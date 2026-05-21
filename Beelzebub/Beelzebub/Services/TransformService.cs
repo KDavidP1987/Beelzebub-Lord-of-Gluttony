@@ -139,8 +139,15 @@ internal sealed class TransformService
 
             string unitName = new PrefabGUID(active.UnitPrefabGuid).GetPrefabName();
             Core.Log.LogInfo($"[Beelz] auto-revert {steamId} from {unitName} after {active.Duration.Value.TotalSeconds:F0}s.");
-            // Need an Entity to send chat; resolve from the player's user entity via the registered admin/player lookups.
-            // Skipped here for simplicity; the player will discover via their next .beelz list or chat command.
+
+            // Phase A3: route chat back to the player.
+            Entity character = EntityExtensions.FindCharacterBySteamId(steamId);
+            if (character.Exists())
+            {
+                string cooldownNote = cooldownSec > 0f ? $" Cooldown {cooldownSec:F0}s." : "";
+                Core.Chat.Send(character, Verbosity.Summary,
+                    $"Transformation ended ({unitName}). Swap a weapon to restore.{cooldownNote}");
+            }
         }
     }
 

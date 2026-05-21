@@ -10,14 +10,35 @@ namespace Beelzebub.Services;
 internal sealed class PersistenceService
 {
     static readonly JsonSerializerOptions _json = new() { WriteIndented = true };
+    static readonly TimeSpan _saveDebounceWindow = TimeSpan.FromSeconds(1);
 
     public string StateFilePath { get; }
+
+    int _dirty;          // 0 = clean, 1 = save requested
+    DateTime _lastSavedUtc = DateTime.MinValue;
 
     public PersistenceService()
     {
         var dir = Path.Combine(Paths.ConfigPath, MyPluginInfo.PLUGIN_GUID);
         Directory.CreateDirectory(dir);
         StateFilePath = Path.Combine(dir, "state.json");
+    }
+
+    /// <summary>
+    /// Mark state as needing a save. The actual write is deferred to the next
+    /// per-frame tick at most once per debounce window.
+    /// </summary>
+    public void RequestSave() => System.Threading.Interlocked.Exchange(ref _dirty, 1);
+
+    /// <summary>
+    /// Called from the per-frame tick. Performs a save if state is dirty and
+    /// the debounce window has elapsed since the last write.
+    /// </summary>
+    public void MaybeSave()
+    {
+        if (System.Threading.Volatile.Read(ref _dirty) == 0) return;
+        if (DateTime.UtcNow - _lastSavedUtc < _saveDebounceWindow) return;
+        SaveSync();
     }
 
     public void LoadInto(AbilityRegistry registry)
@@ -130,6 +151,8 @@ internal sealed class PersistenceService
             File.WriteAllText(tmp, json);
             if (File.Exists(StateFilePath)) File.Replace(tmp, StateFilePath, null);
             else File.Move(tmp, StateFilePath);
+            _lastSavedUtc = DateTime.UtcNow;
+            System.Threading.Interlocked.Exchange(ref _dirty, 0);
         }
         catch (Exception e)
         {

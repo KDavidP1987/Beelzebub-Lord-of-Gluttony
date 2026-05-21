@@ -120,7 +120,7 @@ internal static class VBloodSystemPatch
                         ? $"Defeated V-Blood {unitName}: acquired 1 new ability."
                         : $"Defeated V-Blood {unitName}: acquired {captured} new abilities.");
             }
-            Core.Persistence.SaveSync();
+            Core.Persistence.RequestSave();
         }
     }
 }

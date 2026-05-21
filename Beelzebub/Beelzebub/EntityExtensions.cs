@@ -49,4 +49,30 @@ internal static class EntityExtensions
 
     public static string GetPrefabName(this PrefabGUID guid) =>
         Core.PrefabNames.TryGetValue(guid._Value, out var name) ? name : $"PrefabGuid({guid._Value})";
+
+    /// <summary>
+    /// Locate a player's character entity by SteamId. Walks all User entities each call —
+    /// fine for low-frequency uses (auto-revert, admin lookups); cache if called per-frame.
+    /// </summary>
+    public static Entity FindCharacterBySteamId(ulong steamId)
+    {
+        if (steamId == 0 || Core.EntityManager.World is null) return Entity.Null;
+        var query = Core.EntityManager.CreateEntityQuery(Unity.Entities.ComponentType.ReadOnly<ProjectM.Network.User>());
+        var users = query.ToEntityArray(Unity.Collections.Allocator.Temp);
+        try
+        {
+            for (int i = 0; i < users.Length; i++)
+            {
+                if (!users[i].TryGetComponent<ProjectM.Network.User>(out var user)) continue;
+                if (user.PlatformId != steamId) continue;
+                Entity character = user.LocalCharacter._Entity;
+                if (character.Exists()) return character;
+            }
+            return Entity.Null;
+        }
+        finally
+        {
+            users.Dispose();
+        }
+    }
 }

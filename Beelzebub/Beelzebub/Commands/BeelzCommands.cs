@@ -86,7 +86,7 @@ internal static class BeelzCommands
 
         PrefabGUID ability = new(captured[index].AbilityPrefabGuid);
         Core.AbilityRegistry.SetSlot(steamId, slot, ability._Value);
-        Core.Persistence.SaveSync();
+        Core.Persistence.RequestSave();
 
         ctx.Reply($"Slot {slot} assigned to {ability.GetPrefabName()}. Swap any weapon to apply the change. (Not all abilities are usable in every slot — e.g. _MeleeAttack_ won't appear in spell slots 5/6.)");
         Core.Log.LogInfo($"[Beelz] {steamId} assign slot={slot} ability={ability._Value} ({ability.GetPrefabName()})");
@@ -98,7 +98,7 @@ internal static class BeelzCommands
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
         ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
         Core.AbilityRegistry.ClearSlot(steamId, slot);
-        Core.Persistence.SaveSync();
+        Core.Persistence.RequestSave();
         ctx.Reply($"Slot {slot} cleared. Swap a weapon to apply.");
     }
 
@@ -114,7 +114,7 @@ internal static class BeelzCommands
             ctx.Reply($"Unknown level '{level}'. Valid: silent | summary | verbose. Defaulted to '{v}'.");
         }
         Core.AbilityRegistry.SetVerbosity(steamId, v);
-        Core.Persistence.SaveSync();
+        Core.Persistence.RequestSave();
         ctx.Reply($"Chat verbosity set to {v}.");
     }
 
@@ -133,7 +133,7 @@ internal static class BeelzCommands
         bool ok = Core.AbilityRegistry.Forget(steamId, entry.UnitPrefabGuid, entry.AbilityPrefabGuid);
         if (ok)
         {
-            Core.Persistence.SaveSync();
+            Core.Persistence.RequestSave();
             ctx.Reply($"Forgot {new Stunlock.Core.PrefabGUID(entry.AbilityPrefabGuid).GetPrefabName()} (from {new Stunlock.Core.PrefabGUID(entry.UnitPrefabGuid).GetPrefabName()}).");
         }
         else
@@ -157,7 +157,7 @@ internal static class BeelzCommands
         bool ok = Core.AbilityRegistry.ForgetTransform(steamId, entry.UnitPrefabGuid);
         if (ok)
         {
-            Core.Persistence.SaveSync();
+            Core.Persistence.RequestSave();
             ctx.Reply($"Forgot transform unlock: {new Stunlock.Core.PrefabGUID(entry.UnitPrefabGuid).GetPrefabName()}.");
         }
         else
@@ -173,7 +173,7 @@ internal static class BeelzCommands
         ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
         if (Core.AbilityRegistry.Clear(steamId))
         {
-            Core.Persistence.SaveSync();
+            Core.Persistence.RequestSave();
             ctx.Reply("Captured abilities and slot assignments cleared.");
         }
         else
