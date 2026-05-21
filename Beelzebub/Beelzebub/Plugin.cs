@@ -29,6 +29,8 @@ public class Plugin : BasePlugin
 
         Harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
         Harmony.PatchAll(System.Reflection.Assembly.GetExecutingAssembly());
+        int patchCount = System.Linq.Enumerable.Count(Harmony.GetPatchedMethods());
+        Log.LogInfo($"Harmony patches applied: {patchCount} method(s) patched.");
 
         CommandRegistry.RegisterAll();
 

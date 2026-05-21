@@ -21,29 +21,55 @@ internal static class Core
     public static ManualLogSource Log => Plugin.PluginLog;
     public static bool IsReady { get; private set; }
 
-    internal static void InitializeAfterLoaded()
+    static bool _initInProgress;
+    static int _initAttempts;
+
+    internal static void InitializeAfterLoaded() => TryInitialize("InitializeAfterLoaded");
+
+    internal static void TryInitialize(string trigger)
     {
-        if (IsReady) return;
-
-        Server = FindServerWorld();
-        if (Server is null)
+        if (IsReady || _initInProgress) return;
+        _initInProgress = true;
+        _initAttempts++;
+        try
         {
-            Log.LogError("Beelzebub init: Server world not found. Aborting.");
-            return;
+            var server = FindServerWorld();
+            if (server is null)
+            {
+                if (_initAttempts == 1)
+                    Log.LogInfo($"Beelzebub init ({trigger}): Server world not yet present; will retry.");
+                return;
+            }
+
+            var prefabSystem = server.GetExistingSystemManaged<PrefabCollectionSystem>();
+            if (prefabSystem is null || prefabSystem.SpawnableNameToPrefabGuidDictionary.Count == 0)
+            {
+                if (_initAttempts == 1)
+                    Log.LogInfo($"Beelzebub init ({trigger}): PrefabCollectionSystem not yet populated; will retry.");
+                return;
+            }
+
+            Server = server;
+            EntityManager = server.EntityManager;
+            PrefabCollectionSystem = prefabSystem;
+            ServerScriptMapper = server.GetExistingSystemManaged<ServerScriptMapper>();
+
+            Persistence = new PersistenceService();
+            AbilityRegistry = new AbilityRegistry();
+            AbilityFilter = new AbilityFilter();
+            Persistence.LoadInto(AbilityRegistry);
+
+            IsReady = true;
+            Log.LogInfo($"Beelzebub initialized via {trigger} (attempt #{_initAttempts}). Registry size: {AbilityRegistry.PlayerCount} player(s). Prefab map has {prefabSystem.SpawnableNameToPrefabGuidDictionary.Count} entries.");
         }
-
-        EntityManager = Server.EntityManager;
-        PrefabCollectionSystem = Server.GetExistingSystemManaged<PrefabCollectionSystem>();
-        ServerScriptMapper = Server.GetExistingSystemManaged<ServerScriptMapper>();
-
-        Persistence = new PersistenceService();
-        AbilityRegistry = new AbilityRegistry();
-        AbilityFilter = new AbilityFilter();
-
-        Persistence.LoadInto(AbilityRegistry);
-
-        IsReady = true;
-        Log.LogInfo($"Beelzebub initialized. Registry size: {AbilityRegistry.PlayerCount} player(s).");
+        catch (System.Exception ex)
+        {
+            Log.LogError($"Beelzebub init ({trigger}) FAILED on attempt #{_initAttempts}: {ex}");
+        }
+        finally
+        {
+            _initInProgress = false;
+        }
     }
 
     static World FindServerWorld()

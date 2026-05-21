@@ -13,6 +13,7 @@ internal static class DeathEventListenerSystemPatch
     [HarmonyPostfix]
     public static void OnUpdatePostfix(DeathEventListenerSystem __instance)
     {
+        if (!Core.IsReady) Core.TryInitialize(nameof(DeathEventListenerSystemPatch));
         if (!Core.IsReady || !Settings.CaptureOnKill.Value) return;
 
         NativeArray<DeathEvent> deathEvents = __instance._DeathEventQuery.ToComponentDataArray<DeathEvent>(Allocator.Temp);
