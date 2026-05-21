@@ -137,6 +137,28 @@ Initial POC plus the post-roadmap polish waves.
   ...)") instead of five. `Verbose` per-ability lines stay inline. V-Blood
   path unchanged — boss kills keep their per-event messaging.
 
+### Third-wave (partial) — shared-kill credit
+- **B2** New `Capture_ShareCreditMode` setting: `KillerOnly` (default, legacy
+  behavior) or `Proximity` (every online player within
+  `Capture_ShareCreditRadius` of the kill site gets their own independent
+  capture roll). Mirrors Bloodcraft's "death participants" model conceptually
+  but implemented purely via `LocalToWorld` proximity in the death patch —
+  no dependency on Bloodcraft's PlayerService cache or activity grid.
+- Distance check is XZ-plane (V Rising convention; ignores height) and uses
+  squared-distance to avoid `sqrt` per player per kill.
+- The killer is always included even if outside the radius (long-ranged
+  kills like archery shouldn't lose credit to the shooter).
+- Refactored `DeathEventListenerSystemPatch.Process` into
+  `ResolveParticipants(killer, died)` → `ProcessForParticipant(participant,
+  ...)` so each player runs the full capture + transform-unlock roll
+  independently. Per-frame aggregation still works correctly because each
+  player's `KillAggregate` is keyed by their own SteamId.
+
+### Deferred from third wave
+- **A2** (seamless slot apply — no weapon swap) and **A4** (visual
+  shapeshift VFX on transform) remain pending. Both touch ECS internals
+  where empirical testing matters more than design speculation.
+
 ### Second-wave polish (BCH-blockers)
 
 - **E4** Push-style sync for BCH: per-player `EmitApiEvents` flag (default

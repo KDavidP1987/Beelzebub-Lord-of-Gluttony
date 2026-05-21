@@ -67,16 +67,44 @@ internal static class DeathEventListenerSystemPatch
         if (died.Has<BlockFeedBuff>()) return;
         if (!died.Has<UnitLevel>()) return;
 
-        ulong steamId = killer.GetSteamId();
-        if (steamId == 0) return;
-
         PrefabGUID unitGuid = died.GetPrefabGuid();
         if (unitGuid._Value == 0) return;
         string unitName = unitGuid.GetPrefabName();
 
+        // B2: who counts as participant?
+        var participants = ResolveParticipants(killer, died);
+        foreach (var participant in participants)
+        {
+            ProcessForParticipant(participant, died, unitGuid, unitName, aggregates);
+        }
+    }
+
+    static List<Entity> ResolveParticipants(Entity killer, Entity died)
+    {
+        string mode = (Settings.Capture_ShareCreditMode.Value ?? "KillerOnly").Trim();
+        if (string.Equals(mode, "Proximity", System.StringComparison.OrdinalIgnoreCase))
+        {
+            float radius = Settings.Capture_ShareCreditRadius.Value;
+            if (radius > 0f && died.TryGetComponent<Unity.Transforms.LocalToWorld>(out var ltw))
+            {
+                var near = EntityExtensions.FindPlayersNear(ltw.Position, radius);
+                // Always include the killer (they may be slightly outside the radius for ranged kills).
+                if (!near.Contains(killer)) near.Add(killer);
+                return near;
+            }
+        }
+        return new List<Entity> { killer };
+    }
+
+    static void ProcessForParticipant(Entity participant, Entity died, PrefabGUID unitGuid, string unitName, Dictionary<ulong, KillAggregate> aggregates)
+    {
+        if (!participant.IsPlayer()) return;
+        ulong steamId = participant.GetSteamId();
+        if (steamId == 0) return;
+
         if (!aggregates.TryGetValue(steamId, out var agg))
         {
-            agg = new KillAggregate { Character = killer };
+            agg = new KillAggregate { Character = participant };
             aggregates[steamId] = agg;
         }
 
@@ -108,9 +136,9 @@ internal static class DeathEventListenerSystemPatch
                     if (Settings.VerboseLogging.Value)
                         Core.Log.LogInfo($"[Beelz] capture {abilityName} from {unitName} for {steamId}");
                     // Verbose: per-ability chat line stays inline so the player sees individual unlocks.
-                    Core.Chat.Send(killer, Verbosity.Verbose, $"Acquired ability: {abilityName} (from {unitName}).");
+                    Core.Chat.Send(participant, Verbosity.Verbose, $"Acquired ability: {abilityName} (from {unitName}).");
                     // Phase E4: parseable event for BCH (gated by per-player EmitApiEvents flag).
-                    Core.Chat.SendEvent(killer,
+                    Core.Chat.SendEvent(participant,
                         $"[BEELZ:event] type=capture s=R u={unitGuid._Value} un={unitName} a={ability._Value} an={abilityName}");
                 }
             }
@@ -125,7 +153,7 @@ internal static class DeathEventListenerSystemPatch
                 agg.TransformUnlocks.Add(unitName);
                 agg.AnySave = true;
                 Core.Log.LogInfo($"[Beelz] {steamId} unlocked transform: {unitName} (Regular).");
-                Core.Chat.SendEvent(killer,
+                Core.Chat.SendEvent(participant,
                     $"[BEELZ:event] type=transform-unlock s=R u={unitGuid._Value} un={unitName}");
             }
         }

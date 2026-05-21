@@ -38,6 +38,15 @@ behavior noted under Known caveats below.
 - `.beelz transform <index|substring>` — become a unit
 - `.beelz revert` — end your current transformation
 
+### Shared-kill credit (new)
+Admins can now configure whether the killer gets exclusive capture rolls
+or whether nearby players share. In `BepInEx\config\kdpen.Beelzebub.cfg`:
+- `Capture_ShareCreditMode = KillerOnly` (default) — only the killer rolls
+- `Capture_ShareCreditMode = Proximity` — every online player within
+  `Capture_ShareCreditRadius` of the kill rolls their own captures
+  independently. Default radius is 30m. The killer is always included
+  even if outside the radius (handles ranged kills).
+
 ### Admin commands
 - `.beelz admin rules` / `deny` / `undeny` / `allow` / `unallow` / `reload`
 - `.beelz admin transform mode <regular|vblood> <toggle|timed|disabled>`

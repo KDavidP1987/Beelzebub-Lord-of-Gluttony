@@ -96,6 +96,39 @@ internal static class EntityExtensions
     /// Locate a player's character entity by SteamId. Walks all User entities each call —
     /// fine for low-frequency uses (auto-revert, admin lookups); cache if called per-frame.
     /// </summary>
+    /// <summary>
+    /// Enumerate online PlayerCharacter entities within `radius` of the given position.
+    /// Returns the killer first (if killer is itself a player and within range),
+    /// then any other players in proximity. Caller is responsible for filtering
+    /// out duplicates if needed.
+    /// </summary>
+    public static System.Collections.Generic.List<Entity> FindPlayersNear(Unity.Mathematics.float3 position, float radius)
+    {
+        var result = new System.Collections.Generic.List<Entity>();
+        if (Core.EntityManager.World is null) return result;
+        var query = Core.EntityManager.CreateEntityQuery(
+            Unity.Entities.ComponentType.ReadOnly<ProjectM.PlayerCharacter>(),
+            Unity.Entities.ComponentType.ReadOnly<Unity.Transforms.LocalToWorld>());
+        var entities = query.ToEntityArray(Unity.Collections.Allocator.Temp);
+        try
+        {
+            float r2 = radius * radius;
+            for (int i = 0; i < entities.Length; i++)
+            {
+                if (!entities[i].TryGetComponent<Unity.Transforms.LocalToWorld>(out var ltw)) continue;
+                var p = ltw.Position;
+                float dx = p.x - position.x;
+                float dz = p.z - position.z; // V Rising is XZ-plane; Y is height
+                if (dx * dx + dz * dz <= r2) result.Add(entities[i]);
+            }
+        }
+        finally
+        {
+            entities.Dispose();
+        }
+        return result;
+    }
+
     public static Entity FindCharacterBySteamId(ulong steamId)
     {
         if (steamId == 0 || Core.EntityManager.World is null) return Entity.Null;

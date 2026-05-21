@@ -7,6 +7,10 @@ internal static class Settings
     // Capture loop
     public static ConfigEntry<bool> CaptureOnKill { get; private set; }
 
+    // Shared-kill credit (B2)
+    public static ConfigEntry<string> Capture_ShareCreditMode { get; private set; }
+    public static ConfigEntry<float> Capture_ShareCreditRadius { get; private set; }
+
     // Drop chances (Phase 4)
     public static ConfigEntry<float> DropChance_Ability_Regular { get; private set; }
     public static ConfigEntry<float> DropChance_Ability_VBlood { get; private set; }
@@ -32,6 +36,16 @@ internal static class Settings
         CaptureOnKill = config.Bind(
             "Capture", nameof(CaptureOnKill), true,
             "Master switch. When false, no abilities are captured from kills.");
+
+        Capture_ShareCreditMode = config.Bind(
+            "Capture", nameof(Capture_ShareCreditMode), "KillerOnly",
+            "Who gets capture rolls when a unit dies: KillerOnly | Proximity. " +
+            "Proximity grants every online player within Capture_ShareCreditRadius of the kill site their own independent roll.");
+
+        Capture_ShareCreditRadius = config.Bind(
+            "Capture", nameof(Capture_ShareCreditRadius), 30f,
+            "Radius in world units (~meters) for Proximity share mode. " +
+            "Bloodcraft's analogous setting uses similar default. Ignored when ShareCreditMode = KillerOnly.");
 
         DropChance_Ability_Regular = config.Bind(
             "Capture.DropChance", nameof(DropChance_Ability_Regular), 0.05f,
