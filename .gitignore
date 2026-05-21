@@ -23,6 +23,7 @@ artifacts/
 # ---- Thunderstore packaging output ----
 *.zip
 dist/
+build/
 
 # ---- OS noise ----
 Thumbs.db

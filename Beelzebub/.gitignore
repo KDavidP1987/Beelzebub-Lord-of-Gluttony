@@ -37,6 +37,7 @@ PluginInfo.cs
 # ---- Thunderstore / packaging ----
 *.zip
 dist/
+build/
 
 # ---- Local environment ----
 *.local.json

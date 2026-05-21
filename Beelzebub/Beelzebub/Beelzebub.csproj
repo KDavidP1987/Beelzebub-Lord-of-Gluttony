@@ -38,4 +38,9 @@
 		<Copy SourceFiles="$(TargetDir)$(ProjectName).dll" DestinationFolder="$(VRisingPluginsPath)" />
 		<Message Text="Beelzebub.dll copied to $(VRisingPluginsPath)" Importance="high" />
 	</Target>
+
+	<Target Name="BuildToDist" AfterTargets="Build">
+		<Copy SourceFiles="$(TargetDir)$(ProjectName).dll" DestinationFolder="$(MSBuildProjectDirectory)\dist\BepInEx\plugins" />
+		<Message Text="Beelzebub.dll staged at dist/BepInEx/plugins for tcli build" Importance="high" />
+	</Target>
 </Project>
