@@ -102,6 +102,22 @@ internal static class BeelzCommands
         ctx.Reply($"Slot {slot} cleared. Swap a weapon to apply.");
     }
 
+    [Command("verbosity", description: "Set your in-chat notification level: silent | summary | verbose.")]
+    public static void SetVerbosity(ChatCommandContext ctx, string level)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        var v = ChatNotifier.ParseDefault(level);
+        if (!string.Equals(level?.Trim(), v.ToString(), System.StringComparison.OrdinalIgnoreCase) &&
+            !int.TryParse(level, out _))
+        {
+            ctx.Reply($"Unknown level '{level}'. Valid: silent | summary | verbose. Defaulted to '{v}'.");
+        }
+        Core.AbilityRegistry.SetVerbosity(steamId, v);
+        Core.Persistence.SaveSync();
+        ctx.Reply($"Chat verbosity set to {v}.");
+    }
+
     [Command("clear", description: "Forget all captured abilities and slot assignments. Cannot be undone.")]
     public static void Clear(ChatCommandContext ctx)
     {

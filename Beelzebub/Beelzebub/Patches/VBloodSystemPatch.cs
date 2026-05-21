@@ -82,17 +82,26 @@ internal static class VBloodSystemPatch
                 continue;
             }
 
+            float chance = Settings.DropChance_Ability_VBlood.Value;
+            if (chance < 1f && System.Random.Shared.NextDouble() > chance) continue;
+
             if (Core.AbilityRegistry.Add(steamId, vBloodGuid._Value, ability._Value, CaptureSource.VBlood))
             {
                 captured++;
                 if (Settings.VerboseLogging.Value)
                     Core.Log.LogInfo($"[Beelz] capture (VBlood) {abilityName} from {vBloodGuid.GetPrefabName()} for {steamId}");
+                Core.Chat.Send(playerCharacter, Verbosity.Verbose, $"Acquired V-Blood ability: {abilityName} (from {vBloodGuid.GetPrefabName()}).");
             }
         }
 
         if (captured > 0)
         {
-            Core.Log.LogInfo($"[Beelz] {steamId} defeated V-Blood {vBloodGuid.GetPrefabName()}: captured {captured} ability(ies), skipped {skipped}.");
+            string unitName = vBloodGuid.GetPrefabName();
+            Core.Log.LogInfo($"[Beelz] {steamId} defeated V-Blood {unitName}: captured {captured} ability(ies), skipped {skipped}.");
+            Core.Chat.Send(playerCharacter, Verbosity.Summary,
+                captured == 1
+                    ? $"Defeated V-Blood {unitName}: acquired 1 new ability."
+                    : $"Defeated V-Blood {unitName}: acquired {captured} new abilities.");
             Core.Persistence.SaveSync();
         }
     }

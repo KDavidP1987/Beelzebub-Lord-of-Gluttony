@@ -75,18 +75,28 @@ internal static class DeathEventListenerSystemPatch
                 continue;
             }
 
+            float chance = Settings.DropChance_Ability_Regular.Value;
+            if (chance < 1f && System.Random.Shared.NextDouble() > chance) continue;
+
             if (Core.AbilityRegistry.Add(steamId, unitGuid._Value, ability._Value, CaptureSource.Regular))
             {
                 captured++;
                 if (Settings.VerboseLogging.Value)
                     Core.Log.LogInfo($"[Beelz] capture {abilityName} from {unitGuid.GetPrefabName()} for {steamId}");
+                Core.Chat.Send(killer, Verbosity.Verbose, $"Acquired ability: {abilityName} (from {unitGuid.GetPrefabName()}).");
             }
         }
 
         if (captured > 0)
         {
-            Core.Log.LogInfo($"[Beelz] {steamId} killed {unitGuid.GetPrefabName()}: captured {captured} ability(ies), skipped {skipped}.");
+            string unitName = unitGuid.GetPrefabName();
+            Core.Log.LogInfo($"[Beelz] {steamId} killed {unitName}: captured {captured} ability(ies), skipped {skipped}.");
+            Core.Chat.Send(killer, Verbosity.Summary,
+                captured == 1
+                    ? $"Acquired 1 new ability from {unitName}."
+                    : $"Acquired {captured} new abilities from {unitName}.");
             Core.Persistence.SaveSync();
         }
     }
 }
+

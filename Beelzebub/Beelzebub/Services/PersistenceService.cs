@@ -42,21 +42,29 @@ internal sealed class PersistenceService
             registry.LoadFromSnapshot(snapshot);
 
             int slotCount = 0;
+            int verbositySet = 0;
             foreach (var (key, player) in dto.Players)
             {
-                if (player.Slots is null) continue;
                 ulong steamId = ulong.Parse(key);
-                foreach (var (slotStr, abilityGuid) in player.Slots)
+                if (player.Slots is not null)
                 {
-                    if (int.TryParse(slotStr, out int slot))
+                    foreach (var (slotStr, abilityGuid) in player.Slots)
                     {
-                        registry.SetSlot(steamId, slot, abilityGuid);
-                        slotCount++;
+                        if (int.TryParse(slotStr, out int slot))
+                        {
+                            registry.SetSlot(steamId, slot, abilityGuid);
+                            slotCount++;
+                        }
                     }
+                }
+                if (player.Verbosity.HasValue)
+                {
+                    registry.SetVerbosity(steamId, (Verbosity)player.Verbosity.Value);
+                    verbositySet++;
                 }
             }
 
-            Core.Log.LogInfo($"Loaded {registry.PlayerCount} player(s) and {slotCount} slot assignment(s) from {StateFilePath}.");
+            Core.Log.LogInfo($"Loaded {registry.PlayerCount} player(s), {slotCount} slot assignment(s), {verbositySet} verbosity setting(s) from {StateFilePath}.");
         }
         catch (Exception e)
         {
@@ -69,21 +77,34 @@ internal sealed class PersistenceService
         if (Core.AbilityRegistry is null) return;
         try
         {
+            var allVerbosity = Core.AbilityRegistry.AllVerbosity();
+            // Union of players with captures and players with only verbosity set.
+            var playerIds = new HashSet<ulong>(Core.AbilityRegistry.Snapshot().Select(kv => kv.Key));
+            foreach (var sid in allVerbosity.Keys) playerIds.Add(sid);
+
+            var players = new Dictionary<string, PlayerDto>();
+            foreach (var steamId in playerIds)
+            {
+                var captured = Core.AbilityRegistry.ListFor(steamId);
+                var slots = Core.AbilityRegistry.GetSlots(steamId);
+                allVerbosity.TryGetValue(steamId, out var verbosity);
+                players[steamId.ToString()] = new PlayerDto
+                {
+                    Captured = captured.Select(c => new CapturedDto
+                    {
+                        Unit = c.UnitPrefabGuid,
+                        Ability = c.AbilityPrefabGuid,
+                        Source = (byte)c.Source,
+                    }).ToList(),
+                    Slots = slots.ToDictionary(s => s.Key.ToString(), s => s.Value),
+                    Verbosity = allVerbosity.ContainsKey(steamId) ? (byte?)verbosity : null,
+                };
+            }
+
             var dto = new StateDto
             {
-                Version = 2,
-                Players = Core.AbilityRegistry.Snapshot().ToDictionary(
-                    kv => kv.Key.ToString(),
-                    kv => new PlayerDto
-                    {
-                        Captured = kv.Value.Select(c => new CapturedDto
-                        {
-                            Unit = c.UnitPrefabGuid,
-                            Ability = c.AbilityPrefabGuid,
-                            Source = (byte)c.Source,
-                        }).ToList(),
-                        Slots = Core.AbilityRegistry.GetSlots(kv.Key).ToDictionary(s => s.Key.ToString(), s => s.Value)
-                    })
+                Version = 3,
+                Players = players,
             };
 
             var json = JsonSerializer.Serialize(dto, _json);
@@ -108,6 +129,7 @@ internal sealed class PersistenceService
     {
         public List<CapturedDto> Captured { get; set; } = new();
         public Dictionary<string, int> Slots { get; set; }
+        public byte? Verbosity { get; set; }
     }
 
     sealed class CapturedDto

@@ -10,6 +10,13 @@ internal enum CaptureSource : byte
     VBlood = 1,
 }
 
+internal enum Verbosity : byte
+{
+    Silent = 0,
+    Summary = 1,
+    Verbose = 2,
+}
+
 internal readonly record struct CapturedAbility(int UnitPrefabGuid, int AbilityPrefabGuid, CaptureSource Source);
 
 internal sealed class AbilityRegistry
@@ -17,8 +24,16 @@ internal sealed class AbilityRegistry
     // steamId → unitGuid → abilityGuid → source
     readonly ConcurrentDictionary<ulong, ConcurrentDictionary<int, ConcurrentDictionary<int, CaptureSource>>> _data = new();
     readonly ConcurrentDictionary<ulong, ConcurrentDictionary<int, int>> _slotAssignments = new();
+    readonly ConcurrentDictionary<ulong, Verbosity> _verbosity = new();
 
     public int PlayerCount => _data.Count;
+
+    public Verbosity GetVerbosity(ulong steamId, Verbosity fallback) =>
+        _verbosity.TryGetValue(steamId, out var v) ? v : fallback;
+
+    public void SetVerbosity(ulong steamId, Verbosity verbosity) => _verbosity[steamId] = verbosity;
+
+    public IEnumerable<KeyValuePair<ulong, Verbosity>> VerbositySnapshot() => _verbosity;
 
     public void SetSlot(ulong steamId, int slot, int abilityGuid)
     {
@@ -74,6 +89,8 @@ internal sealed class AbilityRegistry
         _slotAssignments.TryRemove(steamId, out _);
         return _data.TryRemove(steamId, out _);
     }
+
+    public Dictionary<ulong, Verbosity> AllVerbosity() => new(_verbosity);
 
     public IEnumerable<KeyValuePair<ulong, IReadOnlyList<CapturedAbility>>> Snapshot()
     {

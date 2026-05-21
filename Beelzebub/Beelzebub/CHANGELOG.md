@@ -7,7 +7,31 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [0.1.0] - Unreleased
 
-Initial POC.
+POC + early polish.
+
+### Phase 1 — V-Blood hook + source classification
+- Hooks `VBloodSystem.OnUpdate` (Prefix) so boss kills capture abilities through the same registry as regular mobs.
+- Each captured ability is tagged `Regular` or `VBlood`. Boss-source wins on re-capture.
+- `.beelz list` separates V-Bloods from regular mobs with section headers.
+- 5-second per-player dedupe on V-Blood events.
+- `state.json` schema bumped to v2 (forward-compatible load).
+
+### Phase 2 — hot-reloadable ability rules
+- Capture filter now reads from `BepInEx\config\kdpen.Beelzebub\ability_rules.json` (auto-created with curated defaults).
+- Default deny patterns: `_Idle_`, `_Flee_`, `_Sequence_`, `_MeleeAttack_`, `_Block_`, `_Parry_`, `_Counter_`, `_Spawn_`, `_Despawn_`, `_Disappear_`, `_Death_`, `_Wounded_`, `_Hard_`, `_Test_`, `_Internal_`, `_DEBUG_`.
+- Supports allow/deny by substring **or** exact GUID. Allow-mode kicks in when an allow list is non-empty.
+- New `.beelz admin` admin-only commands: `rules`, `deny <pattern>`, `undeny <pattern>`, `allow <pattern>`, `unallow <pattern>`, `reload`.
+
+### Phase 3 — in-chat notifications
+- Per-player verbosity (Silent / Summary / Verbose). Server default via BepInEx config; per-player override via `.beelz verbosity <level>`.
+- Sends server-initiated chat messages via `ServerChatUtils.SendSystemMessageToClient`.
+- Summary on capture: "Acquired N new ability(ies) from <unit>." Verbose adds per-ability lines.
+- Verbosity is persisted alongside captures/slots in `state.json` (schema bumped to v3).
+
+### Phase 4 — drop-chance acquisition
+- Per-ability roll on capture, separate defaults for Regular (5%) and V-Blood (5%).
+- Configurable via BepInEx `Capture.DropChance` section: `DropChance_Ability_Regular`, `DropChance_Ability_VBlood`. Setting to 1.0 restores legacy 100% capture.
+- Transform unlock chance scaffold (default 1% each) staged for Phase 5.
 
 ### Capture pipeline
 - Hooks `DeathEventListenerSystem.OnUpdate` postfix to detect player kills.
