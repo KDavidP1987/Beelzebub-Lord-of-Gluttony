@@ -1,0 +1,33 @@
+# ---- Reference-only data (not part of the mod, kept locally for context) ----
+Reference Data/
+Learning Mods/
+
+# ---- Claude Code workspace settings ----
+.claude/
+
+# ---- .NET / Visual Studio (workspace-level fallback; project-level .gitignore also covers these) ----
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/
+.idea/
+
+# ---- Build / NuGet ----
+*.binlog
+packages/
+project.lock.json
+artifacts/
+
+# ---- Thunderstore packaging output ----
+*.zip
+dist/
+
+# ---- OS noise ----
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+*.swp
+*.tmp

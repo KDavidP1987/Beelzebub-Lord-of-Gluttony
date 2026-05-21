@@ -1,0 +1,18 @@
+[package.dependencies]
+BepInEx-BepInExPack_V_Rising = "1.733.2"
+deca-VampireCommandFramework = "0.10.4"
+
+[publish]
+communities = ["v-rising"]
+repository = "https://thunderstore.io"
+
+[publish.categories]
+v-rising = ["mods", "server-side"]
+
+[package]
+namespace = "kdpen"
+name = "Beelzebub"
+versionNumber = "0.1.0"
+description = "Server-side V Rising mod: defeat a unit, acquire its ability. Configurable assignment to spell slots and admin-defined extra hotkeys."
+websiteUrl = ""
+containsNsfwContent = false
