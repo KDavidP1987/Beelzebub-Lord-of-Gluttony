@@ -47,5 +47,6 @@ internal static class EntityExtensions
     public static PrefabGUID GetPrefabGuid(this Entity entity) =>
         entity.TryGetComponent<PrefabGUID>(out var g) ? g : default;
 
-    public static string GetPrefabName(this PrefabGUID guid) => $"PrefabGuid({guid._Value})";
+    public static string GetPrefabName(this PrefabGUID guid) =>
+        Core.PrefabNames.TryGetValue(guid._Value, out var name) ? name : $"PrefabGuid({guid._Value})";
 }

@@ -1,7 +1,9 @@
+using System.Collections.Generic;
 using BepInEx.Logging;
 using Beelzebub.Services;
 using ProjectM;
 using ProjectM.Scripting;
+using Stunlock.Core;
 using Unity.Entities;
 
 namespace Beelzebub;
@@ -17,6 +19,8 @@ internal static class Core
     public static AbilityRegistry AbilityRegistry { get; private set; }
     public static AbilityFilter AbilityFilter { get; private set; }
     public static PersistenceService Persistence { get; private set; }
+
+    public static Dictionary<int, string> PrefabNames { get; } = new();
 
     public static ManualLogSource Log => Plugin.PluginLog;
     public static bool IsReady { get; private set; }
@@ -58,9 +62,10 @@ internal static class Core
             AbilityRegistry = new AbilityRegistry();
             AbilityFilter = new AbilityFilter();
             Persistence.LoadInto(AbilityRegistry);
+            BuildPrefabNameMap();
 
             IsReady = true;
-            Log.LogInfo($"Beelzebub initialized via {trigger} (attempt #{_initAttempts}). Registry size: {AbilityRegistry.PlayerCount} player(s). Prefab map has {prefabSystem.SpawnableNameToPrefabGuidDictionary.Count} entries.");
+            Log.LogInfo($"Beelzebub initialized via {trigger} (attempt #{_initAttempts}). Registry size: {AbilityRegistry.PlayerCount} player(s). Prefab map has {prefabSystem.SpawnableNameToPrefabGuidDictionary.Count} entries. Built reverse name map with {PrefabNames.Count} entries.");
         }
         catch (System.Exception ex)
         {
@@ -79,5 +84,27 @@ internal static class Core
             if (world.Name == "Server") return world;
         }
         return null;
+    }
+
+    static void BuildPrefabNameMap()
+    {
+        PrefabNames.Clear();
+        try
+        {
+            var map = PrefabCollectionSystem.SpawnableNameToPrefabGuidDictionary;
+            int abCount = 0;
+            foreach (var kvp in map)
+            {
+                string name = kvp.Key.ToString();
+                int guid = kvp.Value._Value;
+                PrefabNames[guid] = name;
+                if (name.StartsWith("AB_")) abCount++;
+            }
+            Log.LogInfo($"Beelzebub: name map built. Total={PrefabNames.Count}, AB_ entries={abCount}.");
+        }
+        catch (System.Exception ex)
+        {
+            Log.LogError($"Beelzebub: failed building name map: {ex}");
+        }
     }
 }
