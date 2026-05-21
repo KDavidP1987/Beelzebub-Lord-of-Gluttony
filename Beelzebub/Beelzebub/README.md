@@ -1,17 +1,19 @@
 # Beelzebub, Lord of Gluttony
 
-A server-side V Rising mod: **defeat a unit, acquire its ability.** Earned abilities can be assigned to your spell slots via chat commands.
+A server-side V Rising mod. **Defeat a unit, devour its abilities.** Earned abilities can be assigned to your spell slots; rare unlocks let you transform into the units themselves.
 
-> **Status:** early development (v0.1.0). Not yet recommended for production servers.
+> **Status:** early access (v0.1.0). Functional end-to-end; rough edges around the "swap a weapon to apply" caveat documented below.
 
-## Features (planned)
+## What it does
 
-- Defeating a unit (V-Blood or otherwise) grants the killer a chance to acquire one of that unit's abilities.
-- Earned abilities can be assigned to any of the player's six spell slots via chat command.
-- Admin configuration:
-  - Allow/deny lists for which units and abilities are capturable.
-  - Per-ability range/magnitude scaling (where the underlying ECS components allow).
-  - Configurable drop chance per kill, with rare "transform-into-unit" unlocks that let players assume an enemy unit's full ability set (EXO-style).
+- **Every kill rolls a chance** to capture the unit's abilities (default 5%) and a smaller chance to unlock the ability to transform into that unit (default 1%).
+- **Boss kills (V-Bloods) have their own roll** through the V-Blood event path. Captures are tagged by source so you can see at a glance what came from a boss.
+- **Default filter** strips abilities that won't work in spell slots (melee animations, idle filler, lifecycle events, Brutal-difficulty duplicates) so you're not flooded with useless captures.
+- **Assign captures to your spell slots** via chat command. Swap a weapon and the new ability appears on your bar.
+- **Transform into any unit you've unlocked.** All six of your spell slots fill with the unit's filtered ability list. Configurable: toggle until manual revert, or time-limited with cooldown.
+- **Per-player chat verbosity** — silent if you prefer minimum spam, summary for one line per kill, verbose for per-ability detail.
+- **Admin-configurable rules** in a hot-reloadable JSON file plus live `.beelz admin` chat commands.
+- **BCH-ready API** — a structured chat surface for the [BloodCraftHub](https://thunderstore.io) client UI to consume.
 
 ## Requirements
 
@@ -21,22 +23,86 @@ A server-side V Rising mod: **defeat a unit, acquire its ability.** Earned abili
 
 ## Installation
 
-Install via [r2modman](https://thunderstore.io/package/ebkr/r2modman/) (recommended) or manually drop `Beelzebub.dll` into:
+Install via [r2modman](https://thunderstore.io/package/ebkr/r2modman/) (recommended) or drop `Beelzebub.dll` into `<VRisingDedicatedServer>\BepInEx\plugins\`. Stop the server before replacing the DLL — it is file-locked while running.
 
-```
-<VRisingDedicatedServer>\BepInEx\plugins\
-```
+## Command cheat-sheet
 
-Stop the dedicated server process before replacing the DLL — it is file-locked while the server runs.
+### Player commands
+
+| Command | What it does |
+|---|---|
+| `.beelz list` | List captured abilities (grouped by source, then by unit) and your current slot assignments. |
+| `.beelz transforms` | List unlocked transformations + your currently active transform if any. |
+| `.beelz grant <slot> <index>` | Assign captured ability at `<index>` to spell slot `<1-6>`. **Swap a weapon to apply.** |
+| `.beelz unslot <slot>` | Clear a slot assignment. Swap a weapon to apply. |
+| `.beelz transform <index\|substring>` | Activate transformation. Swap a weapon to apply. |
+| `.beelz revert` | End your current transformation. Swap a weapon to restore. |
+| `.beelz forget <index>` | Delete one captured ability (also clears any slot pointing at it). |
+| `.beelz forget-transform <index>` | Delete one transformation unlock. |
+| `.beelz clear` | Wipe all your captured abilities, slot assignments, and transforms. |
+| `.beelz verbosity <silent\|summary\|verbose>` | Set your in-chat notification level. |
+
+### Admin commands (`adminOnly:true`)
+
+| Command | What it does |
+|---|---|
+| `.beelz admin rules` | Show the loaded ability-filter rules. |
+| `.beelz admin deny <pattern>` / `undeny <pattern>` | Add / remove a substring from the deny list. |
+| `.beelz admin allow <pattern>` / `unallow <pattern>` | Add / remove a substring from the allow list. When non-empty, only matching abilities are captured. |
+| `.beelz admin reload` | Re-read `ability_rules.json` from disk (for hand edits). |
+| `.beelz admin transform mode <regular\|vblood> <toggle\|timed\|disabled>` | Set transform mode per source type. |
+| `.beelz admin transform duration <regular\|vblood> <seconds>` | Auto-revert duration in `Timed` mode. |
+| `.beelz admin transform cooldown <regular\|vblood> <seconds>` | Cooldown after revert. |
+| `.beelz admin transform show` | Show current transform config. |
+
+### BCH-readable API (`[BEELZ:...]` markers)
+
+| Command | Reply marker(s) |
+|---|---|
+| `.beelz api version` | `[BEELZ:version]` |
+| `.beelz api list` | `[BEELZ:list]` streamed + `[BEELZ:end]` |
+| `.beelz api slots` | `[BEELZ:slot]` streamed + `[BEELZ:end]` |
+| `.beelz api transforms` | `[BEELZ:tx]` streamed + `[BEELZ:end]` |
+| `.beelz api active` | `[BEELZ:active]` (one line) |
+| `.beelz api info <index>` | `[BEELZ:info]` (one line) |
+| `.beelz api verbosity` / `rules` / `transform-config` | Single-line state dumps |
 
 ## Configuration
 
-Configuration documentation will be added as the system stabilizes. See `BepInEx\config\kdpen.Beelzebub.cfg` after first run.
+`BepInEx\config\kdpen.Beelzebub.cfg` controls server-wide defaults:
 
-## Commands
+```ini
+[Capture]
+CaptureOnKill = true
 
-VCF chat commands. Documentation will be auto-generated from the command registry as commands are added.
+[Capture.DropChance]
+DropChance_Ability_Regular = 0.05
+DropChance_Ability_VBlood = 0.05
+DropChance_Transform_Regular = 0.01
+DropChance_Transform_VBlood = 0.01
+
+[Notifications]
+DefaultVerbosity = Summary
+
+[Transformation]
+Transform_Mode_Regular = Toggle
+Transform_Mode_VBlood = Toggle
+Transform_DurationSeconds_Regular = 60
+Transform_DurationSeconds_VBlood = 60
+Transform_CooldownSeconds_Regular = 0
+Transform_CooldownSeconds_VBlood = 0
+```
+
+`BepInEx\config\kdpen.Beelzebub\ability_rules.json` controls the ability filter (auto-created on first run with curated defaults).
+
+`BepInEx\config\kdpen.Beelzebub\state.json` is the per-player state file (captures, slots, transforms, verbosity). Atomic writes, debounced ~1s.
+
+## Known caveats
+
+- **Swap a weapon to apply.** `.beelz grant`, `.beelz transform`, and `.beelz revert` all queue a slot change that V Rising applies on its next natural slot-update event (weapon swap, jewel equip). Eliminating this is on the roadmap.
+- **No visual shapeshift VFX.** Only the spell bar changes when you transform; your model stays the same. A unit→shapeshift-buff mapping is on the roadmap.
+- **Not every ability works in every slot.** Spell slots 5 and 6 generally accept projectile / AoE abilities; basic melee animations won't appear. The default filter strips most non-castable cases, but a few survive — experiment, and report patterns we should add.
 
 ## License
 
-See `LICENSE` (TBD).
+[MIT](../../LICENSE) — see `LICENSE` at the repo root.
