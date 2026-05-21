@@ -90,6 +90,8 @@ internal static class BeelzCommands
 
         ctx.Reply($"Slot {slot} assigned to {ability.GetPrefabName()}. Swap any weapon to apply the change. (Not all abilities are usable in every slot — e.g. _MeleeAttack_ won't appear in spell slots 5/6.)");
         Core.Log.LogInfo($"[Beelz] {steamId} assign slot={slot} ability={ability._Value} ({ability.GetPrefabName()})");
+        Core.Chat.SendEvent(ctx.Event.SenderCharacterEntity,
+            $"[BEELZ:event] type=slot-granted slot={slot} a={ability._Value} an={ability.GetPrefabName()}");
     }
 
     [Command("unslot", description: "Remove your assignment from a spell slot. Usage: .beelz unslot <slot>. Swap a weapon after to apply.")]
@@ -100,6 +102,8 @@ internal static class BeelzCommands
         Core.AbilityRegistry.ClearSlot(steamId, slot);
         Core.Persistence.RequestSave();
         ctx.Reply($"Slot {slot} cleared. Swap a weapon to apply.");
+        Core.Chat.SendEvent(ctx.Event.SenderCharacterEntity,
+            $"[BEELZ:event] type=slot-cleared slot={slot}");
     }
 
     [Command("verbosity", description: "Set your in-chat notification level: silent | summary | verbose.")]

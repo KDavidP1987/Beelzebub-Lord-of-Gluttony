@@ -115,12 +115,46 @@ internal static class ApiCommands
             return;
         }
         var c = captured[index];
-        // Description currently empty — V Rising LocalizationManager wiring is a follow-up.
+        string unitName = new PrefabGUID(c.UnitPrefabGuid).GetPrefabName();
+        string abilityName = new PrefabGUID(c.AbilityPrefabGuid).GetPrefabName();
+        // Humanized name from the prefab — best we can do without LocalizationManager.
+        string label = abilityName.Humanize();
+        string source = unitName.Humanize();
         ctx.Reply(
             $"[BEELZ:info] i={index} s={(c.Source == CaptureSource.VBlood ? "V" : "R")}" +
-            $" u={c.UnitPrefabGuid} un={new PrefabGUID(c.UnitPrefabGuid).GetPrefabName()}" +
-            $" a={c.AbilityPrefabGuid} an={new PrefabGUID(c.AbilityPrefabGuid).GetPrefabName()}" +
-            " desc=");
+            $" u={c.UnitPrefabGuid} un={unitName}" +
+            $" a={c.AbilityPrefabGuid} an={abilityName}" +
+            $" label={label.Replace(' ', '_')}" +
+            $" desc=Captured_from_{source.Replace(' ', '_')}.");
+    }
+
+    [Command("bch", description: "Toggle BCH event-stream emission for the caller (BCH calls this on load). Usage: .beelz api bch <on|off|status>")]
+    public static void Bch(ChatCommandContext ctx, string mode)
+    {
+        if (!Core.IsReady) { ctx.Reply("[BEELZ:err] cmd=bch code=not_ready msg=plugin_not_initialized"); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        var m = mode?.Trim().ToLowerInvariant() ?? "";
+        if (m == "on" || m == "true" || m == "1")
+        {
+            Core.AbilityRegistry.SetEmitApiEvents(steamId, true);
+            Core.Persistence.RequestSave();
+            ctx.Reply($"[BEELZ:bch] state=on api={ApiVersion}");
+        }
+        else if (m == "off" || m == "false" || m == "0")
+        {
+            Core.AbilityRegistry.SetEmitApiEvents(steamId, false);
+            Core.Persistence.RequestSave();
+            ctx.Reply("[BEELZ:bch] state=off");
+        }
+        else if (m == "status" || m == "")
+        {
+            bool on = Core.AbilityRegistry.GetEmitApiEvents(steamId);
+            ctx.Reply($"[BEELZ:bch] state={(on ? "on" : "off")} api={ApiVersion}");
+        }
+        else
+        {
+            ctx.Reply($"[BEELZ:err] cmd=bch code=bad_mode msg=expected_on_off_or_status_got_{m}");
+        }
     }
 
     [Command("verbosity", description: "Return the caller's current verbosity setting (BCH-readable).")]

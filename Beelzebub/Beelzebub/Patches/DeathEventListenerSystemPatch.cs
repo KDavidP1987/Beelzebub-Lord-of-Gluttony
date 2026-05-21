@@ -109,6 +109,9 @@ internal static class DeathEventListenerSystemPatch
                         Core.Log.LogInfo($"[Beelz] capture {abilityName} from {unitName} for {steamId}");
                     // Verbose: per-ability chat line stays inline so the player sees individual unlocks.
                     Core.Chat.Send(killer, Verbosity.Verbose, $"Acquired ability: {abilityName} (from {unitName}).");
+                    // Phase E4: parseable event for BCH (gated by per-player EmitApiEvents flag).
+                    Core.Chat.SendEvent(killer,
+                        $"[BEELZ:event] type=capture s=R u={unitGuid._Value} un={unitName} a={ability._Value} an={abilityName}");
                 }
             }
         }
@@ -122,6 +125,8 @@ internal static class DeathEventListenerSystemPatch
                 agg.TransformUnlocks.Add(unitName);
                 agg.AnySave = true;
                 Core.Log.LogInfo($"[Beelz] {steamId} unlocked transform: {unitName} (Regular).");
+                Core.Chat.SendEvent(killer,
+                    $"[BEELZ:event] type=transform-unlock s=R u={unitGuid._Value} un={unitName}");
             }
         }
     }

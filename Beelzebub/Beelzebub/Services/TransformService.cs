@@ -147,6 +147,9 @@ internal sealed class TransformService
                 string cooldownNote = cooldownSec > 0f ? $" Cooldown {cooldownSec:F0}s." : "";
                 Core.Chat.Send(character, Verbosity.Summary,
                     $"Transformation ended ({unitName}). Swap a weapon to restore.{cooldownNote}");
+                // Phase E4: parseable event for BCH.
+                Core.Chat.SendEvent(character,
+                    $"[BEELZ:event] type=transform-ended u={active.UnitPrefabGuid} un={unitName} reason=auto");
             }
         }
     }

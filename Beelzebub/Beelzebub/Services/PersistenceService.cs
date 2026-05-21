@@ -84,6 +84,10 @@ internal sealed class PersistenceService
                     registry.SetVerbosity(steamId, (Verbosity)player.Verbosity.Value);
                     verbositySet++;
                 }
+                if (player.EmitApiEvents == true)
+                {
+                    registry.SetEmitApiEvents(steamId, true);
+                }
                 if (player.Transforms is not null)
                 {
                     foreach (var t in player.Transforms)
@@ -108,11 +112,13 @@ internal sealed class PersistenceService
         try
         {
             var allVerbosity = Core.AbilityRegistry.AllVerbosity();
+            var allEmitEvents = Core.AbilityRegistry.AllEmitApiEvents();
             var transformSnapshot = Core.AbilityRegistry.TransformSnapshot()
                 .ToDictionary(kv => kv.Key, kv => kv.Value);
 
             var playerIds = new HashSet<ulong>(Core.AbilityRegistry.Snapshot().Select(kv => kv.Key));
             foreach (var sid in allVerbosity.Keys) playerIds.Add(sid);
+            foreach (var sid in allEmitEvents.Keys) playerIds.Add(sid);
             foreach (var sid in transformSnapshot.Keys) playerIds.Add(sid);
 
             var players = new Dictionary<string, PlayerDto>();
@@ -132,6 +138,7 @@ internal sealed class PersistenceService
                     }).ToList(),
                     Slots = slots.ToDictionary(s => s.Key.ToString(), s => s.Value),
                     Verbosity = allVerbosity.ContainsKey(steamId) ? (byte?)verbosity : null,
+                    EmitApiEvents = allEmitEvents.TryGetValue(steamId, out var e) && e ? true : (bool?)null,
                     Transforms = transforms?.Select(t => new TransformDto
                     {
                         Unit = t.UnitPrefabGuid,
@@ -171,6 +178,7 @@ internal sealed class PersistenceService
         public List<CapturedDto> Captured { get; set; } = new();
         public Dictionary<string, int> Slots { get; set; }
         public byte? Verbosity { get; set; }
+        public bool? EmitApiEvents { get; set; }
         public List<TransformDto> Transforms { get; set; }
     }
 

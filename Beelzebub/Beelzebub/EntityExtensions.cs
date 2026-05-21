@@ -51,6 +51,48 @@ internal static class EntityExtensions
         Core.PrefabNames.TryGetValue(guid._Value, out var name) ? name : $"PrefabGuid({guid._Value})";
 
     /// <summary>
+    /// Produce a human-friendly label from a raw prefab name. Strips the well-known
+    /// AB_/CHAR_/Buff_ prefixes plus _Group/_AbilityGroup suffixes, then splits
+    /// CamelCase / underscore-joined tokens so "AB_Bandit_BombThrow_AbilityGroup"
+    /// reads as "Bandit Bomb Throw". Not localized — that needs LocalizationManager.
+    /// </summary>
+    public static string Humanize(this string prefabName)
+    {
+        if (string.IsNullOrEmpty(prefabName)) return "";
+        string s = prefabName;
+        foreach (var prefix in new[] { "AB_", "CHAR_", "Buff_", "Item_", "TM_", "SpellMod_" })
+        {
+            if (s.StartsWith(prefix, System.StringComparison.OrdinalIgnoreCase))
+            { s = s.Substring(prefix.Length); break; }
+        }
+        foreach (var suffix in new[] { "_AbilityGroup", "_Group", "_Cast", "_Throw", "_VBlood" })
+        {
+            if (s.EndsWith(suffix, System.StringComparison.OrdinalIgnoreCase))
+            { s = s.Substring(0, s.Length - suffix.Length); break; }
+        }
+        s = s.Replace('_', ' ');
+        // Split CamelCase: insert space before each uppercase that follows a lowercase or digit.
+        var sb = new System.Text.StringBuilder(s.Length + 8);
+        for (int i = 0; i < s.Length; i++)
+        {
+            char c = s[i];
+            if (i > 0 && char.IsUpper(c) && (char.IsLower(s[i - 1]) || char.IsDigit(s[i - 1])))
+                sb.Append(' ');
+            sb.Append(c);
+        }
+        // Collapse multiple spaces.
+        var collapsed = new System.Text.StringBuilder(sb.Length);
+        char prev = ' ';
+        foreach (char c in sb.ToString())
+        {
+            if (c == ' ' && prev == ' ') continue;
+            collapsed.Append(c);
+            prev = c;
+        }
+        return collapsed.ToString().Trim();
+    }
+
+    /// <summary>
     /// Locate a player's character entity by SteamId. Walks all User entities each call —
     /// fine for low-frequency uses (auto-revert, admin lookups); cache if called per-frame.
     /// </summary>

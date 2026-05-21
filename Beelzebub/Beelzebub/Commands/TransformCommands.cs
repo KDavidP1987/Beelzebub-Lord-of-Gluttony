@@ -86,6 +86,11 @@ internal static class TransformCommands
 
         var (ok, message) = Core.Transforms.TryActivate(steamId, unitGuid);
         ctx.Reply(message);
+        if (ok)
+        {
+            Core.Chat.SendEvent(ctx.Event.SenderCharacterEntity,
+                $"[BEELZ:event] type=transform-activated u={unitGuid} un={new PrefabGUID(unitGuid).GetPrefabName()}");
+        }
     }
 
     [Command("revert", description: "Revert your current transformation. Swap a weapon to restore normal abilities.")]
@@ -99,5 +104,7 @@ internal static class TransformCommands
         Core.Transforms.Revert(steamId, "manual");
         string unitName = new PrefabGUID(active.UnitPrefabGuid).GetPrefabName();
         ctx.Reply($"Reverted from {unitName}. Swap a weapon to restore normal abilities.");
+        Core.Chat.SendEvent(ctx.Event.SenderCharacterEntity,
+            $"[BEELZ:event] type=transform-ended u={active.UnitPrefabGuid} un={unitName} reason=manual");
     }
 }

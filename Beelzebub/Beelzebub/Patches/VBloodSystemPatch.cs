@@ -88,9 +88,12 @@ internal static class VBloodSystemPatch
             if (Core.AbilityRegistry.Add(steamId, vBloodGuid._Value, ability._Value, CaptureSource.VBlood))
             {
                 captured++;
+                string vbName = vBloodGuid.GetPrefabName();
                 if (Settings.VerboseLogging.Value)
-                    Core.Log.LogInfo($"[Beelz] capture (VBlood) {abilityName} from {vBloodGuid.GetPrefabName()} for {steamId}");
-                Core.Chat.Send(playerCharacter, Verbosity.Verbose, $"Acquired V-Blood ability: {abilityName} (from {vBloodGuid.GetPrefabName()}).");
+                    Core.Log.LogInfo($"[Beelz] capture (VBlood) {abilityName} from {vbName} for {steamId}");
+                Core.Chat.Send(playerCharacter, Verbosity.Verbose, $"Acquired V-Blood ability: {abilityName} (from {vbName}).");
+                Core.Chat.SendEvent(playerCharacter,
+                    $"[BEELZ:event] type=capture s=V u={vBloodGuid._Value} un={vbName} a={ability._Value} an={abilityName}");
             }
         }
 
@@ -106,6 +109,8 @@ internal static class VBloodSystemPatch
                 Core.Log.LogInfo($"[Beelz] {steamId} unlocked V-Blood transform: {unitName}.");
                 Core.Chat.Send(playerCharacter, Verbosity.Summary,
                     $"Unlocked V-Blood transformation: {unitName}!");
+                Core.Chat.SendEvent(playerCharacter,
+                    $"[BEELZ:event] type=transform-unlock s=V u={vBloodGuid._Value} un={unitName}");
             }
         }
 

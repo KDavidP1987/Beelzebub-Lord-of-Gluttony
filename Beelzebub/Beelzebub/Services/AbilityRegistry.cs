@@ -35,6 +35,7 @@ internal sealed class AbilityRegistry
     readonly ConcurrentDictionary<ulong, ConcurrentDictionary<int, ConcurrentDictionary<int, CaptureSource>>> _data = new();
     readonly ConcurrentDictionary<ulong, ConcurrentDictionary<int, int>> _slotAssignments = new();
     readonly ConcurrentDictionary<ulong, Verbosity> _verbosity = new();
+    readonly ConcurrentDictionary<ulong, bool> _emitApiEvents = new();
 
     // Phase 5: transforms.
     readonly ConcurrentDictionary<ulong, ConcurrentDictionary<int, CaptureSource>> _transformUnlocks = new(); // unitGuid → source
@@ -50,6 +51,17 @@ internal sealed class AbilityRegistry
     public void SetVerbosity(ulong steamId, Verbosity verbosity) => _verbosity[steamId] = verbosity;
 
     public IEnumerable<KeyValuePair<ulong, Verbosity>> VerbositySnapshot() => _verbosity;
+
+    public bool GetEmitApiEvents(ulong steamId) =>
+        _emitApiEvents.TryGetValue(steamId, out var b) && b;
+
+    public void SetEmitApiEvents(ulong steamId, bool value)
+    {
+        if (value) _emitApiEvents[steamId] = true;
+        else _emitApiEvents.TryRemove(steamId, out _);
+    }
+
+    public Dictionary<ulong, bool> AllEmitApiEvents() => new(_emitApiEvents);
 
     public void SetSlot(ulong steamId, int slot, int abilityGuid)
     {

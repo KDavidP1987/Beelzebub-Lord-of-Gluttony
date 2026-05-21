@@ -25,6 +25,28 @@ internal sealed class ChatNotifier
         Verbosity active = ResolveVerbosity(steamId);
         if (active < required) return;
 
+        SendRaw(user, message);
+    }
+
+    /// <summary>
+    /// Phase E4: emit a parseable [BEELZ:event] line for BCH consumption.
+    /// Gated by the per-player EmitApiEvents flag — off by default.
+    /// Independent of chat verbosity (a Silent player can still receive events
+    /// if BCH has turned them on, and a Verbose player without BCH won't see them).
+    /// </summary>
+    public void SendEvent(Entity playerCharacter, string eventLine)
+    {
+        if (!playerCharacter.IsPlayer()) return;
+        if (!playerCharacter.TryGetComponent<PlayerCharacter>(out var pc)) return;
+        if (!pc.UserEntity.TryGetComponent<User>(out var user)) return;
+        ulong steamId = user.PlatformId;
+
+        if (!Core.AbilityRegistry.GetEmitApiEvents(steamId)) return;
+        SendRaw(user, eventLine);
+    }
+
+    void SendRaw(User user, string message)
+    {
         try
         {
             var fixedMessage = new FixedString512Bytes(SafeTruncate(message, 510));
@@ -32,7 +54,7 @@ internal sealed class ChatNotifier
         }
         catch (Exception ex)
         {
-            Core.Log.LogWarning($"ChatNotifier.Send failed: {ex}");
+            Core.Log.LogWarning($"ChatNotifier.SendRaw failed: {ex}");
         }
     }
 

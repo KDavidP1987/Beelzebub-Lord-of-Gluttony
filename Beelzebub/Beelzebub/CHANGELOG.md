@@ -9,6 +9,20 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 POC + early polish.
 
+### First-wave polish (post-roadmap)
+- **A3** Auto-revert chat routing: when a Timed transform expires, the player gets a `Summary`-level chat ping ("Transformation ended (UnitName). Swap a weapon to restore.") instead of only a server-side log line.
+- **B1** Debounced `state.json` saves: `RequestSave()` marks dirty, `MaybeSave()` writes at most once per second from the per-frame tick. Eliminates blocking JSON writes during heavy combat. `SaveSync()` retained as the synchronous escape hatch for `Plugin.Unload`.
+- **B3** Per-frame kill aggregation: an AoE wipe of five mobs now emits one `Summary` line ("Acquired 12 abilities across 5 units (CHAR_X, CHAR_Y×3, ...)") instead of five. `Verbose` per-ability lines stay inline. V-Blood path unchanged — boss kills keep their per-event messaging.
+
+### Second-wave polish (BCH-blockers)
+- **E4** Push-style sync for BCH: per-player `EmitApiEvents` flag (default off, persisted) gates `[BEELZ:event]` lines on key state changes — captures, transform unlocks, transform activate/end, slot grant/clear. Independent of chat verbosity so BCH can keep up while the player keeps chat quiet. New `.beelz api bch <on|off|status>` command for BCH to toggle.
+- **A1-lite** Humanized labels: `.beelz api info` now emits a readable `label=` (e.g. "Bandit Bomb Throw" instead of "AB_Bandit_BombThrow_AbilityGroup") via a prefab-name humanizer. Real LocalizationManager-driven descriptions are still pending (tracked as A1-full).
+
+### Release prep
+- **D2** README rewrite with full command cheat-sheet and feature overview.
+- **D3** `tcli build` pipeline verified end-to-end — produces a 333 KB upload-ready zip. New `BuildToDist` MSBuild target stages the DLL where `tcli`'s default mapping picks it up.
+- **D4** MIT LICENSE at repo root.
+
 ### Phase 1 — V-Blood hook + source classification
 - Hooks `VBloodSystem.OnUpdate` (Prefix) so boss kills capture abilities through the same registry as regular mobs.
 - Each captured ability is tagged `Regular` or `VBlood`. Boss-source wins on re-capture.
