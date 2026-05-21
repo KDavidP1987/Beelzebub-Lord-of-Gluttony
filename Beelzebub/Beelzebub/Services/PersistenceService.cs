@@ -37,7 +37,7 @@ internal sealed class PersistenceService
             var snapshot = dto.Players.Select(kv =>
                 new KeyValuePair<ulong, IReadOnlyList<CapturedAbility>>(
                     ulong.Parse(kv.Key),
-                    kv.Value.Captured.Select(c => new CapturedAbility(c.Unit, c.Ability)).ToList()));
+                    kv.Value.Captured.Select(c => new CapturedAbility(c.Unit, c.Ability, MapSource(c.Source))).ToList()));
 
             registry.LoadFromSnapshot(snapshot);
 
@@ -71,12 +71,17 @@ internal sealed class PersistenceService
         {
             var dto = new StateDto
             {
-                Version = 1,
+                Version = 2,
                 Players = Core.AbilityRegistry.Snapshot().ToDictionary(
                     kv => kv.Key.ToString(),
                     kv => new PlayerDto
                     {
-                        Captured = kv.Value.Select(c => new CapturedDto { Unit = c.UnitPrefabGuid, Ability = c.AbilityPrefabGuid }).ToList(),
+                        Captured = kv.Value.Select(c => new CapturedDto
+                        {
+                            Unit = c.UnitPrefabGuid,
+                            Ability = c.AbilityPrefabGuid,
+                            Source = (byte)c.Source,
+                        }).ToList(),
                         Slots = Core.AbilityRegistry.GetSlots(kv.Key).ToDictionary(s => s.Key.ToString(), s => s.Value)
                     })
             };
@@ -109,5 +114,12 @@ internal sealed class PersistenceService
     {
         public int Unit { get; set; }
         public int Ability { get; set; }
+        public byte Source { get; set; } // 0=Regular, 1=VBlood. Missing in v1 state.json → defaults to 0/Regular.
     }
+
+    static CaptureSource MapSource(byte raw) => raw switch
+    {
+        (byte)CaptureSource.VBlood => CaptureSource.VBlood,
+        _ => CaptureSource.Regular,
+    };
 }

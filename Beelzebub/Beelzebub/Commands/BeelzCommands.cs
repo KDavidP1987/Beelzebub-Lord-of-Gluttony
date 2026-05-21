@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using Beelzebub.Services;
 using ProjectM;
 using Stunlock.Core;
 using Unity.Entities;
@@ -42,24 +44,26 @@ internal static class BeelzCommands
         }
 
         sb.Append("Captured ").Append(captured.Count).AppendLine(" ability(ies):");
-        var byUnit = new Dictionary<int, List<(int index, int abilityGuid)>>();
-        for (int i = 0; i < captured.Count; i++)
-        {
-            var c = captured[i];
-            if (!byUnit.TryGetValue(c.UnitPrefabGuid, out var list))
-            {
-                list = new List<(int, int)>();
-                byUnit[c.UnitPrefabGuid] = list;
-            }
-            list.Add((i, c.AbilityPrefabGuid));
-        }
 
-        foreach (var (unitGuid, entries) in byUnit)
+        // Group by source first (VBlood at the top), then by unit within each source.
+        var bySource = captured
+            .Select((c, idx) => (idx, ability: c))
+            .GroupBy(t => t.ability.Source)
+            .OrderByDescending(g => g.Key == CaptureSource.VBlood);
+
+        foreach (var sourceGroup in bySource)
         {
-            sb.Append(new PrefabGUID(unitGuid).GetPrefabName()).AppendLine(":");
-            foreach (var (idx, abilityGuid) in entries)
+            sb.Append(sourceGroup.Key == CaptureSource.VBlood ? "-- V-Bloods --" : "-- Regular mobs --").AppendLine();
+            var byUnit = sourceGroup
+                .GroupBy(t => t.ability.UnitPrefabGuid)
+                .OrderBy(g => new PrefabGUID(g.Key).GetPrefabName());
+            foreach (var unitGroup in byUnit)
             {
-                sb.Append("  ").Append(idx).Append(": ").AppendLine(new PrefabGUID(abilityGuid).GetPrefabName());
+                sb.Append(new PrefabGUID(unitGroup.Key).GetPrefabName()).AppendLine(":");
+                foreach (var (idx, ability) in unitGroup)
+                {
+                    sb.Append("  ").Append(idx).Append(": ").AppendLine(new PrefabGUID(ability.AbilityPrefabGuid).GetPrefabName());
+                }
             }
         }
 

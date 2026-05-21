@@ -1,4 +1,5 @@
 using Beelzebub.Config;
+using Beelzebub.Services;
 using HarmonyLib;
 using ProjectM;
 using Stunlock.Core;
@@ -74,7 +75,7 @@ internal static class DeathEventListenerSystemPatch
                 continue;
             }
 
-            if (Core.AbilityRegistry.Add(steamId, unitGuid._Value, ability._Value))
+            if (Core.AbilityRegistry.Add(steamId, unitGuid._Value, ability._Value, CaptureSource.Regular))
             {
                 captured++;
                 if (Settings.VerboseLogging.Value)

@@ -4,9 +4,18 @@ using System.Linq;
 
 namespace Beelzebub.Services;
 
+internal enum CaptureSource : byte
+{
+    Regular = 0,
+    VBlood = 1,
+}
+
+internal readonly record struct CapturedAbility(int UnitPrefabGuid, int AbilityPrefabGuid, CaptureSource Source);
+
 internal sealed class AbilityRegistry
 {
-    readonly ConcurrentDictionary<ulong, ConcurrentDictionary<int, ConcurrentDictionary<int, byte>>> _data = new();
+    // steamId → unitGuid → abilityGuid → source
+    readonly ConcurrentDictionary<ulong, ConcurrentDictionary<int, ConcurrentDictionary<int, CaptureSource>>> _data = new();
     readonly ConcurrentDictionary<ulong, ConcurrentDictionary<int, int>> _slotAssignments = new();
 
     public int PlayerCount => _data.Count;
@@ -30,11 +39,20 @@ internal sealed class AbilityRegistry
             ? slots
             : new Dictionary<int, int>();
 
-    public bool Add(ulong steamId, int unitPrefabGuid, int abilityPrefabGuid)
+    public bool Add(ulong steamId, int unitPrefabGuid, int abilityPrefabGuid, CaptureSource source)
     {
-        var byUnit = _data.GetOrAdd(steamId, _ => new ConcurrentDictionary<int, ConcurrentDictionary<int, byte>>());
-        var abilities = byUnit.GetOrAdd(unitPrefabGuid, _ => new ConcurrentDictionary<int, byte>());
-        return abilities.TryAdd(abilityPrefabGuid, 0);
+        var byUnit = _data.GetOrAdd(steamId, _ => new ConcurrentDictionary<int, ConcurrentDictionary<int, CaptureSource>>());
+        var abilities = byUnit.GetOrAdd(unitPrefabGuid, _ => new ConcurrentDictionary<int, CaptureSource>());
+
+        if (abilities.TryAdd(abilityPrefabGuid, source)) return true;
+
+        // Upgrade Regular → VBlood if a boss kill later captures the same ability (boss source wins).
+        var existing = abilities[abilityPrefabGuid];
+        if (existing == CaptureSource.Regular && source == CaptureSource.VBlood)
+        {
+            abilities[abilityPrefabGuid] = CaptureSource.VBlood;
+        }
+        return false;
     }
 
     public IReadOnlyList<CapturedAbility> ListFor(ulong steamId)
@@ -43,9 +61,9 @@ internal sealed class AbilityRegistry
         var result = new List<CapturedAbility>();
         foreach (var (unitGuid, abilities) in byUnit)
         {
-            foreach (var abilityGuid in abilities.Keys)
+            foreach (var (abilityGuid, source) in abilities)
             {
-                result.Add(new CapturedAbility(unitGuid, abilityGuid));
+                result.Add(new CapturedAbility(unitGuid, abilityGuid, source));
             }
         }
         return result;
@@ -72,10 +90,8 @@ internal sealed class AbilityRegistry
         {
             foreach (var ability in abilities)
             {
-                Add(steamId, ability.UnitPrefabGuid, ability.AbilityPrefabGuid);
+                Add(steamId, ability.UnitPrefabGuid, ability.AbilityPrefabGuid, ability.Source);
             }
         }
     }
 }
-
-internal readonly record struct CapturedAbility(int UnitPrefabGuid, int AbilityPrefabGuid);
