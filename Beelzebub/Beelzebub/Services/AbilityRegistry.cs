@@ -37,6 +37,9 @@ internal sealed class AbilityRegistry
     readonly ConcurrentDictionary<ulong, Verbosity> _verbosity = new();
     readonly ConcurrentDictionary<ulong, bool> _emitApiEvents = new();
 
+    // C1: per-player slot-loadout presets, keyed by case-sensitive name.
+    readonly ConcurrentDictionary<ulong, ConcurrentDictionary<string, ConcurrentDictionary<int, int>>> _presets = new();
+
     // Phase 5: transforms.
     readonly ConcurrentDictionary<ulong, ConcurrentDictionary<int, CaptureSource>> _transformUnlocks = new(); // unitGuid → source
     readonly ConcurrentDictionary<ulong, ActiveTransform> _activeTransforms = new(); // runtime-only
@@ -62,6 +65,81 @@ internal sealed class AbilityRegistry
     }
 
     public Dictionary<ulong, bool> AllEmitApiEvents() => new(_emitApiEvents);
+
+    // --- Slot loadout presets (C1) ---
+    public void SavePreset(ulong steamId, string name)
+    {
+        var byName = _presets.GetOrAdd(steamId, _ => new ConcurrentDictionary<string, ConcurrentDictionary<int, int>>());
+        var snapshot = new ConcurrentDictionary<int, int>();
+        foreach (var (slot, abilityGuid) in GetSlots(steamId))
+        {
+            snapshot[slot] = abilityGuid;
+        }
+        byName[name] = snapshot;
+    }
+
+    /// <summary>
+    /// Returns true if a preset was loaded and slot assignments were replaced. Returns false
+    /// if the preset doesn't exist.
+    /// </summary>
+    public bool LoadPreset(ulong steamId, string name)
+    {
+        if (!_presets.TryGetValue(steamId, out var byName)) return false;
+        if (!byName.TryGetValue(name, out var snapshot)) return false;
+        var slots = _slotAssignments.GetOrAdd(steamId, _ => new ConcurrentDictionary<int, int>());
+        slots.Clear();
+        foreach (var (slot, abilityGuid) in snapshot)
+        {
+            slots[slot] = abilityGuid;
+        }
+        return true;
+    }
+
+    public bool DeletePreset(ulong steamId, string name)
+    {
+        if (!_presets.TryGetValue(steamId, out var byName)) return false;
+        return byName.TryRemove(name, out _);
+    }
+
+    public IReadOnlyDictionary<string, IReadOnlyDictionary<int, int>> ListPresets(ulong steamId)
+    {
+        var result = new Dictionary<string, IReadOnlyDictionary<int, int>>();
+        if (_presets.TryGetValue(steamId, out var byName))
+        {
+            foreach (var (name, snapshot) in byName)
+            {
+                result[name] = new Dictionary<int, int>(snapshot);
+            }
+        }
+        return result;
+    }
+
+    public Dictionary<ulong, Dictionary<string, Dictionary<int, int>>> PresetsSnapshot()
+    {
+        var result = new Dictionary<ulong, Dictionary<string, Dictionary<int, int>>>();
+        foreach (var (steamId, byName) in _presets)
+        {
+            var nested = new Dictionary<string, Dictionary<int, int>>();
+            foreach (var (name, slots) in byName)
+            {
+                nested[name] = new Dictionary<int, int>(slots);
+            }
+            result[steamId] = nested;
+        }
+        return result;
+    }
+
+    public void LoadPresetsSnapshot(ulong steamId, Dictionary<string, Dictionary<int, int>> presets)
+    {
+        var byName = _presets.GetOrAdd(steamId, _ => new ConcurrentDictionary<string, ConcurrentDictionary<int, int>>());
+        byName.Clear();
+        foreach (var (name, slots) in presets)
+        {
+            var snapshot = new ConcurrentDictionary<int, int>();
+            foreach (var (slot, abilityGuid) in slots) snapshot[slot] = abilityGuid;
+            byName[name] = snapshot;
+        }
+    }
 
     public void SetSlot(ulong steamId, int slot, int abilityGuid)
     {

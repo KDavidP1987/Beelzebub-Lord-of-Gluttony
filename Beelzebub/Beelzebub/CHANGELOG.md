@@ -3,7 +3,34 @@
 What's new for players. For full implementation history, see the
 [developer changelog on GitHub](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/blob/main/CHANGELOG.md).
 
-## [0.2.0] - Unreleased
+## [0.3.0] - Unreleased
+
+### Fourth-wave feature extensions
+
+- **`.beelz help`** — in-chat walkthrough explaining the capture → list →
+  grant → swap-weapon → transform loop. No more guessing where to start.
+- **Slot loadout presets**: `.beelz preset save <name>`, `load <name>`,
+  `list`, `delete <name>`. Snapshot your current slot assignments under
+  any number of named loadouts and switch between them; swap a weapon
+  after `load` to apply.
+- **Per-ability rate overrides** in `ability_rules.json`: add entries
+  to a new `dropRateOverrides` list specifying `pattern`, `rateRegular`,
+  `rateVBlood`. The first matching pattern wins and overrides the global
+  drop chance for that ability. Lets admins curate gameplay-defining
+  abilities (e.g. boss ultimates) to drop at different rates than filler.
+- **Per-unit-tier rate multipliers**: new `Capture.Tier` config section
+  with `MidThreshold` (default 30) and `HighThreshold` (default 60) for
+  `UnitLevel`, plus `Multiplier_Low/Mid/High` (all default 1.0). The
+  killed unit's level determines the tier, and the matching multiplier
+  scales both ability and transform drop chances. Curve high-level
+  fights to be more rewarding, or flatten the curve entirely.
+- **Admin grant**: `.beelz admin give <player> <unitGuid> <abilityGuid>`
+  and `.beelz admin give-transform <player> <unitGuid>` to seed captures
+  or transform unlocks for events, testing, or restoring after a wipe.
+  Source (Regular vs VBlood) is inferred from whether the unit prefab
+  has `VBloodUnit` / `VBloodConsumeSource`.
+
+### [0.2.0] surface (still Unreleased)
 
 Early access. Functional end-to-end; rough edges around the "swap a weapon to apply"
 behavior noted under Known caveats below.

@@ -107,6 +107,45 @@ internal static class AdminCommands
         else ctx.Reply("Source must be 'regular' or 'vblood'.");
     }
 
+    [Command("give", description: "Grant a captured ability to a player. Usage: .beelz admin give <player> <unitGuid> <abilityGuid>", adminOnly: true)]
+    public static void Give(ChatCommandContext ctx, string player, int unitGuid, int abilityGuid)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        var character = EntityExtensions.FindCharacterByName(player, out ulong steamId, out string fullName);
+        if (character == Unity.Entities.Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
+
+        var source = new Stunlock.Core.PrefabGUID(unitGuid).IsVBloodUnit()
+            ? Beelzebub.Services.CaptureSource.VBlood
+            : Beelzebub.Services.CaptureSource.Regular;
+        bool added = Core.AbilityRegistry.Add(steamId, unitGuid, abilityGuid, source);
+        Core.Persistence.RequestSave();
+
+        string abilityName = new Stunlock.Core.PrefabGUID(abilityGuid).GetPrefabName();
+        string unitName = new Stunlock.Core.PrefabGUID(unitGuid).GetPrefabName();
+        ctx.Reply(added
+            ? $"Granted {abilityName} (from {unitName}, source={source}) to {fullName}."
+            : $"{fullName} already has that capture — no change.");
+    }
+
+    [Command("give-transform", description: "Grant a transform unlock to a player. Usage: .beelz admin give-transform <player> <unitGuid>", adminOnly: true)]
+    public static void GiveTransform(ChatCommandContext ctx, string player, int unitGuid)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        var character = EntityExtensions.FindCharacterByName(player, out ulong steamId, out string fullName);
+        if (character == Unity.Entities.Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
+
+        var source = new Stunlock.Core.PrefabGUID(unitGuid).IsVBloodUnit()
+            ? Beelzebub.Services.CaptureSource.VBlood
+            : Beelzebub.Services.CaptureSource.Regular;
+        bool added = Core.AbilityRegistry.AddTransformUnlock(steamId, unitGuid, source);
+        Core.Persistence.RequestSave();
+
+        string unitName = new Stunlock.Core.PrefabGUID(unitGuid).GetPrefabName();
+        ctx.Reply(added
+            ? $"Granted transform unlock for {unitName} (source={source}) to {fullName}."
+            : $"{fullName} already has that transform unlock — no change.");
+    }
+
     [Command("transform show", description: "Show current transform settings.", adminOnly: true)]
     public static void TransformShow(ChatCommandContext ctx)
     {

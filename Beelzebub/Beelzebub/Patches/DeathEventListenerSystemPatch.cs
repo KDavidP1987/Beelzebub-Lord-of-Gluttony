@@ -125,7 +125,13 @@ internal static class DeathEventListenerSystemPatch
                     continue;
                 }
 
-                float chance = Settings.DropChance_Ability_Regular.Value;
+                // C2: per-ability override beats the global default.
+                float chance = Core.AbilityRules.TryGetRateOverride(abilityName, out var orR, out _)
+                    ? orR
+                    : Settings.DropChance_Ability_Regular.Value;
+                // C3: scale by the unit's tier multiplier.
+                chance *= died.ResolveTierMultiplier();
+                if (chance <= 0f) continue;
                 if (chance < 1f && System.Random.Shared.NextDouble() > chance) continue;
 
                 if (Core.AbilityRegistry.Add(steamId, unitGuid._Value, ability._Value, CaptureSource.Regular))
@@ -145,7 +151,7 @@ internal static class DeathEventListenerSystemPatch
         }
 
         // Transform-unlock roll happens once per kill, independent of ability captures.
-        float transformChance = Settings.DropChance_Transform_Regular.Value;
+        float transformChance = Settings.DropChance_Transform_Regular.Value * died.ResolveTierMultiplier();
         if (transformChance > 0f && System.Random.Shared.NextDouble() <= transformChance)
         {
             if (Core.AbilityRegistry.AddTransformUnlock(steamId, unitGuid._Value, CaptureSource.Regular))

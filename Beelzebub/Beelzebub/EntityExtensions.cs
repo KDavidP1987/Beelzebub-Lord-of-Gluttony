@@ -129,6 +129,70 @@ internal static class EntityExtensions
         return result;
     }
 
+    /// <summary>
+    /// Find a player's character entity by case-insensitive substring match on their CharacterName.
+    /// Returns Entity.Null if no match or multiple ambiguous matches.
+    /// </summary>
+    public static Entity FindCharacterByName(string nameFragment, out ulong steamId, out string fullName)
+    {
+        steamId = 0;
+        fullName = null;
+        if (string.IsNullOrWhiteSpace(nameFragment) || Core.EntityManager.World is null) return Entity.Null;
+        var query = Core.EntityManager.CreateEntityQuery(Unity.Entities.ComponentType.ReadOnly<ProjectM.Network.User>());
+        var users = query.ToEntityArray(Unity.Collections.Allocator.Temp);
+        Entity match = Entity.Null;
+        int matchCount = 0;
+        try
+        {
+            for (int i = 0; i < users.Length; i++)
+            {
+                if (!users[i].TryGetComponent<ProjectM.Network.User>(out var u)) continue;
+                string name = u.CharacterName.ToString();
+                if (string.IsNullOrEmpty(name)) continue;
+                if (name.Contains(nameFragment, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    Entity character = u.LocalCharacter._Entity;
+                    if (!character.Exists()) continue;
+                    match = character;
+                    steamId = u.PlatformId;
+                    fullName = name;
+                    matchCount++;
+                }
+            }
+        }
+        finally
+        {
+            users.Dispose();
+        }
+        return matchCount == 1 ? match : Entity.Null;
+    }
+
+    /// <summary>
+    /// C3: classify a killed unit's UnitLevel into a tier multiplier from settings.
+    /// Returns 1.0 if the unit has no UnitLevel component (no effect).
+    /// </summary>
+    public static float ResolveTierMultiplier(this Unity.Entities.Entity died)
+    {
+        if (!died.TryGetComponent<ProjectM.UnitLevel>(out var ul)) return 1f;
+        int level = ul.Level._Value;
+        if (level >= Beelzebub.Config.Settings.Capture_TierHighThreshold.Value)
+            return Beelzebub.Config.Settings.Capture_TierMultiplier_High.Value;
+        if (level >= Beelzebub.Config.Settings.Capture_TierMidThreshold.Value)
+            return Beelzebub.Config.Settings.Capture_TierMultiplier_Mid.Value;
+        return Beelzebub.Config.Settings.Capture_TierMultiplier_Low.Value;
+    }
+
+    /// <summary>
+    /// Determine whether the given unit prefab is a V-Blood by checking its prefab entity
+    /// for VBloodUnit or VBloodConsumeSource components.
+    /// </summary>
+    public static bool IsVBloodUnit(this PrefabGUID unitGuid)
+    {
+        if (Core.PrefabCollectionSystem is null) return false;
+        if (!Core.PrefabCollectionSystem._PrefabLookupMap.TryGetValue(unitGuid, out Entity prefabEntity)) return false;
+        return prefabEntity.Has<ProjectM.VBloodUnit>() || prefabEntity.Has<ProjectM.VBloodConsumeSource>();
+    }
+
     public static Entity FindCharacterBySteamId(ulong steamId)
     {
         if (steamId == 0 || Core.EntityManager.World is null) return Entity.Null;

@@ -12,6 +12,29 @@ namespace Beelzebub.Commands;
 [CommandGroup("beelz")]
 internal static class BeelzCommands
 {
+    [Command("help", description: "Show a short walkthrough of how Beelzebub works.")]
+    public static void Help(ChatCommandContext ctx)
+    {
+        ctx.Reply(
+            "BEELZEBUB — defeat units, devour their abilities.\n" +
+            "1. Kill any unit — each eligible ability rolls a chance to be captured.\n" +
+            "   V-Bloods go through their own hook and are tagged separately.\n" +
+            "2. .beelz list — see what you've collected (grouped by source + unit).\n" +
+            "3. .beelz grant <slot 1-6> <index> — assign a captured ability to a slot.\n" +
+            "   Then SWAP A WEAPON to make the spell bar update (V Rising limitation).\n" +
+            "4. Rarer rolls unlock the ability to TRANSFORM into the unit itself.\n" +
+            "   .beelz transforms / .beelz transform <name> / .beelz revert.\n" +
+            "5. Tune your chat noise with .beelz verbosity <silent|summary|verbose>.");
+        ctx.Reply(
+            "MORE\n" +
+            "  .beelz forget <i>         — delete one captured ability\n" +
+            "  .beelz forget-transform <i> — delete one transform unlock\n" +
+            "  .beelz clear              — wipe everything for you\n" +
+            "  .beelz preset save|load|list|delete <name> — slot loadout presets\n" +
+            "  .beelz admin …            — server admin commands (filters, rates, transforms)\n" +
+            "  .beelz api …              — BCH-readable surface for the client UI");
+    }
+
     [Command("list", description: "List the abilities you've captured, grouped by unit, plus current slot assignments.")]
     public static void List(ChatCommandContext ctx)
     {
@@ -167,6 +190,79 @@ internal static class BeelzCommands
         else
         {
             ctx.Reply("Could not forget that transform unlock.");
+        }
+    }
+
+    [Command("preset save", description: "Save your current slot assignments as a named preset. Usage: .beelz preset save <name>")]
+    public static void PresetSave(ChatCommandContext ctx, string name)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        if (string.IsNullOrWhiteSpace(name)) { ctx.Reply("Preset name required."); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        Core.AbilityRegistry.SavePreset(steamId, name);
+        Core.Persistence.RequestSave();
+        int slotCount = Core.AbilityRegistry.GetSlots(steamId).Count;
+        ctx.Reply($"Saved preset '{name}' ({slotCount} slot(s)).");
+    }
+
+    [Command("preset load", description: "Load a named preset into your current slot assignments. Swap a weapon to apply. Usage: .beelz preset load <name>")]
+    public static void PresetLoad(ChatCommandContext ctx, string name)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        if (Core.AbilityRegistry.LoadPreset(steamId, name))
+        {
+            Core.Persistence.RequestSave();
+            ctx.Reply($"Loaded preset '{name}'. Swap a weapon to apply.");
+        }
+        else
+        {
+            ctx.Reply($"No preset named '{name}'. Use .beelz preset list to see saved presets.");
+        }
+    }
+
+    [Command("preset list", description: "List your saved slot-loadout presets.")]
+    public static void PresetList(ChatCommandContext ctx)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        var presets = Core.AbilityRegistry.ListPresets(steamId);
+        if (presets.Count == 0) { ctx.Reply("No saved presets. Use .beelz preset save <name>."); return; }
+        var sb = new StringBuilder();
+        sb.Append("Saved presets (").Append(presets.Count).AppendLine("):");
+        foreach (var (name, slots) in presets)
+        {
+            sb.Append("  ").Append(name).Append(" — ").Append(slots.Count).Append(" slot(s)");
+            if (slots.Count > 0)
+            {
+                sb.Append(" [");
+                bool first = true;
+                foreach (var (slot, abilityGuid) in slots)
+                {
+                    if (!first) sb.Append(", ");
+                    sb.Append(slot).Append('=').Append(new Stunlock.Core.PrefabGUID(abilityGuid).GetPrefabName());
+                    first = false;
+                }
+                sb.Append(']');
+            }
+            sb.AppendLine();
+        }
+        ctx.Reply(sb.ToString());
+    }
+
+    [Command("preset delete", description: "Delete a saved preset. Usage: .beelz preset delete <name>")]
+    public static void PresetDelete(ChatCommandContext ctx, string name)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        if (Core.AbilityRegistry.DeletePreset(steamId, name))
+        {
+            Core.Persistence.RequestSave();
+            ctx.Reply($"Deleted preset '{name}'.");
+        }
+        else
+        {
+            ctx.Reply($"No preset named '{name}'.");
         }
     }
 

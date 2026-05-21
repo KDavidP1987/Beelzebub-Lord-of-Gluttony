@@ -96,6 +96,21 @@ internal sealed class PersistenceService
                         transformCount++;
                     }
                 }
+                if (player.Presets is not null)
+                {
+                    // Deserialize per-name slot maps; keys arrive as strings via JSON, convert back.
+                    var converted = new Dictionary<string, Dictionary<int, int>>();
+                    foreach (var (name, slotMap) in player.Presets)
+                    {
+                        var dict = new Dictionary<int, int>();
+                        foreach (var (slotStr, abilityGuid) in slotMap)
+                        {
+                            if (int.TryParse(slotStr, out int slot)) dict[slot] = abilityGuid;
+                        }
+                        converted[name] = dict;
+                    }
+                    registry.LoadPresetsSnapshot(steamId, converted);
+                }
             }
 
             Core.Log.LogInfo($"Loaded {registry.PlayerCount} player(s), {slotCount} slot(s), {verbositySet} verbosity, {transformCount} transform unlock(s) from {StateFilePath}.");
@@ -115,11 +130,13 @@ internal sealed class PersistenceService
             var allEmitEvents = Core.AbilityRegistry.AllEmitApiEvents();
             var transformSnapshot = Core.AbilityRegistry.TransformSnapshot()
                 .ToDictionary(kv => kv.Key, kv => kv.Value);
+            var presetsSnapshot = Core.AbilityRegistry.PresetsSnapshot();
 
             var playerIds = new HashSet<ulong>(Core.AbilityRegistry.Snapshot().Select(kv => kv.Key));
             foreach (var sid in allVerbosity.Keys) playerIds.Add(sid);
             foreach (var sid in allEmitEvents.Keys) playerIds.Add(sid);
             foreach (var sid in transformSnapshot.Keys) playerIds.Add(sid);
+            foreach (var sid in presetsSnapshot.Keys) playerIds.Add(sid);
 
             var players = new Dictionary<string, PlayerDto>();
             foreach (var steamId in playerIds)
@@ -128,6 +145,16 @@ internal sealed class PersistenceService
                 var slots = Core.AbilityRegistry.GetSlots(steamId);
                 allVerbosity.TryGetValue(steamId, out var verbosity);
                 transformSnapshot.TryGetValue(steamId, out var transforms);
+                Dictionary<string, Dictionary<string, int>> presetsForPlayer = null;
+                if (presetsSnapshot.TryGetValue(steamId, out var presetsRaw) && presetsRaw.Count > 0)
+                {
+                    presetsForPlayer = new Dictionary<string, Dictionary<string, int>>();
+                    foreach (var (name, slotMap) in presetsRaw)
+                    {
+                        presetsForPlayer[name] = slotMap.ToDictionary(s => s.Key.ToString(), s => s.Value);
+                    }
+                }
+
                 players[steamId.ToString()] = new PlayerDto
                 {
                     Captured = captured.Select(c => new CapturedDto
@@ -144,6 +171,7 @@ internal sealed class PersistenceService
                         Unit = t.UnitPrefabGuid,
                         Source = (byte)t.Source,
                     }).ToList(),
+                    Presets = presetsForPlayer,
                 };
             }
 
@@ -180,6 +208,8 @@ internal sealed class PersistenceService
         public byte? Verbosity { get; set; }
         public bool? EmitApiEvents { get; set; }
         public List<TransformDto> Transforms { get; set; }
+        // C1: per-name preset → slot → abilityGuid. Slot keys are stringified ints (JSON requirement).
+        public Dictionary<string, Dictionary<string, int>> Presets { get; set; }
     }
 
     sealed class TransformDto

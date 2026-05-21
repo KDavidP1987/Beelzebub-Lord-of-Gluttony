@@ -11,6 +11,13 @@ internal static class Settings
     public static ConfigEntry<string> Capture_ShareCreditMode { get; private set; }
     public static ConfigEntry<float> Capture_ShareCreditRadius { get; private set; }
 
+    // Per-unit-tier rate multipliers (C3)
+    public static ConfigEntry<int> Capture_TierMidThreshold { get; private set; }
+    public static ConfigEntry<int> Capture_TierHighThreshold { get; private set; }
+    public static ConfigEntry<float> Capture_TierMultiplier_Low { get; private set; }
+    public static ConfigEntry<float> Capture_TierMultiplier_Mid { get; private set; }
+    public static ConfigEntry<float> Capture_TierMultiplier_High { get; private set; }
+
     // Drop chances (Phase 4)
     public static ConfigEntry<float> DropChance_Ability_Regular { get; private set; }
     public static ConfigEntry<float> DropChance_Ability_VBlood { get; private set; }
@@ -46,6 +53,22 @@ internal static class Settings
             "Capture", nameof(Capture_ShareCreditRadius), 30f,
             "Radius in world units (~meters) for Proximity share mode. " +
             "Bloodcraft's analogous setting uses similar default. Ignored when ShareCreditMode = KillerOnly.");
+
+        Capture_TierMidThreshold = config.Bind(
+            "Capture.Tier", nameof(Capture_TierMidThreshold), 30,
+            "UnitLevel at which a killed unit moves from Low to Mid tier (used by Capture_TierMultiplier_*).");
+        Capture_TierHighThreshold = config.Bind(
+            "Capture.Tier", nameof(Capture_TierHighThreshold), 60,
+            "UnitLevel at which a killed unit moves from Mid to High tier.");
+        Capture_TierMultiplier_Low = config.Bind(
+            "Capture.Tier", nameof(Capture_TierMultiplier_Low), 1.0f,
+            "Drop-chance multiplier applied to units in the Low tier (UnitLevel < MidThreshold). 1.0 = no effect.");
+        Capture_TierMultiplier_Mid = config.Bind(
+            "Capture.Tier", nameof(Capture_TierMultiplier_Mid), 1.0f,
+            "Drop-chance multiplier applied to units in the Mid tier.");
+        Capture_TierMultiplier_High = config.Bind(
+            "Capture.Tier", nameof(Capture_TierMultiplier_High), 1.0f,
+            "Drop-chance multiplier applied to units in the High tier (UnitLevel >= HighThreshold).");
 
         DropChance_Ability_Regular = config.Bind(
             "Capture.DropChance", nameof(DropChance_Ability_Regular), 0.05f,

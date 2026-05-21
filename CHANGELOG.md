@@ -8,6 +8,37 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ---
 
+## [0.3.0] - Unreleased
+
+### Fourth-wave feature extensions
+
+- **C5** `.beelz help` — paginated chat walkthrough of the capture →
+  list → grant → swap-weapon → transform loop.
+- **C1** Slot loadout presets (`.beelz preset save|load|list|delete`).
+  Per-player named snapshots of slot assignments; persisted in
+  `state.json` alongside captures/slots/transforms. Loading a preset
+  replaces current slot assignments — swap a weapon to apply.
+- **C2** Per-ability rate overrides in `ability_rules.json`. New
+  `DropRateOverrides` list, each entry `{ Pattern, RateRegular,
+  RateVBlood }`. First matching pattern wins; falls back to the global
+  setting. `AbilityRules.TryGetRateOverride` is the lookup helper.
+- **C3** Per-unit-tier multipliers via new `Capture.Tier` config
+  section. `Capture_TierMidThreshold` / `Capture_TierHighThreshold` on
+  `UnitLevel`, with `Capture_TierMultiplier_Low/Mid/High` (all default
+  1.0 — no effect until tuned). Multiplier applied to both ability
+  and transform drop chances; `EntityExtensions.ResolveTierMultiplier`
+  is the helper.
+- **C4** Admin grant commands: `.beelz admin give <player> <unitGuid>
+  <abilityGuid>` and `.beelz admin give-transform <player> <unitGuid>`.
+  Source classified automatically via `PrefabGUID.IsVBloodUnit()` which
+  checks the prefab entity for `VBloodUnit` / `VBloodConsumeSource`.
+  Player resolved by `EntityExtensions.FindCharacterByName` (case-
+  insensitive substring; ambiguous matches return Null).
+
+State.json schema extended: per-player `Presets` map of
+`{ name: { slot: abilityGuid } }`. Forward-compatible load — older
+files default to no presets.
+
 ## [0.2.0] - Unreleased
 
 Initial POC plus the post-roadmap polish waves.

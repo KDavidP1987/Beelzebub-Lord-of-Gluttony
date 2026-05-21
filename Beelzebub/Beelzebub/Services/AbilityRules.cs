@@ -105,6 +105,7 @@ internal sealed class AbilityRules
         AllowPatterns = dto.AllowPatterns ?? new List<string>(),
         DenyGuids = dto.DenyGuids ?? new List<int>(),
         AllowGuids = dto.AllowGuids ?? new List<int>(),
+        DropRateOverrides = dto.DropRateOverrides ?? new List<RateOverride>(),
     };
 
     static RulesDto DefaultRules() => new()
@@ -128,6 +129,29 @@ internal sealed class AbilityRules
         AllowGuids = new List<int>(),
     };
 
+    /// <summary>
+    /// C2: find a per-ability rate override matching this ability name. Returns
+    /// (true, regular, vblood) for the first matching pattern, else (false, 0, 0).
+    /// Caller decides which rate to use based on the kill's source.
+    /// </summary>
+    public bool TryGetRateOverride(string abilityName, out float rateRegular, out float rateVBlood)
+    {
+        rateRegular = 0f;
+        rateVBlood = 0f;
+        if (string.IsNullOrEmpty(abilityName) || Current.DropRateOverrides == null) return false;
+        foreach (var entry in Current.DropRateOverrides)
+        {
+            if (string.IsNullOrEmpty(entry.Pattern)) continue;
+            if (abilityName.Contains(entry.Pattern, StringComparison.OrdinalIgnoreCase))
+            {
+                rateRegular = entry.RateRegular;
+                rateVBlood = entry.RateVBlood;
+                return true;
+            }
+        }
+        return false;
+    }
+
     public sealed class RulesDto
     {
         public int Version { get; set; } = 1;
@@ -135,5 +159,13 @@ internal sealed class AbilityRules
         public List<string> AllowPatterns { get; set; } = new();
         public List<int> DenyGuids { get; set; } = new();
         public List<int> AllowGuids { get; set; } = new();
+        public List<RateOverride> DropRateOverrides { get; set; } = new();
+    }
+
+    public sealed class RateOverride
+    {
+        public string Pattern { get; set; } = "";
+        public float RateRegular { get; set; } = 0f;
+        public float RateVBlood { get; set; } = 0f;
     }
 }

@@ -82,7 +82,12 @@ internal static class VBloodSystemPatch
                 continue;
             }
 
-            float chance = Settings.DropChance_Ability_VBlood.Value;
+            // C2 + C3: per-ability override and unit-tier multiplier.
+            float chance = Core.AbilityRules.TryGetRateOverride(abilityName, out _, out var orV)
+                ? orV
+                : Settings.DropChance_Ability_VBlood.Value;
+            chance *= vBloodPrefabEntity.ResolveTierMultiplier();
+            if (chance <= 0f) continue;
             if (chance < 1f && System.Random.Shared.NextDouble() > chance) continue;
 
             if (Core.AbilityRegistry.Add(steamId, vBloodGuid._Value, ability._Value, CaptureSource.VBlood))
@@ -98,7 +103,7 @@ internal static class VBloodSystemPatch
         }
 
         // V-Blood transform unlock roll (typically rarer than ability captures).
-        float transformChance = Settings.DropChance_Transform_VBlood.Value;
+        float transformChance = Settings.DropChance_Transform_VBlood.Value * vBloodPrefabEntity.ResolveTierMultiplier();
         bool gotTransform = false;
         if (transformChance > 0f && System.Random.Shared.NextDouble() <= transformChance)
         {
