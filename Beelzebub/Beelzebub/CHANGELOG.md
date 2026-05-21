@@ -3,6 +3,17 @@
 What's new for players. For full implementation history, see the
 [developer changelog on GitHub](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/blob/main/CHANGELOG.md).
 
+## [0.3.2] - Unreleased
+
+### Fixes from second test
+- **No more spurious captures from resource nodes or summons**: the death-event
+  hook now requires the killed prefab name to start with `CHAR_` and not
+  contain `_Summon` or `_Servant`. Previously, breaking a sulfur deposit or
+  killing a temporary summoned skeleton could roll a transform unlock.
+- **Transform reply is clearer**: when you `.beelz transform <unit>`, the
+  server now notes that the visual model swap is still in development.
+  Your spell bar swaps; the model stays for now.
+
 ## [0.3.1] - Unreleased
 
 ### Fixes from first real test

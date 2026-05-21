@@ -88,6 +88,7 @@ internal static class TransformCommands
         ctx.Reply(message);
         if (ok)
         {
+            ctx.Reply("(Visual model swap is still in development — only the spell bar changes for now.)");
             Core.Chat.SendEvent(ctx.Event.SenderCharacterEntity,
                 $"[BEELZ:event] type=transform-activated u={unitGuid} un={new PrefabGUID(unitGuid).GetPrefabName()}");
         }

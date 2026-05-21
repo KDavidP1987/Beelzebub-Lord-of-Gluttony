@@ -93,6 +93,13 @@ internal static class DeathEventListenerSystemPatch
         if (unitGuid._Value == 0) return;
         string unitName = unitGuid.GetPrefabName();
 
+        // F2: only real character prefabs are eligible. Resources (TM_*), Items, etc. would
+        // otherwise pass the UnitLevel check and roll for transform unlocks. Player-owned
+        // summons and "Servant" units are also excluded — those aren't bosses you defeat.
+        if (!unitName.StartsWith("CHAR_", StringComparison.OrdinalIgnoreCase)) return;
+        if (unitName.Contains("_Summon", StringComparison.OrdinalIgnoreCase)) return;
+        if (unitName.Contains("_Servant", StringComparison.OrdinalIgnoreCase)) return;
+
         // B2: who counts as participant?
         var participants = ResolveParticipants(killer, died);
         foreach (var participant in participants)

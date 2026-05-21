@@ -8,6 +8,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ---
 
+## [0.3.2] - Unreleased
+
+### F2 fixes from second test
+- **Eligibility gate** in `DeathEventListenerSystemPatch.Process`: prefab
+  name must start with `CHAR_` and not contain `_Summon` or `_Servant`.
+  Previously, killing a `TM_Sulfur_02_Stage1_Resource` (tile model
+  resource node) or `CHAR_*_Summon` (temporary summoned ally) could fire
+  the transform-unlock roll because they still had a `UnitLevel`
+  component. The new gate keeps captures + transform unlocks tied to
+  real combat targets.
+- `.beelz transform` reply explicitly notes that visual model swap is
+  still in development. Sets correct expectations — abilities swap
+  but the player model stays the same. Tracked as A4.
+
 ## [0.3.1] - Unreleased
 
 ### F1 fixes from first real test
