@@ -1,11 +1,12 @@
 using System;
-using Beelzebub.Config;
 
 namespace Beelzebub.Services;
 
 internal sealed class AbilityFilter
 {
-    public bool ShouldCapture(string abilityName, out string reason)
+    public bool ShouldCapture(string abilityName, out string reason) => ShouldCapture(abilityName, 0, out reason);
+
+    public bool ShouldCapture(string abilityName, int abilityGuid, out string reason)
     {
         if (string.IsNullOrEmpty(abilityName))
         {
@@ -13,40 +14,37 @@ internal sealed class AbilityFilter
             return false;
         }
 
-        var allow = Settings.SplitPatterns(Settings.ExtraAllowPatterns.Value);
-        if (allow.Length > 0)
+        var rules = Core.AbilityRules.Current;
+
+        if (rules.AllowGuids.Count > 0)
+        {
+            if (!rules.AllowGuids.Contains(abilityGuid))
+            {
+                reason = "not in allow-guid list";
+                return false;
+            }
+        }
+        else if (rules.AllowPatterns.Count > 0)
         {
             bool anyAllow = false;
-            foreach (var pat in allow)
+            foreach (var pat in rules.AllowPatterns)
             {
                 if (abilityName.Contains(pat, StringComparison.OrdinalIgnoreCase)) { anyAllow = true; break; }
             }
             if (!anyAllow)
             {
-                reason = "not in allow-list";
+                reason = "not in allow-pattern list";
                 return false;
             }
         }
 
-        if (Settings.ExcludeIdleAbilities.Value && abilityName.Contains("_Idle_", StringComparison.OrdinalIgnoreCase))
+        if (rules.DenyGuids.Contains(abilityGuid))
         {
-            reason = "idle filler";
+            reason = "matches deny-guid";
             return false;
         }
 
-        if (Settings.ExcludeFleeAbilities.Value && abilityName.Contains("_Flee_", StringComparison.OrdinalIgnoreCase))
-        {
-            reason = "flee behavior";
-            return false;
-        }
-
-        if (Settings.ExcludeHardVariants.Value && abilityName.Contains("_Hard_", StringComparison.OrdinalIgnoreCase))
-        {
-            reason = "Brutal-difficulty variant";
-            return false;
-        }
-
-        foreach (var pat in Settings.SplitPatterns(Settings.ExtraDenyPatterns.Value))
+        foreach (var pat in rules.DenyPatterns)
         {
             if (abilityName.Contains(pat, StringComparison.OrdinalIgnoreCase))
             {

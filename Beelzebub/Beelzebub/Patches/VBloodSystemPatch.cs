@@ -74,7 +74,7 @@ internal static class VBloodSystemPatch
             if (ability._Value == 0) continue;
 
             string abilityName = ability.GetPrefabName();
-            if (!Core.AbilityFilter.ShouldCapture(abilityName, out string reason))
+            if (!Core.AbilityFilter.ShouldCapture(abilityName, ability._Value, out string reason))
             {
                 skipped++;
                 if (Settings.VerboseLogging.Value)

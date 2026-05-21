@@ -4,12 +4,19 @@ namespace Beelzebub.Config;
 
 internal static class Settings
 {
+    // Capture loop
     public static ConfigEntry<bool> CaptureOnKill { get; private set; }
-    public static ConfigEntry<bool> ExcludeIdleAbilities { get; private set; }
-    public static ConfigEntry<bool> ExcludeFleeAbilities { get; private set; }
-    public static ConfigEntry<bool> ExcludeHardVariants { get; private set; }
-    public static ConfigEntry<string> ExtraDenyPatterns { get; private set; }
-    public static ConfigEntry<string> ExtraAllowPatterns { get; private set; }
+
+    // Drop chances (Phase 4)
+    public static ConfigEntry<float> DropChance_Ability_Regular { get; private set; }
+    public static ConfigEntry<float> DropChance_Ability_VBlood { get; private set; }
+    public static ConfigEntry<float> DropChance_Transform_Regular { get; private set; }
+    public static ConfigEntry<float> DropChance_Transform_VBlood { get; private set; }
+
+    // Notifications (Phase 3)
+    public static ConfigEntry<string> DefaultVerbosity { get; private set; }
+
+    // Diagnostics
     public static ConfigEntry<bool> VerboseLogging { get; private set; }
 
     public static void Initialize(ConfigFile config)
@@ -18,35 +25,28 @@ internal static class Settings
             "Capture", nameof(CaptureOnKill), true,
             "Master switch. When false, no abilities are captured from kills.");
 
-        ExcludeIdleAbilities = config.Bind(
-            "Capture.Filter", nameof(ExcludeIdleAbilities), true,
-            "Skip ability prefabs whose name contains '_Idle_' (pushups, situps, etc.).");
+        DropChance_Ability_Regular = config.Bind(
+            "Capture.DropChance", nameof(DropChance_Ability_Regular), 0.05f,
+            "Per-ability chance (0.0-1.0) to capture each eligible ability from a regular mob kill. 1.0 = always (legacy behavior).");
 
-        ExcludeFleeAbilities = config.Bind(
-            "Capture.Filter", nameof(ExcludeFleeAbilities), true,
-            "Skip ability prefabs whose name contains '_Flee_'.");
+        DropChance_Ability_VBlood = config.Bind(
+            "Capture.DropChance", nameof(DropChance_Ability_VBlood), 0.05f,
+            "Per-ability chance (0.0-1.0) to capture each eligible ability from a V-Blood kill.");
 
-        ExcludeHardVariants = config.Bind(
-            "Capture.Filter", nameof(ExcludeHardVariants), true,
-            "Skip V-Blood Brutal-difficulty ability duplicates whose name contains '_Hard_'.");
+        DropChance_Transform_Regular = config.Bind(
+            "Capture.DropChance", nameof(DropChance_Transform_Regular), 0.01f,
+            "Per-kill chance (0.0-1.0) to unlock the transform-into-unit form from a regular mob (Phase 5).");
 
-        ExtraDenyPatterns = config.Bind(
-            "Capture.Filter", nameof(ExtraDenyPatterns), "",
-            "Comma-separated case-insensitive substrings. Any ability whose name contains one is excluded.");
+        DropChance_Transform_VBlood = config.Bind(
+            "Capture.DropChance", nameof(DropChance_Transform_VBlood), 0.01f,
+            "Per-kill chance (0.0-1.0) to unlock the transform-into-unit form from a V-Blood (Phase 5).");
 
-        ExtraAllowPatterns = config.Bind(
-            "Capture.Filter", nameof(ExtraAllowPatterns), "",
-            "If set, ONLY abilities whose name contains one of these comma-separated substrings are captured. Empty = allow all (subject to deny rules).");
+        DefaultVerbosity = config.Bind(
+            "Notifications", nameof(DefaultVerbosity), "Summary",
+            "Default chat verbosity for new players: Silent | Summary | Verbose. Each player can override with .beelz verbosity <level>.");
 
         VerboseLogging = config.Bind(
             "Diagnostics", nameof(VerboseLogging), false,
-            "Log every captured ability and filter decision.");
-    }
-
-    public static string[] SplitPatterns(string raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) return System.Array.Empty<string>();
-        var parts = raw.Split(',', System.StringSplitOptions.RemoveEmptyEntries | System.StringSplitOptions.TrimEntries);
-        return parts;
+            "Log every captured ability and filter decision to BepInEx\\LogOutput.log. Independent of in-chat verbosity.");
     }
 }
