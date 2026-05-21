@@ -25,6 +25,10 @@
 		<PackageReference Include="VRising.VampireCommandFramework" Version="0.10.*" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<EmbeddedResource Include="Resources\prefab_names.tsv" />
+	</ItemGroup>
+
 	<PropertyGroup>
 		<VRisingServerPath Condition="'$(VRisingServerPath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\VRisingDedicatedServer</VRisingServerPath>
 		<VRisingPluginsPath>$(VRisingServerPath)\BepInEx\plugins</VRisingPluginsPath>

@@ -89,22 +89,62 @@ internal static class Core
     static void BuildPrefabNameMap()
     {
         PrefabNames.Clear();
+        int fromEmbedded = LoadEmbeddedPrefabNames();
+        int fromRuntime = 0, abEmbedded = 0, abRuntime = 0;
         try
         {
+            foreach (var kvp in PrefabNames)
+            {
+                if (kvp.Value.StartsWith("AB_")) abEmbedded++;
+            }
             var map = PrefabCollectionSystem.SpawnableNameToPrefabGuidDictionary;
-            int abCount = 0;
             foreach (var kvp in map)
             {
                 string name = kvp.Key.ToString();
                 int guid = kvp.Value._Value;
-                PrefabNames[guid] = name;
-                if (name.StartsWith("AB_")) abCount++;
+                if (PrefabNames.TryAdd(guid, name))
+                {
+                    fromRuntime++;
+                    if (name.StartsWith("AB_")) abRuntime++;
+                }
             }
-            Log.LogInfo($"Beelzebub: name map built. Total={PrefabNames.Count}, AB_ entries={abCount}.");
+            Log.LogInfo($"Beelzebub: name map built. Embedded={fromEmbedded} (AB_={abEmbedded}), added from runtime={fromRuntime} (AB_={abRuntime}). Total={PrefabNames.Count}.");
         }
         catch (System.Exception ex)
         {
-            Log.LogError($"Beelzebub: failed building name map: {ex}");
+            Log.LogError($"Beelzebub: failed building name map (runtime merge): {ex}");
+        }
+    }
+
+    static int LoadEmbeddedPrefabNames()
+    {
+        const string resource = "Beelzebub.Resources.prefab_names.tsv";
+        try
+        {
+            var asm = typeof(Core).Assembly;
+            using var stream = asm.GetManifestResourceStream(resource);
+            if (stream is null)
+            {
+                Log.LogWarning($"Beelzebub: embedded resource '{resource}' not found.");
+                return 0;
+            }
+            using var reader = new System.IO.StreamReader(stream);
+            int count = 0;
+            string line;
+            while ((line = reader.ReadLine()) != null)
+            {
+                int tab = line.IndexOf('\t');
+                if (tab <= 0) continue;
+                if (!int.TryParse(line.AsSpan(0, tab), out int guid)) continue;
+                PrefabNames[guid] = line.Substring(tab + 1);
+                count++;
+            }
+            return count;
+        }
+        catch (System.Exception ex)
+        {
+            Log.LogError($"Beelzebub: failed loading embedded prefab names: {ex}");
+            return 0;
         }
     }
 }
