@@ -10,61 +10,95 @@ namespace Beelzebub.Commands;
 [CommandGroup("beelz")]
 internal static class BeelzCommands
 {
-    [Command("list", description: "List the abilities you've captured from kills.")]
+    [Command("list", description: "List the abilities you've captured, grouped by unit, plus current slot assignments.")]
     public static void List(ChatCommandContext ctx)
     {
-        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized — try again after the server finishes loading."); return; }
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
 
         ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
         if (steamId == 0) { ctx.Reply("Could not resolve your Steam ID."); return; }
 
         var captured = Core.AbilityRegistry.ListFor(steamId);
-        if (captured.Count == 0) { ctx.Reply("You haven't captured any abilities yet. Go kill something."); return; }
+        var slots = Core.AbilityRegistry.GetSlots(steamId);
+
+        if (captured.Count == 0 && slots.Count == 0)
+        {
+            ctx.Reply("You haven't captured any abilities yet. Go kill something.");
+            return;
+        }
 
         var sb = new StringBuilder();
-        sb.AppendLine($"Captured abilities ({captured.Count}):");
+        if (slots.Count > 0)
+        {
+            sb.Append("Current slots: ");
+            bool first = true;
+            foreach (var (slot, abilityGuid) in slots)
+            {
+                if (!first) sb.Append(", ");
+                sb.Append('[').Append(slot).Append(']').Append(' ').Append(new PrefabGUID(abilityGuid).GetPrefabName());
+                first = false;
+            }
+            sb.AppendLine();
+        }
+
+        sb.Append("Captured ").Append(captured.Count).AppendLine(" ability(ies):");
+        var byUnit = new Dictionary<int, List<(int index, int abilityGuid)>>();
         for (int i = 0; i < captured.Count; i++)
         {
             var c = captured[i];
-            sb.Append(i).Append(": ");
-            sb.Append(new PrefabGUID(c.AbilityPrefabGuid).GetPrefabName());
-            sb.Append("  (from ").Append(new PrefabGUID(c.UnitPrefabGuid).GetPrefabName()).Append(')');
-            sb.AppendLine();
+            if (!byUnit.TryGetValue(c.UnitPrefabGuid, out var list))
+            {
+                list = new List<(int, int)>();
+                byUnit[c.UnitPrefabGuid] = list;
+            }
+            list.Add((i, c.AbilityPrefabGuid));
         }
+
+        foreach (var (unitGuid, entries) in byUnit)
+        {
+            sb.Append(new PrefabGUID(unitGuid).GetPrefabName()).AppendLine(":");
+            foreach (var (idx, abilityGuid) in entries)
+            {
+                sb.Append("  ").Append(idx).Append(": ").AppendLine(new PrefabGUID(abilityGuid).GetPrefabName());
+            }
+        }
+
         ctx.Reply(sb.ToString());
     }
 
-    [Command("grant", description: "Grant a captured ability to one of your spell slots. Usage: .beelz grant <slot 1-6> <index from .beelz list>")]
+    [Command("grant", description: "Assign a captured ability to a spell slot. Usage: .beelz grant <slot 1-6> <index>. Swap a weapon after to apply.")]
     public static void Grant(ChatCommandContext ctx, int slot, int index)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
-        if (slot < 1 || slot > 6) { ctx.Reply("Slot must be 1-6 (1=primary, 3=Q/shift, 5=spell1, 6=spell2)."); return; }
+        if (slot < 1 || slot > 6) { ctx.Reply("Slot must be 1-6 (1=primary attack, 3=Q/shift, 5=spell1, 6=spell2)."); return; }
 
-        Entity character = ctx.Event.SenderCharacterEntity;
-        ulong steamId = character.GetSteamId();
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
         var captured = Core.AbilityRegistry.ListFor(steamId);
-        if (index < 0 || index >= captured.Count) { ctx.Reply($"Index {index} out of range (0-{captured.Count - 1})."); return; }
+        if (index < 0 || index >= captured.Count)
+        {
+            ctx.Reply($"Index {index} out of range (valid: 0-{captured.Count - 1}). Use .beelz list to see indices.");
+            return;
+        }
 
         PrefabGUID ability = new(captured[index].AbilityPrefabGuid);
+        Core.AbilityRegistry.SetSlot(steamId, slot, ability._Value);
+        Core.Persistence.SaveSync();
 
-        if (!Core.EntityManager.HasBuffer<ReplaceAbilityOnSlotBuff>(character))
-        {
-            Core.EntityManager.AddBuffer<ReplaceAbilityOnSlotBuff>(character);
-        }
-        var buffer = Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(character);
-        buffer.Add(new ReplaceAbilityOnSlotBuff
-        {
-            Slot = slot,
-            NewGroupId = ability,
-            CopyCooldown = true,
-            Priority = 0,
-        });
-
-        ctx.Reply($"Wrote {ability.GetPrefabName()} to slot {slot}. If it doesn't appear in your spell bar, try swapping weapons to re-trigger the game's slot system.");
-        Core.Log.LogInfo($"[Beelz] {steamId} grant slot={slot} ability={ability._Value} ({ability.GetPrefabName()})");
+        ctx.Reply($"Slot {slot} assigned to {ability.GetPrefabName()}. Swap any weapon to apply the change. (Not all abilities are usable in every slot — e.g. _MeleeAttack_ won't appear in spell slots 5/6.)");
+        Core.Log.LogInfo($"[Beelz] {steamId} assign slot={slot} ability={ability._Value} ({ability.GetPrefabName()})");
     }
 
-    [Command("clear", description: "Forget all your captured abilities. Cannot be undone.")]
+    [Command("unslot", description: "Remove your assignment from a spell slot. Usage: .beelz unslot <slot>. Swap a weapon after to apply.")]
+    public static void Unslot(ChatCommandContext ctx, int slot)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        Core.AbilityRegistry.ClearSlot(steamId, slot);
+        Core.Persistence.SaveSync();
+        ctx.Reply($"Slot {slot} cleared. Swap a weapon to apply.");
+    }
+
+    [Command("clear", description: "Forget all captured abilities and slot assignments. Cannot be undone.")]
     public static void Clear(ChatCommandContext ctx)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
@@ -72,7 +106,7 @@ internal static class BeelzCommands
         if (Core.AbilityRegistry.Clear(steamId))
         {
             Core.Persistence.SaveSync();
-            ctx.Reply("Captured abilities cleared.");
+            ctx.Reply("Captured abilities and slot assignments cleared.");
         }
         else
         {

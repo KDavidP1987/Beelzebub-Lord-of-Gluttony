@@ -7,8 +7,28 @@ namespace Beelzebub.Services;
 internal sealed class AbilityRegistry
 {
     readonly ConcurrentDictionary<ulong, ConcurrentDictionary<int, ConcurrentDictionary<int, byte>>> _data = new();
+    readonly ConcurrentDictionary<ulong, ConcurrentDictionary<int, int>> _slotAssignments = new();
 
     public int PlayerCount => _data.Count;
+
+    public void SetSlot(ulong steamId, int slot, int abilityGuid)
+    {
+        var slots = _slotAssignments.GetOrAdd(steamId, _ => new ConcurrentDictionary<int, int>());
+        slots[slot] = abilityGuid;
+    }
+
+    public void ClearSlot(ulong steamId, int slot)
+    {
+        if (_slotAssignments.TryGetValue(steamId, out var slots))
+        {
+            slots.TryRemove(slot, out _);
+        }
+    }
+
+    public IReadOnlyDictionary<int, int> GetSlots(ulong steamId) =>
+        _slotAssignments.TryGetValue(steamId, out var slots)
+            ? slots
+            : new Dictionary<int, int>();
 
     public bool Add(ulong steamId, int unitPrefabGuid, int abilityPrefabGuid)
     {
@@ -33,6 +53,7 @@ internal sealed class AbilityRegistry
 
     public bool Clear(ulong steamId)
     {
+        _slotAssignments.TryRemove(steamId, out _);
         return _data.TryRemove(steamId, out _);
     }
 

@@ -40,7 +40,23 @@ internal sealed class PersistenceService
                     kv.Value.Captured.Select(c => new CapturedAbility(c.Unit, c.Ability)).ToList()));
 
             registry.LoadFromSnapshot(snapshot);
-            Core.Log.LogInfo($"Loaded {registry.PlayerCount} player(s) from {StateFilePath}.");
+
+            int slotCount = 0;
+            foreach (var (key, player) in dto.Players)
+            {
+                if (player.Slots is null) continue;
+                ulong steamId = ulong.Parse(key);
+                foreach (var (slotStr, abilityGuid) in player.Slots)
+                {
+                    if (int.TryParse(slotStr, out int slot))
+                    {
+                        registry.SetSlot(steamId, slot, abilityGuid);
+                        slotCount++;
+                    }
+                }
+            }
+
+            Core.Log.LogInfo($"Loaded {registry.PlayerCount} player(s) and {slotCount} slot assignment(s) from {StateFilePath}.");
         }
         catch (Exception e)
         {
@@ -60,7 +76,8 @@ internal sealed class PersistenceService
                     kv => kv.Key.ToString(),
                     kv => new PlayerDto
                     {
-                        Captured = kv.Value.Select(c => new CapturedDto { Unit = c.UnitPrefabGuid, Ability = c.AbilityPrefabGuid }).ToList()
+                        Captured = kv.Value.Select(c => new CapturedDto { Unit = c.UnitPrefabGuid, Ability = c.AbilityPrefabGuid }).ToList(),
+                        Slots = Core.AbilityRegistry.GetSlots(kv.Key).ToDictionary(s => s.Key.ToString(), s => s.Value)
                     })
             };
 
@@ -85,6 +102,7 @@ internal sealed class PersistenceService
     sealed class PlayerDto
     {
         public List<CapturedDto> Captured { get; set; } = new();
+        public Dictionary<string, int> Slots { get; set; }
     }
 
     sealed class CapturedDto
