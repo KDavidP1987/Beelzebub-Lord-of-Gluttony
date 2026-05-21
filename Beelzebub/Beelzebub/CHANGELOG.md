@@ -33,6 +33,21 @@ POC + early polish.
 - Configurable via BepInEx `Capture.DropChance` section: `DropChance_Ability_Regular`, `DropChance_Ability_VBlood`. Setting to 1.0 restores legacy 100% capture.
 - Per-kill transform-unlock roll (default 1%) staged via `DropChance_Transform_Regular/VBlood`.
 
+### Phase 6 — BCH-ready API surface
+- New `.beelz api` command group for client-UI consumption. Every reply line starts with a `[BEELZ:<tag>]` marker so BCH can filter and parse:
+  - `.beelz api version` — `[BEELZ:version] api=1 plugin=... ready=0|1`
+  - `.beelz api list` — streams `[BEELZ:list]` records, terminated with `[BEELZ:end] cmd=list count=N`
+  - `.beelz api slots` — streams `[BEELZ:slot]` records + end marker
+  - `.beelz api transforms` — streams `[BEELZ:tx]` records + end marker
+  - `.beelz api active` — single `[BEELZ:active]` line (or `[BEELZ:active] none=1`)
+  - `.beelz api info <index>` — single `[BEELZ:info]` line with the same fields as `list` plus `desc=` (description hookup deferred)
+  - `.beelz api verbosity` / `rules` / `transform-config` — read-only state dumps for the BCH settings panel
+  - Errors use `[BEELZ:err] cmd=<name> code=<code> msg=<text>`
+- New mutating commands for BCH-side delete-from-UI workflows:
+  - `.beelz forget <index>` — remove one captured ability by index. Clears any slot assignment pointing at it.
+  - `.beelz forget-transform <index>` — remove one transform unlock; auto-reverts if currently active.
+- Wire format is bare `key=value` pairs space-separated; prefab names are guaranteed `[A-Za-z0-9_]` so no quoting needed. Lines fit comfortably under the 512-byte chat message limit.
+
 ### Phase 5 — transformation system
 - Independent rule sets for Regular vs V-Blood transforms. Each source type has:
   - `Mode`: `Toggle` (active until manual revert), `Timed` (auto-revert after duration), or `Disabled`.

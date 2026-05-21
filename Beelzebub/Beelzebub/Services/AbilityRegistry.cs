@@ -108,6 +108,39 @@ internal sealed class AbilityRegistry
         return _data.TryRemove(steamId, out _);
     }
 
+    /// <summary>
+    /// Remove a single captured ability (per unit source). If the resulting per-unit
+    /// set is empty, the unit entry is also removed. Slot assignments referencing the
+    /// forgotten ability are cleared so the player isn't stuck with a dangling slot.
+    /// </summary>
+    public bool Forget(ulong steamId, int unitPrefabGuid, int abilityPrefabGuid)
+    {
+        if (!_data.TryGetValue(steamId, out var byUnit)) return false;
+        if (!byUnit.TryGetValue(unitPrefabGuid, out var abilities)) return false;
+        if (!abilities.TryRemove(abilityPrefabGuid, out _)) return false;
+        if (abilities.IsEmpty) byUnit.TryRemove(unitPrefabGuid, out _);
+        // Clear any slot assignments pointing at the forgotten ability.
+        if (_slotAssignments.TryGetValue(steamId, out var slots))
+        {
+            foreach (var (slot, abilityGuid) in slots)
+            {
+                if (abilityGuid == abilityPrefabGuid) slots.TryRemove(slot, out _);
+            }
+        }
+        return true;
+    }
+
+    public bool ForgetTransform(ulong steamId, int unitPrefabGuid)
+    {
+        if (!_transformUnlocks.TryGetValue(steamId, out var byUnit)) return false;
+        // If they're currently transformed into this unit, revert first.
+        if (_activeTransforms.TryGetValue(steamId, out var active) && active.UnitPrefabGuid == unitPrefabGuid)
+        {
+            _activeTransforms.TryRemove(steamId, out _);
+        }
+        return byUnit.TryRemove(unitPrefabGuid, out _);
+    }
+
     public Dictionary<ulong, Verbosity> AllVerbosity() => new(_verbosity);
 
     // --- Transform unlocks (persisted) ---

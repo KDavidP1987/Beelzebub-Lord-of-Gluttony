@@ -118,6 +118,54 @@ internal static class BeelzCommands
         ctx.Reply($"Chat verbosity set to {v}.");
     }
 
+    [Command("forget", description: "Delete one captured ability by index. Usage: .beelz forget <index>")]
+    public static void Forget(ChatCommandContext ctx, int index)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        var captured = Core.AbilityRegistry.ListFor(steamId);
+        if (index < 0 || index >= captured.Count)
+        {
+            ctx.Reply($"Index {index} out of range (valid: 0-{captured.Count - 1}). Use .beelz list to see indices.");
+            return;
+        }
+        var entry = captured[index];
+        bool ok = Core.AbilityRegistry.Forget(steamId, entry.UnitPrefabGuid, entry.AbilityPrefabGuid);
+        if (ok)
+        {
+            Core.Persistence.SaveSync();
+            ctx.Reply($"Forgot {new Stunlock.Core.PrefabGUID(entry.AbilityPrefabGuid).GetPrefabName()} (from {new Stunlock.Core.PrefabGUID(entry.UnitPrefabGuid).GetPrefabName()}).");
+        }
+        else
+        {
+            ctx.Reply("Could not forget that entry (already removed?).");
+        }
+    }
+
+    [Command("forget-transform", description: "Delete one transform unlock by index. Usage: .beelz forget-transform <index>")]
+    public static void ForgetTransform(ChatCommandContext ctx, int index)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        var unlocks = Core.AbilityRegistry.ListTransforms(steamId);
+        if (index < 0 || index >= unlocks.Count)
+        {
+            ctx.Reply($"Index {index} out of range (valid: 0-{unlocks.Count - 1}). Use .beelz transforms to see indices.");
+            return;
+        }
+        var entry = unlocks[index];
+        bool ok = Core.AbilityRegistry.ForgetTransform(steamId, entry.UnitPrefabGuid);
+        if (ok)
+        {
+            Core.Persistence.SaveSync();
+            ctx.Reply($"Forgot transform unlock: {new Stunlock.Core.PrefabGUID(entry.UnitPrefabGuid).GetPrefabName()}.");
+        }
+        else
+        {
+            ctx.Reply("Could not forget that transform unlock.");
+        }
+    }
+
     [Command("clear", description: "Forget all captured abilities and slot assignments. Cannot be undone.")]
     public static void Clear(ChatCommandContext ctx)
     {
