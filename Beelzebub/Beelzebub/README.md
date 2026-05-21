@@ -1,8 +1,13 @@
 # Beelzebub, Lord of Gluttony
 
-A server-side V Rising mod. **Defeat a unit, devour its abilities.** Earned abilities can be assigned to your spell slots; rare unlocks let you transform into the units themselves.
+> **Devour the bestiary.** Every kill is a chance to steal a unit's abilities — or unlock the form of the unit itself.
 
-> **Status:** early access (v0.1.0). Functional end-to-end; rough edges around the "swap a weapon to apply" caveat documented below.
+A server-side V Rising mod. Defeat any unit (regular mob or V-Blood boss) and roll a chance to capture its abilities. Assign captures to your spell slots; rare unlocks let you *become* the unit and wield its full ability set.
+
+**Source / issues / roadmap:** [github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony)
+**License:** [MIT](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/blob/main/LICENSE)
+
+> **Status:** early access (v0.1.0). Functional end-to-end; rough edges around the "swap a weapon to apply" caveat documented below. Drop into a private server and iterate — share weird kills back to the issue tracker.
 
 ## What it does
 
@@ -103,6 +108,10 @@ Transform_CooldownSeconds_VBlood = 0
 - **No visual shapeshift VFX.** Only the spell bar changes when you transform; your model stays the same. A unit→shapeshift-buff mapping is on the roadmap.
 - **Not every ability works in every slot.** Spell slots 5 and 6 generally accept projectile / AoE abilities; basic melee animations won't appear. The default filter strips most non-castable cases, but a few survive — experiment, and report patterns we should add.
 
+## Bug reports & feedback
+
+Open an issue at [github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/issues](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/issues). Server-side log lines tagged `[Beelz]` in `BepInEx\LogOutput.log` are the most useful diagnostic — paste the relevant lines plus what you were doing.
+
 ## License
 
-[MIT](../../LICENSE) — see `LICENSE` at the repo root.
+[MIT](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/blob/main/LICENSE).

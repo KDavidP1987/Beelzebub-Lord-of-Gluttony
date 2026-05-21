@@ -41,6 +41,7 @@
 
 	<Target Name="BuildToDist" AfterTargets="Build">
 		<Copy SourceFiles="$(TargetDir)$(ProjectName).dll" DestinationFolder="$(MSBuildProjectDirectory)\dist\BepInEx\plugins" />
-		<Message Text="Beelzebub.dll staged at dist/BepInEx/plugins for tcli build" Importance="high" />
+		<Copy SourceFiles="$(MSBuildProjectDirectory)\CHANGELOG.md" DestinationFolder="$(MSBuildProjectDirectory)\dist" />
+		<Message Text="Beelzebub.dll + CHANGELOG staged at dist/ for tcli build" Importance="high" />
 	</Target>
 </Project>
