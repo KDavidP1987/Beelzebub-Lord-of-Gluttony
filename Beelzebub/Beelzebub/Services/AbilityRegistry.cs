@@ -19,12 +19,28 @@ internal enum Verbosity : byte
 
 internal readonly record struct CapturedAbility(int UnitPrefabGuid, int AbilityPrefabGuid, CaptureSource Source);
 
+internal readonly record struct UnlockedTransform(int UnitPrefabGuid, CaptureSource Source);
+
+internal sealed class ActiveTransform
+{
+    public int UnitPrefabGuid;
+    public CaptureSource Source;
+    public System.DateTime ActivatedAtUtc;
+    public System.TimeSpan? Duration; // null = Toggle mode
+}
+
 internal sealed class AbilityRegistry
 {
     // steamId → unitGuid → abilityGuid → source
     readonly ConcurrentDictionary<ulong, ConcurrentDictionary<int, ConcurrentDictionary<int, CaptureSource>>> _data = new();
     readonly ConcurrentDictionary<ulong, ConcurrentDictionary<int, int>> _slotAssignments = new();
     readonly ConcurrentDictionary<ulong, Verbosity> _verbosity = new();
+
+    // Phase 5: transforms.
+    readonly ConcurrentDictionary<ulong, ConcurrentDictionary<int, CaptureSource>> _transformUnlocks = new(); // unitGuid → source
+    readonly ConcurrentDictionary<ulong, ActiveTransform> _activeTransforms = new(); // runtime-only
+    readonly ConcurrentDictionary<ulong, System.DateTime> _cooldownRegularUntil = new(); // runtime-only
+    readonly ConcurrentDictionary<ulong, System.DateTime> _cooldownVBloodUntil = new(); // runtime-only
 
     public int PlayerCount => _data.Count;
 
@@ -87,10 +103,80 @@ internal sealed class AbilityRegistry
     public bool Clear(ulong steamId)
     {
         _slotAssignments.TryRemove(steamId, out _);
+        _transformUnlocks.TryRemove(steamId, out _);
+        _activeTransforms.TryRemove(steamId, out _);
         return _data.TryRemove(steamId, out _);
     }
 
     public Dictionary<ulong, Verbosity> AllVerbosity() => new(_verbosity);
+
+    // --- Transform unlocks (persisted) ---
+    public bool AddTransformUnlock(ulong steamId, int unitPrefabGuid, CaptureSource source)
+    {
+        var byUnit = _transformUnlocks.GetOrAdd(steamId, _ => new ConcurrentDictionary<int, CaptureSource>());
+        if (byUnit.TryAdd(unitPrefabGuid, source)) return true;
+        // Upgrade Regular -> VBlood if the same unit is later unlocked from a V-Blood kill.
+        if (byUnit[unitPrefabGuid] == CaptureSource.Regular && source == CaptureSource.VBlood)
+        {
+            byUnit[unitPrefabGuid] = CaptureSource.VBlood;
+        }
+        return false;
+    }
+
+    public bool HasTransformUnlock(ulong steamId, int unitPrefabGuid) =>
+        _transformUnlocks.TryGetValue(steamId, out var byUnit) && byUnit.ContainsKey(unitPrefabGuid);
+
+    public IReadOnlyList<UnlockedTransform> ListTransforms(ulong steamId)
+    {
+        if (!_transformUnlocks.TryGetValue(steamId, out var byUnit)) return System.Array.Empty<UnlockedTransform>();
+        var list = new List<UnlockedTransform>(byUnit.Count);
+        foreach (var (unit, source) in byUnit)
+        {
+            list.Add(new UnlockedTransform(unit, source));
+        }
+        return list;
+    }
+
+    public IEnumerable<KeyValuePair<ulong, IReadOnlyList<UnlockedTransform>>> TransformSnapshot()
+    {
+        foreach (var (steamId, _) in _transformUnlocks)
+        {
+            yield return new KeyValuePair<ulong, IReadOnlyList<UnlockedTransform>>(steamId, ListTransforms(steamId));
+        }
+    }
+
+    public void LoadTransformsFromSnapshot(IEnumerable<KeyValuePair<ulong, IReadOnlyList<UnlockedTransform>>> snapshot)
+    {
+        _transformUnlocks.Clear();
+        foreach (var (steamId, list) in snapshot)
+        {
+            foreach (var t in list)
+            {
+                AddTransformUnlock(steamId, t.UnitPrefabGuid, t.Source);
+            }
+        }
+    }
+
+    // --- Active transform (runtime) ---
+    public ActiveTransform GetActiveTransform(ulong steamId) =>
+        _activeTransforms.TryGetValue(steamId, out var at) ? at : null;
+
+    public void SetActiveTransform(ulong steamId, ActiveTransform state) => _activeTransforms[steamId] = state;
+    public void ClearActiveTransform(ulong steamId) => _activeTransforms.TryRemove(steamId, out _);
+    public IEnumerable<KeyValuePair<ulong, ActiveTransform>> AllActiveTransforms() => _activeTransforms;
+
+    // --- Cooldowns (runtime) ---
+    public System.DateTime CooldownUntil(ulong steamId, CaptureSource source)
+    {
+        var dict = source == CaptureSource.VBlood ? _cooldownVBloodUntil : _cooldownRegularUntil;
+        return dict.TryGetValue(steamId, out var ts) ? ts : System.DateTime.MinValue;
+    }
+
+    public void SetCooldownUntil(ulong steamId, CaptureSource source, System.DateTime untilUtc)
+    {
+        var dict = source == CaptureSource.VBlood ? _cooldownVBloodUntil : _cooldownRegularUntil;
+        dict[steamId] = untilUtc;
+    }
 
     public IEnumerable<KeyValuePair<ulong, IReadOnlyList<CapturedAbility>>> Snapshot()
     {

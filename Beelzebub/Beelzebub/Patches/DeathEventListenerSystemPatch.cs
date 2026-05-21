@@ -15,7 +15,12 @@ internal static class DeathEventListenerSystemPatch
     public static void OnUpdatePostfix(DeathEventListenerSystem __instance)
     {
         if (!Core.IsReady) Core.TryInitialize(nameof(DeathEventListenerSystemPatch));
-        if (!Core.IsReady || !Settings.CaptureOnKill.Value) return;
+        if (!Core.IsReady) return;
+
+        // Phase 5: per-frame tick for auto-revert of Timed transforms.
+        Core.Transforms.Tick();
+
+        if (!Settings.CaptureOnKill.Value) return;
 
         NativeArray<DeathEvent> deathEvents = __instance._DeathEventQuery.ToComponentDataArray<DeathEvent>(Allocator.Temp);
         try
@@ -87,14 +92,32 @@ internal static class DeathEventListenerSystemPatch
             }
         }
 
-        if (captured > 0)
+        // Transform-unlock roll happens once per kill, independent of ability captures.
+        float transformChance = Settings.DropChance_Transform_Regular.Value;
+        bool gotTransform = false;
+        if (transformChance > 0f && System.Random.Shared.NextDouble() <= transformChance)
         {
-            string unitName = unitGuid.GetPrefabName();
-            Core.Log.LogInfo($"[Beelz] {steamId} killed {unitName}: captured {captured} ability(ies), skipped {skipped}.");
-            Core.Chat.Send(killer, Verbosity.Summary,
-                captured == 1
-                    ? $"Acquired 1 new ability from {unitName}."
-                    : $"Acquired {captured} new abilities from {unitName}.");
+            if (Core.AbilityRegistry.AddTransformUnlock(steamId, unitGuid._Value, CaptureSource.Regular))
+            {
+                gotTransform = true;
+                string unitName = unitGuid.GetPrefabName();
+                Core.Log.LogInfo($"[Beelz] {steamId} unlocked transform: {unitName} (Regular).");
+                Core.Chat.Send(killer, Verbosity.Summary,
+                    $"Unlocked transformation: {unitName}. Use .beelz transforms to see your unlocks.");
+            }
+        }
+
+        if (captured > 0 || gotTransform)
+        {
+            if (captured > 0)
+            {
+                string unitName = unitGuid.GetPrefabName();
+                Core.Log.LogInfo($"[Beelz] {steamId} killed {unitName}: captured {captured} ability(ies), skipped {skipped}.");
+                Core.Chat.Send(killer, Verbosity.Summary,
+                    captured == 1
+                        ? $"Acquired 1 new ability from {unitName}."
+                        : $"Acquired {captured} new abilities from {unitName}.");
+            }
             Core.Persistence.SaveSync();
         }
     }

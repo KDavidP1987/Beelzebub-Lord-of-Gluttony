@@ -94,14 +94,32 @@ internal static class VBloodSystemPatch
             }
         }
 
-        if (captured > 0)
+        // V-Blood transform unlock roll (typically rarer than ability captures).
+        float transformChance = Settings.DropChance_Transform_VBlood.Value;
+        bool gotTransform = false;
+        if (transformChance > 0f && System.Random.Shared.NextDouble() <= transformChance)
         {
-            string unitName = vBloodGuid.GetPrefabName();
-            Core.Log.LogInfo($"[Beelz] {steamId} defeated V-Blood {unitName}: captured {captured} ability(ies), skipped {skipped}.");
-            Core.Chat.Send(playerCharacter, Verbosity.Summary,
-                captured == 1
-                    ? $"Defeated V-Blood {unitName}: acquired 1 new ability."
-                    : $"Defeated V-Blood {unitName}: acquired {captured} new abilities.");
+            if (Core.AbilityRegistry.AddTransformUnlock(steamId, vBloodGuid._Value, CaptureSource.VBlood))
+            {
+                gotTransform = true;
+                string unitName = vBloodGuid.GetPrefabName();
+                Core.Log.LogInfo($"[Beelz] {steamId} unlocked V-Blood transform: {unitName}.");
+                Core.Chat.Send(playerCharacter, Verbosity.Summary,
+                    $"Unlocked V-Blood transformation: {unitName}!");
+            }
+        }
+
+        if (captured > 0 || gotTransform)
+        {
+            if (captured > 0)
+            {
+                string unitName = vBloodGuid.GetPrefabName();
+                Core.Log.LogInfo($"[Beelz] {steamId} defeated V-Blood {unitName}: captured {captured} ability(ies), skipped {skipped}.");
+                Core.Chat.Send(playerCharacter, Verbosity.Summary,
+                    captured == 1
+                        ? $"Defeated V-Blood {unitName}: acquired 1 new ability."
+                        : $"Defeated V-Blood {unitName}: acquired {captured} new abilities.");
+            }
             Core.Persistence.SaveSync();
         }
     }

@@ -43,6 +43,7 @@ internal sealed class PersistenceService
 
             int slotCount = 0;
             int verbositySet = 0;
+            int transformCount = 0;
             foreach (var (key, player) in dto.Players)
             {
                 ulong steamId = ulong.Parse(key);
@@ -62,9 +63,17 @@ internal sealed class PersistenceService
                     registry.SetVerbosity(steamId, (Verbosity)player.Verbosity.Value);
                     verbositySet++;
                 }
+                if (player.Transforms is not null)
+                {
+                    foreach (var t in player.Transforms)
+                    {
+                        registry.AddTransformUnlock(steamId, t.Unit, MapSource(t.Source));
+                        transformCount++;
+                    }
+                }
             }
 
-            Core.Log.LogInfo($"Loaded {registry.PlayerCount} player(s), {slotCount} slot assignment(s), {verbositySet} verbosity setting(s) from {StateFilePath}.");
+            Core.Log.LogInfo($"Loaded {registry.PlayerCount} player(s), {slotCount} slot(s), {verbositySet} verbosity, {transformCount} transform unlock(s) from {StateFilePath}.");
         }
         catch (Exception e)
         {
@@ -78,9 +87,12 @@ internal sealed class PersistenceService
         try
         {
             var allVerbosity = Core.AbilityRegistry.AllVerbosity();
-            // Union of players with captures and players with only verbosity set.
+            var transformSnapshot = Core.AbilityRegistry.TransformSnapshot()
+                .ToDictionary(kv => kv.Key, kv => kv.Value);
+
             var playerIds = new HashSet<ulong>(Core.AbilityRegistry.Snapshot().Select(kv => kv.Key));
             foreach (var sid in allVerbosity.Keys) playerIds.Add(sid);
+            foreach (var sid in transformSnapshot.Keys) playerIds.Add(sid);
 
             var players = new Dictionary<string, PlayerDto>();
             foreach (var steamId in playerIds)
@@ -88,6 +100,7 @@ internal sealed class PersistenceService
                 var captured = Core.AbilityRegistry.ListFor(steamId);
                 var slots = Core.AbilityRegistry.GetSlots(steamId);
                 allVerbosity.TryGetValue(steamId, out var verbosity);
+                transformSnapshot.TryGetValue(steamId, out var transforms);
                 players[steamId.ToString()] = new PlayerDto
                 {
                     Captured = captured.Select(c => new CapturedDto
@@ -98,12 +111,17 @@ internal sealed class PersistenceService
                     }).ToList(),
                     Slots = slots.ToDictionary(s => s.Key.ToString(), s => s.Value),
                     Verbosity = allVerbosity.ContainsKey(steamId) ? (byte?)verbosity : null,
+                    Transforms = transforms?.Select(t => new TransformDto
+                    {
+                        Unit = t.UnitPrefabGuid,
+                        Source = (byte)t.Source,
+                    }).ToList(),
                 };
             }
 
             var dto = new StateDto
             {
-                Version = 3,
+                Version = 4,
                 Players = players,
             };
 
@@ -130,6 +148,13 @@ internal sealed class PersistenceService
         public List<CapturedDto> Captured { get; set; } = new();
         public Dictionary<string, int> Slots { get; set; }
         public byte? Verbosity { get; set; }
+        public List<TransformDto> Transforms { get; set; }
+    }
+
+    sealed class TransformDto
+    {
+        public int Unit { get; set; }
+        public byte Source { get; set; }
     }
 
     sealed class CapturedDto

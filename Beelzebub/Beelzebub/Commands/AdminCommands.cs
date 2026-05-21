@@ -67,4 +67,58 @@ internal static class AdminCommands
         Core.AbilityRules.Load();
         ctx.Reply($"Rules reloaded from {Core.AbilityRules.RulesFilePath}.");
     }
+
+    [Command("transform mode", description: "Set transform mode. Usage: .beelz admin transform mode <regular|vblood> <toggle|timed|disabled>", adminOnly: true)]
+    public static void TransformMode(ChatCommandContext ctx, string source, string mode)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        var s = source.Trim().ToLowerInvariant();
+        var m = mode.Trim().ToLowerInvariant();
+        if (m != "toggle" && m != "timed" && m != "disabled")
+        {
+            ctx.Reply("Mode must be one of: toggle, timed, disabled.");
+            return;
+        }
+        var canonical = m == "toggle" ? "Toggle" : m == "timed" ? "Timed" : "Disabled";
+        if (s == "regular") { Beelzebub.Config.Settings.Transform_Mode_Regular.Value = canonical; ctx.Reply($"Regular transform mode set to {canonical}."); }
+        else if (s == "vblood") { Beelzebub.Config.Settings.Transform_Mode_VBlood.Value = canonical; ctx.Reply($"V-Blood transform mode set to {canonical}."); }
+        else ctx.Reply("Source must be 'regular' or 'vblood'.");
+    }
+
+    [Command("transform duration", description: "Set Timed-mode duration. Usage: .beelz admin transform duration <regular|vblood> <seconds>", adminOnly: true)]
+    public static void TransformDuration(ChatCommandContext ctx, string source, float seconds)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        if (seconds < 0) { ctx.Reply("Duration must be non-negative."); return; }
+        var s = source.Trim().ToLowerInvariant();
+        if (s == "regular") { Beelzebub.Config.Settings.Transform_DurationSeconds_Regular.Value = seconds; ctx.Reply($"Regular transform duration: {seconds}s."); }
+        else if (s == "vblood") { Beelzebub.Config.Settings.Transform_DurationSeconds_VBlood.Value = seconds; ctx.Reply($"V-Blood transform duration: {seconds}s."); }
+        else ctx.Reply("Source must be 'regular' or 'vblood'.");
+    }
+
+    [Command("transform cooldown", description: "Set post-revert cooldown. Usage: .beelz admin transform cooldown <regular|vblood> <seconds>", adminOnly: true)]
+    public static void TransformCooldown(ChatCommandContext ctx, string source, float seconds)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        if (seconds < 0) { ctx.Reply("Cooldown must be non-negative."); return; }
+        var s = source.Trim().ToLowerInvariant();
+        if (s == "regular") { Beelzebub.Config.Settings.Transform_CooldownSeconds_Regular.Value = seconds; ctx.Reply($"Regular transform cooldown: {seconds}s."); }
+        else if (s == "vblood") { Beelzebub.Config.Settings.Transform_CooldownSeconds_VBlood.Value = seconds; ctx.Reply($"V-Blood transform cooldown: {seconds}s."); }
+        else ctx.Reply("Source must be 'regular' or 'vblood'.");
+    }
+
+    [Command("transform show", description: "Show current transform settings.", adminOnly: true)]
+    public static void TransformShow(ChatCommandContext ctx)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        var s = new System.Text.StringBuilder();
+        s.AppendLine("Transform settings:");
+        s.Append("  Regular: mode=").Append(Beelzebub.Config.Settings.Transform_Mode_Regular.Value)
+            .Append(", duration=").Append(Beelzebub.Config.Settings.Transform_DurationSeconds_Regular.Value).Append("s")
+            .Append(", cooldown=").Append(Beelzebub.Config.Settings.Transform_CooldownSeconds_Regular.Value).Append("s").AppendLine();
+        s.Append("  V-Blood: mode=").Append(Beelzebub.Config.Settings.Transform_Mode_VBlood.Value)
+            .Append(", duration=").Append(Beelzebub.Config.Settings.Transform_DurationSeconds_VBlood.Value).Append("s")
+            .Append(", cooldown=").Append(Beelzebub.Config.Settings.Transform_CooldownSeconds_VBlood.Value).Append("s");
+        ctx.Reply(s.ToString());
+    }
 }

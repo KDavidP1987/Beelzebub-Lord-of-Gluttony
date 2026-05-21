@@ -20,6 +20,7 @@ internal static class Core
     public static AbilityFilter AbilityFilter { get; private set; }
     public static AbilityRules AbilityRules { get; private set; }
     public static ChatNotifier Chat { get; private set; }
+    public static TransformService Transforms { get; private set; }
     public static PersistenceService Persistence { get; private set; }
 
     public static Dictionary<int, string> PrefabNames { get; } = new();
@@ -66,6 +67,7 @@ internal static class Core
             AbilityRegistry = new AbilityRegistry();
             AbilityFilter = new AbilityFilter();
             Chat = new ChatNotifier();
+            Transforms = new TransformService();
             Persistence.LoadInto(AbilityRegistry);
             BuildPrefabNameMap();
 

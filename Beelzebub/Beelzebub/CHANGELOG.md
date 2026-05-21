@@ -31,7 +31,23 @@ POC + early polish.
 ### Phase 4 — drop-chance acquisition
 - Per-ability roll on capture, separate defaults for Regular (5%) and V-Blood (5%).
 - Configurable via BepInEx `Capture.DropChance` section: `DropChance_Ability_Regular`, `DropChance_Ability_VBlood`. Setting to 1.0 restores legacy 100% capture.
-- Transform unlock chance scaffold (default 1% each) staged for Phase 5.
+- Per-kill transform-unlock roll (default 1%) staged via `DropChance_Transform_Regular/VBlood`.
+
+### Phase 5 — transformation system
+- Independent rule sets for Regular vs V-Blood transforms. Each source type has:
+  - `Mode`: `Toggle` (active until manual revert), `Timed` (auto-revert after duration), or `Disabled`.
+  - `Duration` seconds (when `Timed`).
+  - `Cooldown` seconds after revert (0 = none).
+  - Defaults: both = `Toggle`, 60s duration, 0s cooldown.
+- New user commands:
+  - `.beelz transforms` — list your unlocked transforms (grouped by source) plus the currently active one if any.
+  - `.beelz transform <index|substring>` — activate a transform. Swap a weapon to apply.
+  - `.beelz revert` — end the current transform.
+- Per-kill transform unlock roll fires on both regular and V-Blood kills via `DropChance_Transform_*`.
+- During a transform, the player's slots 1-6 are overridden with up to six of the unit's filtered `AbilityGroupSlotBuffer` abilities. Regular slot grants resume on revert.
+- `state.json` schema bumped to v4 to include per-player transform unlock list (backward-compatible load).
+- Auto-revert tick lives in `DeathEventListenerSystemPatch.OnUpdatePostfix` (runs every server frame, regardless of kill activity).
+- Admin commands: `.beelz admin transform mode|duration|cooldown|show` for live tuning per source type.
 
 ### Capture pipeline
 - Hooks `DeathEventListenerSystem.OnUpdate` postfix to detect player kills.
