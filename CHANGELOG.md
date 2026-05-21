@@ -8,7 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ---
 
-## [0.1.0] - Unreleased
+## [0.2.0] - Unreleased
 
 Initial POC plus the post-roadmap polish waves.
 

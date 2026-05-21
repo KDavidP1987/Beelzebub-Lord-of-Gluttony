@@ -3,7 +3,7 @@
 What's new for players. For full implementation history, see the
 [developer changelog on GitHub](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/blob/main/CHANGELOG.md).
 
-## [0.1.0] - Unreleased
+## [0.2.0] - Unreleased
 
 Early access. Functional end-to-end; rough edges around the "swap a weapon to apply"
 behavior noted under Known caveats below.
