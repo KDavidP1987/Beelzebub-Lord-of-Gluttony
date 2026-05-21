@@ -31,19 +31,40 @@ internal static class DeathEventListenerSystemPatch
         if (!Core.IsReady) return;
 
         // Phase 5: per-frame tick for auto-revert of Timed transforms.
-        Core.Transforms.Tick();
+        try { Core.Transforms.Tick(); }
+        catch (System.Exception ex) { Core.Log.LogError($"[Beelz] TransformService.Tick failed: {ex}"); }
+
         // Phase B1: drain any pending state save (debounced).
-        Core.Persistence.MaybeSave();
+        try { Core.Persistence.MaybeSave(); }
+        catch (System.Exception ex) { Core.Log.LogError($"[Beelz] Persistence.MaybeSave failed: {ex}"); }
 
         if (!Settings.CaptureOnKill.Value) return;
 
-        NativeArray<DeathEvent> deathEvents = __instance._DeathEventQuery.ToComponentDataArray<DeathEvent>(Allocator.Temp);
+        NativeArray<DeathEvent> deathEvents;
+        try
+        {
+            deathEvents = __instance._DeathEventQuery.ToComponentDataArray<DeathEvent>(Allocator.Temp);
+        }
+        catch (System.Exception ex)
+        {
+            Core.Log.LogError($"[Beelz] DeathEventListenerSystemPatch failed to read query: {ex}");
+            return;
+        }
+
         var aggregates = new Dictionary<ulong, KillAggregate>();
         try
         {
             for (int i = 0; i < deathEvents.Length; i++)
             {
-                Process(deathEvents[i], aggregates);
+                var evt = deathEvents[i];
+                try
+                {
+                    Process(evt, aggregates);
+                }
+                catch (System.Exception ex)
+                {
+                    Core.Log.LogError($"[Beelz] DeathEvent Process failed (killer={evt.Killer}, died={evt.Died}): {ex}");
+                }
             }
         }
         finally
@@ -51,7 +72,8 @@ internal static class DeathEventListenerSystemPatch
             deathEvents.Dispose();
         }
 
-        FlushAggregates(aggregates);
+        try { FlushAggregates(aggregates); }
+        catch (System.Exception ex) { Core.Log.LogError($"[Beelz] FlushAggregates failed: {ex}"); }
     }
 
     static void Process(DeathEvent deathEvent, Dictionary<ulong, KillAggregate> aggregates)

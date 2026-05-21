@@ -3,6 +3,25 @@
 What's new for players. For full implementation history, see the
 [developer changelog on GitHub](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/blob/main/CHANGELOG.md).
 
+## [0.3.1] - Unreleased
+
+### Fixes from first real test
+- **Weapon abilities no longer overridden**: captured-ability slot grants now
+  only apply while you're UNARMED (or holding a fishing pole). Equipping a
+  weapon shows the weapon's natural abilities, as expected. Transforms
+  still override the spell bar regardless of weapon (that's the
+  "you ARE the unit" intent).
+- **`.beelz help`** no longer errors. Replaced the multi-line reply with
+  multiple short single-line messages. New `.beelz commands` lists every
+  command available.
+- **Crash mitigation**: defensive try/catch added to every per-frame patch
+  (death-event, V-Blood, slot-replace, transform tick). A single bad
+  ability or unit can no longer take down the server — the exception
+  goes to `BepInEx\LogOutput.log` and processing continues.
+- **`start_server_local.bat`** now `pause`s on exit so the CMD window
+  stays open after a crash; you can see the last lines of output and
+  read the log file paths from the bat's own farewell message.
+
 ## [0.3.0] - Unreleased
 
 ### Fourth-wave feature extensions

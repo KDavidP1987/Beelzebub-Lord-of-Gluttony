@@ -8,6 +8,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 
 ---
 
+## [0.3.1] - Unreleased
+
+### F1 fixes from first real test
+- **F1-a** spell-vs-weapon: `ReplaceAbilityOnSlotSystemPatch.OnUpdatePrefix`
+  now reads the event entity's `PrefabGUID`, looks up the name via
+  `Core.PrefabNames`, and only injects saved slot grants when the name
+  contains `unarmed` or `fishingpole` (case-insensitive). Transforms
+  bypass this gate — they always override slots 1-N, which is the
+  intended EXO-style "you ARE the unit" behavior.
+- **F1-b** `.beelz help` rewritten as multiple short `ctx.Reply` calls
+  (was failing with "internal error" — likely because of embedded `\n`
+  characters and/or oversize message in V Rising's chat path). New
+  `.beelz commands` lists every command.
+- **F1-c** Defensive try/catch wraps the per-event bodies of
+  `DeathEventListenerSystemPatch`, `VBloodSystemPatch`, and
+  `ReplaceAbilityOnSlotSystemPatch`, plus `TransformService.Tick` and
+  `Persistence.MaybeSave`. Each failure logs to `Core.Log.LogError`
+  with the failing entity / kill so the next combat crash leaves a
+  traceable line. `start_server_local.bat` updated to `pause` on exit.
+
 ## [0.3.0] - Unreleased
 
 ### Fourth-wave feature extensions

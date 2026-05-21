@@ -20,17 +20,27 @@ internal static class VBloodSystemPatch
     {
         if (!Core.IsReady || !Settings.CaptureOnKill.Value) return;
 
+        Unity.Collections.NativeList<VBloodConsumed> events;
         try
         {
-            var events = __instance.EventList;
-            for (int i = 0; i < events.Length; i++)
-            {
-                ProcessVBloodConsumed(events[i]);
-            }
+            events = __instance.EventList;
         }
         catch (Exception ex)
         {
-            Core.Log.LogError($"[Beelz] VBloodSystemPatch failed: {ex}");
+            Core.Log.LogError($"[Beelz] VBloodSystemPatch failed to read EventList: {ex}");
+            return;
+        }
+
+        for (int i = 0; i < events.Length; i++)
+        {
+            try
+            {
+                ProcessVBloodConsumed(events[i]);
+            }
+            catch (Exception ex)
+            {
+                Core.Log.LogError($"[Beelz] VBloodConsumed Process failed: {ex}");
+            }
         }
     }
 
