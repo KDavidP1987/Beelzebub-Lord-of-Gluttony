@@ -53,6 +53,22 @@ internal sealed class AbilityFilter
             }
         }
 
+        // Per-ability admin kill-switch from AbilityMap.
+        if (!Core.AbilityRules.IsEnabled(abilityName, abilityGuid))
+        {
+            reason = "AbilityMap entry has Enabled=false";
+            return false;
+        }
+
+        // TX4: Brutal-only abilities can't be captured on a Basic server.
+        string abilityDifficulty = Core.AbilityRules.GetAbilityDifficulty(abilityName);
+        string serverMode = AbilityRules.GetServerDifficulty();
+        if (!AbilityRules.IsDifficultyAllowed(abilityDifficulty, serverMode))
+        {
+            reason = $"ability difficulty {abilityDifficulty} not allowed on {serverMode} server";
+            return false;
+        }
+
         reason = null;
         return true;
     }

@@ -1,0 +1,368 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using BepInEx;
+using ProjectM;
+using Stunlock.Core;
+using Unity.Entities;
+
+namespace Beelzebub.Services;
+
+/// <summary>
+/// v0.24.0 — R1 ability metadata lookup.
+///
+/// Provides human-readable names, descriptions, school/type tagging, and
+/// source-NPC info for V Rising abilities. Data sourced from a curated
+/// JSON shipped with the mod (scraped from <c>vrising.gaming.tools</c> at
+/// build time) and merged at lookup time with runtime ECS data (cooldown,
+/// cast time, range) read from the live prefab entities via
+/// <see cref="PrefabCollectionSystem"/>.
+///
+/// Lookup priority for each field:
+/// 1. Admin override (file: <c>BepInEx/config/kdpen.Beelzebub/ability_metadata_overrides.json</c>)
+/// 2. Shipped curated data (embedded resource <c>ability_metadata.json</c>)
+/// 3. Runtime ECS prefab entity (cooldown, cast time, range)
+/// 4. Humanized prefab name fallback
+///
+/// This is the "reference" data — what the ability IS. The companion
+/// <see cref="AbilityRules"/> service holds "policy" data — what admins
+/// CHOOSE to do with each ability (enabled/disabled, transform-only,
+/// damage-scale overrides, etc.). The two are kept separate on disk so
+/// re-shipping metadata never clobbers admin policy.
+/// </summary>
+internal sealed class AbilityMetadataService
+{
+    static readonly JsonSerializerOptions _json = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Converters = { new JsonStringEnumConverter() },
+    };
+
+    /// <summary>Shipped (embedded) entries keyed by AbilityGroup PrefabGuid integer.</summary>
+    readonly Dictionary<int, AbilityMetadataEntry> _shipped = new();
+
+    /// <summary>Admin overrides keyed by AbilityGroup PrefabGuid. Wins over shipped.</summary>
+    readonly Dictionary<int, AbilityMetadataEntry> _overrides = new();
+
+    public string OverridesFilePath { get; }
+    public int ShippedCount => _shipped.Count;
+    public int OverrideCount => _overrides.Count;
+
+    public AbilityMetadataService()
+    {
+        var dir = Path.Combine(Paths.ConfigPath, MyPluginInfo.PLUGIN_GUID);
+        Directory.CreateDirectory(dir);
+        OverridesFilePath = Path.Combine(dir, "ability_metadata_overrides.json");
+    }
+
+    public void Load()
+    {
+        LoadShippedFromEmbeddedResource();
+        LoadOverridesFromDisk();
+    }
+
+    void LoadShippedFromEmbeddedResource()
+    {
+        try
+        {
+            var asm = Assembly.GetExecutingAssembly();
+            // Resource name follows the project's default naming: <RootNamespace>.<RelativePath>
+            var name = "Beelzebub.Resources.ability_metadata.json";
+            using var stream = asm.GetManifestResourceStream(name);
+            if (stream == null)
+            {
+                // Resource not embedded — fine for early dev; we just have no shipped data.
+                Core.Log.LogInfo($"[AbilityMetadata] No embedded ability_metadata.json found. " +
+                    $"Lookups will fall back to humanized prefab names + ECS data only.");
+                return;
+            }
+            using var reader = new StreamReader(stream);
+            string raw = reader.ReadToEnd();
+            var dto = JsonSerializer.Deserialize<AbilityMetadataFile>(raw, _json);
+            if (dto?.Abilities is null) return;
+            foreach (var (key, entry) in dto.Abilities)
+            {
+                if (int.TryParse(key, out int guid))
+                {
+                    _shipped[guid] = entry;
+                }
+            }
+            Core.Log.LogInfo($"[AbilityMetadata] Loaded {_shipped.Count} shipped ability entries from embedded resource.");
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError($"[AbilityMetadata] Failed to load shipped data: {ex}");
+        }
+    }
+
+    void LoadOverridesFromDisk()
+    {
+        if (!File.Exists(OverridesFilePath)) return;
+        try
+        {
+            string raw = File.ReadAllText(OverridesFilePath);
+            var dto = JsonSerializer.Deserialize<AbilityMetadataFile>(raw, _json);
+            if (dto?.Abilities is null) return;
+            foreach (var (key, entry) in dto.Abilities)
+            {
+                if (int.TryParse(key, out int guid))
+                {
+                    _overrides[guid] = entry;
+                }
+            }
+            Core.Log.LogInfo($"[AbilityMetadata] Loaded {_overrides.Count} admin override entries from {OverridesFilePath}.");
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError($"[AbilityMetadata] Failed to load overrides from {OverridesFilePath}: {ex}");
+        }
+    }
+
+    /// <summary>
+    /// Resolve full ability info — merges shipped + override + ECS prefab data.
+    /// Returns a record with whatever fields are available. Never returns null.
+    /// </summary>
+    public AbilityInfo Resolve(int abilityGroupGuid)
+    {
+        _shipped.TryGetValue(abilityGroupGuid, out var ship);
+        _overrides.TryGetValue(abilityGroupGuid, out var over);
+
+        // Prefer override > shipped.
+        var name = over?.Name ?? ship?.Name;
+        var description = over?.Description ?? ship?.Description;
+        var school = over?.School ?? ship?.School;
+        var type = over?.Type ?? ship?.Type;
+        var categories = over?.Categories ?? ship?.Categories;
+        var icon = over?.Icon ?? ship?.Icon;
+        var sourceNpcs = over?.SourceNpcs ?? ship?.SourceNpcs;
+        var parameters = over?.Parameters ?? ship?.Parameters;
+        // Incompatible follows the same precedence — override wins if set;
+        // shipped is the curated default list.
+        var incompatible = over?.Incompatible ?? ship?.Incompatible ?? false;
+        var incompatibleReason = over?.IncompatibleReason ?? ship?.IncompatibleReason;
+
+        // Humanized fallback for missing name.
+        if (string.IsNullOrEmpty(name))
+        {
+            name = new PrefabGUID(abilityGroupGuid).GetPrefabName().Humanize();
+        }
+
+        // ECS-derived runtime fields.
+        var runtime = ProbeRuntimePrefabFields(abilityGroupGuid);
+
+        return new AbilityInfo
+        {
+            AbilityGroupGuid = abilityGroupGuid,
+            Name = name,
+            Description = description,
+            School = school,
+            Type = type,
+            Categories = categories,
+            Icon = icon,
+            SourceNpcs = sourceNpcs,
+            Parameters = parameters,
+            CooldownSeconds = runtime.cooldown,
+            CastTimeSeconds = runtime.castTime,
+            BehaviorType = runtime.behaviorType,
+            MinRange = runtime.minRange,
+            MaxRange = runtime.maxRange,
+            HasShippedEntry = ship is not null,
+            HasOverrideEntry = over is not null,
+            Incompatible = incompatible,
+            IncompatibleReason = incompatibleReason,
+        };
+    }
+
+    /// <summary>
+    /// Probe the live prefab entity for cooldown / cast time / range.
+    /// AbilityGroup prefab itself doesn't carry these — they're on the
+    /// AbilityCast referenced by AbilityGroupStartAbilitiesBuffer[0].
+    /// All fields nullable to signal "not found / not applicable".
+    /// </summary>
+    static (float? cooldown, float? castTime, string behaviorType, float? minRange, float? maxRange)
+        ProbeRuntimePrefabFields(int abilityGroupGuid)
+    {
+        try
+        {
+            if (Core.PrefabCollectionSystem is null) return (null, null, null, null, null);
+
+            var groupGuid = new PrefabGUID(abilityGroupGuid);
+            if (!Core.PrefabCollectionSystem._PrefabLookupMap.TryGetValue(groupGuid, out Entity groupEntity)) return (null, null, null, null, null);
+            if (!groupEntity.Exists()) return (null, null, null, null, null);
+
+            // AbilityGroupInfo gives min/max range + behavior type.
+            string behaviorType = null;
+            float? minRange = null, maxRange = null;
+            if (groupEntity.TryGetComponent<AbilityGroupInfo>(out var info))
+            {
+                behaviorType = info.BehaviorType.ToString();
+                minRange = info.MinRange;
+                maxRange = info.MaxRange;
+            }
+
+            // AbilityCast prefab via the StartAbilitiesBuffer.
+            float? cooldown = null, castTime = null;
+            if (Core.EntityManager.HasBuffer<AbilityGroupStartAbilitiesBuffer>(groupEntity))
+            {
+                var buf = Core.EntityManager.GetBuffer<AbilityGroupStartAbilitiesBuffer>(groupEntity);
+                if (buf.Length > 0)
+                {
+                    var castGuid = buf[0].PrefabGUID;
+                    if (Core.PrefabCollectionSystem._PrefabLookupMap.TryGetValue(castGuid, out Entity castEntity)
+                        && castEntity.Exists())
+                    {
+                        if (castEntity.TryGetComponent<AbilityCooldownData>(out var cd)) cooldown = cd.Cooldown;
+                        if (castEntity.TryGetComponent<AbilityCastTimeData>(out var ct)) castTime = ct.MaxCastTime;
+                    }
+                }
+            }
+
+            return (cooldown, castTime, behaviorType, minRange, maxRange);
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogWarning($"[AbilityMetadata] ProbeRuntimePrefabFields failed for {abilityGroupGuid}: {ex.Message}");
+            return (null, null, null, null, null);
+        }
+    }
+
+    /// <summary>
+    /// Substring search across shipped+override names. Returns up to <paramref name="maxResults"/>
+    /// matches, sorted by exact-match then prefix-match then substring.
+    /// </summary>
+    public List<AbilityInfo> SearchByName(string fragment, int maxResults = 25)
+    {
+        if (string.IsNullOrWhiteSpace(fragment)) return new List<AbilityInfo>();
+        fragment = fragment.Trim();
+
+        var hits = new List<(int score, AbilityInfo info)>();
+        var seen = new HashSet<int>();
+
+        void TryAdd(int guid, string name)
+        {
+            if (string.IsNullOrEmpty(name)) return;
+            if (!seen.Add(guid)) return;
+            int score;
+            if (name.Equals(fragment, StringComparison.OrdinalIgnoreCase)) score = 0;
+            else if (name.StartsWith(fragment, StringComparison.OrdinalIgnoreCase)) score = 1;
+            else if (name.IndexOf(fragment, StringComparison.OrdinalIgnoreCase) >= 0) score = 2;
+            else return;
+            hits.Add((score, Resolve(guid)));
+        }
+
+        foreach (var (guid, entry) in _shipped) TryAdd(guid, entry.Name);
+        foreach (var (guid, entry) in _overrides) TryAdd(guid, entry.Name);
+
+        return hits.OrderBy(h => h.score).Take(maxResults).Select(h => h.info).ToList();
+    }
+
+    /// <summary>Save the current overrides dictionary back to disk.</summary>
+    public void SaveOverrides()
+    {
+        try
+        {
+            var file = new AbilityMetadataFile
+            {
+                Version = 1,
+                Abilities = _overrides.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value),
+            };
+            string tmp = OverridesFilePath + ".tmp";
+            File.WriteAllText(tmp, JsonSerializer.Serialize(file, _json));
+            if (File.Exists(OverridesFilePath)) File.Replace(tmp, OverridesFilePath, null);
+            else File.Move(tmp, OverridesFilePath);
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError($"[AbilityMetadata] SaveOverrides failed: {ex}");
+        }
+    }
+
+    public void SetOverride(int abilityGroupGuid, AbilityMetadataEntry entry)
+    {
+        _overrides[abilityGroupGuid] = entry;
+        SaveOverrides();
+    }
+
+    public bool RemoveOverride(int abilityGroupGuid)
+    {
+        if (!_overrides.Remove(abilityGroupGuid)) return false;
+        SaveOverrides();
+        return true;
+    }
+}
+
+/// <summary>Top-level JSON wrapper for the metadata file.</summary>
+internal sealed class AbilityMetadataFile
+{
+    public int Version { get; set; } = 1;
+    public Dictionary<string, AbilityMetadataEntry> Abilities { get; set; } = new();
+}
+
+/// <summary>One ability's curated entry. Mirrors the schema produced by the scraper.</summary>
+internal sealed class AbilityMetadataEntry
+{
+    public string Name { get; set; }
+    public string Description { get; set; }
+    public string School { get; set; }
+    public string Type { get; set; }
+    public List<string> Categories { get; set; }
+    public string Icon { get; set; }
+    public List<NpcRef> SourceNpcs { get; set; }
+    public Dictionary<string, string> Parameters { get; set; }
+
+    /// <summary>
+    /// v0.24.2: known-broken abilities — the cast animation fires but the
+    /// effect doesn't complete properly when triggered by a player. Causes
+    /// catalogued per <see cref="IncompatibleReason"/>. Surfaced as a
+    /// warning in <c>.beelz info</c> / <c>.beelz active</c> so the player
+    /// understands why the ability they slotted "doesn't seem to work".
+    /// </summary>
+    public bool Incompatible { get; set; }
+
+    /// <summary>
+    /// Why the ability is broken when cast by a player. Free-text but the
+    /// well-known categories from the chain audit (project_ability_chain_audit.md):
+    /// - "Offset" — projectile spawns at hardcoded NPC bone offset, lands at wrong height
+    /// - "AnimRig" — TravelBuff + HideWeapon bound to NPC skeleton bones; player doesn't have them
+    /// - "OwnerChain" — multi-step chain loses owner reference on intermediate entities
+    /// - "TeamFilter" — spawned children filter on Team=1 (NPC), miss enemies
+    /// - "AOE-Proxy" — ProxySpawner pattern with NPC team; projectiles fire but don't hit
+    /// - "Corpse-Required" — natural chain animates existing corpses; player has none in range
+    /// </summary>
+    public string IncompatibleReason { get; set; }
+}
+
+internal sealed class NpcRef
+{
+    public int Guid { get; set; }
+    public string Name { get; set; }
+}
+
+/// <summary>Merged record returned by <see cref="AbilityMetadataService.Resolve"/>.</summary>
+internal sealed class AbilityInfo
+{
+    public int AbilityGroupGuid { get; set; }
+    public string Name { get; set; }
+    public string Description { get; set; }
+    public string School { get; set; }
+    public string Type { get; set; }
+    public List<string> Categories { get; set; }
+    public string Icon { get; set; }
+    public List<NpcRef> SourceNpcs { get; set; }
+    public Dictionary<string, string> Parameters { get; set; }
+    public float? CooldownSeconds { get; set; }
+    public float? CastTimeSeconds { get; set; }
+    public string BehaviorType { get; set; }
+    public float? MinRange { get; set; }
+    public float? MaxRange { get; set; }
+    public bool HasShippedEntry { get; set; }
+    public bool HasOverrideEntry { get; set; }
+    public bool Incompatible { get; set; }
+    public string IncompatibleReason { get; set; }
+}
