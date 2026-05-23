@@ -50,9 +50,17 @@ internal sealed class AbilityMetadataService
     /// <summary>Admin overrides keyed by AbilityGroup PrefabGuid. Wins over shipped.</summary>
     readonly Dictionary<int, AbilityMetadataEntry> _overrides = new();
 
+    /// <summary>
+    /// v0.28.0 (#9): unit/NPC GUID → human display name, aggregated from the
+    /// shipped metadata's per-ability SourceNpcs. Lets transforms/messages show
+    /// "Dracula the Immortal King" instead of "CHAR_Vampire_Dracula_VBlood".
+    /// </summary>
+    readonly Dictionary<int, string> _unitNames = new();
+
     public string OverridesFilePath { get; }
     public int ShippedCount => _shipped.Count;
     public int OverrideCount => _overrides.Count;
+    public int UnitNameCount => _unitNames.Count;
 
     public AbilityMetadataService()
     {
@@ -65,6 +73,96 @@ internal sealed class AbilityMetadataService
     {
         LoadShippedFromEmbeddedResource();
         LoadOverridesFromDisk();
+        BuildUnitNameIndex();
+    }
+
+    /// <summary>
+    /// v0.28.0 (#9): aggregate unit display names from every entry's SourceNpcs.
+    /// SourceNpcs carry MULTIPLE localized names per GUID (EN/IT/PT/HU/…); pick the
+    /// English one via an ASCII + "the"-title heuristic (V Rising V-Bloods are
+    /// overwhelmingly named "X the Y" in English, e.g. "Dracula the Immortal King").
+    /// Admin overrides win. Units absent here fall back to a humanized prefab name.
+    /// </summary>
+    void BuildUnitNameIndex()
+    {
+        _unitNames.Clear();
+        var candidates = new Dictionary<int, List<string>>();
+
+        void Collect(IEnumerable<AbilityMetadataEntry> entries)
+        {
+            foreach (var e in entries)
+            {
+                if (e?.SourceNpcs == null) continue;
+                foreach (var npc in e.SourceNpcs)
+                {
+                    if (npc == null || string.IsNullOrWhiteSpace(npc.Name)) continue;
+                    if (!candidates.TryGetValue(npc.Guid, out var list))
+                        candidates[npc.Guid] = list = new List<string>();
+                    if (!list.Contains(npc.Name)) list.Add(npc.Name);
+                }
+            }
+        }
+        Collect(_shipped.Values);
+        Collect(_overrides.Values);
+
+        foreach (var (guid, names) in candidates)
+        {
+            var best = PickEnglishName(names);
+            if (!string.IsNullOrWhiteSpace(best)) _unitNames[guid] = best;
+        }
+
+        Core.Log.LogInfo($"[AbilityMetadata] Built unit-name index: {_unitNames.Count} units from SourceNpcs.");
+    }
+
+    static bool IsAscii(string s)
+    {
+        foreach (char c in s) if (c > 127) return false;
+        return true;
+    }
+
+    static string PickEnglishName(List<string> names)
+    {
+        string best = null;
+        int bestScore = int.MinValue;
+        foreach (var n in names)
+        {
+            // Prefer ASCII-only (filters Cyrillic/accented localizations) and the
+            // English V-Blood "X the Y" title pattern.
+            int score = (IsAscii(n) ? 2 : 0)
+                      + (n.IndexOf(" the ", StringComparison.OrdinalIgnoreCase) >= 0 ? 1 : 0);
+            if (score > bestScore) { bestScore = score; best = n; }
+        }
+        return best;
+    }
+
+    /// <summary>
+    /// v0.28.0 (#9): resolve a unit/NPC GUID to a human display name. Priority:
+    /// admin override (a SourceNpcs entry in the overrides file) → shipped
+    /// SourceNpcs English name → humanized prefab name (CHAR_/faction/_VBlood
+    /// stripped). Never returns null/empty.
+    /// </summary>
+    public string ResolveUnitName(int unitGuid)
+    {
+        if (_unitNames.TryGetValue(unitGuid, out var name) && !string.IsNullOrWhiteSpace(name))
+            return name;
+        return HumanizeUnitPrefab(new PrefabGUID(unitGuid).GetPrefabName());
+    }
+
+    /// <summary>
+    /// Fallback prettifier for a CHAR_ prefab name with no curated/source name.
+    /// "CHAR_Blackfang_Morgana_VBlood" → "Blackfang Morgana".
+    /// </summary>
+    public static string HumanizeUnitPrefab(string prefabName)
+    {
+        if (string.IsNullOrWhiteSpace(prefabName)) return "Unknown";
+        string s = prefabName;
+        // Strip only the CHAR_ prefix and pure role/tier suffixes — keep clan/faction
+        // words since they're often part of the name ("Blackfang Morgana"). Named
+        // bosses resolve via SourceNpcs anyway; this is just the generic fallback.
+        if (s.StartsWith("CHAR_", StringComparison.OrdinalIgnoreCase)) s = s.Substring(5);
+        foreach (var suf in new[] { "_VBlood", "_Standard", "_Servant", "_Minion", "_Base" })
+            if (s.EndsWith(suf, StringComparison.OrdinalIgnoreCase)) { s = s.Substring(0, s.Length - suf.Length); break; }
+        return s.Replace('_', ' ').Trim().Humanize();
     }
 
     void LoadShippedFromEmbeddedResource()

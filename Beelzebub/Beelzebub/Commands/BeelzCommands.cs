@@ -89,15 +89,15 @@ internal static class BeelzCommands
         var ordered = captured
             .Select((c, idx) => (idx, ability: c))
             .OrderByDescending(t => t.ability.Source == CaptureSource.VBlood)
-            .ThenBy(t => new PrefabGUID(t.ability.UnitPrefabGuid).GetPrefabName(), System.StringComparer.OrdinalIgnoreCase)
+            .ThenBy(t => Core.AbilityMetadata.ResolveUnitName(t.ability.UnitPrefabGuid), System.StringComparer.OrdinalIgnoreCase)
             .Skip((page - 1) * pageSize)
             .Take(pageSize);
 
         foreach (var (idx, ability) in ordered)
         {
             string src = ability.Source == CaptureSource.VBlood ? "V" : "R";
-            string unitName = new PrefabGUID(ability.UnitPrefabGuid).GetPrefabName();
-            string abilityName = new PrefabGUID(ability.AbilityPrefabGuid).GetPrefabName();
+            string unitName = Core.AbilityMetadata.ResolveUnitName(ability.UnitPrefabGuid);
+            string abilityName = Core.AbilityMetadata.Resolve(ability.AbilityPrefabGuid).Name;
             ctx.Reply($"  {idx,3}: [{src}] {unitName} → {abilityName}");
         }
 
@@ -121,7 +121,7 @@ internal static class BeelzCommands
             foreach (var (slot, abilityGuid) in slots.OrderBy(kv => kv.Key))
             {
                 if (!first) sb.Append(", ");
-                sb.Append('[').Append(slot).Append("] ").Append(new PrefabGUID(abilityGuid).GetPrefabName());
+                sb.Append('[').Append(slot).Append("] ").Append(Core.AbilityMetadata.Resolve(abilityGuid).Name);
                 first = false;
             }
             ctx.Reply(sb.ToString());
@@ -137,7 +137,7 @@ internal static class BeelzCommands
             foreach (var (slot, abilityGuid) in weaponMap.OrderBy(kv => kv.Key))
             {
                 if (!first) sb.Append(", ");
-                sb.Append('[').Append(slot).Append("] ").Append(new PrefabGUID(abilityGuid).GetPrefabName());
+                sb.Append('[').Append(slot).Append("] ").Append(Core.AbilityMetadata.Resolve(abilityGuid).Name);
                 first = false;
             }
             ctx.Reply(sb.ToString());
