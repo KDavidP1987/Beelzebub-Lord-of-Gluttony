@@ -113,9 +113,26 @@ internal static class VBloodSystemPatch
         }
 
         // V-Blood transform unlock roll (typically rarer than ability captures).
+        // TX1: respect the per-unit admin kill-switch in TransformMap.
+        // TX4: skip if the V-Blood's transform is Brutal-only on a Basic server.
+        // AUDIT-7 (v0.20.1): gate-boss variants (e.g. CHAR_Bandit_StoneBreaker_VBlood_GateBoss_Minor)
+        // skip the transform-unlock roll — see DeathEventListenerSystemPatch for full rationale.
+        // Ability captures (above) are unaffected.
+        string vbloodNameOuter = vBloodGuid.GetPrefabName();
+        bool isGateBossVariant = !string.IsNullOrEmpty(vbloodNameOuter)
+            && vbloodNameOuter.IndexOf("_GateBoss_", System.StringComparison.OrdinalIgnoreCase) >= 0;
+        if (isGateBossVariant && Settings.VerboseLogging.Value)
+            Core.Log.LogInfo($"[Beelz] skip V-Blood transform-roll for gate-boss variant {vbloodNameOuter}");
+
         float transformChance = Settings.DropChance_Transform_VBlood.Value * vBloodPrefabEntity.ResolveTierMultiplier();
         bool gotTransform = false;
-        if (transformChance > 0f && System.Random.Shared.NextDouble() <= transformChance)
+        if (!isGateBossVariant
+            && transformChance > 0f
+            && Core.AbilityRules.IsTransformUnitEnabled(vBloodGuid._Value)
+            && Beelzebub.Services.AbilityRules.IsDifficultyAllowed(
+                Core.AbilityRules.GetTransformDifficulty(vBloodGuid._Value),
+                Beelzebub.Services.AbilityRules.GetServerDifficulty())
+            && System.Random.Shared.NextDouble() <= transformChance)
         {
             if (Core.AbilityRegistry.AddTransformUnlock(steamId, vBloodGuid._Value, CaptureSource.VBlood))
             {

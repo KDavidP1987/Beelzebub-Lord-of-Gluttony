@@ -18,8 +18,9 @@ internal static class BeelzCommands
         ctx.Reply("Beelzebub — kill units, devour their abilities.");
         ctx.Reply("1. Kill any unit → chance to capture its abilities. V-Bloods are tagged separately.");
         ctx.Reply("2. .beelz list — see what you've collected.");
-        ctx.Reply("3. .beelz grant <slot 1-6> <index> — assign a captured ability to a slot.");
-        ctx.Reply("   Grants apply only when UNARMED. Equipping a weapon uses the weapon's abilities.");
+        ctx.Reply("3. .beelz grant <slot 1-6> <index> — universal slot (any weapon).");
+        ctx.Reply("   For a weapon-specific loadout: .beelz weapon-grant <weapon|auto> <slot> <index>");
+        ctx.Reply("   Wielding that weapon overrides your universal slots with the weapon-specific ones.");
         ctx.Reply("4. Rarer rolls unlock TRANSFORM into the unit. .beelz transforms / transform / revert.");
         ctx.Reply("   Transforms override your spell bar regardless of weapon.");
         ctx.Reply("5. .beelz verbosity <silent|summary|verbose> — tune chat noise.");
@@ -31,21 +32,27 @@ internal static class BeelzCommands
     {
         ctx.Reply("Beelzebub player commands:");
         ctx.Reply(".beelz list / .beelz transforms — see captures and transform unlocks");
-        ctx.Reply(".beelz grant <slot 1-6> <index> / .beelz unslot <slot> — manage slot assignments");
+        ctx.Reply(".beelz info <index|name> — full ability info: title, description, cooldown, source");
+        ctx.Reply(".beelz grant <slot 1-6> <index> / .beelz unslot <slot> — universal slot binds");
+        ctx.Reply(".beelz weapon-grant <weapon|auto> <slot> <index> / weapon-unslot <weapon> <slot> — per-weapon binds");
         ctx.Reply(".beelz transform <index|name> / .beelz revert — activate/end a transform");
         ctx.Reply(".beelz forget <i> / .beelz forget-transform <i> — delete one entry");
         ctx.Reply(".beelz clear — wipe all your data");
         ctx.Reply(".beelz preset save|load|list|delete <name> — slot loadout presets");
+        ctx.Reply(".beelz hotkey set|clear|list — named hotkey bindings (extra slots, BCH-driven)");
+        ctx.Reply(".beelz progress — your collection-completion %.");
         ctx.Reply(".beelz verbosity <silent|summary|verbose> — chat detail");
         ctx.Reply(".beelz help — walkthrough.   .beelz commands — this list.");
         ctx.Reply("Admin: .beelz admin rules / deny / undeny / allow / unallow / reload");
         ctx.Reply("Admin: .beelz admin transform mode|duration|cooldown|show <regular|vblood> ...");
-        ctx.Reply("Admin: .beelz admin give <player> <unitGuid> <abilityGuid>");
-        ctx.Reply("BCH API: .beelz api version|list|slots|transforms|active|info|bch ...");
+        ctx.Reply("Admin: .beelz admin give|revoke <player> <unitGuid> <abilityGuid>");
+        ctx.Reply("Admin: .beelz admin give-transform|revoke-transform|force-transform|clear-transform <player> <unitGuid?>");
+        ctx.Reply("Admin: .beelz admin inspect <player> / .beelz admin progress <player>");
+        ctx.Reply("BCH API: .beelz api version|list|slots|transforms|active|info|bch|hotkeys|progress|catalog ...");
     }
 
-    [Command("list", description: "List the abilities you've captured, grouped by unit, plus current slot assignments.")]
-    public static void List(ChatCommandContext ctx)
+    [Command("list", description: "List your captured abilities + slot assignments. Usage: .beelz list [page]. Paginated 15/page.")]
+    public static void List(ChatCommandContext ctx, int page = 1)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
 
@@ -61,48 +68,271 @@ internal static class BeelzCommands
             return;
         }
 
-        var sb = new StringBuilder();
-        if (slots.Count > 0)
+        // v0.21.0: emit one chat reply per logical block to stay under VCF's 510-byte
+        // per-reply cap. Page 1 shows the slot-binding header + first 15 captures;
+        // subsequent pages show captures only.
+        const int pageSize = 15;
+        int total = captured.Count;
+        int pages = total == 0 ? 1 : (total + pageSize - 1) / pageSize;
+        if (page < 1) page = 1;
+        if (page > pages) page = pages;
+
+        // Page 1: header (slot bindings + current weapon).
+        if (page == 1)
         {
-            sb.Append("Current slots: ");
-            bool first = true;
-            foreach (var (slot, abilityGuid) in slots)
-            {
-                if (!first) sb.Append(", ");
-                sb.Append('[').Append(slot).Append(']').Append(' ').Append(new PrefabGUID(abilityGuid).GetPrefabName());
-                first = false;
-            }
-            sb.AppendLine();
+            EmitSlotHeader(ctx, steamId, slots);
         }
 
-        sb.Append("Captured ").Append(captured.Count).AppendLine(" ability(ies):");
+        ctx.Reply($"Captured {total} ability(ies). Page {page}/{pages}:");
 
-        // Group by source first (VBlood at the top), then by unit within each source.
-        var bySource = captured
+        // Sort: VBlood first, then by unit name, preserving original index.
+        var ordered = captured
             .Select((c, idx) => (idx, ability: c))
-            .GroupBy(t => t.ability.Source)
-            .OrderByDescending(g => g.Key == CaptureSource.VBlood);
+            .OrderByDescending(t => t.ability.Source == CaptureSource.VBlood)
+            .ThenBy(t => new PrefabGUID(t.ability.UnitPrefabGuid).GetPrefabName(), System.StringComparer.OrdinalIgnoreCase)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize);
 
-        foreach (var sourceGroup in bySource)
+        foreach (var (idx, ability) in ordered)
         {
-            sb.Append(sourceGroup.Key == CaptureSource.VBlood ? "-- V-Bloods --" : "-- Regular mobs --").AppendLine();
-            var byUnit = sourceGroup
-                .GroupBy(t => t.ability.UnitPrefabGuid)
-                .OrderBy(g => new PrefabGUID(g.Key).GetPrefabName());
-            foreach (var unitGroup in byUnit)
-            {
-                sb.Append(new PrefabGUID(unitGroup.Key).GetPrefabName()).AppendLine(":");
-                foreach (var (idx, ability) in unitGroup)
-                {
-                    sb.Append("  ").Append(idx).Append(": ").AppendLine(new PrefabGUID(ability.AbilityPrefabGuid).GetPrefabName());
-                }
-            }
+            string src = ability.Source == CaptureSource.VBlood ? "V" : "R";
+            string unitName = new PrefabGUID(ability.UnitPrefabGuid).GetPrefabName();
+            string abilityName = new PrefabGUID(ability.AbilityPrefabGuid).GetPrefabName();
+            ctx.Reply($"  {idx,3}: [{src}] {unitName} → {abilityName}");
         }
 
-        ctx.Reply(sb.ToString());
+        if (pages > 1)
+        {
+            int nextPage = page < pages ? page + 1 : 1;
+            ctx.Reply($"More? .beelz list {nextPage}   |   Search: .beelz search <term>");
+        }
     }
 
-    [Command("grant", description: "Assign a captured ability to a spell slot. Usage: .beelz grant <slot 1-6> <index>. Swap a weapon after to apply.")]
+    /// <summary>
+    /// v0.21.0: shared slot-binding header used by .beelz list page 1 and .beelz search.
+    /// Emits one reply per bound bucket (universal + per-weapon) to stay under VCF cap.
+    /// </summary>
+    static void EmitSlotHeader(ChatCommandContext ctx, ulong steamId, IReadOnlyDictionary<int, int> slots)
+    {
+        if (slots.Count > 0)
+        {
+            var sb = new StringBuilder("Universal slots: ");
+            bool first = true;
+            foreach (var (slot, abilityGuid) in slots.OrderBy(kv => kv.Key))
+            {
+                if (!first) sb.Append(", ");
+                sb.Append('[').Append(slot).Append("] ").Append(new PrefabGUID(abilityGuid).GetPrefabName());
+                first = false;
+            }
+            ctx.Reply(sb.ToString());
+        }
+
+        var weaponBuckets = Core.AbilityRegistry.AllWeaponSlots(steamId);
+        foreach (var (weapon, weaponMap) in weaponBuckets.OrderBy(kv => kv.Key.ToString()))
+        {
+            if (weaponMap.Count == 0) continue;
+            var sb = new StringBuilder();
+            sb.Append(weapon).Append(" slots: ");
+            bool first = true;
+            foreach (var (slot, abilityGuid) in weaponMap.OrderBy(kv => kv.Key))
+            {
+                if (!first) sb.Append(", ");
+                sb.Append('[').Append(slot).Append("] ").Append(new PrefabGUID(abilityGuid).GetPrefabName());
+                first = false;
+            }
+            ctx.Reply(sb.ToString());
+        }
+
+        var currentWeapon = Beelzebub.Services.SlotApply.GetCurrentWeapon(ctx.Event.SenderCharacterEntity);
+        if (currentWeapon != Beelzebub.Services.WeaponFamily.None)
+        {
+            ctx.Reply($"Currently wielding: {currentWeapon}");
+        }
+    }
+
+    [Command("search", description: "Search your captured abilities. Substring match against ability + unit names. Usage: .beelz search <term>. Returns up to 25 matches.")]
+    public static void Search(ChatCommandContext ctx, string term)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        if (string.IsNullOrWhiteSpace(term)) { ctx.Reply("Search term required. Usage: .beelz search <term>"); return; }
+
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        var captured = Core.AbilityRegistry.ListFor(steamId);
+        if (captured.Count == 0) { ctx.Reply("You haven't captured any abilities yet."); return; }
+
+        string needle = term.Trim();
+        const int maxResults = 25;
+
+        // Match against ability name OR unit name. Preserve original index so the
+        // result IDs are still valid for .beelz grant <slot> <index>.
+        var matches = captured
+            .Select((c, idx) => (idx, ability: c,
+                                 abName: new PrefabGUID(c.AbilityPrefabGuid).GetPrefabName(),
+                                 unitName: new PrefabGUID(c.UnitPrefabGuid).GetPrefabName()))
+            .Where(t => (t.abName?.Contains(needle, System.StringComparison.OrdinalIgnoreCase) ?? false)
+                     || (t.unitName?.Contains(needle, System.StringComparison.OrdinalIgnoreCase) ?? false))
+            .Take(maxResults + 1) // +1 to detect "more results available"
+            .ToList();
+
+        if (matches.Count == 0)
+        {
+            ctx.Reply($"No matches for '{needle}'.");
+            return;
+        }
+
+        bool truncated = matches.Count > maxResults;
+        if (truncated) matches = matches.Take(maxResults).ToList();
+
+        ctx.Reply($"Search '{needle}': {matches.Count}{(truncated ? "+ (truncated)" : "")} match(es).");
+        foreach (var m in matches)
+        {
+            string src = m.ability.Source == CaptureSource.VBlood ? "V" : "R";
+            ctx.Reply($"  {m.idx,3}: [{src}] {m.unitName} → {m.abName}");
+        }
+        if (truncated)
+        {
+            ctx.Reply($"…more than {maxResults} results. Narrow your search term.");
+        }
+    }
+
+    [Command("info", description: "Show full info for an ability: title, description, school, type, cooldown, cast time, source NPCs. Usage: .beelz info <index|name>. Index = your .beelz list entry; name = substring search across all known abilities.")]
+    public static void Info(ChatCommandContext ctx, string arg)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        if (string.IsNullOrWhiteSpace(arg)) { ctx.Reply("Usage: .beelz info <index|name>"); return; }
+
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+
+        // Try numeric index against the player's captured list first.
+        if (int.TryParse(arg.Trim(), out int idx))
+        {
+            var captured = Core.AbilityRegistry.ListFor(steamId);
+            if (idx >= 0 && idx < captured.Count)
+            {
+                int guid = captured[idx].AbilityPrefabGuid;
+                RenderAbilityInfo(ctx, guid);
+                return;
+            }
+            // numeric but out of range — fall through to name search using the digits as a query
+        }
+
+        // Substring name search.
+        var hits = Core.AbilityMetadata.SearchByName(arg);
+        if (hits.Count == 0)
+        {
+            // Fallback: maybe the arg matches a prefab name we have in the global map.
+            // Iterate Core.PrefabNames (built at init) and humanize-match.
+            string needle = arg.Trim();
+            foreach (var (rawGuid, rawName) in Core.PrefabNames)
+            {
+                if (!rawName.StartsWith("AB_", System.StringComparison.OrdinalIgnoreCase)) continue;
+                if (rawName.IndexOf(needle, System.StringComparison.OrdinalIgnoreCase) < 0) continue;
+                hits.Add(Core.AbilityMetadata.Resolve(rawGuid));
+                if (hits.Count >= 10) break;
+            }
+        }
+
+        if (hits.Count == 0)
+        {
+            ctx.Reply($"No ability found matching '{arg}'. Try .beelz list (then .beelz info <index>) or search a shorter substring.");
+            return;
+        }
+
+        if (hits.Count > 1)
+        {
+            ctx.Reply($"{hits.Count} match(es) for '{arg}' — showing top result. Refine search for others:");
+            for (int i = 0; i < System.Math.Min(5, hits.Count); i++)
+            {
+                ctx.Reply($"  • {hits[i].Name} [{hits[i].School ?? "?"}]");
+            }
+            ctx.Reply("---");
+        }
+        RenderAbilityInfo(ctx, hits[0].AbilityGroupGuid);
+    }
+
+    /// <summary>Format an AbilityInfo into a multi-line chat report.</summary>
+    static void RenderAbilityInfo(ChatCommandContext ctx, int abilityGroupGuid)
+    {
+        var info = Core.AbilityMetadata.Resolve(abilityGroupGuid);
+
+        // Header line with title + school/type tags.
+        var tags = new System.Collections.Generic.List<string>();
+        if (!string.IsNullOrEmpty(info.School)) tags.Add(info.School);
+        if (!string.IsNullOrEmpty(info.Type)) tags.Add(info.Type);
+        if (info.Incompatible) tags.Add("⚠ INCOMPATIBLE");
+        string tagStr = tags.Count > 0 ? $" [{string.Join(" / ", tags)}]" : "";
+        ctx.Reply($"{info.Name}{tagStr}");
+
+        // v0.24.2: incompatibility warning on its own line so the player
+        // understands why the ability "doesn't work" when they cast it.
+        if (info.Incompatible)
+        {
+            string reason = !string.IsNullOrEmpty(info.IncompatibleReason)
+                ? $" ({info.IncompatibleReason})"
+                : "";
+            ctx.Reply($"⚠ This ability is known to misbehave when cast by a player{reason}. The cast animates but the effect doesn't complete. See the V-Blood audit doc for the chain-failure class.");
+        }
+
+        // Description (multi-line — split into chat-sized chunks).
+        if (!string.IsNullOrEmpty(info.Description))
+        {
+            string desc = info.Description.Replace("\\n", " ").Replace("\n", " ").Trim();
+            // Substitute parameters into %placeholder% values where present.
+            if (info.Parameters != null)
+            {
+                foreach (var (k, v) in info.Parameters)
+                {
+                    desc = desc.Replace("%" + k + "%", v);
+                }
+            }
+            ctx.Reply(desc);
+        }
+        else
+        {
+            ctx.Reply("(no description curated yet — admin can override via ability_metadata_overrides.json)");
+        }
+
+        // Stats line — combines curated + ECS-derived.
+        var stats = new System.Collections.Generic.List<string>();
+        if (info.CooldownSeconds.HasValue) stats.Add($"cd {info.CooldownSeconds.Value:F1}s");
+        if (info.CastTimeSeconds.HasValue) stats.Add($"cast {info.CastTimeSeconds.Value:F2}s");
+        if (info.MaxRange.HasValue && info.MaxRange.Value > 0) stats.Add($"range {info.MinRange ?? 0:F0}-{info.MaxRange.Value:F0}");
+        if (!string.IsNullOrEmpty(info.BehaviorType)) stats.Add(info.BehaviorType);
+        if (stats.Count > 0) ctx.Reply("Stats: " + string.Join(" · ", stats));
+
+        // Source NPCs.
+        if (info.SourceNpcs != null && info.SourceNpcs.Count > 0)
+        {
+            var names = info.SourceNpcs.Select(n => n.Name).Where(s => !string.IsNullOrEmpty(s));
+            ctx.Reply("Source: " + string.Join(", ", names));
+        }
+
+        // Admin rules context (policy from ability_rules.json, distinct from metadata).
+        try
+        {
+            string abName = new PrefabGUID(abilityGroupGuid).GetPrefabName() ?? "";
+            bool rateOverridden = Core.AbilityRules.TryGetRateOverride(abName, out float rateR, out float rateV);
+            float damageScale = Core.AbilityRules.GetDamageScale(abName);
+            if (rateOverridden || System.Math.Abs(damageScale - 1f) > 0.001f)
+            {
+                var policy = new System.Collections.Generic.List<string>();
+                if (rateOverridden) policy.Add($"drop R={rateR:P0} V={rateV:P0}");
+                if (System.Math.Abs(damageScale - 1f) > 0.001f) policy.Add($"damage×{damageScale:F2}");
+                ctx.Reply("Admin policy: " + string.Join(" · ", policy));
+            }
+        }
+        catch { /* policy lookup is best-effort */ }
+
+        // Footer with provenance.
+        var sources = new System.Collections.Generic.List<string>();
+        if (info.HasOverrideEntry) sources.Add("override");
+        else if (info.HasShippedEntry) sources.Add("shipped");
+        else sources.Add("fallback");
+        sources.Add($"id {abilityGroupGuid}");
+        ctx.Reply($"({string.Join(", ", sources)})");
+    }
+
+    [Command("grant", description: "Assign a captured ability to a spell slot. Usage: .beelz grant <slot 1-6> <index>. Universal abilities apply on any weapon; weapon-tagged ones only on their weapon family.")]
     public static void Grant(ChatCommandContext ctx, int slot, int index)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
@@ -117,25 +347,168 @@ internal static class BeelzCommands
         }
 
         PrefabGUID ability = new(captured[index].AbilityPrefabGuid);
+
+        // Admin kill-switch + transform-only gates.
+        string abilityName = ability.GetPrefabName();
+        if (!Core.AbilityRules.IsEnabled(abilityName, ability._Value))
+        {
+            ctx.Reply($"'{abilityName}' is currently disabled by the server admin.");
+            return;
+        }
+        if (Core.AbilityRules.IsTransformOnly(abilityName, ability._Value))
+        {
+            ctx.Reply($"'{abilityName}' is reserved for .beelz transform — cannot be granted to a slot.");
+            return;
+        }
+
         Core.AbilityRegistry.SetSlot(steamId, slot, ability._Value);
         Core.Persistence.RequestSave();
 
-        ctx.Reply($"Slot {slot} assigned to {ability.GetPrefabName()}. Swap any weapon to apply the change. (Not all abilities are usable in every slot — e.g. _MeleeAttack_ won't appear in spell slots 5/6.)");
-        Core.Log.LogInfo($"[Beelz] {steamId} assign slot={slot} ability={ability._Value} ({ability.GetPrefabName()})");
+        // W2: apply immediately if the ability is compatible with the player's
+        // current weapon (universal/Magic always compatible; weapon-family-tagged
+        // abilities compatible only when wielding that family). Otherwise the saved
+        // assignment activates next time the player swaps to a compatible weapon.
+        bool appliedNow = SlotApply.ApplyGrant(ctx.Event.SenderCharacterEntity, slot, ability);
+        var families = Core.AbilityRules.ClassifyWeaponFamilies(abilityName);
+        string famHint = (families.Count == 1 && (families[0] == Beelzebub.Services.WeaponFamily.Magic || families[0] == Beelzebub.Services.WeaponFamily.None))
+            ? "universal (any weapon)"
+            : string.Join("/", families);
+        string applyHint = appliedNow
+            ? "Applied to your spell bar."
+            : $"Activates while wielding: {famHint}.";
+        ctx.Reply($"Slot {slot} assigned to {ability.GetPrefabName()}. {applyHint} (Not all abilities are usable in every slot — e.g. _MeleeAttack_ won't appear in spell slots 5/6.)");
+        Core.Log.LogInfo($"[Beelz] {steamId} assign slot={slot} ability={ability._Value} ({ability.GetPrefabName()}) appliedNow={appliedNow}");
         Core.Chat.SendEvent(ctx.Event.SenderCharacterEntity,
             $"[BEELZ:event] type=slot-granted slot={slot} a={ability._Value} an={ability.GetPrefabName()}");
     }
 
-    [Command("unslot", description: "Remove your assignment from a spell slot. Usage: .beelz unslot <slot>. Swap a weapon after to apply.")]
+    [Command("unslot", description: "Remove your universal-bucket assignment from a spell slot. Usage: .beelz unslot <slot>.")]
     public static void Unslot(ChatCommandContext ctx, int slot)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
         ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
         Core.AbilityRegistry.ClearSlot(steamId, slot);
         Core.Persistence.RequestSave();
-        ctx.Reply($"Slot {slot} cleared. Swap a weapon to apply.");
+        bool clearedNow = SlotApply.ClearGrant(ctx.Event.SenderCharacterEntity, slot);
+        ctx.Reply(clearedNow
+            ? $"Universal slot {slot} cleared from your spell bar."
+            : $"Universal slot {slot} cleared.");
         Core.Chat.SendEvent(ctx.Event.SenderCharacterEntity,
             $"[BEELZ:event] type=slot-cleared slot={slot}");
+    }
+
+    /// <summary>
+    /// W3: weapon-family-specific slot bind. Lets the player keep a sword loadout
+    /// AND a crossbow loadout AND a universal loadout simultaneously; switching
+    /// weapons swaps loadouts automatically.
+    /// </summary>
+    [Command("weapon-grant", description: "Bind a captured ability to a slot for a specific weapon family. Usage: .beelz weapon-grant <weapon|auto> <slot 1-6> <index>. Use 'auto' for the weapon you're currently wielding.")]
+    public static void WeaponGrant(ChatCommandContext ctx, string weaponStr, int slot, int index)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        if (slot < 1 || slot > 6) { ctx.Reply("Slot must be 1-6 (1=primary attack, 3=Q/shift, 5=spell1, 6=spell2)."); return; }
+
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        Entity character = ctx.Event.SenderCharacterEntity;
+
+        Beelzebub.Services.WeaponFamily weapon;
+        if (string.Equals(weaponStr, "auto", System.StringComparison.OrdinalIgnoreCase))
+        {
+            weapon = Beelzebub.Services.SlotApply.GetCurrentWeapon(character);
+            if (weapon == Beelzebub.Services.WeaponFamily.None)
+            {
+                ctx.Reply("Couldn't detect your current weapon. Try naming it explicitly: .beelz weapon-grant <sword|crossbow|...> <slot> <index>.");
+                return;
+            }
+        }
+        else if (!System.Enum.TryParse<Beelzebub.Services.WeaponFamily>(weaponStr, ignoreCase: true, out weapon)
+                 || weapon == Beelzebub.Services.WeaponFamily.None
+                 || weapon == Beelzebub.Services.WeaponFamily.Magic)
+        {
+            ctx.Reply($"Unknown weapon family '{weaponStr}'. Valid: Sword, GreatSword, Axe, Mace, DualHammers, Spear, Daggers, Crossbow, Longbow, Pistols, Reaper, Whip, Claws, Pollaxe, Slashers, TwinBlades, Unarmed, FishingPole.");
+            return;
+        }
+
+        var captured = Core.AbilityRegistry.ListFor(steamId);
+        if (index < 0 || index >= captured.Count)
+        {
+            ctx.Reply($"Index {index} out of range (valid: 0-{captured.Count - 1}). Use .beelz list to see indices.");
+            return;
+        }
+
+        PrefabGUID ability = new(captured[index].AbilityPrefabGuid);
+        string abilityName = ability.GetPrefabName();
+        if (!Core.AbilityRules.IsEnabled(abilityName, ability._Value))
+        {
+            ctx.Reply($"'{abilityName}' is currently disabled by the server admin.");
+            return;
+        }
+        if (Core.AbilityRules.IsTransformOnly(abilityName, ability._Value))
+        {
+            ctx.Reply($"'{abilityName}' is reserved for .beelz transform — cannot be granted to a slot.");
+            return;
+        }
+
+        Core.AbilityRegistry.SetSlot(steamId, weapon, slot, ability._Value);
+        Core.Persistence.RequestSave();
+
+        // Apply in-place only if the player is currently wielding the matching family.
+        var currentWeapon = Beelzebub.Services.SlotApply.GetCurrentWeapon(character);
+        bool appliedNow = false;
+        if (currentWeapon == weapon)
+        {
+            appliedNow = Beelzebub.Services.SlotApply.ApplyGrant(character, slot, ability);
+        }
+
+        string applyHint = appliedNow
+            ? $"Applied to your spell bar (currently wielding {weapon})."
+            : $"Activates next time you wield {weapon}.";
+        ctx.Reply($"{weapon} slot {slot} = {ability.GetPrefabName()}. {applyHint}");
+        Core.Log.LogInfo($"[Beelz] {steamId} weapon-grant weapon={weapon} slot={slot} ability={ability._Value} ({ability.GetPrefabName()}) appliedNow={appliedNow}");
+        Core.Chat.SendEvent(character,
+            $"[BEELZ:event] type=weapon-slot-granted weapon={weapon} slot={slot} a={ability._Value} an={ability.GetPrefabName()}");
+    }
+
+    [Command("weapon-unslot", description: "Clear a weapon-family-specific slot bind. Usage: .beelz weapon-unslot <weapon|auto> <slot>.")]
+    public static void WeaponUnslot(ChatCommandContext ctx, string weaponStr, int slot)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        Entity character = ctx.Event.SenderCharacterEntity;
+
+        Beelzebub.Services.WeaponFamily weapon;
+        if (string.Equals(weaponStr, "auto", System.StringComparison.OrdinalIgnoreCase))
+        {
+            weapon = Beelzebub.Services.SlotApply.GetCurrentWeapon(character);
+            if (weapon == Beelzebub.Services.WeaponFamily.None)
+            {
+                ctx.Reply("Couldn't detect your current weapon. Name it explicitly.");
+                return;
+            }
+        }
+        else if (!System.Enum.TryParse<Beelzebub.Services.WeaponFamily>(weaponStr, ignoreCase: true, out weapon)
+                 || weapon == Beelzebub.Services.WeaponFamily.None
+                 || weapon == Beelzebub.Services.WeaponFamily.Magic)
+        {
+            ctx.Reply($"Unknown weapon family '{weaponStr}'.");
+            return;
+        }
+
+        Core.AbilityRegistry.ClearSlot(steamId, weapon, slot);
+        Core.Persistence.RequestSave();
+
+        // If currently wielding the matching family, clear the live slot too.
+        bool clearedNow = false;
+        var currentWeapon = Beelzebub.Services.SlotApply.GetCurrentWeapon(character);
+        if (currentWeapon == weapon)
+        {
+            clearedNow = Beelzebub.Services.SlotApply.ClearGrant(character, slot);
+        }
+        ctx.Reply(clearedNow
+            ? $"{weapon} slot {slot} cleared from your spell bar."
+            : $"{weapon} slot {slot} cleared.");
+        Core.Chat.SendEvent(character,
+            $"[BEELZ:event] type=weapon-slot-cleared weapon={weapon} slot={slot}");
     }
 
     [Command("verbosity", description: "Set your in-chat notification level: silent | summary | verbose.")]
@@ -214,7 +587,7 @@ internal static class BeelzCommands
         ctx.Reply($"Saved preset '{name}' ({slotCount} slot(s)).");
     }
 
-    [Command("preset load", description: "Load a named preset into your current slot assignments. Swap a weapon to apply. Usage: .beelz preset load <name>")]
+    [Command("preset load", description: "Load a named preset into your current slot assignments. Usage: .beelz preset load <name>")]
     public static void PresetLoad(ChatCommandContext ctx, string name)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
@@ -222,7 +595,15 @@ internal static class BeelzCommands
         if (Core.AbilityRegistry.LoadPreset(steamId, name))
         {
             Core.Persistence.RequestSave();
-            ctx.Reply($"Loaded preset '{name}'. Swap a weapon to apply.");
+            // A2: apply each slot in-place if unarmed.
+            int appliedCount = 0;
+            foreach (var (slot, abilityGuid) in Core.AbilityRegistry.GetSlots(steamId))
+            {
+                if (SlotApply.ApplyGrant(ctx.Event.SenderCharacterEntity, slot, new PrefabGUID(abilityGuid))) appliedCount++;
+            }
+            ctx.Reply(appliedCount > 0
+                ? $"Loaded preset '{name}'. {appliedCount} slot(s) applied."
+                : $"Loaded preset '{name}'. (Applies while UNARMED.)");
         }
         else
         {
@@ -289,5 +670,58 @@ internal static class BeelzCommands
         {
             ctx.Reply("You had no captured abilities.");
         }
+    }
+
+    [Command("progress", description: "Show your collection progress: % of curated abilities captured and transforms unlocked.")]
+    public static void Progress(ChatCommandContext ctx)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        ShowProgress(ctx, steamId, "Your");
+    }
+
+    /// <summary>
+    /// Shared progress-summary writer used by both `.beelz progress` (self) and
+    /// `.beelz admin progress &lt;player&gt;` (admin variant in AdminCommands).
+    /// "Totals" are derived from the curated AbilityMap entry count (for abilities)
+    /// and the V-Blood-prefab count (for transforms) — admins can adjust the
+    /// completion bar by trimming/extending the curated matrix.
+    /// </summary>
+    internal static void ShowProgress(VampireCommandFramework.ChatCommandContext ctx, ulong steamId, string subjectLabel)
+    {
+        var captured = Core.AbilityRegistry.ListFor(steamId);
+        var transforms = Core.AbilityRegistry.ListTransforms(steamId);
+
+        // Total abilities = size of curated AbilityMap (admins control the denominator
+        // by editing ability_rules.json). Falls back to 0 if no matrix is loaded.
+        int totalAbilities = Core.AbilityRules?.Current?.AbilityMap?.Count ?? 0;
+        // TX2-curated TransformMap is the source of truth for transformation totals (was a
+        // hardcoded 61 placeholder pre-TX2). Fall back to the V-Blood count if no matrix loaded.
+        int TotalTransforms_Approx = Core.AbilityRules?.Current?.TransformMap?.Count ?? 61;
+        if (TotalTransforms_Approx == 0) TotalTransforms_Approx = 61;
+
+        int vbloodCaptures = captured.Count(c => c.Source == Beelzebub.Services.CaptureSource.VBlood);
+        int vbloodTx = transforms.Count(t => t.Source == Beelzebub.Services.CaptureSource.VBlood);
+
+        float abilityPct = totalAbilities > 0
+            ? captured.Count * 100f / totalAbilities
+            : 0f;
+        float transformPct = transforms.Count * 100f / TotalTransforms_Approx;
+
+        var sb = new System.Text.StringBuilder();
+        sb.Append(subjectLabel).AppendLine(" progress:");
+        sb.Append("  Abilities: ").Append(captured.Count).Append(" / ~").Append(totalAbilities)
+          .Append(" (").Append(abilityPct.ToString("F1")).Append("%)")
+          .Append("   V-Blood ").Append(vbloodCaptures).Append(" • Regular ").Append(captured.Count - vbloodCaptures).AppendLine();
+        sb.Append("  Transforms: ").Append(transforms.Count).Append(" / ").Append(TotalTransforms_Approx)
+          .Append(" (").Append(transformPct.ToString("F1")).Append("%)")
+          .Append("   V-Blood ").Append(vbloodTx).Append(" • Regular ").Append(transforms.Count - vbloodTx).AppendLine();
+        sb.Append("  Slots bound: ").Append(Core.AbilityRegistry.GetSlots(steamId).Count)
+          .Append(" universal");
+        int weaponBindings = Core.AbilityRegistry.AllWeaponSlots(steamId).Sum(kv => kv.Value.Count);
+        if (weaponBindings > 0) sb.Append(", ").Append(weaponBindings).Append(" weapon-specific");
+        int hotkeys = Core.AbilityRegistry.HotkeyCount(steamId);
+        if (hotkeys > 0) sb.Append(", ").Append(hotkeys).Append(" hotkey(s)");
+        ctx.Reply(sb.ToString());
     }
 }

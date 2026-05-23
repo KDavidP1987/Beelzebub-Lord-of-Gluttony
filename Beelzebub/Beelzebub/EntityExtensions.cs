@@ -24,6 +24,25 @@ internal static class EntityExtensions
     public static bool Has<T>(this Entity entity) =>
         entity.Exists() && Core.EntityManager.HasComponent<T>(entity);
 
+    /// <summary>
+    /// Borrow a component, mutate via callback, write it back. Mirrors Bloodcraft's
+    /// VExtensions.With pattern for IL2CPP-safe in-place struct edits. No-op (and
+    /// logs a warning) if the component is missing — call AddComponent first if you
+    /// need to introduce it.
+    /// </summary>
+    public delegate void RefAction<T>(ref T value) where T : unmanaged;
+    public static void With<T>(this Entity entity, RefAction<T> mutator) where T : unmanaged
+    {
+        if (!entity.Has<T>())
+        {
+            Core.Log.LogWarning($"[Beelz] Entity.With<{typeof(T).Name}>: component missing on {entity}");
+            return;
+        }
+        T value = Core.EntityManager.GetComponentData<T>(entity);
+        mutator(ref value);
+        Core.EntityManager.SetComponentData(entity, value);
+    }
+
     public static bool IsPlayer(this Entity entity) =>
         entity.Has<PlayerCharacter>();
 

@@ -38,6 +38,73 @@ internal static class Settings
     // Diagnostics
     public static ConfigEntry<bool> VerboseLogging { get; private set; }
 
+    // W4: hotkey slots (BCH-facing)
+    public static ConfigEntry<bool> Hotkeys_Enabled { get; private set; }
+    public static ConfigEntry<int> Hotkeys_MaxPerPlayer { get; private set; }
+
+    // TX4: server difficulty mode (Basic | Brutal) — admin specifies their server's mode.
+    public static ConfigEntry<string> Server_DifficultyMode { get; private set; }
+
+    // Z2 (v0.14.0): opt-in native shapeshift VFX on transforms. Native V Rising
+    // shapeshift forms (Wolf/Bear/Rat/Spider/Toad) auto-exit when the player casts
+    // any ability NOT in the form's baked-in moveset — which our captured abilities
+    // always are. Default OFF so transforms behave consistently. Admins who want
+    // the cosmetic on wolf-flavored transforms can enable knowing the form will
+    // drop the moment any captured ability is cast.
+    public static ConfigEntry<bool> Transform_NativeShapeshift_Enabled { get; private set; }
+
+    // TX7 (v0.17.0): how the runtime sources power scaling for a transform.
+    //   CuratedScales (default) — apply admin-curated DamageScale/HealthScale/etc.
+    //                             from the TransformMap entry as ModifyUnitStatBuff_DOTS
+    //                             entries on the carrier buff. (Existing TX6 behavior.)
+    //   PrefabAbsolute  — read the CHAR_ prefab's UnitStats component (PhysicalPower,
+    //                     SpellPower, MaxHealth, etc.) and apply matching boss-tier
+    //                     stats to the player. Ignores player progression — the player
+    //                     hits as hard as the boss does. Use for "true boss form" servers.
+    //   PlayerScaled    — apply no overrides. V Rising's natural damage formula scales
+    //                     the captured ability's base damage by the player's own
+    //                     PhysicalPower/SpellPower — including any Bloodcraft expertise
+    //                     / blood-quality / level buffs. Naturally tracks player
+    //                     progression and Bloodcraft prestige resets.
+    // Per-transformation override: `PowerScalingMode` field on each TransformMap
+    // entry can be set to one of the three values to override the global default
+    // for that specific unit.
+    public static ConfigEntry<string> Transform_PowerScalingMode { get; private set; }
+
+    // TX7-extended (v0.19.0): max-level anchor for PlayerLeveled scaling. The
+    // factor curve is `clamp(player.UnitLevel / this, 0, 1)`. Default 90
+    // matches V Rising's typical max gear level (and Bloodcraft's usual leveling
+    // cap). Admins on Bloodcraft servers with raised level caps should bump
+    // this to match.
+    public static ConfigEntry<int> Transform_PlayerLeveled_MaxLevel { get; private set; }
+
+    // v0.20.0: when a summon ability is cast during a Beelzebub transform, rebind
+    // the spawned minions as player-allies via a LinkMinionToOwnerOnSpawnSystem
+    // Prefix patch. Default true. Set false to leave V Rising's vanilla spawn
+    // behavior alone (which on direct player casts usually still works via
+    // SetTeamToOwner=true on the spawn event, but breaks for some chained summon
+    // patterns that expect an NPC caster context).
+    public static ConfigEntry<bool> Transform_SummonsAreAllies { get; private set; }
+
+    // v0.23.0: stack-cap per (player, summon-ability) pair. Once a player has this
+    // many live ally minions from a single ability, further casts of that ability
+    // are refused (manual-spawn casts) or destroyed on natural-chain (LinkMinion
+    // catches over-cap entities and queues for staged despawn). 0 = no cap.
+    public static ConfigEntry<int> Transform_MaxStacksPerSummonAbility { get; private set; }
+
+    // v0.23.0: per-frame budget for the staged-despawn queue drain.
+    // V Rising crashes when too many entities are destroyed in one frame.
+    public static ConfigEntry<int> Transform_DespawnBudgetPerFrame { get; private set; }
+
+    // v0.23.0: when a player disconnects, dismiss their active summons.
+    // Bloodcraft does this for familiars; we mirror the pattern. Setting false
+    // leaves summons in-world during DC — useful for short reconnects.
+    public static ConfigEntry<bool> Transform_DespawnSummonsOnDisconnect { get; private set; }
+
+    // v0.23.1: max distance (world units) a summon can wander from its player
+    // before being teleported back. 0 = no leashing.
+    public static ConfigEntry<float> Transform_SummonLeashRadius { get; private set; }
+
     public static void Initialize(ConfigFile config)
     {
         CaptureOnKill = config.Bind(
@@ -117,5 +184,96 @@ internal static class Settings
         VerboseLogging = config.Bind(
             "Diagnostics", nameof(VerboseLogging), false,
             "Log every captured ability and filter decision to BepInEx\\LogOutput.log. Independent of in-chat verbosity.");
+
+        Hotkeys_Enabled = config.Bind(
+            "Hotkeys", nameof(Hotkeys_Enabled), true,
+            "Admin master switch for W4 named hotkey bindings (extra ability slots beyond the V Rising 6). " +
+            "When false, .beelz hotkey commands are blocked and no hotkey bindings can be created. " +
+            "The cast-trigger mechanism is BCH-side (server stores; BCH UI fires).");
+
+        Hotkeys_MaxPerPlayer = config.Bind(
+            "Hotkeys", nameof(Hotkeys_MaxPerPlayer), 5,
+            "Maximum number of named hotkey bindings a player can create. 0 disables hotkey storage entirely.");
+
+        Server_DifficultyMode = config.Bind(
+            "Server", nameof(Server_DifficultyMode), "Basic",
+            "TX4: difficulty mode this server is configured for: Basic | Brutal. " +
+            "Used to gate Brutal-only ability captures and transform unlocks — abilities/transforms " +
+            "tagged Difficulty:Brutal in ability_rules.json are blocked on Basic servers. " +
+            "Also auto-treats any ability whose prefab name contains '_Hard_' as Brutal-only " +
+            "(unless an AbilityMap entry overrides). Admins set this once to match their server's " +
+            "game-difficulty preset.");
+
+        Transform_NativeShapeshift_Enabled = config.Bind(
+            "Transformation", nameof(Transform_NativeShapeshift_Enabled), false,
+            "Z2 (v0.14.0): apply a native V Rising shapeshift form (Wolf/Bear/Rat/Spider/Toad) " +
+            "as the visual when a player transforms into a matching unit. WARNING: native shapeshift " +
+            "forms auto-exit when the player casts any ability NOT in the form's own moveset — which " +
+            "captured abilities always are — so the visual will drop the moment any spell fires. " +
+            "Default false: keep the player's vampire model and only swap the spell bar. " +
+            "Set true if you'd rather see the wolf model for a couple seconds at the cost of the " +
+            "visual ending on first cast.");
+
+        Transform_PowerScalingMode = config.Bind(
+            "Transformation", nameof(Transform_PowerScalingMode), "CuratedScales",
+            "TX7 (v0.17.0): where transform power comes from. One of: " +
+            "CuratedScales (default — admin-curated *Scale fields from the TransformMap entry); " +
+            "PrefabAbsolute (auto-derive from the CHAR_ prefab — boss-tier regardless of player level); " +
+            "PlayerScaled (no overrides — V Rising's vanilla formula uses the player's natural " +
+            "stats, including any Bloodcraft expertise/blood/level buffs); " +
+            "PlayerLeveled (v0.19.0: boss-tier stats scaled by the player's current UnitLevel — " +
+            "weak transforms when the player is low-level, full boss tier at max level). " +
+            "Per-TransformMap-entry `PowerScalingMode` field overrides this for one unit.");
+
+        Transform_SummonsAreAllies = config.Bind(
+            "Transformation", nameof(Transform_SummonsAreAllies), true,
+            "v0.20.0 (Task #74): when a summon ability fires during a Beelzebub transform " +
+            "(e.g. Stonebreaker reinforcements, Bishop of Shadows shadow soldiers), rebind " +
+            "the freshly-spawned minions as player-allies — they fight alongside the " +
+            "player instead of attacking them, and despawn cleanly on .beelz revert. " +
+            "Implementation: Harmony Prefix on LinkMinionToOwnerOnSpawnSystem.OnUpdate " +
+            "rewrites EntityOwner / FactionReference / Follower / Minion components " +
+            "(pattern: Bloodcraft FamiliarBindingSystem.ModifyFollowerFactionMinion). " +
+            "Set false to disable the rebind and let V Rising's vanilla spawn handling " +
+            "stand (most player-cast summons would still side with the player via the " +
+            "engine's native SetTeamToOwner machinery, but some chained summon patterns " +
+            "won't spawn anything without our intervention).");
+
+        Transform_MaxStacksPerSummonAbility = config.Bind(
+            "Transformation", nameof(Transform_MaxStacksPerSummonAbility), 3,
+            "v0.23.0: maximum number of live ally-summons a player can have from a single " +
+            "summon ability at once. Subsequent casts are refused (or destroyed for natural-chain " +
+            "summons that V Rising spawns through its own pipeline). Stack decays as minions die. " +
+            "0 = no cap (legacy behavior, prone to runaway). Default 3.");
+
+        Transform_DespawnBudgetPerFrame = config.Bind(
+            "Transformation", nameof(Transform_DespawnBudgetPerFrame), 5,
+            "v0.23.0: maximum number of summon entities destroyed per frame during the " +
+            "staged-despawn drain (revert, over-cap kills, etc.). V Rising's server crashes " +
+            "when ~36+ entities are destroyed in a single tick; staging across frames avoids " +
+            "this. Lower = safer but slower cleanup; higher = faster but risk crash. Default 5.");
+
+        Transform_SummonLeashRadius = config.Bind(
+            "Transformation", nameof(Transform_SummonLeashRadius), 30f,
+            "v0.23.1: max distance (world units) summons can wander from their player " +
+            "before being teleported back. Also triggers when summons enter Idle/Return " +
+            "BehaviourTreeState (means they gave up on combat). Default 30. Set 0 to disable leashing.");
+
+        Transform_DespawnSummonsOnDisconnect = config.Bind(
+            "Transformation", nameof(Transform_DespawnSummonsOnDisconnect), true,
+            "v0.23.0: when a player disconnects (logout, network drop, kick), queue their " +
+            "active summons for staged despawn. Mirrors Bloodcraft's familiar pattern. " +
+            "Set false to leave summons in-world during DC — useful if you want short " +
+            "reconnects to resume with intact summons, but risks accumulating offline " +
+            "minion clutter on long disconnects. Default true.");
+
+        Transform_PlayerLeveled_MaxLevel = config.Bind(
+            "Transformation", nameof(Transform_PlayerLeveled_MaxLevel), 90,
+            "v0.19.0: max-level anchor for the PlayerLeveled scaling curve. Formula: " +
+            "factor = clamp(player.UnitLevel / this, 0.0, 1.0). At level 0 the transform's " +
+            "boss-stat bonus is 0; at this level it's the full boss tier. Default 90 = V Rising's " +
+            "typical max gear level. Bloodcraft servers with raised level caps should bump this " +
+            "to match (the curve continues to apply at this:1 ratio even above; clamp keeps it " +
+            "from exploding past 100% boss-tier).");
     }
 }

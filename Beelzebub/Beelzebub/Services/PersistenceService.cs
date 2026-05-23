@@ -63,6 +63,7 @@ internal sealed class PersistenceService
             registry.LoadFromSnapshot(snapshot);
 
             int slotCount = 0;
+            int weaponSlotCount = 0;
             int verbositySet = 0;
             int transformCount = 0;
             foreach (var (key, player) in dto.Players)
@@ -77,6 +78,26 @@ internal sealed class PersistenceService
                             registry.SetSlot(steamId, slot, abilityGuid);
                             slotCount++;
                         }
+                    }
+                }
+                // W3 / state.json v5: per-weapon-family slot bindings.
+                if (player.WeaponSlots is not null)
+                {
+                    var perWeapon = new Dictionary<WeaponFamily, Dictionary<int, int>>();
+                    foreach (var (weaponStr, slotMap) in player.WeaponSlots)
+                    {
+                        if (!Enum.TryParse<WeaponFamily>(weaponStr, ignoreCase: true, out var weapon)) continue;
+                        var slots = new Dictionary<int, int>();
+                        foreach (var (slotStr, abilityGuid) in slotMap)
+                        {
+                            if (int.TryParse(slotStr, out int slot)) slots[slot] = abilityGuid;
+                        }
+                        if (slots.Count > 0) perWeapon[weapon] = slots;
+                        weaponSlotCount += slots.Count;
+                    }
+                    if (perWeapon.Count > 0)
+                    {
+                        registry.LoadWeaponSlotsSnapshot(steamId, perWeapon);
                     }
                 }
                 if (player.Verbosity.HasValue)
@@ -111,9 +132,14 @@ internal sealed class PersistenceService
                     }
                     registry.LoadPresetsSnapshot(steamId, converted);
                 }
+                // W4 / v6: named hotkey bindings.
+                if (player.Hotkeys is not null && player.Hotkeys.Count > 0)
+                {
+                    registry.LoadHotkeysSnapshot(steamId, new Dictionary<string, int>(player.Hotkeys));
+                }
             }
 
-            Core.Log.LogInfo($"Loaded {registry.PlayerCount} player(s), {slotCount} slot(s), {verbositySet} verbosity, {transformCount} transform unlock(s) from {StateFilePath}.");
+            Core.Log.LogInfo($"Loaded {registry.PlayerCount} player(s), {slotCount} universal slot(s), {weaponSlotCount} weapon-specific slot(s), {verbositySet} verbosity, {transformCount} transform unlock(s) from {StateFilePath}.");
         }
         catch (Exception e)
         {
@@ -131,12 +157,16 @@ internal sealed class PersistenceService
             var transformSnapshot = Core.AbilityRegistry.TransformSnapshot()
                 .ToDictionary(kv => kv.Key, kv => kv.Value);
             var presetsSnapshot = Core.AbilityRegistry.PresetsSnapshot();
+            var weaponSlotsSnapshot = Core.AbilityRegistry.WeaponSlotsSnapshot();
+            var hotkeysSnapshot = Core.AbilityRegistry.HotkeysSnapshot();
 
             var playerIds = new HashSet<ulong>(Core.AbilityRegistry.Snapshot().Select(kv => kv.Key));
             foreach (var sid in allVerbosity.Keys) playerIds.Add(sid);
             foreach (var sid in allEmitEvents.Keys) playerIds.Add(sid);
             foreach (var sid in transformSnapshot.Keys) playerIds.Add(sid);
             foreach (var sid in presetsSnapshot.Keys) playerIds.Add(sid);
+            foreach (var sid in weaponSlotsSnapshot.Keys) playerIds.Add(sid);
+            foreach (var sid in hotkeysSnapshot.Keys) playerIds.Add(sid);
 
             var players = new Dictionary<string, PlayerDto>();
             foreach (var steamId in playerIds)
@@ -155,6 +185,23 @@ internal sealed class PersistenceService
                     }
                 }
 
+                // W3: serialize per-weapon-family slot bindings. Outer key = enum name.
+                Dictionary<string, Dictionary<string, int>> weaponSlotsForPlayer = null;
+                if (weaponSlotsSnapshot.TryGetValue(steamId, out var weaponSlotsRaw) && weaponSlotsRaw.Count > 0)
+                {
+                    weaponSlotsForPlayer = new Dictionary<string, Dictionary<string, int>>();
+                    foreach (var (weapon, slotMap) in weaponSlotsRaw)
+                    {
+                        weaponSlotsForPlayer[weapon.ToString()] = slotMap.ToDictionary(s => s.Key.ToString(), s => s.Value);
+                    }
+                }
+                // W4: named hotkeys, name → ability guid.
+                Dictionary<string, int> hotkeysForPlayer = null;
+                if (hotkeysSnapshot.TryGetValue(steamId, out var hotkeysRaw) && hotkeysRaw.Count > 0)
+                {
+                    hotkeysForPlayer = new Dictionary<string, int>(hotkeysRaw);
+                }
+
                 players[steamId.ToString()] = new PlayerDto
                 {
                     Captured = captured.Select(c => new CapturedDto
@@ -164,6 +211,7 @@ internal sealed class PersistenceService
                         Source = (byte)c.Source,
                     }).ToList(),
                     Slots = slots.ToDictionary(s => s.Key.ToString(), s => s.Value),
+                    WeaponSlots = weaponSlotsForPlayer,
                     Verbosity = allVerbosity.ContainsKey(steamId) ? (byte?)verbosity : null,
                     EmitApiEvents = allEmitEvents.TryGetValue(steamId, out var e) && e ? true : (bool?)null,
                     Transforms = transforms?.Select(t => new TransformDto
@@ -172,12 +220,13 @@ internal sealed class PersistenceService
                         Source = (byte)t.Source,
                     }).ToList(),
                     Presets = presetsForPlayer,
+                    Hotkeys = hotkeysForPlayer,
                 };
             }
 
             var dto = new StateDto
             {
-                Version = 4,
+                Version = 6,
                 Players = players,
             };
 
@@ -205,11 +254,16 @@ internal sealed class PersistenceService
     {
         public List<CapturedDto> Captured { get; set; } = new();
         public Dictionary<string, int> Slots { get; set; }
+        // W3 / v5: weapon-family-specific slot bindings.
+        // Outer key = WeaponFamily enum name; inner key = slot stringified (JSON).
+        public Dictionary<string, Dictionary<string, int>> WeaponSlots { get; set; }
         public byte? Verbosity { get; set; }
         public bool? EmitApiEvents { get; set; }
         public List<TransformDto> Transforms { get; set; }
         // C1: per-name preset → slot → abilityGuid. Slot keys are stringified ints (JSON requirement).
         public Dictionary<string, Dictionary<string, int>> Presets { get; set; }
+        // W4 / v6: named hotkey bindings, hotkey-name → ability prefab GUID.
+        public Dictionary<string, int> Hotkeys { get; set; }
     }
 
     sealed class TransformDto

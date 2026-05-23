@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using BepInEx.Logging;
 using Beelzebub.Services;
 using ProjectM;
+using ProjectM.Gameplay.Systems;
 using ProjectM.Scripting;
 using Stunlock.Core;
 using Unity.Entities;
@@ -14,11 +15,14 @@ internal static class Core
     public static EntityManager EntityManager { get; private set; }
     public static PrefabCollectionSystem PrefabCollectionSystem { get; private set; }
     public static ServerScriptMapper ServerScriptMapper { get; private set; }
+    public static DebugEventsSystem DebugEventsSystem { get; private set; }
+    public static ReplaceAbilityOnSlotSystem ReplaceAbilityOnSlotSystem { get; private set; }
     public static ServerGameManager ServerGameManager => ServerScriptMapper.GetServerGameManager();
 
     public static AbilityRegistry AbilityRegistry { get; private set; }
     public static AbilityFilter AbilityFilter { get; private set; }
     public static AbilityRules AbilityRules { get; private set; }
+    public static AbilityMetadataService AbilityMetadata { get; private set; }
     public static ChatNotifier Chat { get; private set; }
     public static TransformService Transforms { get; private set; }
     public static PersistenceService Persistence { get; private set; }
@@ -60,10 +64,14 @@ internal static class Core
             EntityManager = server.EntityManager;
             PrefabCollectionSystem = prefabSystem;
             ServerScriptMapper = server.GetExistingSystemManaged<ServerScriptMapper>();
+            DebugEventsSystem = server.GetExistingSystemManaged<DebugEventsSystem>();
+            ReplaceAbilityOnSlotSystem = server.GetExistingSystemManaged<ReplaceAbilityOnSlotSystem>();
 
             Persistence = new PersistenceService();
             AbilityRules = new AbilityRules();
             AbilityRules.Load();
+            AbilityMetadata = new AbilityMetadataService();
+            AbilityMetadata.Load();
             AbilityRegistry = new AbilityRegistry();
             AbilityFilter = new AbilityFilter();
             Chat = new ChatNotifier();
