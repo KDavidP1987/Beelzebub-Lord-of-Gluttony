@@ -1,0 +1,279 @@
+using System;
+using System.Collections.Generic;
+using Beelzebub.Services;
+using HarmonyLib;
+using ProjectM;
+using ProjectM.Gameplay.Systems;
+using ProjectM.Scripting;
+using Stunlock.Core;
+using Unity.Collections;
+using Unity.Entities;
+using Unity.Mathematics;
+using Unity.Transforms;
+
+namespace Beelzebub.Patches;
+
+/// <summary>
+/// v0.22.0 — manual summon-ally spawn at cast-start (Bloodcraft pattern).
+/// v0.23.0 — adds per-ability stack-cap check, recent-cast attribution table
+/// so <see cref="LinkMinionToOwnerOnSpawnSystemPatch"/> can credit natural-chain
+/// spawns back to the cast that caused them, and routes setup through
+/// <see cref="SummonAllyService"/>.
+/// </summary>
+[HarmonyPatch(typeof(AbilityCastStarted_SetupAbilityTargetSystem_Shared),
+              nameof(AbilityCastStarted_SetupAbilityTargetSystem_Shared.OnUpdate))]
+internal static class AbilityCastStartedSystemPatch
+{
+    /// <summary>Substring patterns identifying a summon-class ability (case-insensitive).</summary>
+    static readonly string[] SummonNamePatterns = {
+        "_Summon_", "_Summoning_", "_Reinforcement_", "_CallReinforcements_",
+        "_RaiseDead_", "_RaiseHorde_",
+    };
+
+    /// <summary>
+    /// v0.23.12: waypoint ability-group GUIDs. When a transformed player initiates
+    /// a waygate cast, auto-stash their summons so V Rising's "subdued enemy"
+    /// pre-check doesn't refuse. AbilityCastStartedEvent fires at cast-start
+    /// (before the validation gate per our hypothesis); if validation actually
+    /// runs first we'll know from testing and need a different hook.
+    /// </summary>
+    static readonly System.Collections.Generic.HashSet<int> WaypointCastAbilityGroups = new()
+    {
+        893332545,   // AB_Interact_UseWaypoint_AbilityGroup (world waygate)
+        695067846,   // AB_Interact_UseWaypoint_Castle_AbilityGroup (castle waypoint)
+    };
+
+    /// <summary>
+    /// Curated map: ability-group name → (target CHAR_ prefab GUID, spawn count).
+    /// Add entries here as test data reveals each V-Blood's summon target.
+    /// </summary>
+    public static readonly Dictionary<string, (int targetGuid, int spawnCount)> SummonTargets =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            { "AB_Undead_BishopOfShadows_ShadowSoldier_AbilityGroup", (678628353, 2) },
+            { "AB_Undead_BishopOfShadows_ShadowSoldier_Group",        (678628353, 2) },
+            { "AB_Bandit_StoneBreaker_VBlood_Reinforcement_Group", (-2039670689, 2) },
+            { "AB_Bandit_StoneBreaker_VBlood_Reinforcement_AbilityGroup", (-2039670689, 2) },
+            { "AB_Bandit_Foreman_Reinforcement_Group", (-2039670689, 2) },
+            { "AB_Bandit_Foreman_Reinforcement_AbilityGroup", (-2039670689, 2) },
+            // v0.24.2 (#93): Priest RaiseDead — natural chain animates existing
+            // corpses via Summon_Melee/Ranged HitTrigger carriers. When a player
+            // casts, there are typically no corpses in range → nothing spawns.
+            // Manual-spawn pattern bypasses this: directly instantiate skeleton
+            // soldiers at the player's position. Elite variant has separate
+            // Melee + Ranged spawns; we represent it as 2 melee for simplicity
+            // (the Elite Priest typically raises 2 skeleton soldiers in fights).
+            { "AB_Undead_Priest_RaiseDead_AbilityGroup", (-603934060, 2) }, // CHAR_Undead_SkeletonSoldier_Base ×2
+            { "AB_Undead_Priest_RaiseDead_Group",        (-603934060, 2) },
+            { "AB_Undead_Priest_Elite_RaiseDead_AbilityGroup", (-603934060, 2) },
+            { "AB_Undead_Priest_Elite_RaiseDead_Group",        (-603934060, 2) },
+        };
+
+    /// <summary>
+    /// v0.23.0: most recent cast event per (steamId, abilityGuid). Read by
+    /// LinkMinionToOwnerOnSpawnSystemPatch to attribute natural-chain spawns
+    /// (Undead Priest's _RaiseHorde_, etc.) back to the cast that caused them
+    /// so stack-cap accounting includes them.
+    /// </summary>
+    public static readonly Dictionary<ulong, (int abilityGuid, DateTime when)> RecentSummonCast = new();
+    // v0.23.16 (B1 fix): bumped from 3s → 10s. Priest's RaiseHorde / RaiseDead
+    // channel for ~2s before V Rising's spawn chain produces the actual entities,
+    // so a 3-second window only just catches the first spawn — subsequent
+    // entities from the same cast (and the spawn-then-buff-then-rebuild chain
+    // some abilities use) frequently land at 4-6s, missing the window entirely.
+    // 10s gives ~8s of slack while staying well under the typical interval
+    // between intentional re-casts of the same summon by a player.
+    public static readonly TimeSpan AttributionWindow = TimeSpan.FromSeconds(10);
+
+    /// <summary>Dedupe rapid repeat firings of the same cast event.</summary>
+    static readonly Dictionary<(ulong, int), DateTime> _recentCasts = new();
+    static readonly TimeSpan DedupeWindow = TimeSpan.FromMilliseconds(250);
+
+    [HarmonyPrefix]
+    public static void OnUpdatePrefix(AbilityCastStarted_SetupAbilityTargetSystem_Shared __instance)
+    {
+        if (!Core.IsReady) return;
+        if (!Beelzebub.Config.Settings.Transform_SummonsAreAllies.Value) return;
+
+        NativeArray<AbilityCastStartedEvent> events;
+        try
+        {
+            events = __instance.EntityQueries[0].ToComponentDataArray<AbilityCastStartedEvent>(Allocator.Temp);
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError($"[Beelz] AbilityCastStarted query failed: {ex}");
+            return;
+        }
+
+        try
+        {
+            foreach (var evt in events)
+            {
+                try { ProcessCast(evt); }
+                catch (Exception ex) { Core.Log.LogError($"[Beelz] ProcessCast failed: {ex}"); }
+            }
+        }
+        finally { events.Dispose(); }
+    }
+
+    static void ProcessCast(AbilityCastStartedEvent evt)
+    {
+        Entity caster = evt.Character;
+        if (!caster.Exists() || !caster.IsPlayer()) return;
+
+        ulong steamId = caster.GetSteamId();
+        if (steamId == 0) return;
+
+        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
+        if (active == null) return;
+
+        PrefabGUID abilityPrefab = evt.AbilityGroup.GetPrefabGuid();
+
+        // v0.23.16 (B1 diagnostic): log every cast from a transformed player.
+        // Lets us see whether Priest's _RaiseHorde_ is being received by this
+        // hook at all, and whether name-matching identifies it as a summon.
+        if (Beelzebub.Config.Settings.VerboseLogging.Value)
+        {
+            string castName = abilityPrefab.GetPrefabName() ?? "?";
+            Core.Log.LogInfo($"[Beelz SUMMON][cast] steamId={steamId} ability={castName} guid={abilityPrefab._Value}");
+        }
+
+        // v0.25.0: open a chain-trace window for EVERY transformed-player cast
+        // (not just summons) so the runtime audit can see what each ability's
+        // chain actually spawns. See ChainTraceService.
+        Services.ChainTraceService.BeginTrace(steamId, abilityPrefab.GetPrefabName() ?? "?");
+
+        // v0.23.12: auto-stash on waygate cast. Fires BEFORE we check
+        // SummonsDisabled because we want to stash regardless of toggle state
+        // when the player is trying to teleport.
+        if (WaypointCastAbilityGroups.Contains(abilityPrefab._Value))
+        {
+            if (active.SummonedMinions != null && active.SummonedMinions.Count > 0)
+            {
+                int stashed = Services.SummonAllyService.StashAll(active, caster);
+                if (stashed > 0)
+                {
+                    active.SummonsDisabled = true;
+                    Core.Log.LogInfo($"[Beelz SUMMON] auto-stash on waypoint cast: stashed {stashed} for player {steamId} (ability={abilityPrefab.GetPrefabName()}).");
+                    try
+                    {
+                        Core.Chat.Send(caster, Verbosity.Summary,
+                            $"Auto-stashed {stashed} summon(s) for waygate. They'll restore on arrival.");
+                    }
+                    catch { /* chat failures non-critical */ }
+                }
+            }
+            return; // not a summon cast; nothing else to do
+        }
+
+        if (active.SummonsDisabled) return; // v0.23.0 toggle
+
+        string abilityName = abilityPrefab.GetPrefabName() ?? "";
+        if (string.IsNullOrEmpty(abilityName)) return;
+
+        bool isSummon = false;
+        foreach (string pat in SummonNamePatterns)
+        {
+            if (abilityName.IndexOf(pat, StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                isSummon = true;
+                break;
+            }
+        }
+        if (!isSummon) return;
+
+        var dedupeKey = (steamId, abilityPrefab._Value);
+        DateTime now = DateTime.UtcNow;
+        if (_recentCasts.TryGetValue(dedupeKey, out var lastFire) && (now - lastFire) < DedupeWindow)
+        {
+            if (Beelzebub.Config.Settings.VerboseLogging.Value)
+                Core.Log.LogInfo($"[Beelz SUMMON][cast] dedupe-skip {abilityName} (within {DedupeWindow.TotalMilliseconds}ms)");
+            return;
+        }
+        _recentCasts[dedupeKey] = now;
+
+        // v0.23.6: record recent cast FIRST. Previously this happened after the
+        // cap check, so refused casts couldn't attribute their natural-chain
+        // spawns — and LinkMinion couldn't destroy them. Now: always update the
+        // attribution window so over-cap spawns can be identified and destroyed
+        // by Hook 2 even when our manual spawn is refused.
+        RecentSummonCast[steamId] = (abilityPrefab._Value, now);
+
+        // v0.23.6: cap check uses LiveCastCount (= number of live groups, where
+        // each group is one cast). Refuses when N uses of the ability are still
+        // alive. Different from v0.23.0-5 which counted live ENTITIES.
+        int liveCount = SummonAllyService.LiveCastCount(active, abilityPrefab._Value);
+        int cap = Beelzebub.Config.Settings.Transform_MaxStacksPerSummonAbility.Value;
+        if (cap > 0 && liveCount >= cap)
+        {
+            Core.Log.LogInfo($"[Beelz SUMMON] {steamId} cast {abilityName} REFUSED — at use cap {liveCount}/{cap}. Wait for a previous use's minions to fully die.");
+            try { Core.Chat.Send(caster, Verbosity.Summary, $"Summon use limit reached ({liveCount}/{cap}) for {abilityName.Humanize()}. Wait for an active use's minions to die."); }
+            catch { /* chat failures non-critical */ }
+            return;
+        }
+
+        // Cap passed → open a new cast group for tracking.
+        SummonAllyService.BeginCastGroup(active, abilityPrefab._Value);
+        if (Beelzebub.Config.Settings.VerboseLogging.Value)
+        {
+            int groupsAfter = active.SummonStacks != null
+                && active.SummonStacks.TryGetValue(abilityPrefab._Value, out var gs)
+                ? gs.Count : 0;
+            Core.Log.LogInfo($"[Beelz SUMMON][cast] open cast-group for {abilityName} (now {groupsAfter} group(s) tracked, uses {liveCount}/{(cap > 0 ? cap.ToString() : "∞")} pre-cap)");
+        }
+
+        // Lookup target in map. If not present, this is a natural-chain ability
+        // (e.g. Undead Priest _RaiseHorde_) — V Rising's spawner will produce
+        // entities; Hook 2 catches them.
+        if (!SummonTargets.TryGetValue(abilityName, out var entry))
+        {
+            if (Beelzebub.Config.Settings.VerboseLogging.Value)
+                Core.Log.LogInfo($"[Beelz SUMMON] {steamId} cast {abilityName} — no manual-spawn entry; relying on natural chain + LinkMinion rebind. (Add entry to SummonTargets to enable manual spawn for unmapped abilities.)");
+            return;
+        }
+
+        var targetPrefab = new PrefabGUID(entry.targetGuid);
+        string targetName = targetPrefab.GetPrefabName() ?? "?";
+
+        float3 spawnPos = float3.zero;
+        if (caster.TryGetComponent<LocalToWorld>(out var ltw)) spawnPos = ltw.Position;
+
+        int spawned = 0;
+        for (int i = 0; i < entry.spawnCount; i++)
+        {
+            try
+            {
+                Entity minion = Core.ServerGameManager.InstantiateEntityImmediate(caster, targetPrefab);
+                if (!minion.Exists()) continue;
+
+                if (minion.Has<Translation>())
+                {
+                    float angle = (float)(i * (Math.PI * 2.0 / Math.Max(1, entry.spawnCount)));
+                    float3 offset = new float3((float)Math.Cos(angle) * 1.5f, 0f, (float)Math.Sin(angle) * 1.5f);
+                    minion.With((ref Translation t) => t.Value = spawnPos + offset);
+                }
+
+                if (!SummonAllyService.ApplyPlayerAllySetup(minion, caster)) continue;
+
+                active.SummonedMinions ??= new List<Entity>();
+                active.SummonedMinions.Add(minion);
+                SummonAllyService.TrackInCurrentGroup(active, abilityPrefab._Value, minion);
+                spawned++;
+
+                if (Beelzebub.Config.Settings.VerboseLogging.Value)
+                    Core.Log.LogInfo($"[Beelz SUMMON] manual-spawn ally {minion} prefab={targetName} for player {steamId} (ability={abilityName})");
+            }
+            catch (Exception ex)
+            {
+                Core.Log.LogError($"[Beelz SUMMON] InstantiateEntityImmediate failed for {targetName}: {ex}");
+            }
+        }
+
+        if (spawned > 0)
+        {
+            int afterCount = SummonAllyService.LiveCastCount(active, abilityPrefab._Value);
+            Core.Log.LogInfo($"[Beelz SUMMON] {steamId} cast {abilityName} → spawned {spawned} allied {targetName} unit(s) [uses {afterCount}/{(cap > 0 ? cap.ToString() : "∞")}]");
+        }
+    }
+}

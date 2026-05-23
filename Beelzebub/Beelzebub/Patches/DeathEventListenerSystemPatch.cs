@@ -57,6 +57,15 @@ internal static class DeathEventListenerSystemPatch
             for (int i = 0; i < deathEvents.Length; i++)
             {
                 var evt = deathEvents[i];
+
+                // v0.23.10: prune any tracked summon that just died. Without this,
+                // SummonStacks keeps dead-but-not-yet-destroyed entities as "alive"
+                // for the cap → players can't resummon for several seconds after
+                // their units die in combat. Pruning on the death event fires the
+                // moment V Rising marks the unit dead, before destruction completes.
+                try { SummonAllyService.PruneDeadSummon(evt.Died); }
+                catch (System.Exception ex) { Core.Log.LogError($"[Beelz] PruneDeadSummon failed: {ex}"); }
+
                 try
                 {
                     Process(evt, aggregates);
@@ -180,6 +189,26 @@ internal static class DeathEventListenerSystemPatch
         }
 
         // Transform-unlock roll happens once per kill, independent of ability captures.
+        // TX1: skip the roll entirely if the unit is admin-disabled in TransformMap.
+        if (!Core.AbilityRules.IsTransformUnitEnabled(unitGuid._Value)) return;
+        // TX4: skip the roll if the unit's transformation is Brutal-only and the server is Basic.
+        if (!Beelzebub.Services.AbilityRules.IsDifficultyAllowed(
+                Core.AbilityRules.GetTransformDifficulty(unitGuid._Value),
+                Beelzebub.Services.AbilityRules.GetServerDifficulty())) return;
+        // AUDIT-7 (v0.20.1): gate-boss variants don't roll for transforms. They're
+        // easier prefab copies of main V-Bloods (e.g. CHAR_Bandit_StoneBreaker_VBlood_GateBoss_Minor),
+        // and granting a separate "lesser" transform unlock from one would clutter
+        // the player's collection with a weaker duplicate that's confusing alongside
+        // the real version. Ability captures still happen — gate-boss kits ARE the
+        // boss's kits, so capturing from them is a legitimate "preview" pathway
+        // before the main fight.
+        if (unitName.IndexOf("_GateBoss_", System.StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            if (Settings.VerboseLogging.Value)
+                Core.Log.LogInfo($"[Beelz] skip transform-roll for gate-boss variant {unitName} (still captures abilities)");
+            return;
+        }
+
         float transformChance = Settings.DropChance_Transform_Regular.Value * died.ResolveTierMultiplier();
         if (transformChance > 0f && System.Random.Shared.NextDouble() <= transformChance)
         {

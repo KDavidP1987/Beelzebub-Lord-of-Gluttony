@@ -27,18 +27,97 @@ internal sealed class ActiveTransform
     public CaptureSource Source;
     public System.DateTime ActivatedAtUtc;
     public System.TimeSpan? Duration; // null = Toggle mode
+    // Z1 (v0.14.0): StashedOverrides is gone. Transform slot overrides now live on
+    // a dedicated carrier buff (TransformBuffService). When the buff is destroyed
+    // on revert V Rising re-resolves the player's spell-book + weapon naturals
+    // automatically — no stash-and-restore dance needed.
+    // A4/Z2: the native shapeshift form buff we applied (Wolf/Bear/Rat/Spider/Toad)
+    // for the visual model swap. 0 = no native form applied (default since v0.14.0
+    // when Transform_NativeShapeshift_Enabled is false). Used by revert to know
+    // which buff to destroy. Runtime-only.
+    public int AppliedShapeshiftForm;
+    // TX5: which boss-phase loadout is currently on the spell bar. Default 1.
+    // Switched via `.beelz phase <n>`.
+    public int CurrentPhase = 1;
+    // v0.20.0: minion entities spawned by summon abilities while this transform
+    // was active. AbilityCastStartedSystemPatch + LinkMinionToOwnerOnSpawnSystemPatch
+    // append here as they rebind freshly-spawned minions. v0.23.0: no cap (was 10);
+    // TransformService.Revert moves these into DespawnQueue and drains across frames
+    // so we don't crash V Rising by destroying 100 entities in a single tick.
+    public System.Collections.Generic.List<Unity.Entities.Entity> SummonedMinions;
+
+    // v0.23.6: per-CAST stack tracking. Each cast of a summon ability creates a
+    // new inner list (a "cast group") in SummonStacks[abilityGuid]. The cap
+    // refuses based on the number of LIVE GROUPS (= number of active uses of
+    // the ability), not the number of live entities. Example: cast RaiseHorde
+    // 3 times = 3 groups = 3/3 uses, even though each cast spawned 10 entities.
+    // A group is "alive" if any entity in it still exists. Lazy cleanup on read.
+    public System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<System.Collections.Generic.List<Unity.Entities.Entity>>> SummonStacks
+        = new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<System.Collections.Generic.List<Unity.Entities.Entity>>>();
+
+    // v0.23.16 (B1 fix): parallel to SummonStacks — SummonStackTimes[abilityGuid][i]
+    // is the creation timestamp of the cast group at SummonStacks[abilityGuid][i].
+    // Without this, LiveCastCount prunes empty groups immediately — and any cast
+    // whose natural-chain spawns arrive AFTER the attribution window (Priest's
+    // channeled RaiseHorde/RaiseDead can take 2-3s) leaves an empty group that
+    // gets pruned before attribution lands, breaking the cap entirely. With
+    // this, an empty group is only pruneable after the attribution window
+    // expires (= confirmed no attribution will arrive). BeginCastGroup must
+    // keep these two dictionaries index-aligned per ability.
+    public System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<System.DateTime>> SummonStackTimes
+        = new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<System.DateTime>>();
+
+    // v0.23.0: staged-despawn queue. Revert moves SummonedMinions here in one shot;
+    // TransformService.Tick drains <=N entities/frame to avoid the batch-destroy
+    // server crash (v0.22.0 testing crashed at ~36 entities/frame).
+    public System.Collections.Generic.Queue<Unity.Entities.Entity> DespawnQueue
+        = new System.Collections.Generic.Queue<Unity.Entities.Entity>();
+
+    // v0.23.0: `.beelz summons off` master kill-switch per player+transform. When
+    // true: cast-intercept refuses new summons, natural-chain rebind skips, and
+    // any future re-summon-on-teleport is suppressed.
+    public bool SummonsDisabled;
+
+    // v0.23.0: teleport snapshot. PlayerTeleportSystemPatch moves live summons here
+    // and adds <Disabled> components on teleport-start; on teleport-finish we drain
+    // back into SummonedMinions and remove <Disabled>. Avoids leaving allies behind
+    // in the source zone (V Rising's teleport flow doesn't carry NPC followers).
+    public System.Collections.Generic.List<Unity.Entities.Entity> SuspendedSummons
+        = new System.Collections.Generic.List<Unity.Entities.Entity>();
+
+    // v0.23.8: manual stash/restore for waygate teleport. Bloodcraft-pattern —
+    // when player runs `.beelz summons stash`, all live summons get <Disabled>
+    // component + move from SummonedMinions to StashedSummons. They're out of
+    // the world (don't trigger V Rising's "subdued enemy" pre-check) but still
+    // tied to this transform's runtime state. `.beelz summons restore` reverses:
+    // remove <Disabled>, teleport to current player position, move back to
+    // SummonedMinions list.
+    public System.Collections.Generic.List<Unity.Entities.Entity> StashedSummons
+        = new System.Collections.Generic.List<Unity.Entities.Entity>();
 }
 
 internal sealed class AbilityRegistry
 {
     // steamId → unitGuid → abilityGuid → source
     readonly ConcurrentDictionary<ulong, ConcurrentDictionary<int, ConcurrentDictionary<int, CaptureSource>>> _data = new();
+    // Universal slot bindings: steamId → slot → abilityGuid. Activate on any
+    // weapon if the ability's family is Magic/None or matches the equipped weapon.
     readonly ConcurrentDictionary<ulong, ConcurrentDictionary<int, int>> _slotAssignments = new();
+    // W3: weapon-family-specific slot bindings: steamId → weapon → slot → abilityGuid.
+    // Win over universal bindings when the player wields that weapon family.
+    readonly ConcurrentDictionary<ulong, ConcurrentDictionary<WeaponFamily, ConcurrentDictionary<int, int>>> _weaponSlots = new();
     readonly ConcurrentDictionary<ulong, Verbosity> _verbosity = new();
     readonly ConcurrentDictionary<ulong, bool> _emitApiEvents = new();
 
     // C1: per-player slot-loadout presets, keyed by case-sensitive name.
     readonly ConcurrentDictionary<ulong, ConcurrentDictionary<string, ConcurrentDictionary<int, int>>> _presets = new();
+
+    // W4: per-player named hotkey bindings. Key = hotkey name (admin/player-chosen,
+    // free text like "Q1", "Heal", "Burst"), value = ability prefab GUID. These are
+    // EXTRA slots beyond V Rising's 6 — the actual fire mechanism is BCH-side
+    // (server stores the binding + exposes it via .beelz api hotkeys; BCH client
+    // renders buttons and triggers casts).
+    readonly ConcurrentDictionary<ulong, ConcurrentDictionary<string, int>> _hotkeys = new();
 
     // Phase 5: transforms.
     readonly ConcurrentDictionary<ulong, ConcurrentDictionary<int, CaptureSource>> _transformUnlocks = new(); // unitGuid → source
@@ -141,24 +220,200 @@ internal sealed class AbilityRegistry
         }
     }
 
-    public void SetSlot(ulong steamId, int slot, int abilityGuid)
+    // --- W4: named hotkey bindings (BCH-facing) ---
+
+    /// <summary>
+    /// Bind a hotkey name to an ability GUID for a player. Names are case-insensitive
+    /// and trimmed; bindings overwrite. Returns false if name is empty/whitespace.
+    /// </summary>
+    public bool SetHotkey(ulong steamId, string name, int abilityGuid)
     {
-        var slots = _slotAssignments.GetOrAdd(steamId, _ => new ConcurrentDictionary<int, int>());
-        slots[slot] = abilityGuid;
+        if (string.IsNullOrWhiteSpace(name)) return false;
+        var byName = _hotkeys.GetOrAdd(steamId, _ => new ConcurrentDictionary<string, int>(System.StringComparer.OrdinalIgnoreCase));
+        byName[name.Trim()] = abilityGuid;
+        return true;
     }
 
-    public void ClearSlot(ulong steamId, int slot)
+    public bool ClearHotkey(ulong steamId, string name)
     {
-        if (_slotAssignments.TryGetValue(steamId, out var slots))
+        if (string.IsNullOrWhiteSpace(name)) return false;
+        if (!_hotkeys.TryGetValue(steamId, out var byName)) return false;
+        return byName.TryRemove(name.Trim(), out _);
+    }
+
+    /// <summary>Returns the ability GUID bound to <paramref name="name"/>, or 0 if unbound.</summary>
+    public int GetHotkey(ulong steamId, string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return 0;
+        if (_hotkeys.TryGetValue(steamId, out var byName)
+            && byName.TryGetValue(name.Trim(), out int guid)) return guid;
+        return 0;
+    }
+
+    public int HotkeyCount(ulong steamId) =>
+        _hotkeys.TryGetValue(steamId, out var byName) ? byName.Count : 0;
+
+    public IReadOnlyDictionary<string, int> ListHotkeys(ulong steamId)
+    {
+        if (!_hotkeys.TryGetValue(steamId, out var byName)) return new Dictionary<string, int>();
+        return new Dictionary<string, int>(byName);
+    }
+
+    public Dictionary<ulong, Dictionary<string, int>> HotkeysSnapshot()
+    {
+        var result = new Dictionary<ulong, Dictionary<string, int>>();
+        foreach (var (steamId, byName) in _hotkeys)
+        {
+            if (byName.IsEmpty) continue;
+            result[steamId] = new Dictionary<string, int>(byName);
+        }
+        return result;
+    }
+
+    public void LoadHotkeysSnapshot(ulong steamId, Dictionary<string, int> snapshot)
+    {
+        var byName = _hotkeys.GetOrAdd(steamId, _ => new ConcurrentDictionary<string, int>(System.StringComparer.OrdinalIgnoreCase));
+        byName.Clear();
+        foreach (var (name, abilityGuid) in snapshot)
+        {
+            if (string.IsNullOrWhiteSpace(name)) continue;
+            byName[name.Trim()] = abilityGuid;
+        }
+    }
+
+    /// <summary>
+    /// Universal slot bind. Backward-compatible overload — equivalent to
+    /// SetSlot(steamId, WeaponFamily.None, slot, abilityGuid).
+    /// </summary>
+    public void SetSlot(ulong steamId, int slot, int abilityGuid) =>
+        SetSlot(steamId, WeaponFamily.None, slot, abilityGuid);
+
+    /// <summary>
+    /// W3: bind an ability to a slot for a specific weapon family.
+    /// Use WeaponFamily.None (or .Magic) for the universal bucket — fires on any weapon
+    /// (subject to the ability's own compatibility). Any other family creates a
+    /// weapon-specific binding that wins over the universal bucket when wielded.
+    /// </summary>
+    public void SetSlot(ulong steamId, WeaponFamily weapon, int slot, int abilityGuid)
+    {
+        if (IsUniversalBucket(weapon))
+        {
+            var slots = _slotAssignments.GetOrAdd(steamId, _ => new ConcurrentDictionary<int, int>());
+            slots[slot] = abilityGuid;
+        }
+        else
+        {
+            var byWeapon = _weaponSlots.GetOrAdd(steamId, _ => new ConcurrentDictionary<WeaponFamily, ConcurrentDictionary<int, int>>());
+            var slots = byWeapon.GetOrAdd(weapon, _ => new ConcurrentDictionary<int, int>());
+            slots[slot] = abilityGuid;
+        }
+    }
+
+    public void ClearSlot(ulong steamId, int slot) =>
+        ClearSlot(steamId, WeaponFamily.None, slot);
+
+    public void ClearSlot(ulong steamId, WeaponFamily weapon, int slot)
+    {
+        if (IsUniversalBucket(weapon))
+        {
+            if (_slotAssignments.TryGetValue(steamId, out var slots)) slots.TryRemove(slot, out _);
+        }
+        else if (_weaponSlots.TryGetValue(steamId, out var byWeapon)
+                 && byWeapon.TryGetValue(weapon, out var slots))
         {
             slots.TryRemove(slot, out _);
         }
     }
 
+    /// <summary>
+    /// Returns the universal-bucket slots. Backward-compatible — pre-W3 callers
+    /// (like `.beelz list`, presets) keep seeing only the universal bindings.
+    /// </summary>
     public IReadOnlyDictionary<int, int> GetSlots(ulong steamId) =>
         _slotAssignments.TryGetValue(steamId, out var slots)
             ? slots
             : new Dictionary<int, int>();
+
+    /// <summary>
+    /// W3: returns the resolved slot map for a given currently-equipped weapon family.
+    /// Weapon-specific binds win on a slot if present; otherwise the universal bind wins.
+    /// Use this when injecting into the live ability bar.
+    /// </summary>
+    public IReadOnlyDictionary<int, int> GetSlotsResolved(ulong steamId, WeaponFamily currentWeapon)
+    {
+        var result = new Dictionary<int, int>();
+        // Universal first.
+        if (_slotAssignments.TryGetValue(steamId, out var uni))
+        {
+            foreach (var (slot, abilityGuid) in uni) result[slot] = abilityGuid;
+        }
+        // Weapon-specific overrides.
+        if (!IsUniversalBucket(currentWeapon)
+            && _weaponSlots.TryGetValue(steamId, out var byWeapon)
+            && byWeapon.TryGetValue(currentWeapon, out var w))
+        {
+            foreach (var (slot, abilityGuid) in w) result[slot] = abilityGuid;
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// W3: return the bindings for one specific weapon family. Empty if none set.
+    /// </summary>
+    public IReadOnlyDictionary<int, int> GetWeaponSlots(ulong steamId, WeaponFamily weapon)
+    {
+        if (IsUniversalBucket(weapon)) return GetSlots(steamId);
+        if (_weaponSlots.TryGetValue(steamId, out var byWeapon)
+            && byWeapon.TryGetValue(weapon, out var slots)) return slots;
+        return new Dictionary<int, int>();
+    }
+
+    /// <summary>
+    /// W3: snapshot of every weapon-specific bucket for a player (excludes universal).
+    /// Returns empty dict if nothing weapon-specific is bound.
+    /// </summary>
+    public Dictionary<WeaponFamily, Dictionary<int, int>> AllWeaponSlots(ulong steamId)
+    {
+        var result = new Dictionary<WeaponFamily, Dictionary<int, int>>();
+        if (_weaponSlots.TryGetValue(steamId, out var byWeapon))
+        {
+            foreach (var (weapon, slots) in byWeapon)
+            {
+                if (slots.IsEmpty) continue;
+                result[weapon] = new Dictionary<int, int>(slots);
+            }
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// W3: persistence snapshot of every player's weapon-specific bindings.
+    /// Outer key = steamId; mid key = weapon family; inner = slot → ability.
+    /// </summary>
+    public Dictionary<ulong, Dictionary<WeaponFamily, Dictionary<int, int>>> WeaponSlotsSnapshot()
+    {
+        var result = new Dictionary<ulong, Dictionary<WeaponFamily, Dictionary<int, int>>>();
+        foreach (var (steamId, _) in _weaponSlots)
+        {
+            var nested = AllWeaponSlots(steamId);
+            if (nested.Count > 0) result[steamId] = nested;
+        }
+        return result;
+    }
+
+    public void LoadWeaponSlotsSnapshot(ulong steamId, Dictionary<WeaponFamily, Dictionary<int, int>> snapshot)
+    {
+        var byWeapon = _weaponSlots.GetOrAdd(steamId, _ => new ConcurrentDictionary<WeaponFamily, ConcurrentDictionary<int, int>>());
+        foreach (var (weapon, slots) in snapshot)
+        {
+            var bucket = byWeapon.GetOrAdd(weapon, _ => new ConcurrentDictionary<int, int>());
+            bucket.Clear();
+            foreach (var (slot, abilityGuid) in slots) bucket[slot] = abilityGuid;
+        }
+    }
+
+    static bool IsUniversalBucket(WeaponFamily weapon) =>
+        weapon == WeaponFamily.None || weapon == WeaponFamily.Magic;
 
     public bool Add(ulong steamId, int unitPrefabGuid, int abilityPrefabGuid, CaptureSource source)
     {
@@ -190,9 +445,41 @@ internal sealed class AbilityRegistry
         return result;
     }
 
+    /// <summary>
+    /// AUDIT-6 (v0.20.1): bulk wipe. Returns (players, abilities, transforms) wiped.
+    /// Clears every internal dictionary in one shot; intended only for the
+    /// `.beelz admin wipe-all` operation. Caller is responsible for triggering
+    /// persistence save afterward.
+    /// </summary>
+    public (int players, int abilities, int transforms) WipeAll()
+    {
+        int players = _data.Count;
+        int abilities = 0;
+        foreach (var byUnit in _data.Values)
+            foreach (var abs in byUnit.Values)
+                abilities += abs.Count;
+        int transforms = 0;
+        foreach (var byUnit in _transformUnlocks.Values) transforms += byUnit.Count;
+
+        _data.Clear();
+        _slotAssignments.Clear();
+        _weaponSlots.Clear();
+        _hotkeys.Clear();
+        _presets.Clear();
+        _transformUnlocks.Clear();
+        _activeTransforms.Clear();
+        _cooldownRegularUntil.Clear();
+        _cooldownVBloodUntil.Clear();
+        _verbosity.Clear();
+        _emitApiEvents.Clear();
+        return (players, abilities, transforms);
+    }
+
     public bool Clear(ulong steamId)
     {
         _slotAssignments.TryRemove(steamId, out _);
+        _weaponSlots.TryRemove(steamId, out _);
+        _hotkeys.TryRemove(steamId, out _);
         _transformUnlocks.TryRemove(steamId, out _);
         _activeTransforms.TryRemove(steamId, out _);
         return _data.TryRemove(steamId, out _);
@@ -287,6 +574,26 @@ internal sealed class AbilityRegistry
     public void SetActiveTransform(ulong steamId, ActiveTransform state) => _activeTransforms[steamId] = state;
     public void ClearActiveTransform(ulong steamId) => _activeTransforms.TryRemove(steamId, out _);
     public IEnumerable<KeyValuePair<ulong, ActiveTransform>> AllActiveTransforms() => _activeTransforms;
+
+    // v0.23.0: post-revert despawn pending records. When a transform reverts with
+    // live summons we move the ActiveTransform here (instead of dropping it) until
+    // its DespawnQueue drains — TransformService.Tick processes both these and
+    // currently-active records via SummonAllyService.DrainDespawnQueues. Allows the
+    // staged destroy to keep running even after the player switched / reverted.
+    readonly ConcurrentDictionary<ulong, ActiveTransform> _pendingDespawns = new();
+
+    public void StashPendingDespawn(ulong steamId, ActiveTransform state) => _pendingDespawns[steamId] = state;
+    public IEnumerable<ActiveTransform> AllPendingDespawns() => _pendingDespawns.Values;
+    public void ClearDrainedPendingDespawns()
+    {
+        foreach (var kv in _pendingDespawns)
+        {
+            if (kv.Value.DespawnQueue == null || kv.Value.DespawnQueue.Count == 0)
+            {
+                _pendingDespawns.TryRemove(kv.Key, out _);
+            }
+        }
+    }
 
     // --- Cooldowns (runtime) ---
     public System.DateTime CooldownUntil(ulong steamId, CaptureSource source)
