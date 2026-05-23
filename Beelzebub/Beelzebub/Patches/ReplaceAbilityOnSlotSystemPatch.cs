@@ -59,43 +59,41 @@ internal static class ReplaceAbilityOnSlotSystemPatch
         if (!Core.EntityManager.HasBuffer<ReplaceAbilityOnSlotBuff>(entity)) return;
         var buffer = Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(entity);
 
-        // Transform: full override of slots 1-N with the unit's filtered abilities.
-        // This is the EXO-style "you ARE the unit" mode and intentionally wins over weapons.
-        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
-        if (active is not null)
+        // Z1 (v0.14.0): the active-transform injection branch is gone. Transforms now
+        // own their slot overrides via a dedicated carrier buff (TransformBuffService).
+        // That buff's own ReplaceAbilityOnSlotBuff entries (Target=BuffTarget, Priority=99)
+        // win over weapon naturals AND any saved Beelzebub grant the player has — no
+        // need to stamp transform overrides into the EquipBuff's buffer here.
+        //
+        // While transformed we still skip the W2 grant-injection branch below, since
+        // those grants would just be replaced by the carrier buff anyway and would
+        // re-flicker on the bar each weapon swap.
+        if (Core.AbilityRegistry.GetActiveTransform(steamId) is not null) return;
+
+        // W2: no active transform. Inject Beelzebub's saved grants per slot based on
+        // weapon-family compatibility — universal/Magic abilities fire for any weapon,
+        // weapon-family-tagged abilities fire only when wielding that weapon. Replaces
+        // the old "unarmed-only" gate.
+        PrefabGUID eventPrefab = entity.GetPrefabGuid();
+        string eventName = eventPrefab.GetPrefabName() ?? "";
+        var weapon = Beelzebub.Services.SlotApply.DetectFamily(eventName);
+        if (weapon == Beelzebub.Services.WeaponFamily.None)
         {
-            var unitGuid = new PrefabGUID(active.UnitPrefabGuid);
-            var abilities = Core.Transforms.GetTransformAbilities(unitGuid);
-            for (int i = 0; i < abilities.Count; i++)
-            {
-                buffer.Add(new ReplaceAbilityOnSlotBuff
-                {
-                    Slot = i + 1,
-                    NewGroupId = new PrefabGUID(abilities[i]),
-                    CopyCooldown = true,
-                    Priority = 0,
-                });
-            }
-            if (Beelzebub.Config.Settings.VerboseLogging.Value)
-                Core.Log.LogInfo($"[Beelz] transform-inject {steamId} as {unitGuid.GetPrefabName()} ({abilities.Count} slots)");
+            // Unrecognized equip-buff (could be a non-weapon EquipBuff_*). Skip safely.
             return;
         }
 
-        // No active transform. Only inject Beelzebub's saved grants when the event
-        // entity is the player's UNARMED (or fishing-pole) slot setup. Weapon equip
-        // events should leave the weapon's natural abilities alone.
-        // Mirrors Bloodcraft's ReplaceAbilityOnSlotSystemPatch gating.
-        PrefabGUID eventPrefab = entity.GetPrefabGuid();
-        string eventName = eventPrefab.GetPrefabName() ?? "";
-        bool isUnarmed = eventName.Contains("unarmed", StringComparison.OrdinalIgnoreCase)
-                      || eventName.Contains("fishingpole", StringComparison.OrdinalIgnoreCase);
-        if (!isUnarmed) return;
-
-        var slots = Core.AbilityRegistry.GetSlots(steamId);
+        // W3: resolved slot map = universal bucket + weapon-specific overrides for
+        // the currently-equipped weapon family.
+        var slots = Core.AbilityRegistry.GetSlotsResolved(steamId, weapon);
         if (slots.Count == 0) return;
 
         foreach (var (slot, abilityGuid) in slots)
         {
+            if (!Beelzebub.Services.SlotApply.IsGrantCompatible(abilityGuid, weapon))
+            {
+                continue; // ability isn't allowed on this weapon (or is Enabled=false / TransformOnly)
+            }
             buffer.Add(new ReplaceAbilityOnSlotBuff
             {
                 Slot = slot,
@@ -104,7 +102,7 @@ internal static class ReplaceAbilityOnSlotSystemPatch
                 Priority = 0,
             });
             if (Beelzebub.Config.Settings.VerboseLogging.Value)
-                Core.Log.LogInfo($"[Beelz] inject slot={slot} ability={new PrefabGUID(abilityGuid).GetPrefabName()} (unarmed) for {steamId}");
+                Core.Log.LogInfo($"[Beelz] inject slot={slot} ability={new PrefabGUID(abilityGuid).GetPrefabName()} weapon={weapon} for {steamId}");
         }
     }
 }
