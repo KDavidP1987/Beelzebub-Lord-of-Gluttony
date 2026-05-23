@@ -105,6 +105,21 @@ internal static class Settings
     // before being teleported back. 0 = no leashing.
     public static ConfigEntry<float> Transform_SummonLeashRadius { get; private set; }
 
+    // v0.26.0: max lifetime (seconds) for a summon cast-group before it is
+    // auto-despawned. 0 = infinite (default). Prevents indefinite horde
+    // accumulation on long-lived servers / AFK players.
+    public static ConfigEntry<float> Transform_SummonLifetimeSeconds { get; private set; }
+
+    // v0.27.0: how multi-phase boss transforms switch combat phases.
+    public enum PhaseControlMode { Manual, Auto }
+    public static ConfigEntry<PhaseControlMode> Transform_PhaseMode { get; private set; }
+
+    // v0.29.0 (#4): GUID of a buff used as the on-screen summon-count indicator.
+    // The buff is applied to the player and its Stacks reflect the live summon
+    // count; 0 = feature off. The icon is the chosen buff's own art — pick any
+    // buff whose icon you like.
+    public static ConfigEntry<int> Transform_SummonCounterBuffGuid { get; private set; }
+
     public static void Initialize(ConfigFile config)
     {
         CaptureOnKill = config.Bind(
@@ -258,6 +273,32 @@ internal static class Settings
             "v0.23.1: max distance (world units) summons can wander from their player " +
             "before being teleported back. Also triggers when summons enter Idle/Return " +
             "BehaviourTreeState (means they gave up on combat). Default 30. Set 0 to disable leashing.");
+
+        Transform_SummonLifetimeSeconds = config.Bind(
+            "Transformation", nameof(Transform_SummonLifetimeSeconds), 0f,
+            "v0.26.0: max lifetime in seconds for a summon cast-group before it is " +
+            "automatically despawned. Each cast of a summon ability starts its own timer. " +
+            "0 = infinite (default). Set e.g. 120 to make summons fade 2 minutes after casting, " +
+            "preventing indefinite horde accumulation. Uses the same crash-safe staged despawn " +
+            "as revert/disconnect cleanup.");
+
+        Transform_PhaseMode = config.Bind(
+            "Transformation", nameof(Transform_PhaseMode), PhaseControlMode.Manual,
+            "v0.27.0: how multi-phase boss transforms (e.g. Dracula) switch phases. " +
+            "Manual = the player chooses with `.beelz phase <n>`. Auto = phases auto-advance " +
+            "as the transformed player loses health WHILE IN COMBAT (one-way; even-split " +
+            "thresholds by phase count — e.g. 3 phases advance at 66% and 33% HP), then RESET " +
+            "to phase 1 when combat ends, just like a boss resetting on leash. Only affects " +
+            "units with curated multi-phase ability sets.");
+
+        Transform_SummonCounterBuffGuid = config.Bind(
+            "Transformation", nameof(Transform_SummonCounterBuffGuid), 0,
+            "v0.29.0: PrefabGUID (integer) of a buff to show on the player as a live summon-count " +
+            "indicator while transformed — its stack count = how many summon 'uses' you have active " +
+            "(toward Transform_MaxStacksPerSummonAbility). 0 = OFF (default). The indicator uses the " +
+            "chosen buff's OWN icon (V Rising buffs can't have their icon swapped at runtime), so set " +
+            "this to any buff whose icon you like — e.g. a consumable/blessing buff. The buff's " +
+            "gameplay effects are stripped automatically; only the icon + stack number remain.");
 
         Transform_DespawnSummonsOnDisconnect = config.Bind(
             "Transformation", nameof(Transform_DespawnSummonsOnDisconnect), true,

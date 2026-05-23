@@ -12,7 +12,7 @@ v-rising = ["mods", "server-side"]
 [package]
 namespace = "kdpen"
 name = "Beelzebub"
-versionNumber = "0.25.0"
+versionNumber = "0.29.0"
 description = "Server-side V Rising mod: defeat a unit, acquire its ability. Configurable assignment to spell slots and admin-defined extra hotkeys."
 websiteUrl = ""
 containsNsfwContent = false
