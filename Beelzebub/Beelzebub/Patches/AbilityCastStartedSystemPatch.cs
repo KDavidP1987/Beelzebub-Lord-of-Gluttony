@@ -60,13 +60,17 @@ internal static class AbilityCastStartedSystemPatch
             // corpses via Summon_Melee/Ranged HitTrigger carriers. When a player
             // casts, there are typically no corpses in range → nothing spawns.
             // Manual-spawn pattern bypasses this: directly instantiate skeleton
-            // soldiers at the player's position. Elite variant has separate
-            // Melee + Ranged spawns; we represent it as 2 melee for simplicity
-            // (the Elite Priest typically raises 2 skeleton soldiers in fights).
-            { "AB_Undead_Priest_RaiseDead_AbilityGroup", (-603934060, 2) }, // CHAR_Undead_SkeletonSoldier_Base ×2
-            { "AB_Undead_Priest_RaiseDead_Group",        (-603934060, 2) },
-            { "AB_Undead_Priest_Elite_RaiseDead_AbilityGroup", (-603934060, 2) },
-            { "AB_Undead_Priest_Elite_RaiseDead_Group",        (-603934060, 2) },
+            // soldiers at the player's position.
+            // v0.26.0 (#93 count): the Elite RaiseDead channel ticks 3x and spawns
+            // BOTH a melee and a ranged skeleton per relevant tick — in the real
+            // fight the boss raises ~3-4 (user-observed). We were spawning only 2,
+            // so bump Elite→4 and base→3 to match the boss feel. (CHAR_Undead_
+            // SkeletonSoldier_Base; a melee/ranged unit MIX is a later refinement —
+            // would need SummonTargets to carry multiple (guid,count) pairs.)
+            { "AB_Undead_Priest_RaiseDead_AbilityGroup", (-603934060, 3) }, // CHAR_Undead_SkeletonSoldier_Base
+            { "AB_Undead_Priest_RaiseDead_Group",        (-603934060, 3) },
+            { "AB_Undead_Priest_Elite_RaiseDead_AbilityGroup", (-603934060, 4) },
+            { "AB_Undead_Priest_Elite_RaiseDead_Group",        (-603934060, 4) },
         };
 
     /// <summary>

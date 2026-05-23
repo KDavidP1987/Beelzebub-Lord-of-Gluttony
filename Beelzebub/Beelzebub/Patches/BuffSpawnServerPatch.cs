@@ -40,6 +40,14 @@ internal static class BuffSpawnServerPatch
     // Per Bloodcraft's UpdateBuffsBufferDestroyPatch GetBuffType: GuidHash 581443919.
     static readonly PrefabGUID PvECombatBuff = new(581443919);
 
+    // v0.26.0: bat-form landing signal. ShapeshiftSystemPatch stashes summons on
+    // bat-form ENTER; this buff (AB_Shapeshift_Bat_Landing_Travel) marks the
+    // player touching down → restore. NOTE: Bloodcraft's older code caught this
+    // via Spawn_TravelBuffSystem, so if testing shows no restore here, the buff
+    // routes through that system instead and we move detection there. Manual
+    // `.beelz summons restore` is the fallback meanwhile.
+    static readonly PrefabGUID BatLandingTravelBuff = new(-371745443);
+
     // v0.24.8: "teleport-and-detonate" map. When one of these arrival buffs is
     // applied to a transformed player, V Rising's NATIVE chain refuses to spawn
     // the detonation because the SpawnPrefab gameplay event is gated by a
@@ -158,6 +166,16 @@ internal static class BuffSpawnServerPatch
                             Core.Log.LogInfo($"[Beelz SUMMON][combat-on] PvE combat buff applied to player {steamId} → HandleHordeEnteringCombat");
                         SummonAllyService.SetCombatMode(steamId, true);
                         SummonAllyService.HandleHordeEnteringCombat(steamId, target);
+
+                        // v0.27.0: mark combat + capture the player entity so the
+                        // Auto-mode phase monitor (TransformService.Tick) can read
+                        // Health without a steamId→entity lookup.
+                        var activeT = Core.AbilityRegistry.GetActiveTransform(steamId);
+                        if (activeT != null)
+                        {
+                            activeT.InCombat = true;
+                            activeT.Character = target;
+                        }
                     }
                 }
                 else if (TeleportDetonateTargets.TryGetValue(prefab._Value, out int detonateGuid))
@@ -169,6 +187,17 @@ internal static class BuffSpawnServerPatch
                     catch (Exception ex)
                     {
                         Core.Log.LogError($"[Beelz NOVA] HandleTeleportDetonate failed: {ex}");
+                    }
+                }
+                else if (prefab._Value == BatLandingTravelBuff._Value)
+                {
+                    // v0.26.0: player landed from bat form → restore stashed summons.
+                    if (Beelzebub.Config.Settings.VerboseLogging.Value)
+                        Core.Log.LogInfo($"[Beelz SUMMON] bat-landing buff seen on player {target.GetSteamId()} → restore");
+                    try { HandleWaypointTravelEnd(target); }
+                    catch (Exception ex)
+                    {
+                        Core.Log.LogError($"[Beelz SUMMON] bat-land restore failed: {ex}");
                     }
                 }
             }

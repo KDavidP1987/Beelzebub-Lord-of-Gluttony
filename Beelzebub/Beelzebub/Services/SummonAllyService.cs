@@ -1165,6 +1165,133 @@ internal static class SummonAllyService
     }
 
     /// <summary>
+    /// v0.29.0 (#4): maintain an on-player buff whose stack count = the player's
+    /// live summon "uses" (toward the cap), so they can see cap status at a glance
+    /// without typing <c>.beelz summons</c>. The buff prefab is admin-chosen
+    /// (Transform_SummonCounterBuffGuid) for its icon; we strip its gameplay
+    /// effects and force it permanent + stacking. 0 = feature off.
+    /// </summary>
+    public static void UpdateSummonCounter(ActiveTransform active, Entity character)
+    {
+        int guidInt = Beelzebub.Config.Settings.Transform_SummonCounterBuffGuid.Value;
+        if (guidInt == 0 || active == null || !character.Exists()) return;
+
+        var buffGuid = new PrefabGUID(guidInt);
+
+        int count = 0;
+        if (active.SummonStacks != null)
+            foreach (var abilityGuid in active.SummonStacks.Keys)
+                count += LiveCastCount(active, abilityGuid);
+
+        bool hasBuff = Core.ServerGameManager.TryGetBuff(character, buffGuid.ToIdentifier(), out Entity buffEntity)
+            && buffEntity.Exists();
+
+        if (count <= 0)
+        {
+            if (hasBuff)
+                try { DestroyUtility.Destroy(Core.EntityManager, buffEntity, DestroyDebugReason.TryRemoveBuff); }
+                catch { /* best-effort */ }
+            return;
+        }
+
+        if (!hasBuff)
+        {
+            if (!Core.ServerGameManager.TryInstantiateBuffEntityImmediate(character, character, buffGuid, out buffEntity)
+                || !buffEntity.Exists())
+                return;
+            NeuterCounterBuff(buffEntity);
+        }
+
+        int cap = Beelzebub.Config.Settings.Transform_MaxStacksPerSummonAbility.Value;
+        int maxStacks = System.Math.Max(count, cap > 0 ? cap : count);
+        try
+        {
+            buffEntity.With((ref Buff b) =>
+            {
+                b.IncreaseStacks = true;
+                b.MaxStacks = (byte)System.Math.Min(maxStacks, 250);
+                b.Stacks = (byte)System.Math.Min(count, 250);
+            });
+        }
+        catch (Exception ex) { Core.Log.LogWarning($"[Beelz SUMMON] counter stack-set failed: {ex.Message}"); }
+    }
+
+    /// <summary>v0.29.0: strip a buff's gameplay effects so only its icon + stacks
+    /// remain, and make it permanent (Bloodcraft's persistent-buff recipe).</summary>
+    static void NeuterCounterBuff(Entity buffEntity)
+    {
+        try
+        {
+            if (buffEntity.Has<RemoveBuffOnGameplayEvent>()) Core.EntityManager.RemoveComponent<RemoveBuffOnGameplayEvent>(buffEntity);
+            if (buffEntity.Has<CreateGameplayEventsOnSpawn>()) Core.EntityManager.RemoveComponent<CreateGameplayEventsOnSpawn>(buffEntity);
+            if (buffEntity.Has<GameplayEventListeners>()) Core.EntityManager.RemoveComponent<GameplayEventListeners>(buffEntity);
+            if (buffEntity.Has<DestroyOnGameplayEvent>()) Core.EntityManager.RemoveComponent<DestroyOnGameplayEvent>(buffEntity);
+            if (buffEntity.Has<LifeTime>())
+                buffEntity.With((ref LifeTime lt) => { lt.Duration = 0f; lt.EndAction = LifeTimeEndAction.None; });
+            if (buffEntity.Has<BuffCategory>())
+                buffEntity.With((ref BuffCategory bc) => bc.Groups = BuffCategoryFlag.None);
+        }
+        catch (Exception ex) { Core.Log.LogWarning($"[Beelz SUMMON] NeuterCounterBuff failed: {ex.Message}"); }
+    }
+
+    /// <summary>v0.29.0: remove the summon-count indicator buff (on revert).</summary>
+    public static void RemoveSummonCounter(Entity character)
+    {
+        int guidInt = Beelzebub.Config.Settings.Transform_SummonCounterBuffGuid.Value;
+        if (guidInt == 0 || !character.Exists()) return;
+        var buffGuid = new PrefabGUID(guidInt);
+        if (Core.ServerGameManager.TryGetBuff(character, buffGuid.ToIdentifier(), out Entity buffEntity) && buffEntity.Exists())
+            try { DestroyUtility.Destroy(Core.EntityManager, buffEntity, DestroyDebugReason.TryRemoveBuff); }
+            catch { /* best-effort */ }
+    }
+
+    /// <summary>
+    /// v0.26.0: auto-despawn summon cast-groups older than <paramref name="lifetimeSeconds"/>.
+    /// Each group's creation time lives in <c>SummonStackTimes[abilityGuid][i]</c>
+    /// (index-aligned with <c>SummonStacks</c>). Expired groups have their entities
+    /// enqueued for the crash-safe staged despawn (<see cref="EnqueueAdminDespawn"/>)
+    /// and are removed from the tracking dictionaries + <c>SummonedMinions</c>.
+    /// Returns the number of entities queued. No-op when lifetime &lt;= 0.
+    /// </summary>
+    public static int DespawnExpiredGroups(ActiveTransform active, float lifetimeSeconds)
+    {
+        if (lifetimeSeconds <= 0f) return 0;
+        if (active?.SummonStacks == null || active.SummonStacks.Count == 0) return 0;
+
+        DateTime now = DateTime.UtcNow;
+        var maxAge = TimeSpan.FromSeconds(lifetimeSeconds);
+        int queued = 0;
+
+        // Snapshot the ability keys — we mutate the inner group lists below.
+        foreach (var abilityGuid in new List<int>(active.SummonStacks.Keys))
+        {
+            var groups = active.SummonStacks[abilityGuid];
+            active.SummonStackTimes.TryGetValue(abilityGuid, out var times);
+
+            for (int i = groups.Count - 1; i >= 0; i--)
+            {
+                // Need a timestamp to judge age; without one we can't tell, so skip.
+                if (times == null || i >= times.Count) continue;
+                if (now - times[i] < maxAge) continue;
+
+                var grp = groups[i];
+                for (int j = 0; j < grp.Count; j++)
+                {
+                    var e = grp[j];
+                    if (e.Exists()) { EnqueueAdminDespawn(e); queued++; }
+                    active.SummonedMinions?.Remove(e);
+                }
+                groups.RemoveAt(i);
+                times.RemoveAt(i);
+            }
+        }
+
+        if (queued > 0)
+            Core.Log.LogInfo($"[Beelz SUMMON] lifespan: queued {queued} summon(s) for staged despawn (lifetime {lifetimeSeconds:0}s).");
+        return queued;
+    }
+
+    /// <summary>
     /// v0.23.10: invoked from <c>DeathEventListenerSystemPatch</c> when V Rising
     /// fires a death event. Scans all active transforms and stashed-summon lists,
     /// removes the dying entity from <c>SummonedMinions</c> and all per-ability
