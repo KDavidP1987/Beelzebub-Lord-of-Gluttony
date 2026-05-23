@@ -4,7 +4,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<AssemblyName>Beelzebub</AssemblyName>
 		<RootNamespace>Beelzebub</RootNamespace>
-		<Version>0.3.2</Version>
+		<Version>0.25.0</Version>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<LangVersion>12.0</LangVersion>
 		<BepInExPluginGuid>kdpen.Beelzebub</BepInExPluginGuid>
@@ -27,6 +27,7 @@
 
 	<ItemGroup>
 		<EmbeddedResource Include="Resources\prefab_names.tsv" />
+		<EmbeddedResource Include="Resources\ability_metadata.json" />
 	</ItemGroup>
 
 	<PropertyGroup>

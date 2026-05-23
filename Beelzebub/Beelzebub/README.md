@@ -7,14 +7,14 @@ A server-side V Rising mod. Defeat any unit (regular mob or V-Blood boss) and ro
 **Source / issues / roadmap:** [github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony)
 **License:** [MIT](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/blob/main/LICENSE)
 
-> **Status:** early access (v0.1.0). Functional end-to-end; rough edges around the "swap a weapon to apply" caveat documented below. Drop into a private server and iterate — share weird kills back to the issue tracker.
+> **Status:** early access (v0.4.0). Functional end-to-end; slot changes apply instantly. Drop into a private server and iterate — share weird kills back to the issue tracker.
 
 ## What it does
 
 - **Every kill rolls a chance** to capture the unit's abilities (default 5%) and a smaller chance to unlock the ability to transform into that unit (default 1%).
 - **Boss kills (V-Bloods) have their own roll** through the V-Blood event path. Captures are tagged by source so you can see at a glance what came from a boss.
 - **Default filter** strips abilities that won't work in spell slots (melee animations, idle filler, lifecycle events, Brutal-difficulty duplicates) so you're not flooded with useless captures.
-- **Assign captures to your spell slots** via chat command. Swap a weapon and the new ability appears on your bar.
+- **Assign captures to your spell slots** via chat command. Applies instantly while unarmed.
 - **Transform into any unit you've unlocked.** All six of your spell slots fill with the unit's filtered ability list. Configurable: toggle until manual revert, or time-limited with cooldown.
 - **Per-player chat verbosity** — silent if you prefer minimum spam, summary for one line per kill, verbose for per-ability detail.
 - **Admin-configurable rules** in a hot-reloadable JSON file plus live `.beelz admin` chat commands.
@@ -38,9 +38,9 @@ Install via [r2modman](https://thunderstore.io/package/ebkr/r2modman/) (recommen
 |---|---|
 | `.beelz list` | List captured abilities (grouped by source, then by unit) and your current slot assignments. |
 | `.beelz transforms` | List unlocked transformations + your currently active transform if any. |
-| `.beelz grant <slot> <index>` | Assign captured ability at `<index>` to spell slot `<1-6>`. **Swap a weapon to apply.** |
-| `.beelz unslot <slot>` | Clear a slot assignment. Swap a weapon to apply. |
-| `.beelz transform <index\|substring>` | Activate transformation. Swap a weapon to apply. |
+| `.beelz grant <slot> <index>` | Assign captured ability at `<index>` to spell slot `<1-6>`. **Applies instantly.** |
+| `.beelz unslot <slot>` | Clear a slot assignment. Applies instantly. |
+| `.beelz transform <index\|substring>` | Activate transformation. Applies instantly. |
 | `.beelz revert` | End your current transformation. Swap a weapon to restore. |
 | `.beelz forget <index>` | Delete one captured ability (also clears any slot pointing at it). |
 | `.beelz forget-transform <index>` | Delete one transformation unlock. |
@@ -104,7 +104,7 @@ Transform_CooldownSeconds_VBlood = 0
 
 ## Known caveats
 
-- **Swap a weapon to apply.** `.beelz grant`, `.beelz transform`, and `.beelz revert` all queue a slot change that V Rising applies on its next natural slot-update event (weapon swap, jewel equip). Eliminating this is on the roadmap.
+- **Grants apply only while UNARMED.** Once you equip a weapon, the weapon's natural abilities win for its slots — that's by design. Transforms override the spell bar regardless of weapon. Slot changes (grant/unslot/transform/revert) apply instantly via in-place buffer mutation — no more weapon-swap dance.
 - **No visual shapeshift VFX.** Only the spell bar changes when you transform; your model stays the same. A unit→shapeshift-buff mapping is on the roadmap.
 - **Not every ability works in every slot.** Spell slots 5 and 6 generally accept projectile / AoE abilities; basic melee animations won't appear. The default filter strips most non-castable cases, but a few survive — experiment, and report patterns we should add.
 

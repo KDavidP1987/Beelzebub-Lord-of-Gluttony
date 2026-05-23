@@ -1,0 +1,90 @@
+{
+  "_README": "Paste your curated entries into the AbilityMap section, then merge this file into BepInEx\\config\\kdpen.Beelzebub\\ability_rules.json (or copy this whole object's AbilityMap block in). Valid Weapons: Magic, Unarmed, Sword, GreatSword, Axe, Mace, DualHammers, Spear, Daggers, Crossbow, Longbow, Pistols, Reaper, Whip, Claws. Valid Forms: Wolf, Bear, Rat, Spider, Toad. Empty Weapons array = universal (any weapon). Empty Forms array = not form-restricted. TransformOnly:true blocks .beelz grant for this ability.",
+
+  "AbilityMap": {
+
+    "AB_Paladin_MeleeAttack_AbilityGroup": {
+      "Weapons": ["Sword", "GreatSword"],
+      "Forms": [],
+      "TransformOnly": false,
+      "Notes": "Physical melee — works with any sword-family weapon"
+    },
+
+    "AB_Paladin_ChargeMeleeAttack_AbilityGroup": {
+      "Weapons": ["Sword", "GreatSword"],
+      "Forms": [],
+      "TransformOnly": false,
+      "Notes": "Charged sword swing"
+    },
+
+    "AB_Paladin_HolyNuke_AbilityGroup": {
+      "Weapons": ["Magic"],
+      "Forms": [],
+      "TransformOnly": false,
+      "Notes": "Holy spell — universal spell slot"
+    },
+
+    "AB_Paladin_ShockWaveSlam_AbilityGroup": {
+      "Weapons": ["GreatSword", "Mace"],
+      "Forms": [],
+      "TransformOnly": false,
+      "Notes": "Heavy ground slam — feels right with two-handed weapons"
+    },
+
+    "AB_Paladin_Dash_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Notes": "Universal dash — usable in any slot"
+    },
+
+    "AB_Bandit_Hunter_Bow_Group": {
+      "Weapons": ["Longbow", "Crossbow"],
+      "Forms": [],
+      "TransformOnly": false,
+      "Notes": "Generic ranged shot — fits any bow-like weapon"
+    },
+
+    "AB_Bandit_Hunter_Roll_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Notes": "Combat roll — universal"
+    },
+
+    "AB_Militia_Crossbow_Group": {
+      "Weapons": ["Crossbow"],
+      "Forms": [],
+      "TransformOnly": false,
+      "Notes": "Crossbow-specific shot"
+    },
+
+    "AB_Shapeshift_Wolf_Bite_Bleed_AbilityGroup": {
+      "Weapons": [],
+      "Forms": ["Wolf"],
+      "TransformOnly": true,
+      "Notes": "Wolf bite — only fires while in Wolf form"
+    },
+
+    "AB_Shapeshift_Wolf_Leap_Travel_AbilityGroup": {
+      "Weapons": [],
+      "Forms": ["Wolf"],
+      "TransformOnly": true,
+      "Notes": "Wolf leap — form-locked"
+    },
+
+    "AB_Solarus_HolyPillar_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": true,
+      "Notes": "Too OP for normal grants — transform-only"
+    }
+
+  },
+
+  "TransformOnlyPatterns": [
+    "_Ultimate_VBlood_"
+  ],
+
+  "TransformOnlyGuids": []
+}

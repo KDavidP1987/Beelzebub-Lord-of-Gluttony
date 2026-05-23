@@ -1,0 +1,5337 @@
+{
+  "_README_1_": "CURATED ability_rules.json — Beelzebub v0.5.2 — initial pass for all 60 V-Bloods. Drop this file into BepInEx\\config\\kdpen.Beelzebub\\ on the server (overwrites any existing ability_rules.json). Use .beelz admin reload to hot-reload while the server is running.",
+  "_README_2_": "Each entry under AbilityMap is a curated guess. Where Weapons is empty, the ability is universal (Magic). Where TransformOnly is true, .beelz grant will refuse to bind the ability — it only fires while transformed. Forms gates which native shapeshift form (Wolf/Bear/Rat/Spider/Toad) the ability is associated with.",
+  "_README_3_": "Review with your friends, edit freely, and re-upload. The source-of-truth lives in docs/ability_map.curated.json in the repo; copy it into your live config when ready.",
+  "Version": 1,
+  "DenyPatterns": [
+    "_Idle_",
+    "_Flee_",
+    "_Sequence_",
+    "_MeleeAttack_",
+    "_Block_",
+    "_Parry_",
+    "_Counter_",
+    "_Spawn_",
+    "_Despawn_",
+    "_Disappear_",
+    "_Death_",
+    "_Wounded_",
+    "_Hard_",
+    "_Test_",
+    "_Internal_",
+    "_DEBUG_"
+  ],
+  "AllowPatterns": [],
+  "DenyGuids": [],
+  "AllowGuids": [],
+  "DropRateOverrides": [],
+  "TransformOnlyPatterns": [
+    "_Emote_Aggro_",
+    "_TravelToPos",
+    "_TravelToCenter",
+    "_SideStep",
+    "_WalkToPos",
+    "_FallAsleep",
+    "_WakeUp",
+    "_TargetSwitch",
+    "_Stagger",
+    "_AggroPlayers",
+    "_KillDisconnected",
+    "_Followup_",
+    "_PreAbility",
+    "_Init_",
+    "_Setup_",
+    "_FlyStart_",
+    "_FlyEnd_",
+    "_PhaseSwap_",
+    "_PhaseSingle_",
+    "_PhaseDual_",
+    "_BloodRage_",
+    "_OnAggro_"
+  ],
+  "TransformOnlyGuids": [],
+  "AbilityMap": {
+    "AB_ArchMage_CrystalLance_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "ArchMage — single crystal lance projectile"
+    },
+    "AB_ArchMage_CrystalLance_Charged_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Charged crystal lance"
+    },
+    "AB_ArchMage_ArcaneImprisonment_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Boss-signature CC — transform-only"
+    },
+    "AB_ArchMage_MirrorImage_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Spawns clones — transform-only mechanic"
+    },
+    "AB_ArchMage_FireSpinner_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Fire AoE"
+    },
+    "AB_ArchMage_FlamingIce_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Fire/frost hybrid spell"
+    },
+    "AB_ArchMage_Teleport_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Universal teleport — useful as a shift slot"
+    },
+    "AB_ArchMage_LightningCurse_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Lightning DoT curse"
+    },
+    "AB_ArchMage_LightningArc_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Chain lightning"
+    },
+    "AB_Bandit_ClusterBombThrow_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Bandit Bomber — bomb toss"
+    },
+    "AB_Bandit_Bomber_Elite_Roll_Group": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Universal dodge roll"
+    },
+    "AB_Bandit_StickyBomb_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Sticky bomb projectile"
+    },
+    "AB_Bandit_Deadeye_Chaosstorm_Group": {
+      "Weapons": [
+        "Longbow",
+        "Crossbow"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Chaos arrow storm — ranged"
+    },
+    "AB_Bandit_Deadeye_Camouflage_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Stealth — universal utility"
+    },
+    "AB_Bandit_Deadeye_Roll_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Universal dodge roll"
+    },
+    "AB_Bandit_Deadeye_Chaosbarrage_Group": {
+      "Weapons": [
+        "Longbow",
+        "Crossbow"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Chaos arrow barrage"
+    },
+    "AB_Bandit_Fisherman_SwingAttack_AbilityGroup": {
+      "Weapons": [
+        "Spear"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Fisherman uses fishing rod — closest weapon match is Spear"
+    },
+    "AB_Bandit_Fisherman_FishHook_AbilityGroup": {
+      "Weapons": [
+        "Spear",
+        "Whip"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Hook-and-pull — could fit spear or whip"
+    },
+    "AB_Bandit_Fisherman_SpinAttack_AbilityGroup": {
+      "Weapons": [
+        "Spear"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Spinning rod attack"
+    },
+    "AB_Bandit_Fisherman_FishingBlowfish_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons a blowfish — boss-signature gag"
+    },
+    "AB_Bandit_Fisherman_FishingLineup_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Multi-target signature"
+    },
+    "AB_Bandit_Fisherman_FishingPiranhas_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons piranhas — transform-only signature"
+    },
+    "AB_Bandit_Fisherman_FishingOldBoot_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Throws old boot — joke move, transform-only"
+    },
+    "AB_Bandit_Foreman_Crossbow_Group": {
+      "Weapons": [
+        "Crossbow"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Foreman crossbow shot"
+    },
+    "AB_Bandit_Foreman_ThrowNet_Group": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Net CC — universal utility"
+    },
+    "AB_Bandit_Foreman_Roll_Group": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Universal dodge roll"
+    },
+    "AB_Bandit_Foreman_Reinforcement_Group": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Calls adds — transform-only"
+    },
+    "AB_Bandit_Foreman_RapidShot_AbilityGroup": {
+      "Weapons": [
+        "Crossbow"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Rapid crossbow shots"
+    },
+    "AB_Bandit_Foreman_BoltStorm_Group": {
+      "Weapons": [
+        "Crossbow"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Crossbow volley"
+    },
+    "AB_Bandit_FrosttArrow_MultiShot_Group": {
+      "Weapons": [
+        "Longbow",
+        "Crossbow"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Frost arrow multi-shot"
+    },
+    "AB_Bandit_FrostArrow_RainOfArrows_AbilityGroup": {
+      "Weapons": [
+        "Longbow",
+        "Crossbow"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Rain of frost arrows"
+    },
+    "AB_Bandit_Stalker_VBlood_MeleeAttack_Group": {
+      "Weapons": [
+        "Sword",
+        "Daggers"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Stalker dual-blade strike"
+    },
+    "AB_Bandit_Stalker_VBlood_ChargeAttack_Group": {
+      "Weapons": [
+        "Sword",
+        "Daggers"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Charged blade attack"
+    },
+    "AB_Bandit_Stalker_VBlood_Projectile_Group": {
+      "Weapons": [
+        "Daggers"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Thrown blade"
+    },
+    "AB_Bandit_Stalker_VBlood_SpinAttack_Group": {
+      "Weapons": [
+        "Sword",
+        "Daggers"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Whirlwind blade spin"
+    },
+    "AB_Bandit_Stalker_VBlood_Reinforcement_Group": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Calls adds"
+    },
+    "AB_Bandit_Stalker_VBlood_SpikeTrap_Group": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Spike trap placement"
+    },
+    "AB_Bandit_StoneBreaker_VBlood_SwingAttack_AbilityGroup": {
+      "Weapons": [
+        "Mace",
+        "DualHammers",
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Big-weapon overhead swing"
+    },
+    "AB_Bandit_StoneBreaker_VBlood_RockSmash_AbilityGroup": {
+      "Weapons": [
+        "Mace",
+        "DualHammers"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Ground smash"
+    },
+    "AB_Bandit_StoneBreaker_VBlood_SpinAttack_Group": {
+      "Weapons": [
+        "Mace",
+        "DualHammers",
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Heavy spin"
+    },
+    "AB_Bandit_StoneBreaker_VBlood_Reinforcement_Group": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Calls adds"
+    },
+    "AB_Bandit_StoneBreaker_VBlood_MountainRumbler_AbilityGroup": {
+      "Weapons": [
+        "Mace",
+        "DualHammers"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Ground tremor"
+    },
+    "AB_Bandit_Tourok_VBlood_DoubleSwing_AbilityGroup01": {
+      "Weapons": [
+        "Axe",
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Tourok cleave 1"
+    },
+    "AB_Bandit_Tourok_VBlood_DoubleSwing_AbilityGroup02": {
+      "Weapons": [
+        "Axe",
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Tourok cleave 2"
+    },
+    "AB_Bandit_Tourok_VBlood_ChaosWave_AbilityGroup": {
+      "Weapons": [
+        "Magic",
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Chaos shockwave from weapon"
+    },
+    "AB_Bandit_Tourok_VBlood_ChaosCharge_AbilityGroup": {
+      "Weapons": [
+        "Axe",
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Charging cleave"
+    },
+    "AB_Bandit_Tourok_VBlood_RageOfChaos_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Boss enrage signature"
+    },
+    "AB_Bandit_Tourok_VBlood_ChaosParry_AbilityGroup": {
+      "Weapons": [
+        "Sword",
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Parry counter"
+    },
+    "AB_Bandit_Tourok_VBlood_CallReinforcements_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Calls adds"
+    },
+    "AB_BatVampire_JumpStrike_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Bat-form pounce"
+    },
+    "AB_BatVampire_BatSwarm_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons bat swarm"
+    },
+    "AB_BatVampire_NightDash_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Shadow dash — universal shift slot"
+    },
+    "AB_BatVampire_BatStorm_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Bat storm AoE"
+    },
+    "AB_BatVampire_SummonMinions_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons bat minions — boss-only"
+    },
+    "AB_BatVampire_Whirlwind_AbilityGroup": {
+      "Weapons": [
+        "GreatSword",
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Spinning weapon attack"
+    },
+    "AB_BatVampire_QuickTeleport_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Short teleport — useful dash"
+    },
+    "AB_Blackfang_CarverBoss_WildSwings_AbilityGroup": {
+      "Weapons": [
+        "Axe",
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Carver wild axe swings"
+    },
+    "AB_Blackfang_CarverBoss_ChopLeap_AbilityGroup": {
+      "Weapons": [
+        "Axe"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Leap chop"
+    },
+    "AB_Blackfang_CarverBoss_BodySlam_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Body slam — universal"
+    },
+    "AB_Blackfang_CarverBoss_CoatWeapon_AbilityGroup": {
+      "Weapons": [
+        "Axe",
+        "Sword",
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Weapon-coat buff"
+    },
+    "AB_Blackfang_CarverBoss_MegaCleave_AbilityGroup": {
+      "Weapons": [
+        "Axe",
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Mega cleave"
+    },
+    "AB_Blackfang_CarverBoss_SpewCorruption_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Corruption breath"
+    },
+    "AB_Blackfang_CarverBoss_SummonCarvers_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons minions"
+    },
+    "AB_Blackfang_CarverBoss_WeaponThrow_Intense_AbilityGroup": {
+      "Weapons": [
+        "Axe"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Axe throw"
+    },
+    "AB_CarverBoss_Whirlwind_Init_AbilityGroup": {
+      "Weapons": [
+        "Axe",
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Whirlwind windup"
+    },
+    "AB_Blackfang_Livith_SlicingDash_AbilityGroup": {
+      "Weapons": [
+        "Daggers",
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Ninja slash dash"
+    },
+    "AB_Blackfang_Livith_Stealth_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Stealth — universal"
+    },
+    "AB_Blackfang_Livith_StealthAttack_AbilityGroup": {
+      "Weapons": [
+        "Daggers"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Stealth strike"
+    },
+    "AB_Blackfang_Livith_RoundKick_AbilityGroup": {
+      "Weapons": [
+        "Unarmed"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Spinning kick"
+    },
+    "AB_Blackfang_Livith_CloneNinjutsu_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Clone signature"
+    },
+    "AB_Blackfang_Livith_CuttingWind_AbilityGroup": {
+      "Weapons": [
+        "Daggers",
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Wind slash projectile"
+    },
+    "AB_Blackfang_Livith_Dash_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Ninja dash"
+    },
+    "AB_Blackfang_Livith_SpiritOrbs_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Boss-signature orbs"
+    },
+    "AB_Blackfang_Livith_ShadowDance_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Boss-only signature"
+    },
+    "AB_Lucie_ToxinBolt_AbilityGroup": {
+      "Weapons": [
+        "Magic",
+        "Pistols"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Poison bolt projectile"
+    },
+    "AB_Lucie_DeadlyInjection_AbilityGroup": {
+      "Weapons": [
+        "Daggers"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Syringe stab"
+    },
+    "AB_Lucie_ClarityPotion_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Self-buff potion"
+    },
+    "AB_Lucie_CripplingGoo_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Slowing goo AoE"
+    },
+    "AB_Lucie_Barrier_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Defensive barrier"
+    },
+    "AB_Lucie_LiquidFire_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Liquid fire bottle"
+    },
+    "AB_Lucie_PanicShot_AbilityGroup": {
+      "Weapons": [
+        "Pistols"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Quick shot"
+    },
+    "AB_Lucie_Roll_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Universal dodge"
+    },
+    "AB_Lucie_AlchemicMadness_Channel_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Boss signature"
+    },
+    "AB_Lucie_WakeGolemPotion_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons golem — boss-only"
+    },
+    "AB_Blackfang_Morgana_SpectralBlast_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Spectral magic blast"
+    },
+    "AB_Blackfang_Morgana_SpectralSwarm_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Spectral swarm AoE"
+    },
+    "AB_Blackfang_Morgana_SummonTail_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons her boss-form tail"
+    },
+    "AB_Blackfang_Morgana_SpectralHell_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Big AoE signature"
+    },
+    "AB_Blackfang_Morgana_GroundPiercer_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Ground piercing spike"
+    },
+    "AB_Blackfang_Morgana_SpectralBeam_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Spectral beam"
+    },
+    "AB_Blackfang_Morgana_SpectralOrbBarrage_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Orb barrage"
+    },
+    "AB_Blackfang_Morgana_CrossWindSlash_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Wind cross slash"
+    },
+    "AB_Blackfang_Morgana_GroundPiercer_AbilityGroup_alt": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Duplicate placeholder — remove if not present"
+    },
+    "AB_Blackfang_Morgana_RingsOfTerror_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Boss-signature rings AoE"
+    },
+    "AB_Blackfang_Morgana_Transformation_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Phase change — boss-only"
+    },
+    "AB_Blackfang_Morgana_CorruptionFountain_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Corruption fountain"
+    },
+    "AB_Blackfang_Morgana_SpectralSnake_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Spectral snake projectile"
+    },
+    "AB_Blackfang_Morgana_TravelingOrbBarrage_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Moving orb barrage"
+    },
+    "AB_Blackfang_Morgana_MistSpinners_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Mist spinner AoE"
+    },
+    "AB_Blackfang_Valyr_PhaseDual_Tackle_AbilityGroup": {
+      "Weapons": [
+        "Unarmed"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Body tackle"
+    },
+    "AB_Blackfang_Valyr_PhaseDual_SeismicJump_AbilityGroup": {
+      "Weapons": [
+        "Mace",
+        "DualHammers"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Seismic ground slam"
+    },
+    "AB_Blackfang_Valyr_PhaseDual_BomberDuelQuake_AbilityGroup": {
+      "Weapons": [
+        "Magic",
+        "Mace"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Quake AoE"
+    },
+    "AB_Blackfang_Valyr_PhaseSingle_Charge_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Charge attack"
+    },
+    "AB_Blackfang_Valyr_PhaseSingle_VaultAttack_AbilityGroup": {
+      "Weapons": [
+        "GreatSword",
+        "Spear"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Vault leap attack"
+    },
+    "AB_Blackfang_Valyr_PhaseSingle_Smack_AbilityGroup": {
+      "Weapons": [
+        "Mace"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Heavy smack"
+    },
+    "AB_Blackfang_Valyr_PhaseSingle_BomberQuake_AbilityGroup": {
+      "Weapons": [
+        "Mace",
+        "DualHammers"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Ground quake"
+    },
+    "AB_Cardinal_LightWave_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Holy light wave"
+    },
+    "AB_Cardinal_Channel_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Holy channel beam"
+    },
+    "AB_Cardinal_LightSwitch_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Light toggle utility"
+    },
+    "AB_Cardinal_Zap_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Holy zap"
+    },
+    "AB_Cardinal_LightNova_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Massive AoE — too OP for grant"
+    },
+    "AB_Cardinal_SummonOrb_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summon holy orb"
+    },
+    "AB_Cardinal_SummonAide_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons aide — boss-only"
+    },
+    "AB_ChurchOfLight_Overseer_SwingAttack_AbilityGroup": {
+      "Weapons": [
+        "GreatSword",
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Big two-handed swing"
+    },
+    "AB_ChurchOfLight_Overseer_SpinAttack_AbilityGroup": {
+      "Weapons": [
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Spin attack"
+    },
+    "AB_ChurchOfLight_Overseer_IceRecovery_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Frost self-heal"
+    },
+    "AB_ChurchOfLight_Overseer_PiercingCharge_AbilityGroup": {
+      "Weapons": [
+        "Spear",
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Piercing charge"
+    },
+    "AB_ChurchOfLight_Overseer_PiercingCharge_Throw_AbilityGroup": {
+      "Weapons": [
+        "Spear"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Spear throw"
+    },
+    "AB_ChurchOfLight_Overseer_Reinforcement_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Calls adds"
+    },
+    "AB_ChurchOfLight_Overseer_IcicleField_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Icicle field AoE"
+    },
+    "AB_ChurchOfLight_Paladin_Melee_AbilityGroup": {
+      "Weapons": [
+        "Sword",
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Paladin sword melee"
+    },
+    "AB_ChurchOfLight_Paladin_Dash_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Paladin dash"
+    },
+    "AB_ChurchOfLight_Paladin_HolyBubble_Beam_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Holy beam"
+    },
+    "AB_ChurchOfLight_Paladin_AngelicAscent_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Boss-signature ascent"
+    },
+    "AB_ChurchOfLight_Paladin_HolySpinners_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Holy spinning blades"
+    },
+    "AB_ChurchOfLight_Paladin_HolyFlackCannon_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Holy flak burst"
+    },
+    "AB_ChurchOfLight_Paladin_SummonAngel_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summon angel — boss-only"
+    },
+    "AB_ChurchOfLight_Paladin_ChargedSwing_AbilityGroup": {
+      "Weapons": [
+        "Sword",
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Charged sword swing"
+    },
+    "AB_ChurchOfLight_Paladin_HealAngel_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Heals summoned angel — boss-only"
+    },
+    "AB_ChurchOfLight_Paladin_DivineRays_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Divine rays AoE"
+    },
+    "AB_Sommelier_MeleeHorizontal_AbilityGroup": {
+      "Weapons": [
+        "Mace"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Mace horizontal swing"
+    },
+    "AB_Sommelier_HorizontalBarrel_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Barrel toss"
+    },
+    "AB_Sommelier_BloodBolt_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Blood bolt projectile"
+    },
+    "AB_Sommelier_Flurry_AbilityGroup": {
+      "Weapons": [
+        "Mace"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Mace flurry combo"
+    },
+    "AB_Sommelier_BarrelDance_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Boss-signature barrel mechanic"
+    },
+    "AB_Sommelier_BarrelFountain_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Boss-signature"
+    },
+    "AB_Sommelier_MeleeSwing_AbilityGroup": {
+      "Weapons": [
+        "Mace"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Mace overhead swing"
+    },
+    "AB_Sommelier_GroundStab_AbilityGroup": {
+      "Weapons": [
+        "Mace",
+        "Spear"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Ground stab"
+    },
+    "AB_Cursed_Mountainbeast_TrippleAttack_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Bear"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Beast triple swipe — only in Bear-like form"
+    },
+    "AB_Cursed_MountainBeast_WhackAVamp_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Bear"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Beast whack signature"
+    },
+    "AB_Cursed_MountainBeast_KongPound_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Bear"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Ground pound"
+    },
+    "AB_Cursed_MountainBeast_LeapAttack_Travel_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Bear"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Leap attack"
+    },
+    "AB_Cursed_MountainBeast_DashAttack_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Bear"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Dash attack"
+    },
+    "AB_Cursed_Mountainbeast_HornFlick_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Bear"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Horn flick"
+    },
+    "AB_Cursed_MountainBeast_SpiritDouble_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Spirit double — boss-only"
+    },
+    "AB_Cursed_Mountainbeast_MeleeStraight_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Bear"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Beast melee"
+    },
+    "AB_Cursed_MountainBeast_GhostCall_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Ghost summon"
+    },
+    "AB_Cursed_ToadKing_DoubleTongueSlap_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Toad"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Toad tongue slap — Toad form only"
+    },
+    "AB_Cursed_ToadKing_TongueGrab_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Toad"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Toad tongue grab"
+    },
+    "AB_Cursed_ToadKing_PoisonLeap_Travel_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Toad"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Toad leap"
+    },
+    "AB_Cursed_ToadKing_FrogSplit_Travel_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Toad"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Boss-signature frog split"
+    },
+    "AB_Cursed_ToadKing_PoisonRain_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [
+        "Toad"
+      ],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Poison AoE — usable as magic"
+    },
+    "AB_Cursed_ToadKing_Swallow_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Toad"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Toad swallow"
+    },
+    "AB_Cursed_ToadKing_Spit_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [
+        "Toad"
+      ],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Toad spit projectile"
+    },
+    "AB_Cursed_ToadKing_FrogVomit_Group": {
+      "Weapons": [],
+      "Forms": [
+        "Toad"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Toad-form ability"
+    },
+    "AB_Cursed_Witch_WitchBolt_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Witch bolt projectile"
+    },
+    "AB_Cursed_Witch_WickedWhisps_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Will-o-wisp homing"
+    },
+    "AB_Cursed_Witch_Hex_VBlood_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Hex curse — boss-only"
+    },
+    "AB_Cursed_Witch_ExplodingMushrooms_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Mushroom traps"
+    },
+    "AB_Cursed_Witch_CorruptedGhouls_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons ghouls"
+    },
+    "AB_Cursed_Witch_ExplodeMosquito_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Mosquito bomb"
+    },
+    "AB_Bear_Dire_AreaAttack_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Bear"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Bear area swipe — Bear form"
+    },
+    "AB_Bear_Dire_Dash_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Bear"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Bear charge"
+    },
+    "AB_Bear_Dire_Roar_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Bear"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Bear roar"
+    },
+    "AB_Wolf_Boss_Bite_Group": {
+      "Weapons": [],
+      "Forms": [
+        "Wolf"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Wolf bite — Wolf form only"
+    },
+    "AB_Wolf_Boss_Bite_Enraged_Group": {
+      "Weapons": [],
+      "Forms": [
+        "Wolf"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Enraged wolf bite"
+    },
+    "AB_Wolf_Boss_DashAttack_Single_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Wolf"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Wolf dash"
+    },
+    "AB_Wolf_Boss_DashAttack_Double_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Wolf"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Double wolf dash"
+    },
+    "AB_Wolf_Boss_DashAttack_Tripple_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Wolf"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Triple wolf dash"
+    },
+    "AB_Wolf_Boss_Pounce_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Wolf"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Wolf pounce"
+    },
+    "AB_Wolf_Boss_Howl_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Wolf"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Wolf howl — Wolf form"
+    },
+    "AB_Wolf_Boss_SpeedBuff_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Wolf"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Wolf speed buff"
+    },
+    "AB_Geomancer_Human_Projectile_Group": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Earth projectile"
+    },
+    "AB_Geomancer_Transform_ToGolem_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Geomancer phase change"
+    },
+    "AB_Geomancer_MeleeAttack_Group": {
+      "Weapons": [
+        "Mace"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Geomancer melee"
+    },
+    "AB_Geomancer_RockSlam_AbilityGroup": {
+      "Weapons": [
+        "Mace",
+        "DualHammers"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Rock slam"
+    },
+    "AB_Geomancer_GroundSlam_Group": {
+      "Weapons": [
+        "Mace",
+        "DualHammers"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Ground slam"
+    },
+    "AB_Geomancer_UndergroundTremmors_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Earth tremors"
+    },
+    "AB_Geomancer_EnragedSmash_AbilityGroup": {
+      "Weapons": [
+        "DualHammers",
+        "Mace"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Enraged smash"
+    },
+    "AB_Geomancer_Golem_RaiseGuardians_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons guardians"
+    },
+    "AB_Iva_ShotgunBlast_AbilityGroup": {
+      "Weapons": [
+        "Pistols"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Shotgun blast"
+    },
+    "AB_Iva_Autofire_AbilityGroup": {
+      "Weapons": [
+        "Pistols"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Autofire pistols"
+    },
+    "AB_Iva_Burn_AbilityGroup": {
+      "Weapons": [
+        "Pistols"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Flamer attack"
+    },
+    "AB_Iva_BurningRingOfFire_AbilityGroup": {
+      "Weapons": [
+        "Magic",
+        "Pistols"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Fire ring AoE"
+    },
+    "AB_Iva_BFG_Orb_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Big-gun orb — boss-only"
+    },
+    "AB_Iva_BFGLightningFire_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "BFG signature"
+    },
+    "AB_Iva_BallLightning_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Ball lightning"
+    },
+    "AB_Iva_Tazer_AbilityGroup": {
+      "Weapons": [
+        "Pistols"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Taser shot"
+    },
+    "AB_Iva_JetDash_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Jetpack dash"
+    },
+    "AB_Iva_JetEscape_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Boss-escape jetpack — transform-only"
+    },
+    "AB_Monster_Stomp_AbilityGroup": {
+      "Weapons": [
+        "Mace"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Monster stomp"
+    },
+    "AB_Monster_WarpSlam_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Warp slam"
+    },
+    "AB_Monster_PierceShock_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Shock spear"
+    },
+    "AB_Monster_Grab_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Grab-and-throw — boss-only"
+    },
+    "AB_Monster_Throw_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Throw — boss-only"
+    },
+    "AB_Monster_LightningShield_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Lightning shield buff"
+    },
+    "AB_Monster_LightningSlam_LiftOff_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Boss flight signature"
+    },
+    "AB_Monster_SummonLightningPillars_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Lightning pillars — too OP"
+    },
+    "AB_Monster_LightningStorm_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Lightning storm signature"
+    },
+    "AB_Monster_ElectricField_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Electric field"
+    },
+    "AB_Purifier_ForwardBarrier_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Forward barrier"
+    },
+    "AB_Purifier_ChaosVolley_AbilityGroup": {
+      "Weapons": [
+        "Magic",
+        "Pistols"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Chaos pistol volley"
+    },
+    "AB_Purifier_VerminRepellent_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Repellent AoE"
+    },
+    "AB_Purifier_BackBarrier_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Rear barrier"
+    },
+    "AB_Purifier_ChaosSpray_AbilityGroup": {
+      "Weapons": [
+        "Pistols",
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Chaos spray"
+    },
+    "AB_Purifier_JetPunch_AbilityGroup": {
+      "Weapons": [
+        "Unarmed"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Rocket punch"
+    },
+    "AB_Purifier_ChaosQuake_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Chaos quake AoE"
+    },
+    "AB_Purifier_ScatterLob_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Scatter lobbed projectile"
+    },
+    "AB_Gloomrot_RailgunSergeant_EnergyBurst_AbilityGroup": {
+      "Weapons": [
+        "Pistols",
+        "Crossbow"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Railgun burst"
+    },
+    "AB_Gloomrot_RailgunSergeant_CloakField_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Cloak field"
+    },
+    "AB_Gloomrot_RailgunSergeant_WideShot_AbilityGroup": {
+      "Weapons": [
+        "Pistols",
+        "Crossbow"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Wide railgun shot"
+    },
+    "AB_Gloomrot_RailgunSergeant_Warp_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Short warp — shift slot"
+    },
+    "AB_Gloomrot_RailgunSergeant_HomingOrb_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Homing orb"
+    },
+    "AB_Gloomrot_RailgunSergeant_LightningWall_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Lightning wall"
+    },
+    "AB_Gloomrot_RailgunSergeant_CallAdds_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Calls adds"
+    },
+    "AB_Gloomrot_TheProfessor_ImplodingOrb_Group": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Imploding orb"
+    },
+    "AB_Gloomrot_TheProfessor_ElectricPush_Group": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Electric push"
+    },
+    "AB_Gloomrot_TheProfessor_Discharge_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Discharge AoE"
+    },
+    "AB_Gloomrot_TheProfessor_TeleportMid_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Mid-range teleport"
+    },
+    "AB_Gloomrot_TheProfessor_FewBeams_Group": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Lightning beams"
+    },
+    "AB_Gloomrot_TheProfessor_PermaBeams_Group": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Permanent beams — too OP"
+    },
+    "AB_Gloomrot_TheProfessor_OverloadOrb_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Overload orb"
+    },
+    "AB_Gloomrot_TheProfessor_ManyBeams_Group": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Many beams — too OP"
+    },
+    "AB_Voltage_KickCombo_AbilityGroup": {
+      "Weapons": [
+        "Unarmed"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Kick combo"
+    },
+    "AB_Voltage_LeapAttack_AbilityGroup": {
+      "Weapons": [
+        "Unarmed",
+        "Whip"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Voltage leap kick"
+    },
+    "AB_Voltage_Whip_AbilityGroup": {
+      "Weapons": [
+        "Whip"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Electric whip"
+    },
+    "AB_Voltage_ElectricSprint_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Electric sprint"
+    },
+    "AB_Voltage_SprintKick_AbilityGroup": {
+      "Weapons": [
+        "Unarmed"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Sprint kick"
+    },
+    "AB_Voltage_Whirlwind_AbilityGroup": {
+      "Weapons": [
+        "Whip"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Whip whirlwind"
+    },
+    "AB_Voltage_ElectricRod_AbilityGroup": {
+      "Weapons": [
+        "Whip"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Electric rod"
+    },
+    "AB_Voltage_KickCombo_Final_AbilityGroup": {
+      "Weapons": [
+        "Unarmed"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Kick combo finisher"
+    },
+    "AB_Matriarch_Launcher_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Harpy launcher"
+    },
+    "AB_Matriarch_Melee_AbilityGroup": {
+      "Weapons": [
+        "Daggers",
+        "Claws"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Harpy talons"
+    },
+    "AB_Matriarch_Dash_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Harpy dash"
+    },
+    "AB_Matriarch_SpinAttack_AbilityGroup": {
+      "Weapons": [
+        "Daggers",
+        "Claws"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Harpy spin"
+    },
+    "AB_Matriarch_Projectile_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Harpy projectile"
+    },
+    "AB_Matriarch_AoE_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Harpy AoE"
+    },
+    "AB_Matriarch_Soar_Travel_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Flight signature — boss-only"
+    },
+    "AB_Manticore_ChaosBreath_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Boss breath weapon"
+    },
+    "AB_Manticore_FrostBreath_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Boss breath weapon"
+    },
+    "AB_Manticore_WingStorm_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Wing storm signature"
+    },
+    "AB_Manticore_AirDash_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Manticore aerial — boss only"
+    },
+    "AB_Manticore_BreathFromAbove_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Aerial breath"
+    },
+    "AB_Manticore_FrostVortex_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Frost vortex"
+    },
+    "AB_Manticore_TailStrike_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Manticore tail"
+    },
+    "AB_Manticore_TailSpin_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Tail spin"
+    },
+    "AB_Manticore_Dash_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Manticore dash"
+    },
+    "AB_Militia_BishopOfDunley_Projectile_Group": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Holy projectile"
+    },
+    "AB_Militia_BishopOfDunley_SummonPillar_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Holy pillar"
+    },
+    "AB_Militia_BishopOfDunley_HolyCircles_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Holy circles"
+    },
+    "AB_Militia_BishopOfDunley_HolyBeam_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Holy beam"
+    },
+    "AB_Militia_BishopOfDunley_SummonEyeOfGod_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Eye of God summon"
+    },
+    "AB_Militia_Fabian_MountedSwing_Right_AbilityGroup": {
+      "Weapons": [
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Mounted attack — only on horseback"
+    },
+    "AB_Militia_Fabian_MountedSwing_Left_AbilityGroup": {
+      "Weapons": [
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Mounted attack — only on horseback"
+    },
+    "AB_Militia_Fabian_Mountup_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons horse — boss-only"
+    },
+    "AB_Militia_Fabian_CallLightning_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Lightning bolt"
+    },
+    "AB_Militia_Fabian_LightningOrb_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Lightning orb"
+    },
+    "AB_Militia_Glassblower_Cyclone_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Wind cyclone"
+    },
+    "AB_Militia_Glassblower_GlassRain_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Glass rain AoE"
+    },
+    "AB_Militia_Glassblower_WindDash_Group": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Wind dash"
+    },
+    "AB_Militia_Glassblower_DeepBreath_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Wind breath"
+    },
+    "AB_Militia_Glassblower_MirrorShield_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Mirror shield"
+    },
+    "AB_Militia_Guard_VBlood_IceBoltsThrow_Group": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Frost bolts"
+    },
+    "AB_Militia_Guard_VBlood_FrostShield_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Frost shield"
+    },
+    "AB_Militia_Guard_VBlood_IceBreaker_AbilityGroup": {
+      "Weapons": [
+        "Sword",
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Sword strike with ice"
+    },
+    "AB_Militia_Guard_VBlood_FrostNova_Group": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Frost nova AoE"
+    },
+    "AB_Militia_Hound_Bite_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Wolf"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Hound bite — closest to Wolf"
+    },
+    "AB_Militia_Hound_Howl_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Wolf"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Hound howl"
+    },
+    "AB_Militia_Hound_DashAttack_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Wolf"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Hound dash"
+    },
+    "AB_Militia_Hound_HoundMark_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Wolf"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Marks prey"
+    },
+    "AB_Militia_HoundMaster_QuickShot_AbilityGroup": {
+      "Weapons": [
+        "Crossbow"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Quick crossbow shot"
+    },
+    "AB_Militia_HoundMaster_Shove_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Shove"
+    },
+    "AB_Militia_HoundMaster_Tackel_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Tackle"
+    },
+    "AB_Militia_HoundMaster_Roll_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Roll"
+    },
+    "AB_Militia_HoundMaster_SpreadShot_AbilityGroup": {
+      "Weapons": [
+        "Crossbow"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Spread crossbow shot"
+    },
+    "AB_Militia_HoundMaster_Command_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Commands hounds"
+    },
+    "AB_Militia_HoundMaster_Heal_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Self-heal"
+    },
+    "AB_Militia_MeleeHorizontal_AbilityGroup": {
+      "Weapons": [
+        "Sword",
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Horizontal sword swing"
+    },
+    "AB_Militia_MeleeStraight_AbilityGroup": {
+      "Weapons": [
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Straight sword thrust"
+    },
+    "AB_Militia_Leader_LeapAttack_AbilityGroup": {
+      "Weapons": [
+        "GreatSword",
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Leap attack"
+    },
+    "AB_Militia_Leader_Whirlwind_v2_AbilityGroup": {
+      "Weapons": [
+        "GreatSword",
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Whirlwind"
+    },
+    "AB_Militia_CallAdds_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Calls adds"
+    },
+    "AB_Militia_LightArrow_BasicShot_AbilityGroup": {
+      "Weapons": [
+        "Longbow"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Basic longbow shot"
+    },
+    "AB_Militia_LightArrow_Snipe_AbilityGroup": {
+      "Weapons": [
+        "Longbow"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Snipe shot"
+    },
+    "AB_Militia_LightArrow_Dash_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Archer dash"
+    },
+    "AB_Militia_LightArrow_Throw_AbilityGroup": {
+      "Weapons": [
+        "Daggers"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Throws something"
+    },
+    "AB_Militia_LightArrow_QuickShot_AbilityGroup": {
+      "Weapons": [
+        "Longbow"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Quick longbow shot"
+    },
+    "AB_Militia_LightArrow_HealShot_AbilityGroup": {
+      "Weapons": [
+        "Longbow",
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Heal arrow"
+    },
+    "AB_Nun_HARD_HolyBoltSpray_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Holy bolt spray"
+    },
+    "AB_Nun_AoE_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Holy AoE"
+    },
+    "AB_Nun_Counter_AbilityGroup": {
+      "Weapons": [
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Counter strike"
+    },
+    "AB_Nun_HolyProjectile_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Holy projectile"
+    },
+    "AB_Nun_HealingChannel_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Self-heal channel"
+    },
+    "AB_Nun_VBlood_HealCommand_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Boss-only AoE heal"
+    },
+    "AB_Militia_Scribe_RangedAttack_AbilityGroup": {
+      "Weapons": [
+        "Daggers"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Thrown ink quill"
+    },
+    "AB_Militia_Scribe_RazorParchment_AbilityGroup": {
+      "Weapons": [
+        "Daggers"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Razor parchment"
+    },
+    "AB_Militia_Scribe_InkExplosion_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Ink explosion"
+    },
+    "AB_Militia_Scribe_InkFuel_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Ink fuel buff"
+    },
+    "AB_Militia_Scribe_CuttingParchment02_AbilityGroup": {
+      "Weapons": [
+        "Daggers"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Cutting parchment"
+    },
+    "AB_Militia_Scribe_QuickAttack_AbilityGroup": {
+      "Weapons": [
+        "Daggers"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Quick scribe attack"
+    },
+    "AB_Poloma_Projectile_Group": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Spirit projectile"
+    },
+    "AB_Poloma_Wolf_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Wolf"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons spirit wolf — Wolf-themed"
+    },
+    "AB_Poloma_Otherside_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Spirit shift"
+    },
+    "AB_Poloma_SpiritRift_Group": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Spirit rift"
+    },
+    "AB_Poloma_Pixie_Group": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Pixie summon"
+    },
+    "AB_Spider_Queen_Cocoonify_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Spider"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Cocoon — Spider form"
+    },
+    "AB_Spider_Queen_ProjectileLoop_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [
+        "Spider"
+      ],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Web projectiles"
+    },
+    "AB_Spider_Queen_AoE_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [
+        "Spider"
+      ],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Spider AoE"
+    },
+    "AB_Spider_Queen_PBAoE_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Spider"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Spider pbaoe — Spider form"
+    },
+    "AB_Spider_Queen_WebHook_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Spider"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Web hook"
+    },
+    "AB_Spider_Queen_WebProjectile_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [
+        "Spider"
+      ],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Web projectile"
+    },
+    "AB_Spider_Queen_RangeAttack_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [
+        "Spider"
+      ],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Ranged spider attack"
+    },
+    "AB_Undead_ArenaChampion_SweepAttacks_AbilityGroup": {
+      "Weapons": [
+        "Sword",
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Sword sweep combo"
+    },
+    "AB_Undead_ArenaChampion_Fadestrike_AbilityGroup": {
+      "Weapons": [
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Fade-strike"
+    },
+    "AB_Undead_ArenaChampion_Windslash_AbilityGroup": {
+      "Weapons": [
+        "Sword",
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Windslash projectile"
+    },
+    "AB_Undead_ArenaChampion_Disengage_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Backstep disengage"
+    },
+    "AB_Undead_ArenaChampion_LeapStrike_AbilityGroup": {
+      "Weapons": [
+        "GreatSword",
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Leap strike"
+    },
+    "AB_Undead_ArenaChampion_Charge_AbilityGroup": {
+      "Weapons": [
+        "GreatSword",
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Charging strike"
+    },
+    "AB_Undead_ArenaChampion_Kick_AbilityGroup": {
+      "Weapons": [
+        "Unarmed"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Kick"
+    },
+    "AB_Undead_ArenaChampion_StabLaunch_AbilityGroup": {
+      "Weapons": [
+        "Sword",
+        "Daggers"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Stab launch"
+    },
+    "AB_Undead_ArenaChampion_TwinbladeThrow_AbilityGroup": {
+      "Weapons": [
+        "Daggers"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Twinblade throw"
+    },
+    "AB_Undead_ArenaChampion_CounterStrike_AbilityGroup": {
+      "Weapons": [
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Counter strike"
+    },
+    "AB_Undead_BishopOfShadows_Projectile_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Shadow projectile"
+    },
+    "AB_Undead_BishopOfShadows_TrippleBolt_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Triple shadow bolt"
+    },
+    "AB_Undead_BishopOfShadows_ShadowStep_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Shadow teleport"
+    },
+    "AB_Undead_BishopOfShadows_ShadowSoldier_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons shadow soldier"
+    },
+    "AB_Undead_BishopOfShadows_EternalDarkness_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Eternal darkness — too OP"
+    },
+    "AB_Undead_CursedSmith_HammerSlam_AbilityGroup": {
+      "Weapons": [
+        "Mace",
+        "DualHammers"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Hammer slam"
+    },
+    "AB_Undead_CursedSmith_SpearThrust_AbilityGroup": {
+      "Weapons": [
+        "Spear"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Spear thrust"
+    },
+    "AB_Undead_CursedSmith_SwordDash_AbilityGroup": {
+      "Weapons": [
+        "Sword",
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Sword dash"
+    },
+    "AB_Undead_CursedSmith_MultiDash_AbilityGroup": {
+      "Weapons": [
+        "Sword",
+        "Daggers"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Multi-dash"
+    },
+    "AB_Undead_CursedSmith_Summon_WeaponSlashers_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons floating swords"
+    },
+    "AB_Undead_CursedSmith_Summon_WeaponMace_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons mace"
+    },
+    "AB_Undead_CursedSmith_Summon_WeaponSword_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons sword"
+    },
+    "AB_Undead_CursedSmith_Summon_WeaponSpear_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons spear"
+    },
+    "AB_Undead_CursedSmith_Summon_WeaponAxe_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons axe"
+    },
+    "AB_Undead_CursedSmith_Summon_WeaponAll_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons all weapons — boss signature"
+    },
+    "AB_Undead_Infiltrator_DoubleStrike_AbilityGroup": {
+      "Weapons": [
+        "Daggers",
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Double strike"
+    },
+    "AB_Undead_Infiltrator_HeavyAttack_AbilityGroup": {
+      "Weapons": [
+        "Sword",
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Heavy attack"
+    },
+    "AB_Undead_Infiltrator_ShadowStep_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Shadow step"
+    },
+    "AB_Undead_Infiltrator_AfterImage_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "After-image clone"
+    },
+    "AB_Undead_Infiltrator_KnifeThrow_AbilityGroup": {
+      "Weapons": [
+        "Daggers"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Knife throw"
+    },
+    "AB_Undead_Infiltrator_ShadowFlurry_AbilityGroup": {
+      "Weapons": [
+        "Daggers",
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Shadow flurry"
+    },
+    "AB_Undead_Infiltrator_ArmyOfShadows_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Army of shadows — boss signature"
+    },
+    "AB_Undead_Leader_MeleeStandard_Group": {
+      "Weapons": [
+        "Sword",
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Standard sword swing"
+    },
+    "AB_Undead_Leader_ChainHookProjectile_Group": {
+      "Weapons": [
+        "Whip"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Chain hook"
+    },
+    "AB_Undead_Leader_SpinningDash_Group": {
+      "Weapons": [
+        "Sword",
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Spinning dash"
+    },
+    "AB_Undead_Leader_AreaAttack_Group": {
+      "Weapons": [
+        "Sword",
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Area attack"
+    },
+    "AB_Undead_Leader_WardOfTheDamned_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Boss ward signature"
+    },
+    "AB_Undead_Priest_Elite_Projectile_Group": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Death projectile"
+    },
+    "AB_Undead_Priest_Elite_Teleport_Travel_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Death teleport"
+    },
+    "AB_Undead_Priest_Elite_ProjectileNova_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Projectile nova"
+    },
+    "AB_Undead_Priest_Elite_RaiseDead_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Raises undead"
+    },
+    "AB_Undead_Priest_Elite_RaiseHorde_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Raises horde — boss only"
+    },
+    "AB_Undead_ZealousCultist_Slice_AbilityGroup_01": {
+      "Weapons": [
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Cultist slice 1"
+    },
+    "AB_Undead_ZealousCultist_Slice_AbilityGroup_02": {
+      "Weapons": [
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Cultist slice 2"
+    },
+    "AB_Undead_ZealousCultist_SummonGhosts_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons ghosts"
+    },
+    "AB_Undead_ZealousCultist_GhastlyMockery_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Ghostly mockery"
+    },
+    "AB_Undead_ZealousCultist_ShadowMeld_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Shadow meld stealth"
+    },
+    "AB_Undead_ZealousCultist_ShadowMeld_Melee_AbilityGroup": {
+      "Weapons": [
+        "Sword",
+        "Daggers"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Stealth melee strike"
+    },
+    "AB_Vampire_BloodKnight_BasicSpearDance_AbilityGroup": {
+      "Weapons": [
+        "Spear"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Spear dance combo"
+    },
+    "AB_Vampire_BloodKnight_HighKick_Abilitygroup": {
+      "Weapons": [
+        "Unarmed",
+        "Spear"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "High kick"
+    },
+    "AB_Vampire_BloodKnight_HookingSpear_Abilitygroup": {
+      "Weapons": [
+        "Spear"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Hooking spear"
+    },
+    "AB_Vampire_BloodKnight_MaidenLineup_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Boss signature"
+    },
+    "AB_Vampire_BloodKnight_ThousandSpears_AbilityGroup": {
+      "Weapons": [
+        "Spear",
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Thousand spears — too OP"
+    },
+    "AB_Vampire_BloodKnight_SpearTwirl_AbilityGroup": {
+      "Weapons": [
+        "Spear"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Spear twirl"
+    },
+    "AB_Vampire_BloodKnight_FieldOfSpears_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Spear field AoE"
+    },
+    "AB_Vampire_BloodKnight_SummonCrimsonMaiden_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons maiden"
+    },
+    "AB_Vampire_BloodKnight_SkeweringLeap_AbilityGroup": {
+      "Weapons": [
+        "Spear"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Leap with spear"
+    },
+    "AB_Vampire_Dracula_ShockwaveSlash_AbilityGroup": {
+      "Weapons": [
+        "GreatSword",
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Dracula shockwave slash"
+    },
+    "AB_Vampire_Dracula_DownSwing_Abilitygroup": {
+      "Weapons": [
+        "GreatSword",
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Heavy downswing"
+    },
+    "AB_Vampire_Dracula_SwordThrow_Abilitygroup": {
+      "Weapons": [
+        "GreatSword",
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Sword throw"
+    },
+    "AB_Vampire_Dracula_WolfAttack_Abilitygroup": {
+      "Weapons": [],
+      "Forms": [
+        "Wolf"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Wolf-form attack"
+    },
+    "AB_Vampire_Dracula_WolfLeap_EnterTravel_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Wolf"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Wolf leap"
+    },
+    "AB_Vampire_Dracula_BloodBoltSwarm_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "BloodBoltSwarm — too OP"
+    },
+    "AB_Vampire_Dracula_RingOfBlood_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Ring of blood signature"
+    },
+    "AB_Vampire_Dracula_QuickTeleport_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Short teleport"
+    },
+    "AB_Vampire_Dracula_SliceNDice_AbilityGroup": {
+      "Weapons": [
+        "GreatSword",
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Slice n dice combo"
+    },
+    "AB_Vampire_Dracula_BloodShower_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Blood shower AoE"
+    },
+    "AB_Vampire_Dracula_SummonBats_Abilitygroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons bats"
+    },
+    "AB_Vampire_Dracula_BloodStones_Summon_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons blood stones"
+    },
+    "AB_Vampire_Dracula_VeilOfBats_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Veil of bats dash"
+    },
+    "AB_Vampire_Dracula_EtherialSword_Abilitygroup": {
+      "Weapons": [
+        "Sword",
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Ethereal sword strike"
+    },
+    "AB_HighLord_SwordPrimary_MeleeAttack_AbilityGroup": {
+      "Weapons": [
+        "GreatSword",
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "HighLord primary attack"
+    },
+    "AB_HighLord_CorpseStorm_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Corpse storm signature"
+    },
+    "AB_HighLord_PullPlayers_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Pulls players — boss-only mechanic"
+    },
+    "AB_HighLord_SwordDashCleave_AbilityGroup": {
+      "Weapons": [
+        "GreatSword",
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Sword dash cleave"
+    },
+    "AB_HighLord_LeapStrike_AbilityGroup": {
+      "Weapons": [
+        "GreatSword",
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Leap strike"
+    },
+    "AB_HighLord_PBAE_AbilityGroup": {
+      "Weapons": [
+        "GreatSword",
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Point-blank AoE"
+    },
+    "AB_HighLord_UnholyWarp_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Unholy warp"
+    },
+    "AB_HighLord_RaiseDead_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Raises undead"
+    },
+    "AB_HighLord_UnholySkill_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Unholy spell"
+    },
+    "AB_VBlood_IceRanger_Primary_AbilityGroup": {
+      "Weapons": [
+        "Crossbow"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "IceRanger primary crossbow"
+    },
+    "AB_Vampire_Crossbow_IceShard_Group": {
+      "Weapons": [
+        "Crossbow"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Crossbow ice shard"
+    },
+    "AB_Vampire_IceRanger_VeilOfFrost_Group": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Frost veil — useful shift"
+    },
+    "AB_Vampire_Crossbow_IceRanger_IceShard_ChannelBarrage_Group": {
+      "Weapons": [
+        "Crossbow"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Channel ice shard barrage"
+    },
+    "AB_IceRanger_ColdSnap_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Cold snap CC"
+    },
+    "AB_IceRanger_IceNova_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Ice nova AoE"
+    },
+    "AB_IceRanger_TowerOfFrost_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Tower of frost — boss signature"
+    },
+    "AB_IceRanger_LurkerSpikes_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Frost spikes"
+    },
+    "AB_IceRanger_BloodMend_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Self-heal"
+    },
+    "AB_Vermin_DireRat_Gnaw_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Rat"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Rat gnaw — Rat form"
+    },
+    "AB_Vermin_DireRat_MultiGnaw_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Rat"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Multi-gnaw"
+    },
+    "AB_Vermin_DireRat_PoisonBurst_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [
+        "Rat"
+      ],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Poison burst"
+    },
+    "AB_Vermin_DireRat_RatVanguard_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Summons rat vanguard"
+    },
+    "AB_VHunter_Jade_Revolvers4_Group": {
+      "Weapons": [
+        "Pistols"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Jade revolver 4-shot"
+    },
+    "AB_VHunter_Jade_Revolvers_Group": {
+      "Weapons": [
+        "Pistols"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Jade revolver shot"
+    },
+    "AB_VHunter_Jade_Snipe_Group": {
+      "Weapons": [
+        "Pistols",
+        "Longbow"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Snipe shot"
+    },
+    "AB_VHunter_Jade_Caltrops_Group": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Caltrops trap"
+    },
+    "AB_VHunter_Jade_DisablingShot_Group": {
+      "Weapons": [
+        "Pistols"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Disabling shot"
+    },
+    "AB_VHunter_Jade_BlastVault_Group": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Vault dash"
+    },
+    "AB_VHunter_Jade_Stealth_Group": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Stealth"
+    },
+    "AB_VHunter_Jade_ExplosiveShells_Group": {
+      "Weapons": [
+        "Pistols"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Explosive pistol shells"
+    },
+    "AB_VHunter_Jade_Revolvers2_Group": {
+      "Weapons": [
+        "Pistols"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Revolver 2-shot"
+    },
+    "AB_VHunter_Jade_Revolvers3_Group": {
+      "Weapons": [
+        "Pistols"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Revolver 3-shot"
+    },
+    "AB_VHunter_Leader_MeleeHorizontal_Group": {
+      "Weapons": [
+        "Sword",
+        "GreatSword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Sword horizontal swing"
+    },
+    "AB_VHunter_Leader_Whirlwind_AbilityGroup": {
+      "Weapons": [
+        "GreatSword",
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Whirlwind"
+    },
+    "AB_VHunter_Leader_MeleeStraight_Group": {
+      "Weapons": [
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Straight sword thrust"
+    },
+    "AB_VHunter_Leader_LeapThrust_Group": {
+      "Weapons": [
+        "Sword",
+        "Spear"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Leap thrust"
+    },
+    "AB_VHunter_Leader_Roll_Group": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Universal dodge"
+    },
+    "AB_VHunter_Leader_Crossbow_Group": {
+      "Weapons": [
+        "Crossbow"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Hunter crossbow"
+    },
+    "AB_VHunter_Leader_FireRain_Group": {
+      "Weapons": [
+        "Magic",
+        "Crossbow"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Fire rain arrows"
+    },
+    "AB_CursedWanderer_MeleeAttack_Group": {
+      "Weapons": [
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Wanderer sword strike"
+    },
+    "AB_CursedWanderer_FakeMeleeAttack_Group": {
+      "Weapons": [
+        "Sword"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Feint attack"
+    },
+    "AB_CursedWanderer_Gossip_Group": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Curse/debuff signature"
+    },
+    "AB_Tailor_Shapeshift_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Beatrice → Gargoyle phase-change — boss-only"
+    },
+    "AB_Legion_Gargoyle_ForwardSwipe_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Gargoyle swipe — no native form"
+    },
+    "AB_Gargoyle_WingShield_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Gargoyle wing shield"
+    },
+    "AB_Wendigo_IcicleThrow_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Icicle throw"
+    },
+    "AB_Wendigo_FrostNova_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Frost nova"
+    },
+    "AB_Wendigo_IceDash_Strike_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Ice dash strike"
+    },
+    "AB_Wendigo_IceBeam_First_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Ice beam — boss signature"
+    },
+    "AB_Wendigo_SnowStorm_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Snow storm AoE — too OP"
+    },
+    "AB_Wendigo_IceBeam_Second_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Ice beam phase 2"
+    },
+    "AB_Wendigo_LeapAttack_AbilityGroup": {
+      "Weapons": [
+        "GreatSword",
+        "Mace"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Leap attack"
+    },
+    "AB_Winter_Yeti_TrippleAttack_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Bear"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Yeti triple swipe — Bear-like form"
+    },
+    "AB_Winter_Yeti_Avalanche_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Avalanche signature"
+    },
+    "AB_Winter_Yeti_CaveRumble_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Ground rumble"
+    },
+    "AB_Winter_Yeti_IceCrack_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Ice crack"
+    },
+    "AB_Winter_Yeti_AntarcticLeap_AbilityGroup": {
+      "Weapons": [],
+      "Forms": [
+        "Bear"
+      ],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Yeti leap"
+    },
+    "AB_Winter_Yeti_GrabIcicle_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Grabs icicle weapon"
+    },
+    "AB_Winter_Yeti_FrostBite_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Frostbite DoT"
+    },
+    "AB_Winter_Yeti_ThrowIcicle_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": false,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Throw icicle"
+    }
+  },
+  "_README_4_": "v0.5.3 added per-ability admin controls: Enabled (bool, default true) blocks both capture and use when false; DamageScale (float, default 1.0) and CooldownScale (float, default 1.0) are stored but only take effect once the W5 runtime ships.",
+  "TransformMap": {
+    "CHAR_Forest_Wolf_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 1,
+      "Notes": "Alpha Wolf. Maps to native Wolf shapeshift via A4."
+    },
+    "CHAR_Vermin_DireRat_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 1,
+      "Notes": "Putrid Rat. Maps to native Rat shapeshift."
+    },
+    "CHAR_Bandit_Foreman_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 1,
+      "Notes": "Rufus the Foreman — crossbow ranged."
+    },
+    "CHAR_Bandit_StoneBreaker_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 1,
+      "Notes": "Errol the Stonebreaker — heavy hammer melee."
+    },
+    "CHAR_Bandit_Frostarrow_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 1,
+      "Notes": "Keely the Frost Archer."
+    },
+    "CHAR_Bandit_Chaosarrow_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 2,
+      "Notes": "Lidia the Chaos Archer."
+    },
+    "CHAR_Bandit_Bomber_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 2,
+      "Notes": "Clive the Firestarter — bomb thrower."
+    },
+    "CHAR_Bandit_Stalker_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 2,
+      "Notes": "Quincey the Bandit King."
+    },
+    "CHAR_Bandit_Fisherman_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 1,
+      "Notes": "Polora the Feywalker (Fisherman family)."
+    },
+    "CHAR_Bandit_Tourok_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 2,
+      "Notes": "Tristan the Vampire Hunter — chaos two-hander."
+    },
+    "CHAR_Poloma_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 2,
+      "Notes": "Polora the Feywalker — spirit caster."
+    },
+    "CHAR_Villager_CursedWanderer_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 1,
+      "Notes": "Cursed Wanderer — early game."
+    },
+    "CHAR_Forest_Bear_Dire_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 2,
+      "Notes": "Ferocious Bear. Maps to native Bear shapeshift via A4."
+    },
+    "CHAR_Militia_Hound_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 2,
+      "Notes": "Hound — Bloodhound family."
+    },
+    "CHAR_Militia_HoundMaster_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 2,
+      "Notes": "Bloodhound Houndmaster — crossbow + hounds."
+    },
+    "CHAR_Militia_Guard_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 3,
+      "Notes": "Vincent the Frostbringer — ice melee."
+    },
+    "CHAR_Militia_Leader_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 3,
+      "Notes": "Octavian the Militia Captain — sword + whirlwind."
+    },
+    "CHAR_Militia_Scribe_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 3,
+      "Notes": "Maja the Dark Savant."
+    },
+    "CHAR_Militia_Fabian_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 3,
+      "Notes": "Sir Erwin the Gallant Cavalier — mounted lightning."
+    },
+    "CHAR_Militia_Nun_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 2,
+      "Notes": "Christina the Sun Priestess — holy healer."
+    },
+    "CHAR_Militia_Longbowman_LightArrow_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 3,
+      "Notes": "Jade the Vampire Hunter (longbow form)."
+    },
+    "CHAR_Militia_BishopOfDunley_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 3,
+      "Notes": "Bishop of Dunley — holy beam caster."
+    },
+    "CHAR_Villager_Tailor_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 3,
+      "Notes": "Beatrice the Tailor. Gargoyle phase 2 is glitchy — monitor."
+    },
+    "CHAR_Militia_Glassblower_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 3,
+      "Notes": "Christina the Glassblower — wind / cyclone."
+    },
+    "CHAR_Cursed_ToadKing_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 3,
+      "Notes": "Albert the Duke of Balaton. Maps to native Toad shapeshift."
+    },
+    "CHAR_Cursed_Witch_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 3,
+      "Notes": "Old Wood Witch."
+    },
+    "CHAR_Cursed_MountainBeast_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 3,
+      "Notes": "Mountain Beast — heuristically maps to Bear form."
+    },
+    "CHAR_Spider_Queen_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 3,
+      "Notes": "Ungora the Spider Queen. Maps to native Spider shapeshift."
+    },
+    "CHAR_Harpy_Matriarch_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Henry Blackbrew the Doctor (harpy form)."
+    },
+    "CHAR_Geomancer_Human_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Terah the Geomancer — has built-in phase shift to Golem. Good TX5 candidate."
+    },
+    "CHAR_ChurchOfLight_Paladin_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Sir Magnus the Overseer."
+    },
+    "CHAR_ChurchOfLight_Overseer_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Frostmaw the Mountain Terror (ice overseer)."
+    },
+    "CHAR_ChurchOfLight_Sommelier_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 3,
+      "Notes": "Sommelier — barrel-throwing mid-tier boss."
+    },
+    "CHAR_ChurchOfLight_Cardinal_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Cardinal Lazarus the Heartless — holy nova boss."
+    },
+    "CHAR_Undead_ArenaChampion_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Kriig the Undead General — heavy sword combos."
+    },
+    "CHAR_Undead_BishopOfDeath_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Bishop of Death — minimal moves (only feed/melee)."
+    },
+    "CHAR_Undead_BishopOfShadows_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Bishop of Shadows — shadow soldier summons."
+    },
+    "CHAR_Undead_CursedSmith_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Foulrot the Soultaker — multi-weapon summoner."
+    },
+    "CHAR_Undead_Infiltrator_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Stavros the Carver — shadow dagger boss."
+    },
+    "CHAR_Undead_Priest_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Elder Undead — raises horde."
+    },
+    "CHAR_Undead_ZealousCultist_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 3,
+      "Notes": "Zealous Cultist — ghosts + slice combo."
+    },
+    "CHAR_Wendigo_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Wendigo — ice beam boss; signature moves are OP."
+    },
+    "CHAR_Winter_Yeti_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Frostmaw the Mountain Terror (yeti form). Bear-like shapeshift."
+    },
+    "CHAR_Manticore_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 5,
+      "Notes": "Manticore — flight + breath weapons mostly transform-only."
+    },
+    "CHAR_BatVampire_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Bat-form vampire boss — sky-strike combos."
+    },
+    "CHAR_Gloomrot_Iva_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Iva the Engineer — weapon-swap mechanic (good TX5 candidate)."
+    },
+    "CHAR_Gloomrot_Monster_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 5,
+      "Notes": "Voltatia the Power Master (monster form) — lightning storm endgame."
+    },
+    "CHAR_Gloomrot_Purifier_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Purifier — chaos volley + barrier."
+    },
+    "CHAR_Gloomrot_RailgunSergeant_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Angram the Purifier — railgun bursts."
+    },
+    "CHAR_Gloomrot_TheProfessor_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 5,
+      "Notes": "The Mad Professor — many-beams signature."
+    },
+    "CHAR_Gloomrot_Voltage_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Voltatia early form — whip + sprint kicks."
+    },
+    "CHAR_VHunter_Jade_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Jade the Vampire Hunter — pistols + stealth."
+    },
+    "CHAR_VHunter_Leader_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Tristan the Vampire Hunter (leader form)."
+    },
+    "CHAR_Vampire_BloodKnight_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Solarus the Immaculate (Blood Knight form)."
+    },
+    "CHAR_Vampire_HighLord_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Adam the Firstborn (Vampire High Lord)."
+    },
+    "CHAR_Vampire_IceRanger_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Frostmaw / Ice Ranger Vampire — crossbow + ice nova."
+    },
+    "CHAR_Vampire_Dracula_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 5,
+      "Notes": "Dracula — final boss. Many signature moves are transform-only."
+    },
+    "CHAR_Blackfang_CarverBoss_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 5,
+      "Notes": "Blackfang Carver — wild-swing axe boss."
+    },
+    "CHAR_Blackfang_Livith_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 5,
+      "Notes": "Livith the Stygian Ninja."
+    },
+    "CHAR_Blackfang_Lucie_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 5,
+      "Notes": "Lucie the Beautiful — alchemy boss."
+    },
+    "CHAR_Blackfang_Morgana_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 5,
+      "Notes": "Morgana — spectral / transformation mechanic."
+    },
+    "CHAR_Blackfang_Valyr_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 5,
+      "Notes": "Valyr the Keeper — phase-swap mechanic. Good TX5 candidate."
+    },
+    "CHAR_ArchMage_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 5,
+      "Notes": "Solarus / ArchMage variant — crystal lance + arcane."
+    },
+    "CHAR_Undead_Leader_VBlood": {
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Tier": 4,
+      "Notes": "Undead Leader — chain hook + spinning dash."
+    }
+  },
+  "_README_5_": "TX2 (v0.10.1+): 61 V-Bloods curated below in TransformMap. All Enabled by default; admin disables individuals via Enabled:false. Difficulty 'Basic' is the placeholder for the TX4 difficulty gate. Tier 1-5 is the placeholder for the TX6 global scaling. Edit Notes for admin reminders. Review with friends and adjust."
+}
