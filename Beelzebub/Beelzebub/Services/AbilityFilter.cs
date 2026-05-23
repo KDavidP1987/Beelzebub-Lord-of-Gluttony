@@ -38,18 +38,27 @@ internal sealed class AbilityFilter
             }
         }
 
-        if (rules.DenyGuids.Contains(abilityGuid))
+        // v0.27.2: per-ability force-allow lets a curated phase ability bypass the
+        // deny lists when its name legitimately matches a deny-pattern (e.g. Solarus's
+        // "_Hard_" fallen-angel logic-gate abilities). The Enabled kill-switch below
+        // still applies, so admins can still disable a force-allowed ability.
+        bool forceAllow = Core.AbilityRules.IsAllowDenied(abilityName, abilityGuid);
+
+        if (!forceAllow && rules.DenyGuids.Contains(abilityGuid))
         {
             reason = "matches deny-guid";
             return false;
         }
 
-        foreach (var pat in rules.DenyPatterns)
+        if (!forceAllow)
         {
-            if (abilityName.Contains(pat, StringComparison.OrdinalIgnoreCase))
+            foreach (var pat in rules.DenyPatterns)
             {
-                reason = $"matches deny pattern '{pat}'";
-                return false;
+                if (abilityName.Contains(pat, StringComparison.OrdinalIgnoreCase))
+                {
+                    reason = $"matches deny pattern '{pat}'";
+                    return false;
+                }
             }
         }
 

@@ -154,6 +154,7 @@ internal sealed class AbilityRules
                 Enabled = entry.Enabled,            // absent JSON field keeps the C# auto-property default (true)
                 Difficulty = string.IsNullOrWhiteSpace(entry.Difficulty) ? "Basic" : entry.Difficulty.Trim(),
                 Phase = entry.Phase <= 0 ? 1 : entry.Phase,
+                AllowDenied = entry.AllowDenied,
                 DamageScale = entry.DamageScale > 0f ? entry.DamageScale : 1.0f,
                 CooldownScale = entry.CooldownScale > 0f ? entry.CooldownScale : 1.0f,
                 Notes = entry.Notes ?? "",
@@ -260,6 +261,20 @@ internal sealed class AbilityRules
             && Current.AbilityMap.TryGetValue(abilityName ?? "", out var entry)
             && !entry.Enabled) return false;
         return true;
+    }
+
+    /// <summary>
+    /// v0.27.2: does this ability's AbilityMap entry force-allow it past DenyPatterns
+    /// (and DenyGuids)? Lets curated phase abilities with deny-patterned names — e.g.
+    /// Solarus's "_Hard_" fallen-angel logic-gate abilities — still be captured/used.
+    /// Default false. The per-ability Enabled=false kill-switch still applies.
+    /// </summary>
+    public bool IsAllowDenied(string abilityName, int abilityGuid)
+    {
+        if (Current.AbilityMap != null
+            && Current.AbilityMap.TryGetValue(abilityName ?? "", out var entry))
+            return entry.AllowDenied;
+        return false;
     }
 
     /// <summary>
@@ -714,6 +729,12 @@ internal sealed class AbilityRules
         // Default 1. Used by `.beelz phase <n>` to swap the transformed spell bar between
         // phase loadouts. Bosses without multi-phase mechanics leave every ability at Phase=1.
         public int Phase { get; set; } = 1;
+        // v0.27.2: force-allow this ability even if its name matches a DenyPattern.
+        // For curated phase abilities that legitimately carry a deny-patterned name —
+        // e.g. Solarus's fallen-angel logic-gate "_Hard_" abilities, which are NOT
+        // brutal-only difficulty variants but real phase moves present in both modes.
+        // Default false (deny-patterns apply normally).
+        public bool AllowDenied { get; set; } = false;
         public float DamageScale { get; set; } = 1.0f;
         public float CooldownScale { get; set; } = 1.0f;
         public string Notes { get; set; } = "";

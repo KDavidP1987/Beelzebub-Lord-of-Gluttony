@@ -39,6 +39,14 @@ internal sealed class ActiveTransform
     // TX5: which boss-phase loadout is currently on the spell bar. Default 1.
     // Switched via `.beelz phase <n>`.
     public int CurrentPhase = 1;
+    // v0.27.0: auto-phase (Transform_PhaseMode = Auto). InCombat is maintained by
+    // the PvE combat-buff hooks (BuffSpawnServerPatch start / UpdateBuffsBuffer
+    // DestroyPatch end). Character is captured at combat-enter so the Tick
+    // auto-monitor can read Health without a steamId→entity lookup. CurrentPhase
+    // doubles as the one-way ratchet: it only climbs while InCombat, and resets
+    // to 1 when combat ends (mirrors a boss leash-reset).
+    public bool InCombat;
+    public Unity.Entities.Entity Character;
     // v0.20.0: minion entities spawned by summon abilities while this transform
     // was active. AbilityCastStartedSystemPatch + LinkMinionToOwnerOnSpawnSystemPatch
     // append here as they rebind freshly-spawned minions. v0.23.0: no cap (was 10);

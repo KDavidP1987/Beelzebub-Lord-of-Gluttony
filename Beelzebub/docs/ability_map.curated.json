@@ -994,7 +994,8 @@
       "Enabled": true,
       "DamageScale": 1.0,
       "CooldownScale": 1.0,
-      "Notes": "Spectral magic blast"
+      "Notes": "Spectral magic blast",
+      "Phase": 2
     },
     "AB_Blackfang_Morgana_SpectralSwarm_AbilityGroup": {
       "Weapons": [
@@ -1005,7 +1006,8 @@
       "Enabled": true,
       "DamageScale": 1.0,
       "CooldownScale": 1.0,
-      "Notes": "Spectral swarm AoE"
+      "Notes": "Spectral swarm AoE",
+      "Phase": 2
     },
     "AB_Blackfang_Morgana_SummonTail_AbilityGroup": {
       "Weapons": [
@@ -1016,7 +1018,8 @@
       "Enabled": true,
       "DamageScale": 1.0,
       "CooldownScale": 1.0,
-      "Notes": "Summons her boss-form tail"
+      "Notes": "Summons her boss-form tail",
+      "Phase": 2
     },
     "AB_Blackfang_Morgana_SpectralHell_AbilityGroup": {
       "Weapons": [
@@ -1027,7 +1030,8 @@
       "Enabled": true,
       "DamageScale": 1.0,
       "CooldownScale": 1.0,
-      "Notes": "Big AoE signature"
+      "Notes": "Big AoE signature",
+      "Phase": 2
     },
     "AB_Blackfang_Morgana_GroundPiercer_AbilityGroup": {
       "Weapons": [
@@ -1038,7 +1042,8 @@
       "Enabled": true,
       "DamageScale": 1.0,
       "CooldownScale": 1.0,
-      "Notes": "Ground piercing spike"
+      "Notes": "Ground piercing spike",
+      "Phase": 2
     },
     "AB_Blackfang_Morgana_SpectralBeam_AbilityGroup": {
       "Weapons": [
@@ -1049,7 +1054,8 @@
       "Enabled": true,
       "DamageScale": 1.0,
       "CooldownScale": 1.0,
-      "Notes": "Spectral beam"
+      "Notes": "Spectral beam",
+      "Phase": 2
     },
     "AB_Blackfang_Morgana_SpectralOrbBarrage_AbilityGroup": {
       "Weapons": [
@@ -1060,7 +1066,8 @@
       "Enabled": true,
       "DamageScale": 1.0,
       "CooldownScale": 1.0,
-      "Notes": "Orb barrage"
+      "Notes": "Orb barrage",
+      "Phase": 2
     },
     "AB_Blackfang_Morgana_CrossWindSlash_AbilityGroup": {
       "Weapons": [
@@ -1093,7 +1100,8 @@
       "Enabled": true,
       "DamageScale": 1.0,
       "CooldownScale": 1.0,
-      "Notes": "Boss-signature rings AoE"
+      "Notes": "Boss-signature rings AoE",
+      "Phase": 2
     },
     "AB_Blackfang_Morgana_Transformation_AbilityGroup": {
       "Weapons": [
@@ -1115,7 +1123,8 @@
       "Enabled": true,
       "DamageScale": 1.0,
       "CooldownScale": 1.0,
-      "Notes": "Corruption fountain"
+      "Notes": "Corruption fountain",
+      "Phase": 2
     },
     "AB_Blackfang_Morgana_SpectralSnake_AbilityGroup": {
       "Weapons": [
@@ -1126,7 +1135,8 @@
       "Enabled": true,
       "DamageScale": 1.0,
       "CooldownScale": 1.0,
-      "Notes": "Spectral snake projectile"
+      "Notes": "Spectral snake projectile",
+      "Phase": 2
     },
     "AB_Blackfang_Morgana_TravelingOrbBarrage_AbilityGroup": {
       "Weapons": [
@@ -1137,7 +1147,8 @@
       "Enabled": true,
       "DamageScale": 1.0,
       "CooldownScale": 1.0,
-      "Notes": "Moving orb barrage"
+      "Notes": "Moving orb barrage",
+      "Phase": 2
     },
     "AB_Blackfang_Morgana_MistSpinners_AbilityGroup": {
       "Weapons": [
@@ -1148,7 +1159,8 @@
       "Enabled": true,
       "DamageScale": 1.0,
       "CooldownScale": 1.0,
-      "Notes": "Mist spinner AoE"
+      "Notes": "Mist spinner AoE",
+      "Phase": 2
     },
     "AB_Blackfang_Valyr_PhaseDual_Tackle_AbilityGroup": {
       "Weapons": [
@@ -1493,7 +1505,8 @@
       "Enabled": true,
       "DamageScale": 1.0,
       "CooldownScale": 1.0,
-      "Notes": "Divine rays AoE"
+      "Notes": "Divine rays AoE",
+      "Phase": 2
     },
     "AB_Sommelier_MeleeHorizontal_AbilityGroup": {
       "Weapons": [
@@ -4197,7 +4210,8 @@
       "Enabled": true,
       "DamageScale": 1.0,
       "CooldownScale": 1.0,
-      "Notes": "BloodBoltSwarm — too OP"
+      "Notes": "BloodBoltSwarm — too OP",
+      "Phase": 2
     },
     "AB_Vampire_Dracula_RingOfBlood_AbilityGroup": {
       "Weapons": [
@@ -4208,7 +4222,8 @@
       "Enabled": true,
       "DamageScale": 1.0,
       "CooldownScale": 1.0,
-      "Notes": "Ring of blood signature"
+      "Notes": "Ring of blood signature",
+      "Phase": 2
     },
     "AB_Vampire_Dracula_QuickTeleport_AbilityGroup": {
       "Weapons": [
@@ -4242,7 +4257,8 @@
       "Enabled": true,
       "DamageScale": 1.0,
       "CooldownScale": 1.0,
-      "Notes": "Blood shower AoE"
+      "Notes": "Blood shower AoE",
+      "Phase": 2
     },
     "AB_Vampire_Dracula_SummonBats_Abilitygroup": {
       "Weapons": [
@@ -4253,7 +4269,8 @@
       "Enabled": true,
       "DamageScale": 1.0,
       "CooldownScale": 1.0,
-      "Notes": "Summons bats"
+      "Notes": "Summons bats",
+      "Phase": 2
     },
     "AB_Vampire_Dracula_BloodStones_Summon_AbilityGroup": {
       "Weapons": [
@@ -4264,7 +4281,8 @@
       "Enabled": true,
       "DamageScale": 1.0,
       "CooldownScale": 1.0,
-      "Notes": "Summons blood stones"
+      "Notes": "Summons blood stones",
+      "Phase": 2
     },
     "AB_Vampire_Dracula_VeilOfBats_AbilityGroup": {
       "Weapons": [],
@@ -4273,7 +4291,8 @@
       "Enabled": true,
       "DamageScale": 1.0,
       "CooldownScale": 1.0,
-      "Notes": "Veil of bats dash"
+      "Notes": "Veil of bats dash",
+      "Phase": 2
     },
     "AB_Vampire_Dracula_EtherialSword_Abilitygroup": {
       "Weapons": [
@@ -4285,7 +4304,8 @@
       "Enabled": true,
       "DamageScale": 1.0,
       "CooldownScale": 1.0,
-      "Notes": "Ethereal sword strike"
+      "Notes": "Ethereal sword strike",
+      "Phase": 2
     },
     "AB_HighLord_SwordPrimary_MeleeAttack_AbilityGroup": {
       "Weapons": [
@@ -4944,6 +4964,119 @@
       "DamageScale": 1.0,
       "CooldownScale": 1.0,
       "Notes": "Throw icicle"
+    },
+    "AB_Blackfang_Morgana_MeleeAttack_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Phase": 1,
+      "Notes": "Morgana humanoid form (phase 1)"
+    },
+    "AB_Blackfang_Morgana_DownHorizontalSlash_Left_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Phase": 1,
+      "Notes": "Morgana humanoid form (phase 1)"
+    },
+    "AB_Blackfang_Morgana_DownHorizontalSlash_Right_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Phase": 1,
+      "Notes": "Morgana humanoid form (phase 1)"
+    },
+    "AB_Blackfang_Morgana_SpectralBlast_Humanoid_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Phase": 1,
+      "Notes": "Morgana humanoid form (phase 1)"
+    },
+    "AB_Blackfang_Morgana_SpectralSwarm_Humanoid_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Phase": 1,
+      "Notes": "Morgana humanoid form (phase 1)"
+    },
+    "AB_Blackfang_Morgana_RingsOfTerror_Humanoid_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Phase": 1,
+      "Notes": "Morgana humanoid form (phase 1)"
+    },
+    "AB_ChurchOfLight_Paladin_EmpoweredMelee_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Phase": 2,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Solarus ascended/logic-gate (phase 2)"
+    },
+    "AB_ChurchOfLight_Paladin_Hard_Dash_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Phase": 2,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Solarus ascended/logic-gate (phase 2)",
+      "AllowDenied": true
+    },
+    "AB_ChurchOfLight_Paladin_HolyFlackCannon_Hard_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Forms": [],
+      "TransformOnly": true,
+      "Enabled": true,
+      "Difficulty": "Basic",
+      "Phase": 2,
+      "DamageScale": 1.0,
+      "CooldownScale": 1.0,
+      "Notes": "Solarus ascended/logic-gate (phase 2)",
+      "AllowDenied": true
     }
   },
   "_README_4_": "v0.5.3 added per-ability admin controls: Enabled (bool, default true) blocks both capture and use when false; DamageScale (float, default 1.0) and CooldownScale (float, default 1.0) are stored but only take effect once the W5 runtime ships.",

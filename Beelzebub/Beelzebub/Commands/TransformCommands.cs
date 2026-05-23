@@ -27,7 +27,7 @@ internal static class TransformCommands
         var active = Core.AbilityRegistry.GetActiveTransform(steamId);
         if (active is not null)
         {
-            string activeName = new PrefabGUID(active.UnitPrefabGuid).GetPrefabName();
+            string activeName = Core.AbilityMetadata.ResolveUnitName(active.UnitPrefabGuid);
             if (active.Duration.HasValue)
             {
                 var elapsed = (System.DateTime.UtcNow - active.ActivatedAtUtc).TotalSeconds;
@@ -48,9 +48,9 @@ internal static class TransformCommands
         foreach (var grp in byGroup)
         {
             ctx.Reply(grp.Key == CaptureSource.VBlood ? "-- V-Bloods --" : "-- Regular mobs --");
-            foreach (var (idx, unlock) in grp.OrderBy(t => new PrefabGUID(t.unlock.UnitPrefabGuid).GetPrefabName()))
+            foreach (var (idx, unlock) in grp.OrderBy(t => Core.AbilityMetadata.ResolveUnitName(t.unlock.UnitPrefabGuid)))
             {
-                ctx.Reply($"  {idx}: {new PrefabGUID(unlock.UnitPrefabGuid).GetPrefabName()}");
+                ctx.Reply($"  {idx}: {Core.AbilityMetadata.ResolveUnitName(unlock.UnitPrefabGuid)}");
             }
         }
     }
@@ -70,15 +70,38 @@ internal static class TransformCommands
         }
         else
         {
-            // Match by case-insensitive substring of the unit's PrefabName.
-            var match = unlocks.FirstOrDefault(u =>
-                new PrefabGUID(u.UnitPrefabGuid).GetPrefabName().Contains(unitOrIndex, System.StringComparison.OrdinalIgnoreCase));
-            if (match.UnitPrefabGuid == 0)
+            // v0.28.1: resolve by name against BOTH the display name and the raw
+            // prefab name. Prefer an EXACT match, then a V-Blood, then any substring
+            // match — so "dracula" picks the Dracula V-Blood, not a Dracula minion /
+            // illusion / blood-soul that also contains the word (the old FirstOrDefault
+            // substring match grabbed whichever such unit happened to be first).
+            const System.StringComparison OIC = System.StringComparison.OrdinalIgnoreCase;
+            string Prefab(int g) => new PrefabGUID(g).GetPrefabName() ?? "";
+            string Display(int g) => Core.AbilityMetadata?.ResolveUnitName(g) ?? Prefab(g);
+
+            var matches = unlocks.Where(u =>
+                Prefab(u.UnitPrefabGuid).Contains(unitOrIndex, OIC) ||
+                Display(u.UnitPrefabGuid).Contains(unitOrIndex, OIC)).ToList();
+            if (matches.Count == 0)
             {
                 ctx.Reply($"No unlocked transform matches '{unitOrIndex}'. Use .beelz transforms for the list.");
                 return;
             }
-            unitGuid = match.UnitPrefabGuid;
+
+            UnlockedTransform chosen;
+            var exact = matches.Where(u =>
+                Prefab(u.UnitPrefabGuid).Equals(unitOrIndex, OIC) ||
+                Display(u.UnitPrefabGuid).Equals(unitOrIndex, OIC)).ToList();
+            if (exact.Count > 0) chosen = exact[0];
+            else
+            {
+                var vb = matches.FirstOrDefault(u => u.Source == CaptureSource.VBlood);
+                chosen = vb.UnitPrefabGuid != 0 ? vb : matches[0];
+            }
+
+            if (matches.Count > 1)
+                ctx.Reply($"'{unitOrIndex}' matched {matches.Count} unlocks — using {Display(chosen.UnitPrefabGuid)}. (Use the index from .beelz transforms to be exact.)");
+            unitGuid = chosen.UnitPrefabGuid;
         }
 
         var (ok, message) = Core.Transforms.TryActivate(steamId, unitGuid);
@@ -104,14 +127,14 @@ internal static class TransformCommands
         if (n <= 0)
         {
             // Show-only mode.
-            ctx.Reply($"Currently in phase {active.CurrentPhase} of {pg.GetPrefabName()}. Available phases: {string.Join(", ", available)}. " +
+            ctx.Reply($"Currently in phase {active.CurrentPhase} of {Core.AbilityMetadata.ResolveUnitName(pg._Value)}. Available phases: {string.Join(", ", available)}. " +
                       (available.Count > 1 ? "Switch via .beelz phase <n>." : "(This unit doesn't have multi-phase mechanics curated.)"));
             return;
         }
 
         if (!available.Contains(n))
         {
-            ctx.Reply($"Phase {n} isn't defined for {pg.GetPrefabName()}. Available: {string.Join(", ", available)}.");
+            ctx.Reply($"Phase {n} isn't defined for {Core.AbilityMetadata.ResolveUnitName(pg._Value)}. Available: {string.Join(", ", available)}.");
             return;
         }
         if (n == active.CurrentPhase)
@@ -120,31 +143,20 @@ internal static class TransformCommands
             return;
         }
 
-        // Re-fetch the phase's ability list and re-apply on the carrier buff in-place.
+        // Validate the phase actually has abilities before swapping (nicer message).
         var abilities = Core.Transforms.GetTransformAbilities(pg, n);
         if (abilities.Count == 0)
         {
-            ctx.Reply($"Phase {n} has no eligible abilities for {pg.GetPrefabName()}. Aborting.");
+            ctx.Reply($"Phase {n} has no eligible abilities for {Core.AbilityMetadata.ResolveUnitName(pg._Value)}. Aborting.");
             return;
         }
 
+        // v0.27.0: shared swap path (also used by the Auto-mode HP monitor).
         Entity character = ctx.Event.SenderCharacterEntity;
-        bool appliedNow = false;
-        if (character.Exists())
-        {
-            // Z1: Reapply mutates the existing carrier buff's override buffer in
-            // place, so the bar swaps without dropping the buff (and any future
-            // visual / stat overlays we attach to it).
-            appliedNow = TransformBuffService.Reapply(character, abilities);
-        }
-
-        active.CurrentPhase = n;
-        Core.AbilityRegistry.SetActiveTransform(steamId, active);
+        bool appliedNow = Core.Transforms.ApplyPhase(steamId, active, character, n);
 
         string applyHint = appliedNow ? "Spell bar swapped." : "Spell bar will swap this frame.";
         ctx.Reply($"Phase {n} active: {abilities.Count} abilities now on the bar. {applyHint}");
-        Core.Chat.SendEvent(character,
-            $"[BEELZ:event] type=transform-phase-shift u={active.UnitPrefabGuid} un={pg.GetPrefabName()} phase={n}");
     }
 
     [Command("revert", description: "Revert your current transformation. Spell bar restored immediately.")]
@@ -195,11 +207,11 @@ internal static class TransformCommands
         var abilityList = Core.Transforms.GetTransformAbilities(pgUnit, active.CurrentPhase);
         if (abilityList.Count == 0)
         {
-            ctx.Reply($"You are transformed as {pgUnit.GetPrefabName()} but no abilities are loaded for this phase ({active.CurrentPhase}).");
+            ctx.Reply($"You are transformed as {Core.AbilityMetadata.ResolveUnitName(pgUnit._Value)} but no abilities are loaded for this phase ({active.CurrentPhase}).");
             return;
         }
 
-        ctx.Reply($"--- {pgUnit.GetPrefabName().Humanize()} spell bar (phase {active.CurrentPhase}) ---");
+        ctx.Reply($"--- {Core.AbilityMetadata.ResolveUnitName(pgUnit._Value)} spell bar (phase {active.CurrentPhase}) ---");
         for (int i = 0; i < abilityList.Count; i++)
         {
             if (abilityList[i] == 0) continue;
@@ -337,7 +349,7 @@ internal static class TransformCommands
         {
             var pg = new PrefabGUID(active.UnitPrefabGuid);
             var abilities = Core.Transforms.GetTransformAbilities(pg, active.CurrentPhase);
-            ctx.Reply($"[TRANSFORM] {pg.GetPrefabName()} phase={active.CurrentPhase} — {abilities.Count} ability slot(s):");
+            ctx.Reply($"[TRANSFORM] {Core.AbilityMetadata.ResolveUnitName(pg._Value)} phase={active.CurrentPhase} — {abilities.Count} ability slot(s):");
             for (int i = 0; i < abilities.Count; i++)
             {
                 string abName = new PrefabGUID(abilities[i]).GetPrefabName();
@@ -474,7 +486,7 @@ internal static class TransformCommands
 
         // v0.19.0: chunked per-slot reply (was concatenated → hit VCF's
         // FixedString512Bytes limit and threw on large units like StoneBreaker).
-        ctx.Reply($"[PREVIEW] {pg.GetPrefabName()}");
+        ctx.Reply($"[PREVIEW] {Core.AbilityMetadata.ResolveUnitName(pg._Value)}");
         foreach (int phase in phases)
         {
             var abilities = Core.Transforms.GetTransformAbilities(pg, phase);

@@ -74,7 +74,29 @@ internal static class UpdateBuffsBufferDestroyPatch
                     // v0.23.15: combat ended → flip summons back to leash mode
                     // for proper follow spacing (no vortex out of combat).
                     ulong steamId = target.GetSteamId();
-                    if (steamId != 0) SummonAllyService.SetCombatMode(steamId, false);
+                    if (steamId != 0)
+                    {
+                        SummonAllyService.SetCombatMode(steamId, false);
+
+                        // v0.27.0: clear combat flag and, in Auto phase mode, reset
+                        // the transform to phase 1 — mirrors how a boss resets its
+                        // phase when it leaves combat / leashes.
+                        var activeT = Core.AbilityRegistry.GetActiveTransform(steamId);
+                        if (activeT != null)
+                        {
+                            activeT.InCombat = false;
+                            if (Beelzebub.Config.Settings.Transform_PhaseMode.Value
+                                    == Beelzebub.Config.Settings.PhaseControlMode.Auto
+                                && activeT.CurrentPhase > 1)
+                            {
+                                try { Core.Transforms.ApplyPhase(steamId, activeT, target, 1); }
+                                catch (Exception ex)
+                                {
+                                    Core.Log.LogWarning($"[Beelz PHASE] combat-end phase reset failed: {ex.Message}");
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

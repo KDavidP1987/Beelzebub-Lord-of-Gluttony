@@ -177,44 +177,23 @@ internal static class TransformBuffService
     {
         if (!character.Exists() || abilities is null || abilities.Count == 0) return false;
 
+        // v0.27.1 FIX: in-place mutation of the carrier buff's ReplaceAbilityOnSlotBuff
+        // buffer does NOT make V Rising re-resolve the player's LIVE ability bar —
+        // slot replacements are only resolved when the carrier buff is freshly
+        // applied/spawned. Result: a phase swap computed the correct (different)
+        // abilities and reported success, but the visible bar never changed
+        // (confirmed by the Dracula phase test — this was the first real
+        // multi-phase unit, so the latent bug had never surfaced). Fix: drop the
+        // existing carrier and re-Apply a fresh one — the exact path the initial
+        // transform uses, which DOES update the bar. The brief sub-frame gap is
+        // acceptable for a phase swap, and Apply re-attaches stat overlays anyway.
         try
         {
-            if (!Core.ServerGameManager.TryGetBuff(character, CarrierBuff.ToIdentifier(), out Entity buffEntity)
-                || !buffEntity.Exists())
-            {
-                return Apply(character, abilities);
-            }
-
-            DynamicBuffer<ReplaceAbilityOnSlotBuff> replaceBuffer;
-            if (Core.EntityManager.HasBuffer<ReplaceAbilityOnSlotBuff>(buffEntity))
-            {
-                replaceBuffer = Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(buffEntity);
-                replaceBuffer.Clear();
-            }
-            else
-            {
-                replaceBuffer = Core.EntityManager.AddBuffer<ReplaceAbilityOnSlotBuff>(buffEntity);
-            }
-
-            for (int i = 0; i < abilities.Count && i < 6; i++)
-            {
-                int slot = i + 1;
-                replaceBuffer.Add(new ReplaceAbilityOnSlotBuff
-                {
-                    Target = ReplaceAbilityTarget.BuffTarget,
-                    Slot = slot,
-                    NewGroupId = new PrefabGUID(abilities[i]),
-                    Priority = 99,
-                    CopyCooldown = true,
-                    CastBlockType = GroupSlotModificationCastBlockType.WholeCast,
-                });
-            }
-
-            if (Core.ReplaceAbilityOnSlotSystem != null)
-            {
-                Core.ReplaceAbilityOnSlotSystem.OnUpdate();
-            }
-            return true;
+            Remove(character);
+            bool ok = Apply(character, abilities);
+            if (Beelzebub.Config.Settings.VerboseLogging.Value)
+                Core.Log.LogInfo($"[Beelz] TransformBuffService.Reapply: re-applied carrier with {System.Math.Min(abilities.Count, 6)} slot ability(ies) (ok={ok}).");
+            return ok;
         }
         catch (Exception ex)
         {

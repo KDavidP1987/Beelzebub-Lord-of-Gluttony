@@ -119,6 +119,7 @@ internal sealed class TransformService
         // the transform mode so the buff auto-destroys for Timed transforms.
         // Toggle transforms get an infinite buff; we destroy it on Revert.
         Entity character = EntityExtensions.FindCharacterBySteamId(steamId);
+        active.Character = character; // v0.27.0/0.29.0: always-available for Tick (auto-phase + summon counter)
         bool appliedNow = false;
         PrefabGUID shapeshiftForm = PrefabGUID.Empty;
         if (character.Exists())
@@ -167,7 +168,8 @@ internal sealed class TransformService
             catch (System.Exception ex) { Core.Log.LogWarning($"[Beelz] BroadcastTransformLoadout failed: {ex.Message}"); }
         }
 
-        return (true, $"Transformed into {pgUnit.GetPrefabName()} ({abilityList.Count} ability slots).{visualHint} {applyHint} Use .beelz revert to end.");
+        string unitDisplay = Core.AbilityMetadata?.ResolveUnitName(pgUnit._Value) ?? pgUnit.GetPrefabName();
+        return (true, $"Transformed into {unitDisplay} ({abilityList.Count} ability slots).{visualHint} {applyHint} Use .beelz revert to end.");
     }
 
     /// <summary>
@@ -252,6 +254,7 @@ internal sealed class TransformService
         if (character.Exists())
         {
             appliedNow = TransformBuffService.Remove(character);
+            SummonAllyService.RemoveSummonCounter(character); // v0.29.0: drop the summon-count indicator
             // Z2: drop the visual shapeshift if one was applied (off by default).
             if (active.AppliedShapeshiftForm != 0)
             {
@@ -297,6 +300,20 @@ internal sealed class TransformService
     DateTime _lastAggroSync = DateTime.MinValue;
     static readonly TimeSpan AggroSyncInterval = TimeSpan.FromMilliseconds(333);
 
+    // v0.26.0: summon-lifespan check throttle — no need to check ages more than
+    // ~every 5s (the despawn itself is staged across frames anyway).
+    DateTime _lastLifespanCheck = DateTime.MinValue;
+    static readonly TimeSpan LifespanCheckInterval = TimeSpan.FromSeconds(5);
+
+    // v0.27.0: Auto-mode phase-monitor throttle. HP drops fast in combat, so poll
+    // more often than lifespan but not every frame.
+    DateTime _lastPhaseCheck = DateTime.MinValue;
+    static readonly TimeSpan PhaseCheckInterval = TimeSpan.FromMilliseconds(500);
+
+    // v0.29.0: summon-counter buff refresh throttle (~1s; count changes on cast/death).
+    DateTime _lastCounterCheck = DateTime.MinValue;
+    static readonly TimeSpan CounterCheckInterval = TimeSpan.FromSeconds(1);
+
     public void Tick()
     {
         var now = DateTime.UtcNow;
@@ -328,6 +345,48 @@ internal sealed class TransformService
             catch (Exception ex) { Core.Log.LogWarning($"[Beelz SUMMON] LeashCheckAll failed: {ex.Message}"); }
         }
 
+        // v0.26.0: summon lifespan — auto-despawn cast-groups older than the
+        // configured lifetime, regardless of whether the transform itself is
+        // timed. Throttled. 0 = infinite (skip entirely).
+        float summonLifetime = Beelzebub.Config.Settings.Transform_SummonLifetimeSeconds.Value;
+        if (summonLifetime > 0f && (now - _lastLifespanCheck) >= LifespanCheckInterval)
+        {
+            _lastLifespanCheck = now;
+            try
+            {
+                foreach (var (_, active) in Core.AbilityRegistry.AllActiveTransforms())
+                    SummonAllyService.DespawnExpiredGroups(active, summonLifetime);
+            }
+            catch (Exception ex) { Core.Log.LogWarning($"[Beelz SUMMON] lifespan check failed: {ex.Message}"); }
+        }
+
+        // v0.27.0: Auto-mode boss phase advancement (one-way while in combat).
+        // Combat-end reset-to-1 lives in UpdateBuffsBufferDestroyPatch.
+        if (Beelzebub.Config.Settings.Transform_PhaseMode.Value == Beelzebub.Config.Settings.PhaseControlMode.Auto
+            && (now - _lastPhaseCheck) >= PhaseCheckInterval)
+        {
+            _lastPhaseCheck = now;
+            try { AutoAdvancePhases(); }
+            catch (Exception ex) { Core.Log.LogWarning($"[Beelz PHASE] auto-advance failed: {ex.Message}"); }
+        }
+
+        // v0.29.0 (#4): refresh the summon-count indicator buff (throttled). Only
+        // active when an indicator buff GUID is configured.
+        if (Beelzebub.Config.Settings.Transform_SummonCounterBuffGuid.Value != 0
+            && (now - _lastCounterCheck) >= CounterCheckInterval)
+        {
+            _lastCounterCheck = now;
+            try
+            {
+                foreach (var (steamId, active) in Core.AbilityRegistry.AllActiveTransforms())
+                {
+                    Entity ch = active.Character.Exists() ? active.Character : EntityExtensions.FindCharacterBySteamId(steamId);
+                    SummonAllyService.UpdateSummonCounter(active, ch);
+                }
+            }
+            catch (Exception ex) { Core.Log.LogWarning($"[Beelz SUMMON] counter refresh failed: {ex.Message}"); }
+        }
+
         foreach (var (steamId, active) in Core.AbilityRegistry.AllActiveTransforms())
         {
             if (!active.Duration.HasValue) continue;
@@ -348,6 +407,7 @@ internal sealed class TransformService
             if (character.Exists())
             {
                 appliedNow = TransformBuffService.Remove(character);
+                SummonAllyService.RemoveSummonCounter(character); // v0.29.0: drop the summon-count indicator
                 if (active.AppliedShapeshiftForm != 0)
                 {
                     ShapeshiftService.Remove(character, new PrefabGUID(active.AppliedShapeshiftForm));
@@ -443,7 +503,95 @@ internal sealed class TransformService
         // slot template overrides take precedence over heuristic if set
         // on the TransformMap entry. See ReorderForPlayerSlots for full
         // mapping rules.
-        return ReorderForPlayerSlots(result, unitGuid._Value);
+        var reordered = ReorderForPlayerSlots(result, unitGuid._Value);
+        if (Beelzebub.Config.Settings.VerboseLogging.Value)
+        {
+            var names = string.Join(", ", reordered.ConvertAll(a => a == 0 ? "-" : new PrefabGUID(a).GetPrefabName()));
+            Core.Log.LogInfo($"[Beelz PHASE] GetTransformAbilities({unitGuid.GetPrefabName()}, phase {phase}) -> [{names}]");
+        }
+        return reordered;
+    }
+
+    /// <summary>
+    /// v0.27.0: shared phase-swap. Re-fetches the phase's ability list and
+    /// re-applies it on the carrier buff in place (no buff drop). Used by BOTH
+    /// the <c>.beelz phase</c> command and the Auto-mode HP monitor in
+    /// <see cref="Tick"/>. Sets <c>active.CurrentPhase</c> and emits the
+    /// transform-phase-shift event. Returns true if the bar was swapped this
+    /// frame (false if the phase had no eligible abilities or no carrier).
+    /// Callers that care should validate against <see cref="GetAvailablePhases"/>.
+    /// </summary>
+    public bool ApplyPhase(ulong steamId, ActiveTransform active, Entity character, int phase)
+    {
+        if (active == null) return false;
+        var pg = new PrefabGUID(active.UnitPrefabGuid);
+        var abilities = GetTransformAbilities(pg, phase);
+        if (abilities.Count == 0) return false;
+
+        bool appliedNow = false;
+        if (character.Exists())
+            appliedNow = TransformBuffService.Reapply(character, abilities);
+
+        active.CurrentPhase = phase;
+        Core.AbilityRegistry.SetActiveTransform(steamId, active);
+
+        if (character.Exists())
+        {
+            try
+            {
+                Core.Chat.SendEvent(character,
+                    $"[BEELZ:event] type=transform-phase-shift u={active.UnitPrefabGuid} un={pg.GetPrefabName()} phase={phase}");
+            }
+            catch { /* event emit non-critical */ }
+        }
+        return appliedNow;
+    }
+
+    /// <summary>
+    /// v0.27.0: Auto phase mode — for each transformed player IN COMBAT, advance
+    /// their boss phase one-way as HP drops past even-split thresholds. N phases
+    /// → bands of 100/N (3 phases advance at 66% / 33%). <c>CurrentPhase</c> is
+    /// the ratchet: it only climbs here; combat-end resets it to 1
+    /// (UpdateBuffsBufferDestroyPatch). No-op for single-phase units.
+    /// </summary>
+    void AutoAdvancePhases()
+    {
+        foreach (var (steamId, active) in Core.AbilityRegistry.AllActiveTransforms())
+        {
+            if (active == null || !active.InCombat) continue;
+            Entity character = active.Character;
+            if (!character.Exists()) continue;
+            if (!character.TryGetComponent<Health>(out var health)) continue;
+
+            float max = health.MaxHealth;
+            if (max <= 0f) continue;
+            float frac = health.Value / max;
+            if (frac < 0f) frac = 0f;
+            else if (frac > 1f) frac = 1f;
+
+            var pg = new PrefabGUID(active.UnitPrefabGuid);
+            var phases = GetAvailablePhases(pg);
+            int n = phases.Count;
+            if (n <= 1) continue; // not a multi-phase unit
+
+            // Even-split band from the top: HP 100%..0% → phase 1..N.
+            int band = (int)System.Math.Ceiling((1.0 - frac) * n);
+            if (band < 1) band = 1;
+            else if (band > n) band = n;
+
+            // Snap to the highest curated phase <= band (phases sorted ascending).
+            int target = phases[0];
+            for (int i = 0; i < phases.Count; i++)
+                if (phases[i] <= band && phases[i] > target) target = phases[i];
+
+            // One-way ratchet while in combat.
+            if (target > active.CurrentPhase)
+            {
+                bool ok = ApplyPhase(steamId, active, character, target);
+                if (Beelzebub.Config.Settings.VerboseLogging.Value)
+                    Core.Log.LogInfo($"[Beelz PHASE] auto-advance {steamId} → phase {target}/{n} (HP {frac * 100f:0}%) applied={ok}.");
+            }
+        }
     }
 
     /// <summary>
