@@ -120,6 +120,18 @@ internal static class BossFormRegistry
     };
 
     /// <summary>
+    /// v0.41.1: is this buff GUID one of the NATIVE shapeshift forms (wolf/bear/rat/
+    /// spider/toad/werewolf/gargoyle)? Used to detect a combat-form EXIT (the form buff
+    /// being destroyed) so the active transform's bar can be re-applied. Excludes the
+    /// boss form buffs (Dracula/Morgana) on purpose — those are torn down only on revert.
+    /// </summary>
+    public static bool IsNativeShapeshiftBuff(int guid)
+    {
+        foreach (int g in _nativeFormGuids) if (g == guid) return true;
+        return false;
+    }
+
+    /// <summary>
     /// The native form-buff GUID a unit maps to (Wolf/Bear/…), or 0 if none.
     /// Gated by the <c>Transform_RealFormWhenAvailable</c> kill-switch. Curated
     /// boss forms (Dracula/Morgana) are NOT routed here — they live in _forms.

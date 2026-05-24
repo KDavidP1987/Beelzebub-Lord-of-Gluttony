@@ -29,12 +29,18 @@ internal static class UpdateBuffsBufferDestroyPatch
     // v0.23.15: PvE combat buff. Destruction = combat ending = flip summons
     // back to leash mode for proper follow spacing.
     static readonly PrefabGUID PvECombatBuff = new(581443919);
+    // v0.41.1: debounce for the form-exit re-apply. Re-applying a native-FORM transform
+    // re-adds its own shapeshift buff, whose later teardown re-fires this destroy hook —
+    // skip rapid re-fires per player to avoid a loop.
+    static readonly System.Collections.Generic.Dictionary<ulong, DateTime> _lastFormExitReapply = new();
 
     [HarmonyPostfix]
     public static void OnUpdatePostfix(UpdateBuffsBuffer_Destroy __instance)
     {
         if (!Core.IsReady) return;
-        if (!Beelzebub.Config.Settings.Transform_SummonsAreAllies.Value) return;
+        // v0.41.1: summons-allies gates only the summon-restore branch now — the
+        // transform-bar re-apply on form-exit must run regardless of that setting.
+        bool summonsAllies = Beelzebub.Config.Settings.Transform_SummonsAreAllies.Value;
 
         NativeArray<Entity> entities;
         try
@@ -60,8 +66,19 @@ internal static class UpdateBuffsBufferDestroyPatch
                 // Either signal — Travel buff destroyed, OR TravelEnd buff destroyed
                 // (TravelEnd is short-lived; it spawns then quickly destroys at the
                 // moment the player visually arrives). Both indicate teleport done.
-                if (prefab._Value == WaypointTravelBuff._Value
-                    || prefab._Value == WaypointTravelEndBuff._Value)
+                // v0.41.1: a native shapeshift form (wolf/bear/etc.) was destroyed = the
+                // player EXITED that form. If they're still transformed, re-apply the
+                // transform bar (travel/bat forms are handled separately on arrival).
+                if (Services.BossFormRegistry.IsNativeShapeshiftBuff(prefab._Value))
+                {
+                    try { HandleShapeshiftExit(target); }
+                    catch (Exception ex)
+                    {
+                        Core.Log.LogError($"[Beelz] shapeshift-exit re-apply failed: {ex}");
+                    }
+                }
+                else if (summonsAllies && (prefab._Value == WaypointTravelBuff._Value
+                    || prefab._Value == WaypointTravelEndBuff._Value))
                 {
                     try { HandleArrival(target, prefab.GetPrefabName()); }
                     catch (Exception ex)
@@ -103,6 +120,28 @@ internal static class UpdateBuffsBufferDestroyPatch
         finally
         {
             entities.Dispose();
+        }
+    }
+
+    // v0.41.1: player exited a native shapeshift (wolf/bear/etc.). If still transformed,
+    // re-apply the transform's spell bar (it was overridden by the form). Debounced to
+    // avoid a re-entrant loop when re-applying a native-form transform re-adds its buff.
+    static void HandleShapeshiftExit(Entity playerCharacter)
+    {
+        ulong steamId = playerCharacter.GetSteamId();
+        if (steamId == 0) return;
+        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
+        if (active == null) return; // not transformed — nothing to restore
+
+        var now = DateTime.UtcNow;
+        if (_lastFormExitReapply.TryGetValue(steamId, out var last) && (now - last).TotalSeconds < 1.5)
+            return;
+        _lastFormExitReapply[steamId] = now;
+
+        if (Core.Transforms.ReapplyActiveTransform(steamId, active, playerCharacter)
+            && Beelzebub.Config.Settings.VerboseLogging.Value)
+        {
+            Core.Log.LogInfo($"[Beelz] re-applied transform bar after native shapeshift exit for {steamId}.");
         }
     }
 
