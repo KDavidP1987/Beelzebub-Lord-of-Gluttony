@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Beelzebub.Services;
@@ -167,13 +169,48 @@ internal static class TransformCommands
         var active = Core.AbilityRegistry.GetActiveTransform(steamId);
         if (active is null) { ctx.Reply("You are not currently transformed."); return; }
 
-        var (_, appliedNow) = Core.Transforms.Revert(steamId, "manual");
         string unitName = new PrefabGUID(active.UnitPrefabGuid).GetPrefabName();
-        ctx.Reply(appliedNow
-            ? $"Reverted from {unitName}. Spell bar restored."
-            : $"Reverted from {unitName}. Spell bar restored.");
+        var (_, appliedNow) = Core.Transforms.Revert(steamId, "manual");
+        // v0.35.0: transform-ended event now emitted centrally by Core.Transforms.Revert.
+        ctx.Reply($"Reverted from {unitName}. Spell bar restored.");
+    }
+
+    // #3 (v0.36.0): per-player cooldown tracker for manual detonation.
+    static readonly Dictionary<ulong, DateTime> _lastDetonate = new();
+
+    [Command("detonate", description: "Manually fire your transformed unit's signature detonation AoE (e.g. the Undead Priest's Nova), if it has one. Usage: .beelz detonate")]
+    public static void Detonate(ChatCommandContext ctx)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
+        if (active is null) { ctx.Reply("You must be transformed to detonate."); return; }
+
+        if (!Beelzebub.Patches.BuffSpawnServerPatch.HasManualDetonation(active.UnitPrefabGuid))
+        {
+            ctx.Reply($"{new PrefabGUID(active.UnitPrefabGuid).GetPrefabName()} has no manual detonation to trigger.");
+            return;
+        }
+
+        // Anti-spam cooldown (config; 0 = none).
+        float cd = Beelzebub.Config.Settings.Transform_ManualDetonateCooldownSeconds.Value;
+        if (cd > 0f && _lastDetonate.TryGetValue(steamId, out var last))
+        {
+            double remaining = cd - (DateTime.UtcNow - last).TotalSeconds;
+            if (remaining > 0)
+            {
+                ctx.Reply($"Detonation on cooldown ({remaining:F0}s).");
+                return;
+            }
+        }
+
+        string name = Beelzebub.Patches.BuffSpawnServerPatch.TrySpawnManualDetonation(ctx.Event.SenderCharacterEntity, active.UnitPrefabGuid);
+        if (name is null) { ctx.Reply("Detonation failed (see server log)."); return; }
+
+        _lastDetonate[steamId] = DateTime.UtcNow;
+        ctx.Reply("Detonation unleashed!");
         Core.Chat.SendEvent(ctx.Event.SenderCharacterEntity,
-            $"[BEELZ:event] type=transform-ended u={active.UnitPrefabGuid} un={unitName} reason=manual");
+            $"[BEELZ:event] type=detonate u={active.UnitPrefabGuid}");
     }
 
     [Command("active", description: "v0.24.1: show your current spell bar with full ability info per slot (name, school, cooldown, description). Useful for transforms since V Rising's action-bar tooltip can't render NPC ability text. Usage: .beelz active")]

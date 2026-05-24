@@ -314,6 +314,20 @@ internal sealed class TransformService
         {
             Core.AbilityRegistry.SetCooldownUntil(steamId, active.Source, DateTime.UtcNow.AddSeconds(cooldownSec));
         }
+
+        // v0.35.0: emit transform-ended centrally so EVERY revert path notifies BCH —
+        // manual, transform-switch, admin clear/revoke/revert-all/wipe, disconnect.
+        // (The Timed auto-revert in Tick emits its own reason=auto and doesn't route
+        // through here.) Reason normalized to a bare wire token.
+        if (character.Exists())
+        {
+            string un = new PrefabGUID(active.UnitPrefabGuid).GetPrefabName();
+            string r = string.IsNullOrWhiteSpace(reason)
+                ? "manual"
+                : reason.Trim().TrimEnd('.').ToLowerInvariant().Replace(' ', '-');
+            try { Core.Chat.SendEvent(character, $"[BEELZ:event] type=transform-ended u={active.UnitPrefabGuid} un={un} reason={r}"); }
+            catch { /* event emit non-critical */ }
+        }
         return (true, appliedNow);
     }
 

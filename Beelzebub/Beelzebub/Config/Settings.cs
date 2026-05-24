@@ -137,6 +137,11 @@ internal static class Settings
     // buff whose icon you like.
     public static ConfigEntry<int> Transform_SummonCounterBuffGuid { get; private set; }
 
+    // #3 (v0.36.0): cooldown (seconds) between `.beelz detonate` manual detonations,
+    // per player. Prevents spamming a transformed boss's signature AoE. 0 = no
+    // cooldown. Only applies to units that have a registered manual detonation.
+    public static ConfigEntry<float> Transform_ManualDetonateCooldownSeconds { get; private set; }
+
     public static void Initialize(ConfigFile config)
     {
         CaptureOnKill = config.Bind(
@@ -335,6 +340,12 @@ internal static class Settings
             "chosen buff's OWN icon (V Rising buffs can't have their icon swapped at runtime), so set " +
             "this to any buff whose icon you like — e.g. a consumable/blessing buff. The buff's " +
             "gameplay effects are stripped automatically; only the icon + stack number remain.");
+
+        Transform_ManualDetonateCooldownSeconds = config.Bind(
+            "Transformation", nameof(Transform_ManualDetonateCooldownSeconds), 5f,
+            "#3 (v0.36.0): cooldown in seconds between `.beelz detonate` manual detonations per player " +
+            "(fires a transformed boss's signature AoE — e.g. the Undead Priest's Nova — on demand). " +
+            "Prevents spamming the AoE. 0 = no cooldown. Only affects units with a registered detonation.");
 
         Transform_DespawnSummonsOnDisconnect = config.Bind(
             "Transformation", nameof(Transform_DespawnSummonsOnDisconnect), true,

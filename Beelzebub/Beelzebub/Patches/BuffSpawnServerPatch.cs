@@ -68,6 +68,34 @@ internal static class BuffSpawnServerPatch
         { 493463494, 1249580491 },
     };
 
+    // #3 (v0.36.0) MANUAL detonation: transformed UNIT (CHAR_ guid) → its signature
+    // detonation prefab, fired on demand via `.beelz detonate`. Bosses only auto-fire
+    // these on teleport; this lets the player trigger the same self-contained AoE
+    // whenever they like. Same spawn path as TeleportDetonateTargets (the prefab is
+    // self-contained: spawn owned-by-player → auto-positions + player-teams + fans).
+    // Add more units here as their detonation AoEs are confirmed.
+    static readonly Dictionary<int, int> ManualDetonateTargets = new()
+    {
+        { 153390636, 1249580491 },    // CHAR_Undead_Priest_VBlood (Foulrot) → ProjectileNova_ProxySpawner
+        { -1653554504, 1249580491 },  // CHAR_Undead_Priest → ProjectileNova_ProxySpawner
+    };
+
+    /// <summary>#3: does this transformed unit have a manual-detonation AoE registered?</summary>
+    public static bool HasManualDetonation(int unitGuid) => ManualDetonateTargets.ContainsKey(unitGuid);
+
+    /// <summary>
+    /// #3: fire a transformed unit's signature detonation AoE on demand. Spawns the
+    /// self-contained detonation prefab owned by the player (auto-positions + stamps
+    /// the player's team + fans the projectiles). Returns the detonation prefab name,
+    /// or null if the unit has none / the spawn failed.
+    /// </summary>
+    public static string TrySpawnManualDetonation(Entity playerCharacter, int unitGuid)
+    {
+        if (!ManualDetonateTargets.TryGetValue(unitGuid, out int detonateGuid)) return null;
+        Entity e = SpawnDetonationOwnedByPlayer(playerCharacter, detonateGuid, "manual");
+        return e.Exists() ? new PrefabGUID(detonateGuid).GetPrefabName() : null;
+    }
+
     [HarmonyPrefix]
     public static void OnUpdatePrefix(BuffSystem_Spawn_Server __instance)
     {
@@ -245,6 +273,21 @@ internal static class BuffSpawnServerPatch
         // who somehow carries this buff doesn't trigger a spawn.
         if (Core.AbilityRegistry?.GetActiveTransform(steamId) is null) return;
 
+        SpawnDetonationOwnedByPlayer(playerCharacter, detonateGuid,
+            $"arrival:{new PrefabGUID(arrivalBuffGuid).GetPrefabName()}");
+    }
+
+    /// <summary>
+    /// Spawn a self-contained detonation prefab owned by the player. The prefab's
+    /// own GetTranslationOnSpawn(Owner)/GetOwnerTeamOnSpawn processors position it at
+    /// the player and stamp the player's team, then its DestroyOnSpawn chain fans the
+    /// projectiles — so owning it by the player is all it takes. We also anchor
+    /// owner+position explicitly as belt-and-suspenders. Shared by the teleport
+    /// auto-detonate and the `.beelz detonate` manual trigger. Returns the spawned
+    /// entity (or Entity.Null on failure).
+    /// </summary>
+    static Entity SpawnDetonationOwnedByPlayer(Entity playerCharacter, int detonateGuid, string sourceLabel)
+    {
         var detonatePrefab = new PrefabGUID(detonateGuid);
         Entity proxy;
         try
@@ -253,15 +296,11 @@ internal static class BuffSpawnServerPatch
         }
         catch (Exception ex)
         {
-            Core.Log.LogError($"[Beelz NOVA] InstantiateEntityImmediate({detonateGuid}) failed for player {steamId}: {ex}");
-            return;
+            Core.Log.LogError($"[Beelz NOVA] InstantiateEntityImmediate({detonateGuid}) failed for player {playerCharacter.GetSteamId()}: {ex}");
+            return Entity.Null;
         }
-        if (!proxy.Exists()) return;
+        if (!proxy.Exists()) return Entity.Null;
 
-        // Belt-and-suspenders: explicitly anchor owner + position in case the
-        // GetOwnerTeamOnSpawn / GetTranslationOnSpawn processors don't run for a
-        // manually instantiated entity. (If they do run, these are harmless
-        // no-ops — they set the same values.)
         try
         {
             proxy.With((ref EntityOwner o) => o.Owner = playerCharacter);
@@ -273,7 +312,8 @@ internal static class BuffSpawnServerPatch
             Core.Log.LogWarning($"[Beelz NOVA] anchor owner/pos failed on {proxy}: {ex.Message}");
         }
 
-        Core.Log.LogInfo($"[Beelz NOVA] spawned detonation {proxy} prefab={detonatePrefab.GetPrefabName()} for player {steamId} (arrival buff {new PrefabGUID(arrivalBuffGuid).GetPrefabName()}).");
+        Core.Log.LogInfo($"[Beelz NOVA] spawned detonation {proxy} prefab={detonatePrefab.GetPrefabName()} ({sourceLabel}) for player {playerCharacter.GetSteamId()}.");
+        return proxy;
     }
 
     /// <summary>v0.24.4: walk EntityOwner chain up to 4 hops to find a player.</summary>

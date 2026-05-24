@@ -21,7 +21,11 @@ namespace Beelzebub.Commands;
 [CommandGroup("beelz api")]
 internal static class ApiCommands
 {
-    const int ApiVersion = 1;
+    // v2 (v0.35.0): additive — `api info` gained weapon_anim/school/cooldown_seconds
+    // + real ability descriptions; the [BEELZ:event] stream gained forget /
+    // forget-transform / cleared and now emits transform-ended on every revert path.
+    // Backward-compatible with v1 parsers (extra keys/events are ignored if unknown).
+    const int ApiVersion = 2;
 
     [Command("version", description: "Return the Beelzebub API version (BCH-readable).")]
     public static void Version(ChatCommandContext ctx)
@@ -179,9 +183,22 @@ internal static class ApiCommands
         float damageScale = Core.AbilityRules.GetDamageScale(abilityName);
         float cooldownScale = Core.AbilityRules.GetCooldownScale(abilityName);
 
-        string desc = TryGetCuratedNotes(abilityName)
+        // v0.35.0: prefer the REAL ability description from resolved metadata
+        // (shipped ability_metadata.json + ECS), with %param% substitution; fall
+        // back to the admin-curated Notes, then a generic string.
+        var meta = Core.AbilityMetadata?.Resolve(c.AbilityPrefabGuid);
+        string realDesc = meta?.Description;
+        if (!string.IsNullOrWhiteSpace(realDesc) && meta?.Parameters != null)
+            foreach (var kv in meta.Parameters) realDesc = realDesc.Replace("%" + kv.Key + "%", kv.Value);
+        string desc = (!string.IsNullOrWhiteSpace(realDesc) ? realDesc : TryGetCuratedNotes(abilityName))
                       ?? $"Captured from {unitName.Humanize()}.";
         string difficulty = Core.AbilityRules.GetAbilityDifficulty(abilityName);
+
+        // v0.35.0: BCH tooltip enrichment — the weapon whose animation the ability
+        // is bound to (None for spells), plus school + cooldown for the tooltip.
+        var animWeapon = Core.AbilityRules.GetAnimationWeapon(abilityName);
+        string school = string.IsNullOrEmpty(meta?.School) ? "none" : meta.School;
+        string cdSecs = meta?.CooldownSeconds.HasValue == true ? meta.CooldownSeconds.Value.ToString("F1") : "0";
 
         ctx.Reply(
             $"[BEELZ:info] i={index} s={(c.Source == CaptureSource.VBlood ? "V" : "R")}" +
@@ -190,6 +207,9 @@ internal static class ApiCommands
             $" label={SafeToken(label)}" +
             $" desc={SafeToken(desc)}" +
             $" weapons={string.Join(",", families)}" +
+            $" weapon_anim={animWeapon}" +
+            $" school={SafeToken(school)}" +
+            $" cooldown_seconds={cdSecs}" +
             $" forms={(forms.Count == 0 ? "any" : string.Join(",", forms))}" +
             $" transform_only={(transformOnly ? 1 : 0)}" +
             $" enabled={(enabled ? 1 : 0)}" +

@@ -562,6 +562,9 @@ internal static class BeelzCommands
         {
             Core.Persistence.RequestSave();
             ctx.Reply($"Forgot {new Stunlock.Core.PrefabGUID(entry.AbilityPrefabGuid).GetPrefabName()} (from {new Stunlock.Core.PrefabGUID(entry.UnitPrefabGuid).GetPrefabName()}).");
+            // v0.35.0: BCH event so the client refreshes its collection view.
+            Core.Chat.SendEvent(ctx.Event.SenderCharacterEntity,
+                $"[BEELZ:event] type=forget a={entry.AbilityPrefabGuid} u={entry.UnitPrefabGuid}");
         }
         else
         {
@@ -586,6 +589,9 @@ internal static class BeelzCommands
         {
             Core.Persistence.RequestSave();
             ctx.Reply($"Forgot transform unlock: {new Stunlock.Core.PrefabGUID(entry.UnitPrefabGuid).GetPrefabName()}.");
+            // v0.35.0: BCH event so the client refreshes its transform list.
+            Core.Chat.SendEvent(ctx.Event.SenderCharacterEntity,
+                $"[BEELZ:event] type=forget-transform u={entry.UnitPrefabGuid}");
         }
         else
         {
@@ -683,6 +689,8 @@ internal static class BeelzCommands
         {
             Core.Persistence.RequestSave();
             ctx.Reply("Captured abilities and slot assignments cleared.");
+            // v0.35.0: BCH event — wipe the client's cached collection + slots.
+            Core.Chat.SendEvent(ctx.Event.SenderCharacterEntity, "[BEELZ:event] type=cleared");
         }
         else
         {
