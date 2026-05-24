@@ -51,13 +51,25 @@ internal static class BeelzCommands
         ctx.Reply("BCH API: .beelz api version|list|slots|transforms|active|info|bch|hotkeys|progress|catalog ...");
     }
 
-    [Command("list", description: "List your captured abilities + slot assignments. Usage: .beelz list [page]. Paginated 15/page.")]
-    public static void List(ChatCommandContext ctx, int page = 1)
+    [Command("list", description: "List your captured abilities + slot assignments. Optional filter: vblood | shard | regular. Usage: .beelz list [filter] [page]. Paginated 15/page.")]
+    public static void List(ChatCommandContext ctx, string arg = null, int page = 1)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
 
         ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
         if (steamId == 0) { ctx.Reply("Could not resolve your Steam ID."); return; }
+
+        // v0.39.0: first arg is a page number (".beelz list 2") OR a filter keyword
+        // (".beelz list vblood [page]").
+        string filter = null;
+        if (!string.IsNullOrWhiteSpace(arg))
+        {
+            if (int.TryParse(arg.Trim(), out int p)) page = p;
+            else filter = arg.Trim().ToLowerInvariant();
+        }
+        bool fVBlood = filter is "vblood" or "vbloods" or "v";
+        bool fShard = filter is "shard" or "shards" or "shardboss";
+        bool fRegular = filter is "regular" or "r";
 
         var captured = Core.AbilityRegistry.ListFor(steamId);
         var slots = Core.AbilityRegistry.GetSlots(steamId);
@@ -68,26 +80,28 @@ internal static class BeelzCommands
             return;
         }
 
-        // v0.21.0: emit one chat reply per logical block to stay under VCF's 510-byte
-        // per-reply cap. Page 1 shows the slot-binding header + first 15 captures;
-        // subsequent pages show captures only.
+        // Index over the FULL list (idx stays valid for .beelz grant), then filter.
+        var entries = captured.Select((c, idx) => (idx, ability: c)).ToList();
+        if (fVBlood) entries = entries.Where(t => t.ability.Source == CaptureSource.VBlood).ToList();
+        else if (fShard) entries = entries.Where(t => Core.Transforms.IsShardBoss(t.ability.UnitPrefabGuid)).ToList();
+        else if (fRegular) entries = entries.Where(t => t.ability.Source == CaptureSource.Regular).ToList();
+
+        // v0.21.0: one chat reply per block (VCF 510-byte cap). Page 1 adds the slot header.
         const int pageSize = 15;
-        int total = captured.Count;
+        int total = entries.Count;
         int pages = total == 0 ? 1 : (total + pageSize - 1) / pageSize;
         if (page < 1) page = 1;
         if (page > pages) page = pages;
 
-        // Page 1: header (slot bindings + current weapon).
-        if (page == 1)
-        {
-            EmitSlotHeader(ctx, steamId, slots);
-        }
+        if (page == 1) EmitSlotHeader(ctx, steamId, slots);
 
-        ctx.Reply($"Captured {total} ability(ies). Page {page}/{pages}:");
+        string scope = fVBlood ? " (V-Bloods)" : fShard ? " (shard bosses)" : fRegular ? " (regular)" : "";
+        string count = total != captured.Count ? $"{total} of {captured.Count}" : $"{total}";
+        ctx.Reply($"Captured {count} ability(ies){scope}. Page {page}/{pages}:");
+        if (total == 0) { ctx.Reply("  (none match that filter — try: vblood | shard | regular)"); return; }
 
         // Sort: VBlood first, then by unit name, preserving original index.
-        var ordered = captured
-            .Select((c, idx) => (idx, ability: c))
+        var ordered = entries
             .OrderByDescending(t => t.ability.Source == CaptureSource.VBlood)
             .ThenBy(t => Core.AbilityMetadata.ResolveUnitName(t.ability.UnitPrefabGuid), System.StringComparer.OrdinalIgnoreCase)
             .Skip((page - 1) * pageSize)
@@ -104,8 +118,65 @@ internal static class BeelzCommands
         if (pages > 1)
         {
             int nextPage = page < pages ? page + 1 : 1;
-            ctx.Reply($"More? .beelz list {nextPage}   |   Search: .beelz search <term>");
+            string nextCmd = filter != null ? $".beelz list {filter} {nextPage}" : $".beelz list {nextPage}";
+            ctx.Reply($"More? {nextCmd}   |   Search: .beelz search <term>");
         }
+    }
+
+    // v0.40.0: per-(player, ability) cooldown for on-demand .beelz cast (a force-cast
+    // isn't gated by a bar slot, so we enforce the ability's own cooldown ourselves).
+    static readonly System.Collections.Generic.Dictionary<(ulong, int), System.DateTime> _castCooldowns = new();
+
+    [Command("cast", description: "Cast a captured ability on demand — beyond your 6 slots. Usage: .beelz cast <hotkey name | list index>. BloodCraftHub buttons invoke this.")]
+    public static void Cast(ChatCommandContext ctx, string nameOrIndex)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        if (!Beelzebub.Config.Settings.Hotkeys_Enabled.Value)
+        {
+            ctx.Reply("On-demand casting is disabled by the server admin (Hotkeys_Enabled).");
+            return;
+        }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+
+        // Resolve a hotkey name first, then fall back to a captured-list index.
+        int abilityGuid = Core.AbilityRegistry.GetHotkey(steamId, nameOrIndex);
+        if (abilityGuid == 0 && int.TryParse(nameOrIndex?.Trim(), out int idx))
+        {
+            var captured = Core.AbilityRegistry.ListFor(steamId);
+            if (idx >= 0 && idx < captured.Count) abilityGuid = captured[idx].AbilityPrefabGuid;
+        }
+        if (abilityGuid == 0)
+        {
+            ctx.Reply($"No hotkey or captured ability matches '{nameOrIndex}'. Bind one with .beelz hotkey set <name> <index>, or pass a .beelz list index.");
+            return;
+        }
+
+        var ability = new PrefabGUID(abilityGuid);
+        string abilityName = ability.GetPrefabName();
+        if (!Core.AbilityRules.IsEnabled(abilityName, abilityGuid)) { ctx.Reply($"'{abilityName}' is currently disabled by the server admin."); return; }
+        if (Core.AbilityRules.IsTransformOnly(abilityName, abilityGuid)) { ctx.Reply($"'{abilityName}' is reserved for .beelz transform."); return; }
+
+        // Per-ability cooldown — the ability's own cooldown (min 1s anti-spam).
+        var info = Core.AbilityMetadata?.Resolve(abilityGuid);
+        double cd = info?.CooldownSeconds ?? 0;
+        if (cd < 1.0) cd = 1.0;
+        string label = (info != null && !string.IsNullOrEmpty(info.Name)) ? info.Name : abilityName;
+        var key = (steamId, abilityGuid);
+        var now = System.DateTime.UtcNow;
+        if (_castCooldowns.TryGetValue(key, out var until) && until > now)
+        {
+            ctx.Reply($"{label} on cooldown ({(until - now).TotalSeconds:F0}s).");
+            return;
+        }
+
+        if (!Beelzebub.Services.ForceCastService.Cast(ctx.Event.SenderCharacterEntity, ability))
+        {
+            ctx.Reply("Cast failed (see server log).");
+            return;
+        }
+        _castCooldowns[key] = now.AddSeconds(cd);
+        Core.Chat.Send(ctx.Event.SenderCharacterEntity, Verbosity.Verbose, $"Cast {label}.");
+        Core.Chat.SendEvent(ctx.Event.SenderCharacterEntity, $"[BEELZ:event] type=cast a={abilityGuid} an={abilityName}");
     }
 
     /// <summary>

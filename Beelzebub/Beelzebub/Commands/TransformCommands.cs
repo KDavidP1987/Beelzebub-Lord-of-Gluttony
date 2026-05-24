@@ -12,8 +12,8 @@ namespace Beelzebub.Commands;
 [CommandGroup("beelz")]
 internal static class TransformCommands
 {
-    [Command("transforms", description: "List the units you've unlocked the ability to transform into.")]
-    public static void Transforms(ChatCommandContext ctx)
+    [Command("transforms", description: "List your transform unlocks. Optional filter: vblood | shard | regular. Usage: .beelz transforms [filter]")]
+    public static void Transforms(ChatCommandContext ctx, string filter = null)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
         ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
@@ -24,7 +24,21 @@ internal static class TransformCommands
             return;
         }
 
-        ctx.Reply($"Transformation unlocks ({unlocks.Count}):");
+        // v0.39.0: optional filter. Index over the FULL list first so `.beelz transform <idx>` stays valid.
+        string f = filter?.Trim().ToLowerInvariant();
+        bool fVBlood = f is "vblood" or "vbloods" or "v";
+        bool fShard = f is "shard" or "shards" or "shardboss";
+        bool fRegular = f is "regular" or "r";
+        IEnumerable<(int idx, UnlockedTransform unlock)> indexed = unlocks.Select((u, idx) => (idx, unlock: u));
+        if (fVBlood) indexed = indexed.Where(t => t.unlock.Source == CaptureSource.VBlood);
+        else if (fShard) indexed = indexed.Where(t => Core.Transforms.IsShardBoss(t.unlock.UnitPrefabGuid));
+        else if (fRegular) indexed = indexed.Where(t => t.unlock.Source == CaptureSource.Regular);
+        var filtered = indexed.ToList();
+
+        string scope = fVBlood ? " (V-Bloods)" : fShard ? " (shard bosses)" : fRegular ? " (regular)" : "";
+        string count = filtered.Count != unlocks.Count ? $"{filtered.Count} of {unlocks.Count}" : $"{unlocks.Count}";
+        ctx.Reply($"Transformation unlocks{scope} ({count}):");
+        if (filtered.Count == 0) { ctx.Reply("  (none match that filter — try: vblood | shard | regular, or no filter for all)"); return; }
 
         var active = Core.AbilityRegistry.GetActiveTransform(steamId);
         if (active is not null)
@@ -42,14 +56,15 @@ internal static class TransformCommands
             }
         }
 
-        var byGroup = unlocks
-            .Select((u, idx) => (idx, unlock: u))
-            .GroupBy(t => t.unlock.Source)
-            .OrderByDescending(g => g.Key == CaptureSource.VBlood);
+        // Group shard bosses / V-Bloods / regular mobs into their own sections (shard first).
+        var byGroup = filtered
+            .GroupBy(t => Core.Transforms.IsShardBoss(t.unlock.UnitPrefabGuid) ? 0
+                        : t.unlock.Source == CaptureSource.VBlood ? 1 : 2)
+            .OrderBy(g => g.Key);
 
         foreach (var grp in byGroup)
         {
-            ctx.Reply(grp.Key == CaptureSource.VBlood ? "-- V-Bloods --" : "-- Regular mobs --");
+            ctx.Reply(grp.Key == 0 ? "-- Shard bosses --" : grp.Key == 1 ? "-- V-Bloods --" : "-- Regular mobs --");
             foreach (var (idx, unlock) in grp.OrderBy(t => Core.AbilityMetadata.ResolveUnitName(t.unlock.UnitPrefabGuid)))
             {
                 ctx.Reply($"  {idx}: {Core.AbilityMetadata.ResolveUnitName(unlock.UnitPrefabGuid)}");

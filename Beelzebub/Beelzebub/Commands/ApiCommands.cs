@@ -21,11 +21,16 @@ namespace Beelzebub.Commands;
 [CommandGroup("beelz api")]
 internal static class ApiCommands
 {
-    // v2 (v0.35.0): additive — `api info` gained weapon_anim/school/cooldown_seconds
-    // + real ability descriptions; the [BEELZ:event] stream gained forget /
-    // forget-transform / cleared and now emits transform-ended on every revert path.
-    // Backward-compatible with v1 parsers (extra keys/events are ignored if unknown).
-    const int ApiVersion = 2;
+    // v2 (v0.35.0): `api info` gained weapon_anim/school/cooldown_seconds + real
+    //   descriptions; events gained forget/forget-transform/cleared; transform-ended
+    //   now fires on every revert path.
+    // v3 (v0.39.0): added `api config` (full settings dump) + `api cooldowns`
+    //   (per-category remaining); `shard=0|1` on api transforms + api catalog units;
+    //   new event type=config-changed (from `.beelz admin set`).
+    // v4 (v0.40.0): expanded action bar — `.beelz cast <hotkey|index>` force-casts any
+    //   captured ability (the BCH-button mechanism); new event type=cast.
+    // All additive — backward-compatible with older parsers (unknown keys/events ignored).
+    const int ApiVersion = 4;
 
     [Command("version", description: "Return the Beelzebub API version (BCH-readable).")]
     public static void Version(ChatCommandContext ctx)
@@ -124,7 +129,8 @@ internal static class ApiCommands
                 $" damage_scale={dmgScale:F2} cooldown_scale={cdScale:F2}" +
                 $" health_scale={hpScale:F2} speed_scale={spdScale:F2}" +
                 $" type={type} full_replace={(fullReplace ? 1 : 0)}" +
-                $" scaling_mode={scalingMode}");
+                $" scaling_mode={scalingMode}" +
+                $" shard={(Core.Transforms.IsShardBoss(u.UnitPrefabGuid) ? 1 : 0)}");
         }
         ctx.Reply($"[BEELZ:end] cmd=transforms count={unlocks.Count}");
     }
@@ -358,6 +364,7 @@ internal static class ApiCommands
                 $" tier={entry.Tier}" +
                 $" type={type}" +
                 $" full_replace={(entry.FullReplace ? 1 : 0)}" +
+                $" shard={(Core.Transforms.MatchesShardBossNames(name) ? 1 : 0)}" +
                 $" scaling_mode={scalingMode}" +
                 $" damage_scale={entry.DamageScale:F2}" +
                 $" cooldown_scale={entry.CooldownScale:F2}" +
@@ -465,5 +472,41 @@ internal static class ApiCommands
             shown++;
         }
         ctx.Reply($"[BEELZ:end] cmd=bestiary count={shown} total={entries.Count} page={page} pages={pages}");
+    }
+
+    [Command("config", description: "Stream every Beelzebub config setting (BCH settings panel). One [BEELZ:config] line per setting.")]
+    public static void Config(ChatCommandContext ctx)
+    {
+        if (!Core.IsReady) { ctx.Reply("[BEELZ:err] cmd=config code=not_ready msg=plugin_not_initialized"); return; }
+        // v0.39.0: reflect over Settings' static ConfigEntry properties so new settings
+        // are included automatically. All are runtime-settable via `.beelz admin set <key> <value>`.
+        int n = 0;
+        foreach (var prop in typeof(Beelzebub.Config.Settings).GetProperties(
+                     System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static))
+        {
+            if (prop.GetValue(null) is not BepInEx.Configuration.ConfigEntryBase entry) continue;
+            string section = entry.Definition.Section;
+            string key = entry.Definition.Key;
+            string value = entry.BoxedValue?.ToString() ?? "";
+            string type = entry.SettingType.Name;
+            ctx.Reply($"[BEELZ:config] section={SafeToken(section)} key={SafeToken(key)} value={SafeToken(value)} type={SafeToken(type)} editable=1");
+            n++;
+        }
+        ctx.Reply($"[BEELZ:end] cmd=config count={n}");
+    }
+
+    [Command("cooldowns", description: "Per-category transform cooldown remaining, for cooldown timers (BCH-readable).")]
+    public static void Cooldowns(ChatCommandContext ctx)
+    {
+        if (!Core.IsReady) { ctx.Reply("[BEELZ:err] cmd=cooldowns code=not_ready msg=plugin_not_initialized"); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        var now = System.DateTime.UtcNow;
+        foreach (var cat in new[] { TransformCategory.Regular, TransformCategory.VBlood, TransformCategory.ShardBoss })
+        {
+            double rem = (Core.AbilityRegistry.CooldownUntil(steamId, cat) - now).TotalSeconds;
+            if (rem < 0) rem = 0;
+            ctx.Reply($"[BEELZ:cooldown] category={cat.ToString().ToLowerInvariant()} remaining={rem:F0}");
+        }
+        ctx.Reply("[BEELZ:end] cmd=cooldowns count=3");
     }
 }

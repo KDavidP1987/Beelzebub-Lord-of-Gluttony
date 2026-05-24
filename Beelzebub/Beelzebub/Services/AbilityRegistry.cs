@@ -17,6 +17,19 @@ internal enum PityKind : byte
     Transform = 1,
 }
 
+/// <summary>
+/// v0.39.0: transform-settings + cooldown category. Separates the shard bosses
+/// (Dracula, Adam, Solarus, Talzur/Winged Horror, Megara the Serpent Queen, Gorecrusher
+/// — configurable via Transform_ShardBossNames) from other V-Bloods so they
+/// can have their own mode/duration/cooldown and an independent cooldown bucket.
+/// </summary>
+internal enum TransformCategory : byte
+{
+    Regular = 0,
+    VBlood = 1,
+    ShardBoss = 2,
+}
+
 internal enum Verbosity : byte
 {
     Silent = 0,
@@ -139,6 +152,7 @@ internal sealed class AbilityRegistry
     readonly ConcurrentDictionary<ulong, ActiveTransform> _activeTransforms = new(); // runtime-only
     readonly ConcurrentDictionary<ulong, System.DateTime> _cooldownRegularUntil = new(); // runtime-only
     readonly ConcurrentDictionary<ulong, System.DateTime> _cooldownVBloodUntil = new(); // runtime-only
+    readonly ConcurrentDictionary<ulong, System.DateTime> _cooldownShardUntil = new(); // runtime-only (v0.39.0)
 
     public int PlayerCount => _data.Count;
 
@@ -485,6 +499,7 @@ internal sealed class AbilityRegistry
         _activeTransforms.Clear();
         _cooldownRegularUntil.Clear();
         _cooldownVBloodUntil.Clear();
+        _cooldownShardUntil.Clear();
         _verbosity.Clear();
         _emitApiEvents.Clear();
         return (players, abilities, transforms);
@@ -611,17 +626,20 @@ internal sealed class AbilityRegistry
     }
 
     // --- Cooldowns (runtime) ---
-    public System.DateTime CooldownUntil(ulong steamId, CaptureSource source)
+    // v0.39.0: cooldowns are now bucketed by TransformCategory (Regular/VBlood/ShardBoss)
+    // so a shard-boss cooldown doesn't lock out regular V-Blood transforms and vice-versa.
+    ConcurrentDictionary<ulong, System.DateTime> CooldownDict(TransformCategory cat) => cat switch
     {
-        var dict = source == CaptureSource.VBlood ? _cooldownVBloodUntil : _cooldownRegularUntil;
-        return dict.TryGetValue(steamId, out var ts) ? ts : System.DateTime.MinValue;
-    }
+        TransformCategory.ShardBoss => _cooldownShardUntil,
+        TransformCategory.VBlood => _cooldownVBloodUntil,
+        _ => _cooldownRegularUntil,
+    };
 
-    public void SetCooldownUntil(ulong steamId, CaptureSource source, System.DateTime untilUtc)
-    {
-        var dict = source == CaptureSource.VBlood ? _cooldownVBloodUntil : _cooldownRegularUntil;
-        dict[steamId] = untilUtc;
-    }
+    public System.DateTime CooldownUntil(ulong steamId, TransformCategory category)
+        => CooldownDict(category).TryGetValue(steamId, out var ts) ? ts : System.DateTime.MinValue;
+
+    public void SetCooldownUntil(ulong steamId, TransformCategory category, System.DateTime untilUtc)
+        => CooldownDict(category)[steamId] = untilUtc;
 
     // --- Escalating pity / bad-luck protection (v0.38.0, in-memory) ---
     // Per-player accumulated drop-chance bonus, indexed [source*2 + kind]:

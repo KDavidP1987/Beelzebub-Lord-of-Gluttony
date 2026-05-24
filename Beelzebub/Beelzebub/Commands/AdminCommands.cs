@@ -326,7 +326,7 @@ internal static class AdminCommands
         // Ensure unlock exists and clear cooldown so TryActivate sails through.
         var source = new PrefabGUID(unitGuid).IsVBloodUnit() ? CaptureSource.VBlood : CaptureSource.Regular;
         Core.AbilityRegistry.AddTransformUnlock(steamId, unitGuid, source);
-        Core.AbilityRegistry.SetCooldownUntil(steamId, source, DateTime.MinValue);
+        Core.AbilityRegistry.SetCooldownUntil(steamId, Core.Transforms.CategoryFor(source, unitGuid), DateTime.MinValue);
 
         var (ok, message) = Core.Transforms.TryActivate(steamId, unitGuid);
         Core.Persistence.RequestSave();
@@ -764,5 +764,61 @@ internal static class AdminCommands
 
         ctx.Reply($"Cleared {fullName}'s {weapon} slot {slot}. {(clearedNow ? "Removed live." : "Saved bind removed.")}");
         Audit(ctx, "clear-weapon-slot", steamId, fullName, $"weapon={weapon} slot={slot} clearedNow={clearedNow}");
+    }
+
+    // --- v0.39.0: runtime config editing (BCH settings panel) ---
+
+    [Command("set", description: "Set a config value at runtime by key (applies live, persists to the .cfg). Usage: .beelz admin set <key> <value>. See .beelz api config for keys.", adminOnly: true)]
+    public static void SetConfig(ChatCommandContext ctx, string key, string value)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+
+        var entry = FindConfigEntry(key);
+        if (entry == null)
+        {
+            ctx.Reply($"No config key matches '{key}'. Use .beelz api config (or the .cfg) for valid keys.");
+            return;
+        }
+
+        object parsed;
+        try { parsed = ParseConfigValue(entry.SettingType, value); }
+        catch (Exception ex)
+        {
+            ctx.Reply($"Couldn't set {entry.Definition.Key}: '{value}' isn't a valid {entry.SettingType.Name} ({ex.Message}).");
+            return;
+        }
+
+        object old = entry.BoxedValue;
+        try { entry.BoxedValue = parsed; }
+        catch (Exception ex) { ctx.Reply($"Rejected: {ex.Message}"); return; }
+
+        ctx.Reply($"Set {entry.Definition.Key} = {parsed} (was {old}). Applies live.");
+        Audit(ctx, "config-set", 0, "-", $"key={entry.Definition.Key} old={old} new={parsed}");
+        // BCH refresh hint (sent to the admin who changed it; broadcast-to-all-subscribers is a follow-up).
+        Core.Chat.SendEvent(ctx.Event.SenderCharacterEntity,
+            $"[BEELZ:event] type=config-changed key={entry.Definition.Key} value={parsed}");
+    }
+
+    static BepInEx.Configuration.ConfigEntryBase FindConfigEntry(string key)
+    {
+        foreach (var prop in typeof(Beelzebub.Config.Settings).GetProperties(
+                     System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static))
+        {
+            if (prop.GetValue(null) is BepInEx.Configuration.ConfigEntryBase e
+                && string.Equals(e.Definition.Key, key, StringComparison.OrdinalIgnoreCase))
+                return e;
+        }
+        return null;
+    }
+
+    static object ParseConfigValue(Type t, string raw)
+    {
+        if (t == typeof(string)) return raw;
+        if (t == typeof(bool)) return bool.Parse(raw);
+        if (t == typeof(int)) return int.Parse(raw);
+        if (t == typeof(float)) return float.Parse(raw, System.Globalization.CultureInfo.InvariantCulture);
+        if (t == typeof(double)) return double.Parse(raw, System.Globalization.CultureInfo.InvariantCulture);
+        if (t.IsEnum) return Enum.Parse(t, raw, ignoreCase: true);
+        return BepInEx.Configuration.TomlTypeConverter.ConvertToValue(raw, t);
     }
 }

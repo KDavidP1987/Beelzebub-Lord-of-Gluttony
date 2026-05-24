@@ -8,14 +8,14 @@ using VampireCommandFramework;
 namespace Beelzebub.Commands;
 
 /// <summary>
-/// W4: named hotkey bindings beyond V Rising's 6 ability slots. These are
-/// BCH-facing: the server stores name → ability bindings; the BCH client
-/// renders buttons in its UI and is responsible for triggering casts.
+/// W4: named hotkey bindings beyond V Rising's 6 ability slots — an "expanded
+/// action bar." The server stores name → ability bindings; fire one on demand
+/// with `.beelz cast <name>` (v0.40.0, force-cast via ForceCastService). BCH
+/// renders the bindings (via `.beelz api hotkeys`) as on-screen buttons that each
+/// invoke `.beelz cast <name>` — giving players far more than 6 abilities.
 ///
-/// Until the BCH cast-trigger mechanism is finalized, the binding is
-/// observable via `.beelz api hotkeys` but won't fire automatically. Players
-/// can still inspect and manage their bindings here, and admins can gate the
-/// feature entirely via the Hotkeys_Enabled config switch.
+/// Admins cap the count with Hotkeys_MaxPerPlayer and can disable the whole
+/// feature via Hotkeys_Enabled.
 /// </summary>
 [CommandGroup("beelz hotkey")]
 internal static class HotkeyCommands
@@ -68,7 +68,7 @@ internal static class HotkeyCommands
 
         Core.AbilityRegistry.SetHotkey(steamId, name, ability._Value);
         Core.Persistence.RequestSave();
-        ctx.Reply($"Hotkey '{name}' bound to {abilityName}. (BCH UI integration pending — server stores the binding for now.)");
+        ctx.Reply($"Hotkey '{name}' bound to {abilityName}. Fire it with .beelz cast {name} (or a BloodCraftHub button).");
         Core.Chat.SendEvent(ctx.Event.SenderCharacterEntity,
             $"[BEELZ:event] type=hotkey-set name={name} a={ability._Value} an={abilityName}");
     }

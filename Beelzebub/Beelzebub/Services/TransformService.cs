@@ -17,11 +17,14 @@ internal enum TransformMode : byte
 
 internal sealed class TransformService
 {
-    public TransformMode ModeFor(CaptureSource source)
+    public TransformMode ModeFor(TransformCategory category)
     {
-        string raw = (source == CaptureSource.VBlood
-            ? Settings.Transform_Mode_VBlood.Value
-            : Settings.Transform_Mode_Regular.Value) ?? "Toggle";
+        string raw = (category switch
+        {
+            TransformCategory.ShardBoss => Settings.Transform_Mode_ShardBoss.Value,
+            TransformCategory.VBlood => Settings.Transform_Mode_VBlood.Value,
+            _ => Settings.Transform_Mode_Regular.Value,
+        }) ?? "Toggle";
         return raw.Trim().ToLowerInvariant() switch
         {
             "disabled" => TransformMode.Disabled,
@@ -30,15 +33,54 @@ internal sealed class TransformService
         };
     }
 
-    public float DurationSecondsFor(CaptureSource source) =>
-        source == CaptureSource.VBlood
-            ? Settings.Transform_DurationSeconds_VBlood.Value
-            : Settings.Transform_DurationSeconds_Regular.Value;
+    public float DurationSecondsFor(TransformCategory category) => category switch
+    {
+        TransformCategory.ShardBoss => Settings.Transform_DurationSeconds_ShardBoss.Value,
+        TransformCategory.VBlood => Settings.Transform_DurationSeconds_VBlood.Value,
+        _ => Settings.Transform_DurationSeconds_Regular.Value,
+    };
 
-    public float CooldownSecondsFor(CaptureSource source) =>
-        source == CaptureSource.VBlood
-            ? Settings.Transform_CooldownSeconds_VBlood.Value
-            : Settings.Transform_CooldownSeconds_Regular.Value;
+    public float CooldownSecondsFor(TransformCategory category) => category switch
+    {
+        TransformCategory.ShardBoss => Settings.Transform_CooldownSeconds_ShardBoss.Value,
+        TransformCategory.VBlood => Settings.Transform_CooldownSeconds_VBlood.Value,
+        _ => Settings.Transform_CooldownSeconds_Regular.Value,
+    };
+
+    /// <summary>
+    /// v0.39.0: is this transform target one of the configured shard bosses
+    /// (<see cref="Settings.Transform_ShardBossNames"/>, matched case-insensitively
+    /// against the resolved in-game display name so it survives prefab renames)?
+    /// </summary>
+    public bool IsShardBoss(int unitGuid)
+    {
+        // Check the resolved display name first (catches Solarus → "Solarus the Immortal"
+        // whose prefab is ChurchOfLight_Paladin), then fall back to the raw prefab name.
+        if (MatchesShardBossNames(Core.AbilityMetadata?.ResolveUnitName(unitGuid))) return true;
+        return MatchesShardBossNames(new PrefabGUID(unitGuid).GetPrefabName());
+    }
+
+    /// <summary>Does <paramref name="name"/> contain any configured shard-boss token? (display or prefab name)</summary>
+    public bool MatchesShardBossNames(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return false;
+        string csv = Settings.Transform_ShardBossNames?.Value;
+        if (string.IsNullOrWhiteSpace(csv)) return false;
+        foreach (var tokenRaw in csv.Split(','))
+        {
+            string token = tokenRaw.Trim();
+            if (token.Length > 0 && name.IndexOf(token, StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>v0.39.0: map a capture source + unit to its transform-settings/cooldown category.</summary>
+    public TransformCategory CategoryFor(CaptureSource source, int unitGuid)
+    {
+        if (IsShardBoss(unitGuid)) return TransformCategory.ShardBoss;
+        return source == CaptureSource.VBlood ? TransformCategory.VBlood : TransformCategory.Regular;
+    }
 
     /// <summary>
     /// Activate a transformation. Returns (success, message). Caller is responsible
@@ -77,15 +119,18 @@ internal sealed class TransformService
             if (u.UnitPrefabGuid == unitPrefabGuid) { source = u.Source; break; }
         }
 
-        TransformMode mode = ModeFor(source);
+        TransformCategory category = CategoryFor(source, unitPrefabGuid);
+        TransformMode mode = ModeFor(category);
         if (mode == TransformMode.Disabled)
         {
-            return (false, $"Transformations are disabled for {(source == CaptureSource.VBlood ? "V-Bloods" : "regular mobs")} by the server admin.");
+            string catLabel = category == TransformCategory.ShardBoss ? "shard bosses"
+                : category == TransformCategory.VBlood ? "V-Bloods" : "regular mobs";
+            return (false, $"Transformations are disabled for {catLabel} by the server admin.");
         }
 
-        // Cooldown check.
+        // Cooldown check (per-category bucket: Regular / V-Blood / shard boss).
         var now = DateTime.UtcNow;
-        var cooldownUntil = Core.AbilityRegistry.CooldownUntil(steamId, source);
+        var cooldownUntil = Core.AbilityRegistry.CooldownUntil(steamId, category);
         if (cooldownUntil > now)
         {
             var remaining = (cooldownUntil - now).TotalSeconds;
@@ -112,7 +157,7 @@ internal sealed class TransformService
             UnitPrefabGuid = unitPrefabGuid,
             Source = source,
             ActivatedAtUtc = now,
-            Duration = mode == TransformMode.Timed ? TimeSpan.FromSeconds(DurationSecondsFor(source)) : null,
+            Duration = mode == TransformMode.Timed ? TimeSpan.FromSeconds(DurationSecondsFor(category)) : null,
         };
 
         // Z1: apply spell bar via the dedicated carrier buff. Lifetime mirrors
@@ -308,11 +353,12 @@ internal sealed class TransformService
             Core.Log.LogInfo($"[Beelz] revert {steamId}: queued {queued}, processed {processed} summoned minion(s) via immediate drain.");
         }
 
-        TransformMode mode = ModeFor(active.Source);
-        float cooldownSec = CooldownSecondsFor(active.Source);
+        TransformCategory category = CategoryFor(active.Source, active.UnitPrefabGuid);
+        TransformMode mode = ModeFor(category);
+        float cooldownSec = CooldownSecondsFor(category);
         if (mode == TransformMode.Timed && cooldownSec > 0f)
         {
-            Core.AbilityRegistry.SetCooldownUntil(steamId, active.Source, DateTime.UtcNow.AddSeconds(cooldownSec));
+            Core.AbilityRegistry.SetCooldownUntil(steamId, category, DateTime.UtcNow.AddSeconds(cooldownSec));
         }
 
         // v0.35.0: emit transform-ended centrally so EVERY revert path notifies BCH —
@@ -435,10 +481,11 @@ internal sealed class TransformService
             if (now - active.ActivatedAtUtc < active.Duration.Value) continue;
 
             Core.AbilityRegistry.ClearActiveTransform(steamId);
-            float cooldownSec = CooldownSecondsFor(active.Source);
+            TransformCategory category = CategoryFor(active.Source, active.UnitPrefabGuid);
+            float cooldownSec = CooldownSecondsFor(category);
             if (cooldownSec > 0f)
             {
-                Core.AbilityRegistry.SetCooldownUntil(steamId, active.Source, now.AddSeconds(cooldownSec));
+                Core.AbilityRegistry.SetCooldownUntil(steamId, category, now.AddSeconds(cooldownSec));
             }
 
             string unitName = new PrefabGUID(active.UnitPrefabGuid).GetPrefabName();

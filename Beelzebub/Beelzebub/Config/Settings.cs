@@ -39,6 +39,13 @@ internal static class Settings
     public static ConfigEntry<float> Transform_CooldownSeconds_Regular { get; private set; }
     public static ConfigEntry<float> Transform_CooldownSeconds_VBlood { get; private set; }
 
+    // v0.39.0: shard bosses (Dracula/Morgana/Adam/Gorecrusher/Trizon/Solarus) split out
+    // from regular V-Bloods, with their own mode/duration/cooldown + cooldown bucket.
+    public static ConfigEntry<string> Transform_ShardBossNames { get; private set; }
+    public static ConfigEntry<string> Transform_Mode_ShardBoss { get; private set; }
+    public static ConfigEntry<float> Transform_DurationSeconds_ShardBoss { get; private set; }
+    public static ConfigEntry<float> Transform_CooldownSeconds_ShardBoss { get; private set; }
+
     // Diagnostics
     public static ConfigEntry<bool> VerboseLogging { get; private set; }
 
@@ -234,6 +241,30 @@ internal static class Settings
         Transform_CooldownSeconds_VBlood = config.Bind(
             "Transformation", nameof(Transform_CooldownSeconds_VBlood), 0f,
             "Cooldown in seconds after a V-Blood transform ends before another V-Blood transform can start. 0 = no cooldown.");
+
+        Transform_ShardBossNames = config.Bind(
+            "Transformation", nameof(Transform_ShardBossNames), "Dracula,Adam,Solarus,Talzur,Winged Horror,Megara,Morgana,Gorecrusher",
+            "v0.39.0: comma-separated list of SHARD-BOSS name tokens (the six primary shard-granting end bosses: " +
+            "Dracula, Adam the Firstborn, Solarus the Immaculate, The Winged Horror/Talzur, Megara the Serpent Queen, " +
+            "Gorecrusher the Behemoth). A transform target is a shard boss if its in-game display name OR its prefab " +
+            "name contains any token (case-insensitive). The default lists aliases for match robustness — 'Talzur'/" +
+            "'Winged Horror' for the Winged Horror, 'Megara'/'Morgana' for the serpent queen (her prefab is " +
+            "Blackfang_Morgana). Trim or extend this if a boss doesn't resolve in your game version. Shard " +
+            "bosses use the Transform_*_ShardBoss settings below and their own cooldown bucket, separate from other V-Bloods.");
+
+        Transform_Mode_ShardBoss = config.Bind(
+            "Transformation", nameof(Transform_Mode_ShardBoss), "Toggle",
+            "v0.39.0: transformation mode for shard bosses: Toggle | Timed | Disabled. Lets admins, e.g., make the " +
+            "powerful shard-boss forms time-limited while leaving other V-Bloods as toggles.");
+
+        Transform_DurationSeconds_ShardBoss = config.Bind(
+            "Transformation", nameof(Transform_DurationSeconds_ShardBoss), 60f,
+            "v0.39.0: auto-revert duration (seconds) for shard-boss transforms when Transform_Mode_ShardBoss = Timed.");
+
+        Transform_CooldownSeconds_ShardBoss = config.Bind(
+            "Transformation", nameof(Transform_CooldownSeconds_ShardBoss), 0f,
+            "v0.39.0: cooldown (seconds) after a shard-boss transform ends before another shard-boss transform can " +
+            "start. Independent of the regular/V-Blood cooldown buckets. 0 = no cooldown.");
 
         VerboseLogging = config.Bind(
             "Diagnostics", nameof(VerboseLogging), false,
