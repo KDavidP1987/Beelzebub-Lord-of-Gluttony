@@ -53,6 +53,23 @@ internal static class Settings
     // drop the moment any captured ability is cast.
     public static ConfigEntry<bool> Transform_NativeShapeshift_Enabled { get; private set; }
 
+    // v0.33.0 (#17): when a captured unit corresponds to a V Rising form/shapeshift
+    // buff (the boss forms Dracula/Morgana, or a native Wolf/Bear/Rat/Spider/Toad/
+    // Werewolf/Gargoyle), transform via that REAL form buff (the persistent ExoForm
+    // recipe) instead of the cosmetic-only path. This gives the player the form's
+    // rig AND keeps the form across casts (unlike Transform_NativeShapeshift_Enabled,
+    // which drops on first cast). Default true — units without a form still fall back
+    // to the ability-only transform. Set false to disable real native-form transforms
+    // server-wide (per-unit disable lives in the TransformMap).
+    public static ConfigEntry<bool> Transform_RealFormWhenAvailable { get; private set; }
+
+    // #4 (v0.34.0) animation fidelity: when ON, refuse a UNIVERSAL `.beelz grant`
+    // of a weapon-animation-bound ability (e.g. a greatsword slam) and steer the
+    // player to `.beelz weapon-grant <weapon>` so the ability is tied to the weapon
+    // whose animation it needs. Default OFF — guidance is always shown either way;
+    // this only hard-blocks the universal bind.
+    public static ConfigEntry<bool> Grant_EnforceWeaponMatch { get; private set; }
+
     // TX7 (v0.17.0): how the runtime sources power scaling for a transform.
     //   CuratedScales (default) — apply admin-curated DamageScale/HealthScale/etc.
     //                             from the TransformMap entry as ModifyUnitStatBuff_DOTS
@@ -228,6 +245,25 @@ internal static class Settings
             "Default false: keep the player's vampire model and only swap the spell bar. " +
             "Set true if you'd rather see the wolf model for a couple seconds at the cost of the " +
             "visual ending on first cast.");
+
+        Transform_RealFormWhenAvailable = config.Bind(
+            "Transformation", nameof(Transform_RealFormWhenAvailable), true,
+            "v0.33.0 (#17): for units that map to a real V Rising form/shapeshift buff " +
+            "(boss forms Dracula/Morgana, or native Wolf/Bear/Rat/Spider/Toad/Werewolf/Gargoyle), " +
+            "transform using that actual form buff (persistent ExoForm recipe) so the player gets " +
+            "the form's model+rig AND it survives ability casts. Default true. Units with no matching " +
+            "form keep the ability-only transform regardless. Set false to turn off real native-form " +
+            "transforms server-wide; this does NOT affect the curated boss forms (Dracula/Morgana), " +
+            "which always use their form buff.");
+
+        Grant_EnforceWeaponMatch = config.Bind(
+            "Abilities", nameof(Grant_EnforceWeaponMatch), false,
+            "#4 (v0.34.0): when true, refuse a universal `.beelz grant` of a weapon-animation-bound " +
+            "ability (sword/axe/spear/etc.) and tell the player to use `.beelz weapon-grant <weapon>` " +
+            "so it binds to the weapon whose cast animation it needs (V Rising bakes the animation into " +
+            "the ability — wielding the matching weapon is the only way it reads correctly). Default false: " +
+            "the weapon-to-wield guidance is shown on every grant regardless; this only hard-blocks the " +
+            "universal bind. Spells/universal abilities are never affected.");
 
         Transform_PowerScalingMode = config.Bind(
             "Transformation", nameof(Transform_PowerScalingMode), "CuratedScales",

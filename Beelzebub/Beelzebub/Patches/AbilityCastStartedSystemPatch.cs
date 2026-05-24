@@ -28,6 +28,8 @@ internal static class AbilityCastStartedSystemPatch
     static readonly string[] SummonNamePatterns = {
         "_Summon_", "_Summoning_", "_Reinforcement_", "_CallReinforcements_",
         "_RaiseDead_", "_RaiseHorde_",
+        // v0.30.0: Dracula's SummonBats has no trailing underscore after "Summon".
+        "_SummonBats",
     };
 
     /// <summary>
@@ -71,6 +73,17 @@ internal static class AbilityCastStartedSystemPatch
             { "AB_Undead_Priest_RaiseDead_Group",        (-603934060, 3) },
             { "AB_Undead_Priest_Elite_RaiseDead_AbilityGroup", (-603934060, 4) },
             { "AB_Undead_Priest_Elite_RaiseDead_Group",        (-603934060, 4) },
+            // v0.30.0: Dracula summons — units identified by prefab-name audit
+            // (the SpawnMinion unit ref is in a binary blob, but the CHAR_ prefabs
+            // name-match unambiguously). SummonBats = transient attack swarm; the
+            // natural chain spawns 2 bats UNOWNED (InheritOwner:false) so they don't
+            // fight for the player — manual-spawn owned copies instead.
+            { "AB_Vampire_Dracula_SummonBats_Abilitygroup", (-2092104425, 2) }, // CHAR_Dracula_ShadowBatSwarm ×2
+            { "AB_Vampire_Dracula_SummonBats_Group",        (-2092104425, 2) },
+            // BloodStones is gated for players (its SummonTrigger self-destructs
+            // without a valid spell target) → produces nothing. Manual-spawn it.
+            { "AB_Vampire_Dracula_BloodStones_Summon_AbilityGroup", (32692466, 1) }, // CHAR_Dracula_SpellStone_LargeBlood
+            { "AB_Vampire_Dracula_BloodStones_Summon_Group",        (32692466, 1) },
         };
 
     /// <summary>

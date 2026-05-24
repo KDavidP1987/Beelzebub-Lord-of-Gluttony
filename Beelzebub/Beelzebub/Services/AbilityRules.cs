@@ -229,6 +229,26 @@ internal sealed class AbilityRules
     }
 
     /// <summary>
+    /// #4 (v0.34.0) animation fidelity: the weapon family an ability's CAST
+    /// ANIMATION is bound to, or <see cref="WeaponFamily.None"/> for spells /
+    /// universal abilities that don't need a weapon to read right. V Rising bakes
+    /// the cast animation into the ability prefab (a client-side SequenceGUID) — the
+    /// server can't remap it, so the only fidelity lever is wielding the matching
+    /// weapon. Returns the first concrete (non-Magic/non-None) family from the
+    /// curated weapon list; Magic-only/empty abilities return None.
+    /// </summary>
+    public WeaponFamily GetAnimationWeapon(string abilityName)
+    {
+        foreach (var fam in ClassifyWeaponFamilies(abilityName))
+            if (fam != WeaponFamily.Magic && fam != WeaponFamily.None)
+                return fam;
+        return WeaponFamily.None;
+    }
+
+    /// <summary>#4: true if a specific weapon must be wielded for this ability's animation to read right.</summary>
+    public bool IsWeaponAnimationBound(string abilityName) => GetAnimationWeapon(abilityName) != WeaponFamily.None;
+
+    /// <summary>
     /// W1: resolve the set of shapeshift forms an ability is restricted to.
     /// Empty list = no form restriction (works in any form, or while not transformed).
     /// </summary>

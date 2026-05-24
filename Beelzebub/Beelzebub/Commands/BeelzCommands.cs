@@ -361,6 +361,20 @@ internal static class BeelzCommands
             return;
         }
 
+        // #4 (v0.34.0) animation fidelity: a weapon-animation-bound ability's cast
+        // animation only reads correctly while wielding its weapon family (V Rising
+        // bakes the animation into the ability). When Grant_EnforceWeaponMatch is on,
+        // refuse a UNIVERSAL bind and steer the player to weapon-grant; the
+        // weapon-to-wield guidance is shown below either way.
+        var animWeapon = Core.AbilityRules.GetAnimationWeapon(abilityName);
+        if (animWeapon != Beelzebub.Services.WeaponFamily.None
+            && Beelzebub.Config.Settings.Grant_EnforceWeaponMatch.Value)
+        {
+            ctx.Reply($"'{abilityName}' is a {animWeapon} ability — its cast animation only reads right with that weapon. " +
+                      $"Bind it to the {animWeapon} loadout instead: .beelz weapon-grant {animWeapon} {slot} {index}");
+            return;
+        }
+
         Core.AbilityRegistry.SetSlot(steamId, slot, ability._Value);
         Core.Persistence.RequestSave();
 
@@ -376,7 +390,11 @@ internal static class BeelzCommands
         string applyHint = appliedNow
             ? "Applied to your spell bar."
             : $"Activates while wielding: {famHint}.";
-        ctx.Reply($"Slot {slot} assigned to {ability.GetPrefabName()}. {applyHint} (Not all abilities are usable in every slot — e.g. _MeleeAttack_ won't appear in spell slots 5/6.)");
+        // #4: animation-fidelity nudge — tell them which weapon makes the cast read right.
+        string animNote = animWeapon != Beelzebub.Services.WeaponFamily.None
+            ? $" ✋ Wield {animWeapon} for the correct animation."
+            : "";
+        ctx.Reply($"Slot {slot} assigned to {ability.GetPrefabName()}. {applyHint}{animNote} (Not all abilities are usable in every slot — e.g. _MeleeAttack_ won't appear in spell slots 5/6.)");
         Core.Log.LogInfo($"[Beelz] {steamId} assign slot={slot} ability={ability._Value} ({ability.GetPrefabName()}) appliedNow={appliedNow}");
         Core.Chat.SendEvent(ctx.Event.SenderCharacterEntity,
             $"[BEELZ:event] type=slot-granted slot={slot} a={ability._Value} an={ability.GetPrefabName()}");

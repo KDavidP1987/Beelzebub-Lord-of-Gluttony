@@ -125,19 +125,42 @@ internal sealed class TransformService
         if (character.Exists())
         {
             float? duration = active.Duration.HasValue ? (float)active.Duration.Value.TotalSeconds : (float?)null;
-            // TX6: pass the unit GUID so TransformBuffService can attach the
-            // TransformMap's stat scales (damage/cooldown/health/movement) to the
-            // carrier buff. Zero unitGuid signals "no scaling" (legacy callsites).
-            appliedNow = TransformBuffService.Apply(character, abilityList, duration, unitPrefabGuid);
-            // Z2 / TX3: visual shapeshift fires when EITHER the global
-            // `Transform_NativeShapeshift_Enabled` config is on (Z2 opt-in),
-            // OR this specific transform is marked FullReplace in the
-            // TransformMap (TX3 per-unit opt-in). FullReplace lets admins
-            // turn on the cinematic visual for select units without
-            // enabling it for every transform on the server.
-            bool fullReplace = Core.AbilityRules.IsTransformFullReplace(unitPrefabGuid);
-            shapeshiftForm = ShapeshiftService.Apply(character, pgUnit, forceEnabled: fullReplace);
-            active.AppliedShapeshiftForm = shapeshiftForm._Value;
+
+            // v0.31.0: ExoForm-style transform. If this unit has a real form/shapeshift
+            // buff (BossFormRegistry — Dracula/Morgana), apply THAT (the player takes the
+            // boss's rig, so animation-bound + chained abilities fire) with the curated
+            // ability set. The form buff IS the shapeshift, so we skip the native
+            // ShapeshiftService form. Units without a form keep the ability-only path.
+            if (Services.BossFormRegistry.TryResolve(unitPrefabGuid, abilityList, out var bossForm))
+            {
+                // v0.32.0: start in form 1; .beelz phase / auto-HP switches sets.
+                // v0.33.0 (#17): TryResolve also covers native-form units (Wolf/Bear/
+                // Spider/…), which resolve to a single-set form built from the unit's
+                // own curated abilities — a REAL persistent transform, not the cosmetic
+                // path that broke on first cast.
+                active.CurrentPhase = 1;
+                int[] set = bossForm.SetForPhase(1);
+                appliedNow = TransformBuffService.ApplyForm(character, bossForm.FormBuffGuid, set, duration);
+                active.AppliedShapeshiftForm = 0; // form buff handles the visual itself
+                if (Beelzebub.Config.Settings.VerboseLogging.Value)
+                    Core.Log.LogInfo($"[Beelz] transform {steamId} → {pgUnit.GetPrefabName()}: ExoForm path (form={new PrefabGUID(bossForm.FormBuffGuid).GetPrefabName()}, {bossForm.FormCount} set(s), {set.Length} abilities in form 1).");
+            }
+            else
+            {
+                // TX6: pass the unit GUID so TransformBuffService can attach the
+                // TransformMap's stat scales (damage/cooldown/health/movement) to the
+                // carrier buff. Zero unitGuid signals "no scaling" (legacy callsites).
+                appliedNow = TransformBuffService.Apply(character, abilityList, duration, unitPrefabGuid);
+                // Z2 / TX3: visual shapeshift fires when EITHER the global
+                // `Transform_NativeShapeshift_Enabled` config is on (Z2 opt-in),
+                // OR this specific transform is marked FullReplace in the
+                // TransformMap (TX3 per-unit opt-in). FullReplace lets admins
+                // turn on the cinematic visual for select units without
+                // enabling it for every transform on the server.
+                bool fullReplace = Core.AbilityRules.IsTransformFullReplace(unitPrefabGuid);
+                shapeshiftForm = ShapeshiftService.Apply(character, pgUnit, forceEnabled: fullReplace);
+                active.AppliedShapeshiftForm = shapeshiftForm._Value;
+            }
         }
         Core.AbilityRegistry.SetActiveTransform(steamId, active);
 
@@ -201,9 +224,14 @@ internal sealed class TransformService
             string school = !string.IsNullOrEmpty(info.School) ? $" [{info.School}]" : "";
             string cd = info.CooldownSeconds.HasValue ? $" · cd {info.CooldownSeconds.Value:F1}s" : "";
             string warning = info.Incompatible ? " ⚠" : "";
+            // #4 (v0.34.0): flag weapon-animation-bound abilities with the weapon to
+            // wield so the cast reads right (the animation is baked to that weapon;
+            // spells need no weapon). Helps the player pick a weapon for the transform.
+            var animWeapon = Core.AbilityRules.GetAnimationWeapon(new PrefabGUID(ag).GetPrefabName());
+            string animTag = animWeapon != Services.WeaponFamily.None ? $" ✋{animWeapon}" : "";
 
             Core.Chat.Send(playerCharacter, Verbosity.Summary,
-                $"  {slotName}: {title}{school}{cd}{warning}");
+                $"  {slotName}: {title}{school}{cd}{animTag}{warning}");
 
             // v0.24.2: per-slot incompatibility reason on its own line so the
             // player understands which specific spells won't fire correctly.
@@ -525,7 +553,32 @@ internal sealed class TransformService
     {
         if (active == null) return false;
         var pg = new PrefabGUID(active.UnitPrefabGuid);
+
+        // v0.32.0/0.33.0: form units (curated boss OR native ExoForm) switch the FORM
+        // bar's ability set by re-applying the form buff with the new set — same model,
+        // different kit (Warrior ↔ Bloodmage for Dracula). Compute the phase's abilities
+        // first so native single-set forms carry their own kit; curated bosses ignore it
+        // and use their authored set. (Native forms are single-phase, so this normally
+        // only re-fires for curated multi-set bosses.)
         var abilities = GetTransformAbilities(pg, phase);
+
+        if (Services.BossFormRegistry.TryResolve(active.UnitPrefabGuid, abilities, out var bossForm))
+        {
+            int[] set = bossForm.SetForPhase(phase);
+            if (set.Length == 0) return false;
+            float? dur = active.Duration.HasValue ? (float)active.Duration.Value.TotalSeconds : (float?)null;
+            bool okForm = character.Exists()
+                && TransformBuffService.ApplyForm(character, bossForm.FormBuffGuid, set, dur);
+            active.CurrentPhase = phase;
+            Core.AbilityRegistry.SetActiveTransform(steamId, active);
+            if (character.Exists())
+            {
+                try { Core.Chat.SendEvent(character, $"[BEELZ:event] type=transform-phase-shift u={active.UnitPrefabGuid} un={pg.GetPrefabName()} phase={phase}"); }
+                catch { /* event emit non-critical */ }
+            }
+            return okForm;
+        }
+
         if (abilities.Count == 0) return false;
 
         bool appliedNow = false;
@@ -776,6 +829,20 @@ internal sealed class TransformService
     /// </summary>
     public List<int> GetAvailablePhases(PrefabGUID unitGuid)
     {
+        // v0.32.0: form units (ExoForm) expose one phase per curated form-set.
+        if (Services.BossFormRegistry.TryGet(unitGuid._Value, out var bossForm) && bossForm.FormCount > 0)
+        {
+            var formPhases = new List<int>(bossForm.FormCount);
+            for (int i = 1; i <= bossForm.FormCount; i++) formPhases.Add(i);
+            return formPhases;
+        }
+
+        // v0.33.0 (#17): native-form units (Wolf/Bear/Spider/…) are single-phase —
+        // one form-set built from their own abilities. Returning [1] keeps the Auto
+        // HP-phase monitor from trying to "advance" them (which would drop the form).
+        if (Services.BossFormRegistry.PickNativeForm(unitGuid._Value) != 0)
+            return new List<int> { 1 };
+
         var phases = new HashSet<int> { 1 };
         if (!Core.PrefabCollectionSystem._PrefabLookupMap.TryGetValue(unitGuid, out Entity prefabEntity)) return new List<int> { 1 };
         if (!Core.EntityManager.HasBuffer<AbilityGroupSlotBuffer>(prefabEntity)) return new List<int> { 1 };

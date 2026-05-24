@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using ProjectM;
+using ProjectM.Gameplay.Scripting;
 using ProjectM.Network;
 using ProjectM.Shared;
 using Stunlock.Core;
@@ -169,6 +170,96 @@ internal static class TransformBuffService
     }
 
     /// <summary>
+    /// v0.31.0 — ExoForm-style transform: apply the unit's actual FORM/shapeshift
+    /// buff (so the player takes on the boss's rig → animation-bound + chained
+    /// abilities fire) and slot a curated 8-slot ability set on it. Mirrors
+    /// Bloodcraft's <c>Shapeshifts.ModifyShapeshiftBuff</c>. Used for units in
+    /// <see cref="BossFormRegistry"/>; other units use the ability-only <see cref="Apply"/>.
+    /// </summary>
+    public static bool ApplyForm(Entity character, int formBuffGuid, IReadOnlyList<int> abilities, float? durationSeconds = null)
+    {
+        if (!character.Exists() || formBuffGuid == 0 || abilities is null || abilities.Count == 0) return false;
+
+        try
+        {
+            RemoveInternal(character); // clear any prior carrier/form buff
+
+            var formBuff = new PrefabGUID(formBuffGuid);
+            if (!Core.ServerGameManager.TryInstantiateBuffEntityImmediate(character, character, formBuff, out Entity buffEntity)
+                || !buffEntity.Exists())
+            {
+                Core.Log.LogError($"[Beelz] ApplyForm: TryInstantiateBuffEntityImmediate failed for form buff {formBuffGuid}.");
+                return false;
+            }
+
+            // Neuter the form's own chained "advance to next phase" buff so applying
+            // it to a player doesn't kick off the boss's scripted phase sequence.
+            if (Core.EntityManager.HasBuffer<ApplyBuffOnGameplayEvent>(buffEntity))
+            {
+                var ab = Core.EntityManager.GetBuffer<ApplyBuffOnGameplayEvent>(buffEntity);
+                if (ab.Length > 0) { var e0 = ab[0]; e0.Buff0 = PrefabGUID.Empty; ab[0] = e0; }
+            }
+
+            // Shapeshift enrichment (Bloodcraft recipe): the two script/data tags make
+            // slot replacement integrate with the shapeshift; categorize as a
+            // shapeshift that auto-clears on disconnect; Block buff type.
+            if (!Core.EntityManager.HasComponent<ReplaceAbilityOnSlotData>(buffEntity))
+                Core.EntityManager.AddComponent<ReplaceAbilityOnSlotData>(buffEntity);
+            if (!Core.EntityManager.HasComponent<Script_Buff_Shapeshift_DataShared>(buffEntity))
+                Core.EntityManager.AddComponent<Script_Buff_Shapeshift_DataShared>(buffEntity);
+            if (Core.EntityManager.HasComponent<BuffCategory>(buffEntity))
+                buffEntity.With((ref BuffCategory cat) => cat.Groups = BuffCategoryFlag.Shapeshift | BuffCategoryFlag.RemoveOnDisconnect);
+            if (Core.EntityManager.HasComponent<Buff>(buffEntity))
+                buffEntity.With((ref Buff b) => b.BuffType = BuffType.Block);
+
+            // Lifetime: timed → Destroy after duration; toggle → infinite (revert destroys).
+            if (!Core.EntityManager.HasComponent<LifeTime>(buffEntity))
+                Core.EntityManager.AddComponent<LifeTime>(buffEntity);
+            if (durationSeconds.HasValue && durationSeconds.Value > 0f)
+                buffEntity.With((ref LifeTime lt) => { lt.Duration = durationSeconds.Value; lt.EndAction = LifeTimeEndAction.Destroy; });
+            else
+                buffEntity.With((ref LifeTime lt) => { lt.Duration = -1f; lt.EndAction = LifeTimeEndAction.None; });
+
+            // Slot the curated abilities on the form's 0-7 bar (forms expose 8 slots,
+            // unlike the player's normal 1-6; Bloodcraft slots 0-7 here).
+            DynamicBuffer<ReplaceAbilityOnSlotBuff> replaceBuffer;
+            if (Core.EntityManager.HasBuffer<ReplaceAbilityOnSlotBuff>(buffEntity))
+            {
+                replaceBuffer = Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(buffEntity);
+                replaceBuffer.Clear();
+            }
+            else
+            {
+                replaceBuffer = Core.EntityManager.AddBuffer<ReplaceAbilityOnSlotBuff>(buffEntity);
+            }
+
+            for (int i = 0; i < abilities.Count && i < 8; i++)
+            {
+                replaceBuffer.Add(new ReplaceAbilityOnSlotBuff
+                {
+                    Target = ReplaceAbilityTarget.BuffTarget,
+                    Slot = i,
+                    NewGroupId = new PrefabGUID(abilities[i]),
+                    Priority = 99,
+                    CopyCooldown = true,
+                    CastBlockType = GroupSlotModificationCastBlockType.WholeCast,
+                });
+            }
+
+            if (Core.ReplaceAbilityOnSlotSystem != null)
+                Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+
+            Core.Log.LogInfo($"[Beelz] ApplyForm: applied form buff {formBuff.GetPrefabName()} + {abilities.Count} abilities to {character} (duration={(durationSeconds.HasValue ? durationSeconds.Value.ToString("F0") + "s" : "toggle")}).");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError($"[Beelz] ApplyForm failed: {ex}");
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Replace the carrier buff's overrides in-place — used by `.beelz phase` to swap
     /// boss-phase loadouts without dropping the buff (and losing animation state).
     /// Falls back to a fresh Apply if the buff isn't found.
@@ -228,13 +319,33 @@ internal static class TransformBuffService
 
     static bool RemoveInternal(Entity character)
     {
-        if (!Core.ServerGameManager.TryGetBuff(character, CarrierBuff.ToIdentifier(), out Entity buffEntity)
-            || !buffEntity.Exists()) return false;
+        bool removed = false;
 
-        DestroyUtility.Destroy(Core.EntityManager, buffEntity, DestroyDebugReason.TryRemoveBuff);
-        if (Beelzebub.Config.Settings.VerboseLogging.Value)
-            Core.Log.LogInfo($"[Beelz] TransformBuffService.Remove: destroyed carrier buff {buffEntity}.");
-        return true;
+        // Default ability-only carrier buff.
+        if (Core.ServerGameManager.TryGetBuff(character, CarrierBuff.ToIdentifier(), out Entity buffEntity)
+            && buffEntity.Exists())
+        {
+            DestroyUtility.Destroy(Core.EntityManager, buffEntity, DestroyDebugReason.TryRemoveBuff);
+            removed = true;
+            if (Beelzebub.Config.Settings.VerboseLogging.Value)
+                Core.Log.LogInfo($"[Beelz] TransformBuffService.Remove: destroyed carrier buff {buffEntity}.");
+        }
+
+        // v0.31.0: ExoForm-style form buffs (Dracula/Morgana/…). Destroy whichever
+        // is active so the player drops the shapeshift on revert.
+        foreach (int formGuid in Services.BossFormRegistry.FormBuffGuids)
+        {
+            if (Core.ServerGameManager.TryGetBuff(character, new PrefabGUID(formGuid).ToIdentifier(), out Entity formBuff)
+                && formBuff.Exists())
+            {
+                DestroyUtility.Destroy(Core.EntityManager, formBuff, DestroyDebugReason.TryRemoveBuff);
+                removed = true;
+                if (Beelzebub.Config.Settings.VerboseLogging.Value)
+                    Core.Log.LogInfo($"[Beelz] TransformBuffService.Remove: destroyed form buff {formBuff} ({new PrefabGUID(formGuid).GetPrefabName()}).");
+            }
+        }
+
+        return removed;
     }
 
     static NetworkId GetNetworkId(Entity entity) =>
