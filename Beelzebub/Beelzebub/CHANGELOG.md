@@ -3,6 +3,36 @@
 What's new for players. For full implementation history, see the
 [developer changelog on GitHub](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/blob/main/CHANGELOG.md).
 
+## [0.36.0] - 2026-05-23
+
+### Fire boss AoEs on demand: `.beelz detonate`
+
+Some boss abilities only unleash their big area-of-effect blast under a specific
+condition — the Undead Priest, for example, only sets off its projectile Nova at
+the end of a teleport. Now, while transformed into a unit that has one of these
+signature blasts, you can trigger it yourself any time with **`.beelz detonate`**.
+
+It fires the real AoE at your position, on your team, so it actually hits enemies.
+There's a short cooldown (admin-configurable via `Transform_ManualDetonateCooldownSeconds`,
+default 5s) to keep it from being spammed. Right now the Undead Priest's Nova is
+wired up; more bosses can be added over time. (A natural fit for a hotkey button
+in a future companion app.)
+
+## [0.35.0] - 2026-05-23
+
+### Richer ability info + a more complete companion-app feed
+
+Groundwork for the BloodCraftHub companion app — mostly invisible in normal play:
+
+- `.beelz` ability info now reports the real ability description, its magic
+  school, base cooldown, and which weapon its animation belongs to.
+- The companion-app event feed is now complete: it also fires when you forget an
+  ability, forget a transform, or wipe your collection, and it now reliably
+  reports *every* way a transform ends (manual revert, switching forms, an admin
+  ending it, or a server-wide revert) — so the app's display never goes stale.
+
+No gameplay changes; existing setups are unaffected.
+
 ## [0.34.0] - 2026-05-23
 
 ### Wield-the-right-weapon guidance for ability animations
