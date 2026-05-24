@@ -3,6 +3,39 @@
 What's new for players. For full implementation history, see the
 [developer changelog on GitHub](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/blob/main/CHANGELOG.md).
 
+## [0.38.0] - 2026-05-23
+
+### Bad-luck protection, Morgana's second form, and friendlier names
+
+- **Bad-luck protection (pity):** every kill that drops nothing now nudges your
+  odds up a little (default +0.25% per kill, admin-configurable), resetting to
+  baseline the moment you get a drop — so a cold streak can't last forever. Ability
+  and transform luck are tracked separately, per source (regular vs V-Blood).
+- **Morgana now has two switchable forms** like Dracula: a melee "Serpent" kit and
+  a ranged "Spectral" kit — swap with `.beelz phase 1/2`. (The Spectral kit is new
+  and experimental; some of her scripted spells may need tuning.)
+- **Friendlier names everywhere:** `.beelz search`, the "forgot" messages, and the
+  admin grant/revoke/transform replies now show proper in-game names instead of
+  raw asset names (search still matches either).
+
+### Behind the scenes
+- The manual-detonation registry now documents the boss-nova expansion candidates
+  to verify (Dracula CrimsonNova, Cardinal LightNova, Gloomrot ImplodingOrb, …).
+- Added `docs/CHAIN_AUDIT.md` — the chained-ability test plan for a tracing session.
+
+## [0.37.0] - 2026-05-23
+
+### Bestiary — your collection book
+
+A new way to see your collection at a glance. **`.beelz bestiary`** lists every
+unit you've collected from, showing how many of its abilities you've captured
+(e.g. 3/7), whether you've unlocked its transform, and whether it's a V-Blood —
+with a "complete" marker once you've collected everything from it.
+
+**`.beelz bestiary unit <name>`** drills into a single unit and lists each of its
+abilities with a ✓ (collected) or · (still to find), so you know exactly what's
+left to hunt. The companion app can read the same data via `.beelz api bestiary`.
+
 ## [0.36.0] - 2026-05-23
 
 ### Fire boss AoEs on demand: `.beelz detonate`
