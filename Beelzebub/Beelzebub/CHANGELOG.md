@@ -4,6 +4,14 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.41.1] - 2026-05-24
+
+### Combat shapeshifts no longer drop your transform kit
+
+Following up on 0.41.0: leaving a **combat shapeshift** (wolf, bear, etc.) while
+transformed now **automatically** re-applies your transformation's abilities — same
+as bat/waygate travel already did. `.beelz refresh` remains as a manual fallback.
+
 ## [0.41.0] - 2026-05-24
 
 ### Your ability bar no longer vanishes
