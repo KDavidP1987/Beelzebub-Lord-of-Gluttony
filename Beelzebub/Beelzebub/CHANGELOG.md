@@ -3,6 +3,47 @@
 What's new for players. For full implementation history, see the
 [developer changelog on GitHub](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/blob/main/CHANGELOG.md).
 
+## [0.34.0] - 2026-05-23
+
+### Wield-the-right-weapon guidance for ability animations
+
+Weapon-based abilities (sword slams, axe swings, spear lunges, and so on) carry
+their swing animation baked in — they only *look* right when you're holding that
+kind of weapon. Beelzebub now tells you which one:
+
+- Granting a weapon-based ability shows **"✋ Wield <weapon> for the correct
+  animation."**
+- The transform loadout list tags each weapon-based slot with its weapon (✋), so
+  you can pick a matching weapon for the unit you're becoming.
+
+Spells and universal abilities are never tagged — they don't need a weapon.
+
+New admin toggle `Grant_EnforceWeaponMatch` (default **off**): turn it on to make
+`.beelz grant` *require* you to bind weapon-based abilities through
+`.beelz weapon-grant <weapon>` (which ties them to the right weapon's loadout
+automatically), instead of just advising it.
+
+## [0.33.0] - 2026-05-23
+
+### Real shapeshift transforms for animal-form units
+
+Transforming into a unit that matches one of V Rising's real creature forms —
+wolves, bears, rats, spiders, toads, werewolves, and the Tailor's gargoyle —
+now puts you in that **actual form** (model, rig, and all) and **keeps you
+there while you fight**, using the same persistent-form tech that powers the
+Dracula and Morgana transforms. Previously these only flickered a cosmetic form
+that dropped the instant you cast anything; now the form sticks and your
+captured abilities play on it.
+
+Units that don't match a real V Rising form (most humanoids, undead, constructs)
+still transform the same as before — spell bar and stats, no model swap — because
+the game simply doesn't ship a form for them (a hard engine limit; the only way
+to render arbitrary units is a future client-side companion mod).
+
+New admin toggle `Transform_RealFormWhenAvailable` (default **on**) controls this
+server-wide; the curated boss forms (Dracula/Morgana) always use their form
+regardless. Per-unit control still lives in the transform rules.
+
 ## [0.25.0] - 2026-05-23
 
 ### Mist Walk AoE now fires — plus a chain diagnostic for testers
