@@ -4,6 +4,23 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.41.0] - 2026-05-24
+
+### Your ability bar no longer vanishes
+
+Fixed the cases where your spell bar could go blank or lose abilities:
+
+- **After reverting a transformation**, your custom-bound abilities now come back
+  immediately — no more empty bar, and no need to swap a weapon to get them back.
+- **After flying as a bat / leaving a wolf or other form while still transformed**,
+  your transformation's abilities are re-applied on arrival instead of dropping to
+  your weapon's defaults.
+- **Per-weapon loadouts** (set with `.beelz weapon-grant`) keep working as you swap
+  weapons and are now restored reliably alongside the above.
+
+And a safety net for anything we missed: **`.beelz refresh`** re-applies your correct
+bar on demand — whether you're transformed or not.
+
 ## [0.40.0] - 2026-05-24
 
 ### Cast abilities beyond your 6 slots — an expanded action bar

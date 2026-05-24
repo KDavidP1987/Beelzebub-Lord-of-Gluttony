@@ -6,7 +6,7 @@ A **server-side** V Rising mod that turns the whole bestiary into a collection-a
 
 **Source · issues · roadmap:** [github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony) · **License:** MIT
 
-> **Status:** active early access (v0.40.0). Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
+> **Status:** active early access (v0.41.0). Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
 
 ---
 
@@ -59,7 +59,7 @@ Install with [r2modman](https://thunderstore.io/package/ebkr/r2modman/) / Thunde
 
 **Collect & inspect:** `.beelz list [vblood|shard|regular]` · `.beelz search <term>` · `.beelz info <i>` · `.beelz bestiary` · `.beelz progress` · `.beelz catalog`
 **Use abilities:** `.beelz grant <slot 1-6> <index>` · `.beelz weapon-grant <weapon> <slot> <index>` · `.beelz hotkey set <name> <index>` → `.beelz cast <name>`
-**Transform:** `.beelz transforms [vblood|shard|regular]` · `.beelz transform <name>` · `.beelz phase [n]` · `.beelz revert` · `.beelz detonate` · `.beelz summons <stash|restore|status>`
+**Transform:** `.beelz transforms [vblood|shard|regular]` · `.beelz transform <name>` · `.beelz phase [n]` · `.beelz revert` · `.beelz refresh` (re-apply your bar if it ever goes blank) · `.beelz detonate` · `.beelz summons <stash|restore|status>`
 **Admin:** `.beelz admin set <key> <value>` · `.beelz admin transform mode/duration/cooldown …` · `.beelz admin give/revoke …` · `.beelz admin rules` / `deny` / `allow` / `reload` · `.beelz admin difficulty <basic|brutal>`
 **Settings:** `.beelz verbosity <silent|summary|verbose>` · `.beelz help` · `.beelz commands`
 
