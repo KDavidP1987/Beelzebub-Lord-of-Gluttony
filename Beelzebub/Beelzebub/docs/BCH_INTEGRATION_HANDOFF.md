@@ -18,7 +18,7 @@
 > in the BCH workspace.
 >
 > **Canonical source of truth for the wire API:**
-> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 1`). If this doc
+> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 2`). If this doc
 > and that file ever disagree, the file wins — and this doc should be corrected.
 
 ---
@@ -72,7 +72,7 @@ All under the `.beelz api` group. Verified against `ApiCommands.cs`.
 | `.beelz api slots` | `[BEELZ:slot]`, `[BEELZ:slot-current]`, `[BEELZ:end]` | Slot assignments per bucket: `bucket=any\|<WeaponFamily> slot=1-6 a= an=`; footer `weapon=<current>` |
 | `.beelz api transforms` | `[BEELZ:tx]` … `[BEELZ:end]` | Transform unlocks + matrix attrs: `i= s= u= un= enabled= difficulty= tier= damage_scale= cooldown_scale= health_scale= speed_scale= type= full_replace= scaling_mode=` |
 | `.beelz api active` | `[BEELZ:active]` | Active transform: `u= un= s= ttl=<sec>\|toggle` + phase info; or `none=1` |
-| `.beelz api info <index>` | `[BEELZ:info]` | One ability's full tooltip data (weapons, forms, transform_only, enabled, difficulty, scales, `desc=` — see §8) |
+| `.beelz api info <index>` | `[BEELZ:info]` | One ability's full tooltip data: `desc=` (real ability description, %params% substituted), `weapons=`, `weapon_anim=<family\|None>` (animation weapon, v2), `school=` (v2), `cooldown_seconds=` (v2), `forms=`, `transform_only=`, `enabled=`, `difficulty=`, `damage_scale=`, `cooldown_scale=` |
 | `.beelz api progress` | `[BEELZ:progress]` | Collection %: `abilities_captured= abilities_total= abilities_pct= transforms_unlocked= transforms_total= transforms_pct=` + V-Blood breakdowns |
 | `.beelz api rules` | `[BEELZ:rules]` | Loaded filter rules: `version= deny_patterns= allow_patterns= deny_guids= allow_guids=` |
 | `.beelz api transform-config` | `[BEELZ:tx-config]` … `[BEELZ:end]` | One line per source `R`/`V`: `src= mode=Toggle\|Timed\|Disabled duration= cooldown=` |
@@ -84,16 +84,27 @@ All under the `.beelz api` group. Verified against `ApiCommands.cs`.
 
 ---
 
-## 3. Event stream (push) — 🟡 contract present
+## 3. Event stream (push) — ✅ shipped
 
 - `.beelz api bch <on\|off\|status>` → `[BEELZ:bch] state=on\|off api=<ver>`.
-  BCH calls `on` at load to subscribe the caller to live updates.
-- While subscribed, Beelzebub pushes `[BEELZ:event] type=<event> …` lines when
-  state changes (slot granted/cleared, transform activated/ended, hotkey set/
-  cleared, etc.) so BCH can update without re-polling.
-- **Verify the exact emitted `type=` set** against the emitter
-  (`Services/ChatNotifier.cs`) before relying on a specific event — treat any
-  not-yet-confirmed type as "re-fetch the relevant read command."
+  BCH calls `on` at load to subscribe the caller to live updates. Events only go
+  to subscribed players (independent of chat verbosity).
+- While subscribed, Beelzebub pushes `[BEELZ:event] type=<event> …` lines on state
+  change so BCH updates without re-polling. **Complete emitted set:**
+
+  | `type=` | Fields | When |
+  |---|---|---|
+  | `capture` | `s=R\|V u= un= a= an=` | A new ability is captured from a kill |
+  | `transform-unlock` | `s=R\|V u= un=` | A new transform unit is unlocked |
+  | `slot-granted` / `slot-cleared` | `slot= [a= an=]` | Universal-bucket grant/clear |
+  | `weapon-slot-granted` / `weapon-slot-cleared` | `weapon= slot= [a= an=]` | Weapon-bucket grant/clear |
+  | `hotkey-set` / `hotkey-cleared` | `name= [a= an=]` | Named hotkey bind/clear |
+  | `transform-activated` | `u= un=` | Player transforms |
+  | `transform-ended` | `u= un= reason=` | Any revert. `reason` ∈ `manual` · `switching-transformation` · `auto` · `admin-clear` · `admin-revoke` · `admin-revert-all` · `admin-wipe-all` |
+  | `transform-phase-shift` | `u= un= phase=` | Form/phase swap (`.beelz phase` or Auto-HP) |
+  | `forget` / `forget-transform` | `a= u=` / `u=` | Capture / unlock deleted (v2) |
+  | `cleared` | — | Player wiped all captures + slots (v2) |
+  | `detonate` | `u=` | Player manually fired a transform's detonation AoE via `.beelz detonate` (v2) |
 
 ---
 
@@ -107,6 +118,8 @@ re-fetch the affected read command (or wait for the event).
 `.beelz weapon-grant <weapon\|auto> <slot> <index>` ·
 `.beelz weapon-unslot <weapon\|auto> <slot>` ·
 `.beelz transform <index\|name>` · `.beelz revert` · `.beelz phase [n]` ·
+`.beelz detonate` (fire a transform's signature AoE on demand, if it has one — a
+natural candidate for a BCH HUD button) ·
 `.beelz summons <stash\|restore\|status>` ·
 `.beelz preset <save\|load\|list\|delete> <name>` ·
 `.beelz hotkey <set\|clear\|list> …` ·
@@ -206,17 +219,18 @@ exposes `AbilityRules.GetAnimationWeapon(name)` and surfaces it as guidance — 
 weapon tag on each weapon-bound slot in the transform loadout. Opt-in admin
 config `Grant_EnforceWeaponMatch` (default off) hard-blocks a universal grant of a
 weapon-bound ability and steers to `.beelz weapon-grant`.
-**For BCH:** surface the per-ability animation weapon in the loadout/collection UI
-(add a `weapon_anim=<family>` field to `api info` — small follow-up, not yet
-wired). True per-ability animation override would require a **client-side** mod
+**For BCH:** `api info` now returns `weapon_anim=<family>` (v2) — surface it in the
+loadout/collection UI so players know which weapon to wield. True per-ability
+animation override would require a **client-side** mod
 that drives the animation pipeline — same client-authority story as 7.1, and the
 best fidelity path remains real transformation (7.1).
 
-### 7.3 🟡 Ability tooltip text / localization
-`api info`'s `desc=` is intentionally blank pending V Rising
-`LocalizationManager` wiring. BCH can either (a) ship its own ability-text table
-keyed by GUID, or (b) wait for Beelzebub to populate `desc=`. Tracked as the
-next BCH-facing API improvement.
+### 7.3 ✅ Ability tooltip text (v2)
+`api info`'s `desc=` is now populated from resolved ability metadata (shipped
+`ability_metadata.json` + ECS, with `%param%` substitution), falling back to the
+admin-curated `Notes` then a generic string. Many NPC/V-Blood abilities ship no
+localized text, so `desc=` may still be the generic fallback for those — BCH can
+layer its own GUID-keyed text table on top if it wants richer copy.
 
 ### 7.4 🟡 Real-time cooldown feed
 On-screen cooldown rings (§5) need a cooldown source. Beelzebub exposes static
@@ -230,7 +244,8 @@ per tick) is not yet in the API — design this when building the HUD.
 - **Index stability.** `list`/`info`/`grant` indices are stable only for a
   player session and shift after `forget`/`clear`/new captures. **Re-fetch
   `list` after any mutation** before issuing index-based commands.
-- **`desc=` blank** on `api info` (see §7.3).
+- **`desc=` may be generic** on `api info` — populated from real metadata when V
+  Rising ships text, else the curated/generic fallback (see §7.3).
 - **Source convention `s=R|V`:** `R` = regular mob, `V` = V-Blood. V-Blood wins
   when the same ability/unit is later captured from a boss kill.
 - **Mutations reply in human text**, not `[BEELZ:*]` — don't parse them; re-read
@@ -249,7 +264,7 @@ per tick) is not yet in the API — design this when building the HUD.
 - `docs/INTEROP_BLOODCRAFT.md` — coexistence with Bloodcraft (shared patch
   surfaces; relevant if BCH talks to both).
 - `docs/SETUP_GUIDE.md` — install / first-run.
-- `Commands/ApiCommands.cs` — **canonical** wire API (`ApiVersion = 1`).
+- `Commands/ApiCommands.cs` — **canonical** wire API (`ApiVersion = 2`).
 
 ---
 
