@@ -18,7 +18,7 @@
 > in the BCH workspace.
 >
 > **Canonical source of truth for the wire API:**
-> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 2`). If this doc
+> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 4`). If this doc
 > and that file ever disagree, the file wins — and this doc should be corrected.
 
 ---
@@ -82,6 +82,10 @@ All under the `.beelz api` group. Verified against `ApiCommands.cs`.
 | `.beelz api hotkeys` | `[BEELZ:hotkeys-config]`, `[BEELZ:hotkey]`, `[BEELZ:end]` | Config footer (`enabled= max=`) + named hotkey bindings |
 | `.beelz api verbosity` | `[BEELZ:verbosity]` | `level=Silent\|Summary\|Verbose default=<server default>` |
 | `.beelz api bestiary [page]` | `[BEELZ:bestiary]` … `[BEELZ:end]` | Collection book — one line per collected unit: `u= un= s=R\|V captured=X total=Y transform=0\|1` (v2). Cross-ref `api list` (per-ability) for which abilities. Page size 40. |
+| `.beelz api config` | `[BEELZ:config]` … `[BEELZ:end]` | **(v3)** Every setting: `section= key= value= type= editable=1`. Foundation for a BCH settings panel; all keys are settable via `.beelz admin set`. |
+| `.beelz api cooldowns` | `[BEELZ:cooldown]` … `[BEELZ:end]` | **(v3)** Per-category transform cooldown remaining: `category=regular\|vblood\|shard remaining=<sec>`. For cooldown timers on transform buttons. |
+
+> **(v3)** `api transforms` and `api catalog units` now include `shard=0\|1` (shard boss: Dracula/Morgana/Adam/Gorecrusher/Trizon/Solarus, per `Transform_ShardBossNames`) so BCH can badge/group them. The shard bosses also have their own transform mode/duration/cooldown + cooldown bucket.
 
 ---
 
@@ -106,6 +110,8 @@ All under the `.beelz api` group. Verified against `ApiCommands.cs`.
   | `forget` / `forget-transform` | `a= u=` / `u=` | Capture / unlock deleted (v2) |
   | `cleared` | — | Player wiped all captures + slots (v2) |
   | `detonate` | `u=` | Player manually fired a transform's detonation AoE via `.beelz detonate` (v2) |
+  | `config-changed` | `key= value=` | An admin changed a setting via `.beelz admin set` (v3). Re-fetch `api config`. (Currently sent to the acting admin; broadcast-to-all-subscribers is a follow-up.) |
+  | `cast` | `a= an=` | Player force-cast an ability via `.beelz cast` (v4 — expanded action bar). |
 
 ---
 
@@ -116,6 +122,8 @@ BCH sends these exactly as a player would type them. Replies are
 re-fetch the affected read command (or wait for the event).
 
 **Player:** `.beelz grant <slot 1-6> <index>` · `.beelz unslot <slot>` ·
+`.beelz transforms [vblood\|shard\|regular]` / `.beelz list [vblood\|shard\|regular] [page]`
+(v3 filter — also splits shard bosses into their own group) ·
 `.beelz weapon-grant <weapon\|auto> <slot> <index>` ·
 `.beelz weapon-unslot <weapon\|auto> <slot>` ·
 `.beelz transform <index\|name>` · `.beelz revert` · `.beelz phase [n]` ·
@@ -124,6 +132,11 @@ natural candidate for a BCH HUD button) ·
 `.beelz summons <stash\|restore\|status>` ·
 `.beelz preset <save\|load\|list\|delete> <name>` ·
 `.beelz hotkey <set\|clear\|list> …` ·
+`.beelz cast <hotkey name\|index>` (**v4 — expanded action bar:** force-cast any
+captured ability on demand, beyond the 6 slots; respects the ability's cooldown.
+**This is the BCH-button mechanism** — render each `api hotkeys` binding as a button
+that invokes `.beelz cast <name>`. Gated by `Hotkeys_Enabled`; count capped by
+`Hotkeys_MaxPerPlayer`.) ·
 `.beelz bestiary [page]` · `.beelz bestiary unit <name>` (collection book — per-unit X/Y abilities + transform status) ·
 `.beelz forget <i>` · `.beelz forget-transform <i>` · `.beelz clear` ·
 `.beelz verbosity <silent\|summary\|verbose>`.
@@ -160,6 +173,10 @@ via these admin chat commands (all audited to `LogOutput.log` as
 
 - **Filter rules:** `admin rules` · `admin deny/undeny <pattern>` ·
   `admin allow/unallow <pattern>` · `admin reload`.
+- **Runtime config (v3):** `admin set <key> <value>` — set ANY setting live (persists
+  to the `.cfg`); emits `config-changed`. Pair with `api config` (read all keys) for a
+  full BCH settings panel. Covers the shard-boss settings (`Transform_*_ShardBoss`,
+  `Transform_ShardBossNames`) and everything previously `.cfg`-only (drop-chances, pity, …).
 - **Transform control:** `admin transform mode/duration/cooldown <regular|vblood> …`
   · `admin transform show` · `admin difficulty [basic|brutal]`.
 - **Grant/revoke:** `admin give` / `revoke` (ability) ·
@@ -235,9 +252,11 @@ localized text, so `desc=` may still be the generic fallback for those — BCH c
 layer its own GUID-keyed text table on top if it wants richer copy.
 
 ### 7.4 🟡 Real-time cooldown feed
-On-screen cooldown rings (§5) need a cooldown source. Beelzebub exposes static
-cooldown values in ability metadata; a *live* remaining-cooldown feed (per slot,
-per tick) is not yet in the API — design this when building the HUD.
+**Transform cooldowns: ✅ (v3)** — `.beelz api cooldowns` gives per-category
+(regular/vblood/shard) remaining seconds for transform-button timers.
+**Still open:** a *per-ability spell-slot* live cooldown feed (remaining per slot,
+per tick) for on-screen ability rings — Beelzebub exposes static cooldown values
+(`api info` `cooldown_seconds`) but not live per-slot remaining; design when building the HUD.
 
 ---
 
@@ -266,7 +285,7 @@ per tick) is not yet in the API — design this when building the HUD.
 - `docs/INTEROP_BLOODCRAFT.md` — coexistence with Bloodcraft (shared patch
   surfaces; relevant if BCH talks to both).
 - `docs/SETUP_GUIDE.md` — install / first-run.
-- `Commands/ApiCommands.cs` — **canonical** wire API (`ApiVersion = 2`).
+- `Commands/ApiCommands.cs` — **canonical** wire API (`ApiVersion = 4`).
 
 ---
 
