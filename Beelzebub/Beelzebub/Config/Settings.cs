@@ -24,6 +24,10 @@ internal static class Settings
     public static ConfigEntry<float> DropChance_Transform_Regular { get; private set; }
     public static ConfigEntry<float> DropChance_Transform_VBlood { get; private set; }
 
+    // v0.38.0: escalating pity / bad-luck protection.
+    public static ConfigEntry<float> Capture_PityIncrementPerKill { get; private set; }
+    public static ConfigEntry<float> Capture_PityMaxBonus { get; private set; }
+
     // Notifications (Phase 3)
     public static ConfigEntry<string> DefaultVerbosity { get; private set; }
 
@@ -189,6 +193,19 @@ internal static class Settings
         DropChance_Transform_VBlood = config.Bind(
             "Capture.DropChance", nameof(DropChance_Transform_VBlood), 0.01f,
             "Per-kill chance (0.0-1.0) to unlock the transform-into-unit form from a V-Blood (Phase 5).");
+
+        Capture_PityIncrementPerKill = config.Bind(
+            "Capture.Pity", nameof(Capture_PityIncrementPerKill), 0.0025f,
+            "v0.38.0 bad-luck protection: each kill whose roll gives nothing raises that roll's effective " +
+            "chance by this amount (0.0025 = +0.25%), resetting to baseline the moment it pays out. Tracked " +
+            "independently per source (Regular/V-Blood) and per type (ability / transform), so a dry streak " +
+            "gradually guarantees a payout. 0 = disabled (pure flat chance).");
+
+        Capture_PityMaxBonus = config.Bind(
+            "Capture.Pity", nameof(Capture_PityMaxBonus), 1.0f,
+            "v0.38.0: cap on the accumulated pity bonus (1.0 = +100%, i.e. the chance can climb to a guaranteed " +
+            "payout over a long enough dry streak). Lower it (e.g. 0.5) to keep rare drops rare even on long " +
+            "streaks. 0 = uncapped.");
 
         DefaultVerbosity = config.Bind(
             "Notifications", nameof(DefaultVerbosity), "Summary",

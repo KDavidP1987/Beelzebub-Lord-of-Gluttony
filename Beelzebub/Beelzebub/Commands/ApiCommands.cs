@@ -442,4 +442,28 @@ internal static class ApiCommands
             $" cooldown={Beelzebub.Config.Settings.Transform_CooldownSeconds_VBlood.Value}");
         ctx.Reply("[BEELZ:end] cmd=transform-config count=2");
     }
+
+    [Command("bestiary", description: "Stream the caller's collection book — per-unit ability progress + transform status (BCH-readable). Optional page, size 40.")]
+    public static void Bestiary(ChatCommandContext ctx, int page = 0)
+    {
+        if (!Core.IsReady) { ctx.Reply("[BEELZ:err] cmd=bestiary code=not_ready msg=plugin_not_initialized"); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        var entries = BestiaryService.Build(steamId);
+
+        const int pageSize = 40;
+        int pages = entries.Count == 0 ? 1 : (entries.Count + pageSize - 1) / pageSize;
+        if (page < 0) page = 0;
+        if (page >= pages) page = pages - 1;
+
+        int shown = 0;
+        foreach (var e in entries.Skip(page * pageSize).Take(pageSize))
+        {
+            ctx.Reply(
+                $"[BEELZ:bestiary] u={e.UnitPrefabGuid} un={SafeToken(e.UnitName)}" +
+                $" s={(e.Source == CaptureSource.VBlood ? "V" : "R")}" +
+                $" captured={e.CapturedCount} total={e.TotalCount} transform={(e.TransformUnlocked ? 1 : 0)}");
+            shown++;
+        }
+        ctx.Reply($"[BEELZ:end] cmd=bestiary count={shown} total={entries.Count} page={page} pages={pages}");
+    }
 }

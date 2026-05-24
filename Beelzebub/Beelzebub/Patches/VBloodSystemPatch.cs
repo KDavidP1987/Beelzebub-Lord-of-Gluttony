@@ -78,6 +78,9 @@ internal static class VBloodSystemPatch
 
         var slots = Core.EntityManager.GetBuffer<AbilityGroupSlotBuffer>(vBloodPrefabEntity);
         int captured = 0, skipped = 0;
+        // v0.38.0 pity (V-Blood ability source).
+        float pityAbility = Core.AbilityRegistry.GetPityBonus(steamId, CaptureSource.VBlood, PityKind.Ability);
+        int abilityRolls = 0, abilityWins = 0;
         for (int i = 0; i < slots.Length; i++)
         {
             PrefabGUID ability = slots[i].BaseAbilityGroupOnSlot;
@@ -98,10 +101,13 @@ internal static class VBloodSystemPatch
                 : Settings.DropChance_Ability_VBlood.Value;
             chance *= vBloodPrefabEntity.ResolveTierMultiplier();
             if (chance <= 0f) continue;
+            chance += pityAbility;
+            abilityRolls++;
             if (chance < 1f && System.Random.Shared.NextDouble() > chance) continue;
 
             if (Core.AbilityRegistry.Add(steamId, vBloodGuid._Value, ability._Value, CaptureSource.VBlood))
             {
+                abilityWins++;
                 captured++;
                 string vbName = vBloodGuid.GetPrefabName();
                 if (Settings.VerboseLogging.Value)
@@ -110,6 +116,16 @@ internal static class VBloodSystemPatch
                 Core.Chat.SendEvent(playerCharacter,
                     $"[BEELZ:event] type=capture s=V u={vBloodGuid._Value} un={vbName} a={ability._Value} an={abilityName}");
             }
+        }
+
+        // v0.38.0 pity (ability, V-Blood source): reset on a new capture, else bump.
+        if (abilityRolls > 0)
+        {
+            if (abilityWins > 0)
+                Core.AbilityRegistry.ResetPity(steamId, CaptureSource.VBlood, PityKind.Ability);
+            else
+                Core.AbilityRegistry.BumpPity(steamId, CaptureSource.VBlood, PityKind.Ability,
+                    Settings.Capture_PityIncrementPerKill.Value, Settings.Capture_PityMaxBonus.Value);
         }
 
         // V-Blood transform unlock roll (typically rarer than ability captures).
@@ -126,23 +142,34 @@ internal static class VBloodSystemPatch
 
         float transformChance = Settings.DropChance_Transform_VBlood.Value * vBloodPrefabEntity.ResolveTierMultiplier();
         bool gotTransform = false;
-        if (!isGateBossVariant
+        bool transformRollEligible = !isGateBossVariant
             && transformChance > 0f
             && Core.AbilityRules.IsTransformUnitEnabled(vBloodGuid._Value)
             && Beelzebub.Services.AbilityRules.IsDifficultyAllowed(
                 Core.AbilityRules.GetTransformDifficulty(vBloodGuid._Value),
-                Beelzebub.Services.AbilityRules.GetServerDifficulty())
-            && System.Random.Shared.NextDouble() <= transformChance)
+                Beelzebub.Services.AbilityRules.GetServerDifficulty());
+        if (transformRollEligible)
         {
-            if (Core.AbilityRegistry.AddTransformUnlock(steamId, vBloodGuid._Value, CaptureSource.VBlood))
+            // v0.38.0: apply + resolve transform pity for the V-Blood source.
+            transformChance += Core.AbilityRegistry.GetPityBonus(steamId, CaptureSource.VBlood, PityKind.Transform);
+            if (System.Random.Shared.NextDouble() <= transformChance)
             {
-                gotTransform = true;
-                string unitName = vBloodGuid.GetPrefabName();
-                Core.Log.LogInfo($"[Beelz] {steamId} unlocked V-Blood transform: {unitName}.");
-                Core.Chat.Send(playerCharacter, Verbosity.Summary,
-                    $"Unlocked V-Blood transformation: {unitName}!");
-                Core.Chat.SendEvent(playerCharacter,
-                    $"[BEELZ:event] type=transform-unlock s=V u={vBloodGuid._Value} un={unitName}");
+                Core.AbilityRegistry.ResetPity(steamId, CaptureSource.VBlood, PityKind.Transform);
+                if (Core.AbilityRegistry.AddTransformUnlock(steamId, vBloodGuid._Value, CaptureSource.VBlood))
+                {
+                    gotTransform = true;
+                    string unitName = vBloodGuid.GetPrefabName();
+                    Core.Log.LogInfo($"[Beelz] {steamId} unlocked V-Blood transform: {unitName}.");
+                    Core.Chat.Send(playerCharacter, Verbosity.Summary,
+                        $"Unlocked V-Blood transformation: {unitName}!");
+                    Core.Chat.SendEvent(playerCharacter,
+                        $"[BEELZ:event] type=transform-unlock s=V u={vBloodGuid._Value} un={unitName}");
+                }
+            }
+            else
+            {
+                Core.AbilityRegistry.BumpPity(steamId, CaptureSource.VBlood, PityKind.Transform,
+                    Settings.Capture_PityIncrementPerKill.Value, Settings.Capture_PityMaxBonus.Value);
             }
         }
 

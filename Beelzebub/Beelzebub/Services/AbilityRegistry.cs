@@ -10,6 +10,13 @@ internal enum CaptureSource : byte
     VBlood = 1,
 }
 
+/// <summary>v0.38.0: the two independent pity (bad-luck-protection) tracks.</summary>
+internal enum PityKind : byte
+{
+    Ability = 0,
+    Transform = 1,
+}
+
 internal enum Verbosity : byte
 {
     Silent = 0,
@@ -614,6 +621,35 @@ internal sealed class AbilityRegistry
     {
         var dict = source == CaptureSource.VBlood ? _cooldownVBloodUntil : _cooldownRegularUntil;
         dict[steamId] = untilUtc;
+    }
+
+    // --- Escalating pity / bad-luck protection (v0.38.0, in-memory) ---
+    // Per-player accumulated drop-chance bonus, indexed [source*2 + kind]:
+    //   0 Regular+Ability · 1 Regular+Transform · 2 VBlood+Ability · 3 VBlood+Transform.
+    // Bumped on a kill whose roll of that kind failed; reset to 0 on a success — so a
+    // dry streak gradually raises the chance until it pays out, then drops to baseline.
+    // In-memory only (resets on server restart); persistence is a follow-up.
+    readonly System.Collections.Concurrent.ConcurrentDictionary<ulong, float[]> _pity = new();
+
+    static int PityIndex(CaptureSource source, PityKind kind)
+        => ((source == CaptureSource.VBlood) ? 2 : 0) + (int)kind;
+
+    public float GetPityBonus(ulong steamId, CaptureSource source, PityKind kind)
+        => _pity.TryGetValue(steamId, out var arr) ? arr[PityIndex(source, kind)] : 0f;
+
+    public void BumpPity(ulong steamId, CaptureSource source, PityKind kind, float step, float max)
+    {
+        if (step <= 0f) return;
+        var arr = _pity.GetOrAdd(steamId, _ => new float[4]);
+        int i = PityIndex(source, kind);
+        float v = arr[i] + step;
+        if (max > 0f && v > max) v = max;
+        arr[i] = v;
+    }
+
+    public void ResetPity(ulong steamId, CaptureSource source, PityKind kind)
+    {
+        if (_pity.TryGetValue(steamId, out var arr)) arr[PityIndex(source, kind)] = 0f;
     }
 
     public IEnumerable<KeyValuePair<ulong, IReadOnlyList<CapturedAbility>>> Snapshot()

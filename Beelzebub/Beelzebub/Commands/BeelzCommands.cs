@@ -165,12 +165,22 @@ internal static class BeelzCommands
 
         // Match against ability name OR unit name. Preserve original index so the
         // result IDs are still valid for .beelz grant <slot> <index>.
+        // v0.38.0: display the resolved in-game names, but still match against BOTH the
+        // friendly name AND the raw prefab name so either works as a search term.
         var matches = captured
-            .Select((c, idx) => (idx, ability: c,
-                                 abName: new PrefabGUID(c.AbilityPrefabGuid).GetPrefabName(),
-                                 unitName: new PrefabGUID(c.UnitPrefabGuid).GetPrefabName()))
+            .Select((c, idx) =>
+            {
+                string abRaw = new PrefabGUID(c.AbilityPrefabGuid).GetPrefabName();
+                string unitRaw = new PrefabGUID(c.UnitPrefabGuid).GetPrefabName();
+                var abInfo = Core.AbilityMetadata?.Resolve(c.AbilityPrefabGuid);
+                string abName = (abInfo != null && !string.IsNullOrEmpty(abInfo.Name)) ? abInfo.Name : abRaw;
+                string unitName = Core.AbilityMetadata?.ResolveUnitName(c.UnitPrefabGuid) ?? unitRaw;
+                return (idx, ability: c, abName, unitName, abRaw, unitRaw);
+            })
             .Where(t => (t.abName?.Contains(needle, System.StringComparison.OrdinalIgnoreCase) ?? false)
-                     || (t.unitName?.Contains(needle, System.StringComparison.OrdinalIgnoreCase) ?? false))
+                     || (t.unitName?.Contains(needle, System.StringComparison.OrdinalIgnoreCase) ?? false)
+                     || (t.abRaw?.Contains(needle, System.StringComparison.OrdinalIgnoreCase) ?? false)
+                     || (t.unitRaw?.Contains(needle, System.StringComparison.OrdinalIgnoreCase) ?? false))
             .Take(maxResults + 1) // +1 to detect "more results available"
             .ToList();
 
@@ -561,7 +571,10 @@ internal static class BeelzCommands
         if (ok)
         {
             Core.Persistence.RequestSave();
-            ctx.Reply($"Forgot {new Stunlock.Core.PrefabGUID(entry.AbilityPrefabGuid).GetPrefabName()} (from {new Stunlock.Core.PrefabGUID(entry.UnitPrefabGuid).GetPrefabName()}).");
+            var fInfo = Core.AbilityMetadata?.Resolve(entry.AbilityPrefabGuid);
+            string fAbility = (fInfo != null && !string.IsNullOrEmpty(fInfo.Name)) ? fInfo.Name : new Stunlock.Core.PrefabGUID(entry.AbilityPrefabGuid).GetPrefabName();
+            string fUnit = Core.AbilityMetadata?.ResolveUnitName(entry.UnitPrefabGuid) ?? new Stunlock.Core.PrefabGUID(entry.UnitPrefabGuid).GetPrefabName();
+            ctx.Reply($"Forgot {fAbility} (from {fUnit}).");
             // v0.35.0: BCH event so the client refreshes its collection view.
             Core.Chat.SendEvent(ctx.Event.SenderCharacterEntity,
                 $"[BEELZ:event] type=forget a={entry.AbilityPrefabGuid} u={entry.UnitPrefabGuid}");
@@ -588,7 +601,8 @@ internal static class BeelzCommands
         if (ok)
         {
             Core.Persistence.RequestSave();
-            ctx.Reply($"Forgot transform unlock: {new Stunlock.Core.PrefabGUID(entry.UnitPrefabGuid).GetPrefabName()}.");
+            string ftUnit = Core.AbilityMetadata?.ResolveUnitName(entry.UnitPrefabGuid) ?? new Stunlock.Core.PrefabGUID(entry.UnitPrefabGuid).GetPrefabName();
+            ctx.Reply($"Forgot transform unlock: {ftUnit}.");
             // v0.35.0: BCH event so the client refreshes its transform list.
             Core.Chat.SendEvent(ctx.Event.SenderCharacterEntity,
                 $"[BEELZ:event] type=forget-transform u={entry.UnitPrefabGuid}");
@@ -749,5 +763,83 @@ internal static class BeelzCommands
         int hotkeys = Core.AbilityRegistry.HotkeyCount(steamId);
         if (hotkeys > 0) sb.Append(", ").Append(hotkeys).Append(" hotkey(s)");
         ctx.Reply(sb.ToString());
+    }
+
+    // ---- v0.37.0: collection book (bestiary) -------------------------------
+
+    [Command("bestiary", description: "Your collection book: per-unit ability progress (X/Y) + transform status. Usage: .beelz bestiary [page]")]
+    public static void Bestiary(ChatCommandContext ctx, int page = 0)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        var entries = Beelzebub.Services.BestiaryService.Build(steamId);
+        if (entries.Count == 0)
+        {
+            ctx.Reply("Your bestiary is empty — defeat units to collect their abilities. See .beelz help.");
+            return;
+        }
+
+        const int pageSize = 10;
+        int pages = (entries.Count + pageSize - 1) / pageSize;
+        if (page < 0) page = 0;
+        if (page >= pages) page = pages - 1;
+
+        int complete = entries.Count(e => e.Complete);
+        ctx.Reply($"--- Bestiary: {entries.Count} units, {complete} fully collected — page {page + 1}/{pages} ---");
+        foreach (var e in entries.Skip(page * pageSize).Take(pageSize))
+        {
+            string src = e.Source == Beelzebub.Services.CaptureSource.VBlood ? " [V]" : "";
+            string tx = e.TransformUnlocked ? "✓" : "·";
+            string done = e.Complete ? " (complete)" : "";
+            ctx.Reply($"  {e.UnitName}{src} — abilities {e.CapturedCount}/{e.TotalCount} · transform {tx}{done}");
+        }
+        ctx.Reply($"(.beelz bestiary {page + 2} for next page · .beelz bestiary unit <name> for detail)");
+    }
+
+    [Command("bestiary unit", description: "Detail for one collected unit: which of its abilities you have. Usage: .beelz bestiary unit <name>")]
+    public static void BestiaryUnit(ChatCommandContext ctx, string name)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+
+        int unitGuid = ResolveBestiaryUnit(steamId, name);
+        if (unitGuid == 0)
+        {
+            ctx.Reply($"No collected unit matches '{name}'. Use .beelz bestiary to see your units.");
+            return;
+        }
+
+        var e = Beelzebub.Services.BestiaryService.BuildForUnit(steamId, unitGuid);
+        string src = e.Source == Beelzebub.Services.CaptureSource.VBlood ? "[V-Blood]" : "[Regular]";
+        ctx.Reply($"--- {e.UnitName} {src} — abilities {e.CapturedCount}/{e.TotalCount} · transform {(e.TransformUnlocked ? "unlocked ✓" : "locked ·")} ---");
+
+        var heldSet = new System.Collections.Generic.HashSet<int>(e.CapturedAbilityGuids);
+        if (e.AllAbilityGuids.Count == 0)
+        {
+            ctx.Reply("  (No capturable abilities found for this unit — it may have none, or its prefab isn't loaded.)");
+            return;
+        }
+        foreach (int ag in e.AllAbilityGuids)
+        {
+            var info = Core.AbilityMetadata?.Resolve(ag);
+            string title = (info != null && !string.IsNullOrEmpty(info.Name)) ? info.Name : new PrefabGUID(ag).GetPrefabName();
+            string school = (info != null && !string.IsNullOrEmpty(info.School)) ? $" [{info.School}]" : "";
+            ctx.Reply($"  {(heldSet.Contains(ag) ? "✓" : "·")} {title}{school}");
+        }
+    }
+
+    /// <summary>Match a query (exact name → V-Blood substring → any substring) against the player's collected units.</summary>
+    static int ResolveBestiaryUnit(ulong steamId, string query)
+    {
+        if (string.IsNullOrWhiteSpace(query)) return 0;
+        var entries = Beelzebub.Services.BestiaryService.Build(steamId);
+        foreach (var e in entries)
+            if (string.Equals(e.UnitName, query, System.StringComparison.OrdinalIgnoreCase)) return e.UnitPrefabGuid;
+        foreach (var e in entries)
+            if (e.Source == Beelzebub.Services.CaptureSource.VBlood
+                && e.UnitName.IndexOf(query, System.StringComparison.OrdinalIgnoreCase) >= 0) return e.UnitPrefabGuid;
+        foreach (var e in entries)
+            if (e.UnitName.IndexOf(query, System.StringComparison.OrdinalIgnoreCase) >= 0) return e.UnitPrefabGuid;
+        return 0;
     }
 }

@@ -79,6 +79,16 @@ internal static class BuffSpawnServerPatch
         { 153390636, 1249580491 },    // CHAR_Undead_Priest_VBlood (Foulrot) → ProjectileNova_ProxySpawner
         { -1653554504, 1249580491 },  // CHAR_Undead_Priest → ProjectileNova_ProxySpawner
     };
+    // EXPANSION CANDIDATES (unverified — need the prefab component dump or a [Beelz TRACE]
+    // runtime check to confirm the payload is self-contained like the Priest's ProxySpawner,
+    // i.e. positions on its owner + stamps the owner's team + fans/explodes on spawn).
+    // The Priest is the ONLY confirmed self-contained "_ProxySpawner" in the prefab name table.
+    // Other boss novas use different structures (_Area / _Throw / _RingArea / ChannelBuff) and may
+    // NOT self-contain when spawned owned-by-player — verify before adding to avoid no-op detonates:
+    //   Dracula  CrimsonNova   (AB_Dracula_Final_CrimsonNova_Area -346299479)        unit CHAR_Vampire_Dracula_VBlood -327335305
+    //   Cardinal LightNova     (AB_Cardinal_LightNova_Area 1826627256)               unit CHAR_Militia_Cardinal_VBlood (verify guid)
+    //   Professor ImplodingOrb (AB_Gloomrot_TheProfessor_ImplodingOrb_Area 1592022037) unit CHAR_Gloomrot_TheProfessor_VBlood (verify guid)
+    //   IceNova family (IceRanger / Militia_Guard_VBlood) — _RingArea payloads.
 
     /// <summary>#3: does this transformed unit have a manual-detonation AoE registered?</summary>
     public static bool HasManualDetonation(int unitGuid) => ManualDetonateTargets.ContainsKey(unitGuid);

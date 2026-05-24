@@ -75,14 +75,23 @@ internal static class BossFormRegistry
             },
         }},
         // Morgana → CorruptedSerpent form buff (Transformation_SnakePhaseBuff).
-        // Single curated set (Bloodcraft CorruptedSerpent) for now.
+        // v0.38.0: two switchable kits on the serpent form (like Dracula), via .beelz phase 1/2.
+        //   Form 1 "Serpent" — the proven Bloodcraft CorruptedSerpent set (melee + a few spectral).
+        //   Form 2 "Spectral" — her ranged spectral barrage kit. EXPERIMENTAL: several of these
+        //     are heavily scripted boss casts and may not all fire for a player; curate per testing.
         { 591725925, new BossForm {
             Label = "Morgana",
             FormBuffGuid = -1859425781,
-            FormNames = new[] { "Corrupted Serpent" },
+            FormNames = new[] { "Serpent", "Spectral" },
             FormSets = new[]
             {
+                // Form 1 Serpent: MeleeAttack, GroundPiercer, QuickTeleport, MistSpinners,
+                // CrossWindSlash, SpectralBlast, SpectralBeam, EyeOfTheCorruption.
                 new[] { 2134120100, -668068170, -1940289109, 1278045964, 846291757, 1173842428, 2099754785, 734658196 },
+                // Form 2 Spectral: SpectralBeam (primary), QuickTeleport, SpectralSwarm,
+                // CorruptionFountain, SpectralOrbBarrage, RingsOfTerror, SpectralHell,
+                // TravelingOrbBarrage (ult).
+                new[] { 2099754785, -1940289109, 1485893437, 1298623256, 1990869093, -616120746, 1185642044, 1242557903 },
             },
         }},
     };

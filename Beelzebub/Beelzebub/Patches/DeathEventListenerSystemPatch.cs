@@ -148,6 +148,10 @@ internal static class DeathEventListenerSystemPatch
 
         if (Core.EntityManager.HasBuffer<AbilityGroupSlotBuffer>(died))
         {
+            // v0.38.0 pity: current accumulated ability-bonus for this source, and
+            // tallies so we can reset (on a new capture) or bump (on a dry kill) after.
+            float pityAbility = Core.AbilityRegistry.GetPityBonus(steamId, CaptureSource.Regular, PityKind.Ability);
+            int abilityRolls = 0, abilityWins = 0;
             var slots = Core.EntityManager.GetBuffer<AbilityGroupSlotBuffer>(died);
             for (int i = 0; i < slots.Length; i++)
             {
@@ -170,10 +174,14 @@ internal static class DeathEventListenerSystemPatch
                 // C3: scale by the unit's tier multiplier.
                 chance *= died.ResolveTierMultiplier();
                 if (chance <= 0f) continue;
+                // v0.38.0: this ability is eligible to roll — apply the pity bonus.
+                chance += pityAbility;
+                abilityRolls++;
                 if (chance < 1f && System.Random.Shared.NextDouble() > chance) continue;
 
                 if (Core.AbilityRegistry.Add(steamId, unitGuid._Value, ability._Value, CaptureSource.Regular))
                 {
+                    abilityWins++;
                     agg.Captured++;
                     agg.ByUnit[unitName] = agg.ByUnit.TryGetValue(unitName, out var n) ? n + 1 : 1;
                     agg.AnySave = true;
@@ -185,6 +193,17 @@ internal static class DeathEventListenerSystemPatch
                     Core.Chat.SendEvent(participant,
                         $"[BEELZ:event] type=capture s=R u={unitGuid._Value} un={unitName} a={ability._Value} an={abilityName}");
                 }
+            }
+
+            // v0.38.0 pity: a new capture this kill resets the ability streak; an
+            // eligible-but-dry kill bumps it so the next kill is likelier to pay out.
+            if (abilityRolls > 0)
+            {
+                if (abilityWins > 0)
+                    Core.AbilityRegistry.ResetPity(steamId, CaptureSource.Regular, PityKind.Ability);
+                else
+                    Core.AbilityRegistry.BumpPity(steamId, CaptureSource.Regular, PityKind.Ability,
+                        Settings.Capture_PityIncrementPerKill.Value, Settings.Capture_PityMaxBonus.Value);
             }
         }
 
@@ -210,15 +229,26 @@ internal static class DeathEventListenerSystemPatch
         }
 
         float transformChance = Settings.DropChance_Transform_Regular.Value * died.ResolveTierMultiplier();
-        if (transformChance > 0f && System.Random.Shared.NextDouble() <= transformChance)
+        if (transformChance > 0f)
         {
-            if (Core.AbilityRegistry.AddTransformUnlock(steamId, unitGuid._Value, CaptureSource.Regular))
+            // v0.38.0: apply + resolve transform pity for this source.
+            transformChance += Core.AbilityRegistry.GetPityBonus(steamId, CaptureSource.Regular, PityKind.Transform);
+            if (System.Random.Shared.NextDouble() <= transformChance)
             {
-                agg.TransformUnlocks.Add(unitName);
-                agg.AnySave = true;
-                Core.Log.LogInfo($"[Beelz] {steamId} unlocked transform: {unitName} (Regular).");
-                Core.Chat.SendEvent(participant,
-                    $"[BEELZ:event] type=transform-unlock s=R u={unitGuid._Value} un={unitName}");
+                Core.AbilityRegistry.ResetPity(steamId, CaptureSource.Regular, PityKind.Transform);
+                if (Core.AbilityRegistry.AddTransformUnlock(steamId, unitGuid._Value, CaptureSource.Regular))
+                {
+                    agg.TransformUnlocks.Add(unitName);
+                    agg.AnySave = true;
+                    Core.Log.LogInfo($"[Beelz] {steamId} unlocked transform: {unitName} (Regular).");
+                    Core.Chat.SendEvent(participant,
+                        $"[BEELZ:event] type=transform-unlock s=R u={unitGuid._Value} un={unitName}");
+                }
+            }
+            else
+            {
+                Core.AbilityRegistry.BumpPity(steamId, CaptureSource.Regular, PityKind.Transform,
+                    Settings.Capture_PityIncrementPerKill.Value, Settings.Capture_PityMaxBonus.Value);
             }
         }
     }

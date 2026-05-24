@@ -21,6 +21,16 @@ internal static class AdminCommands
         Core.Log.LogInfo($"[Beelz AUDIT] admin={adminSteamId} action={action} target={targetSteamId} ({targetName}) {detail}");
     }
 
+    /// <summary>v0.38.0: friendly in-game unit name for admin replies (falls back to the prefab name).</summary>
+    static string UnitDisplay(int guid) => Core.AbilityMetadata?.ResolveUnitName(guid) ?? new Stunlock.Core.PrefabGUID(guid).GetPrefabName();
+
+    /// <summary>v0.38.0: friendly ability name for admin replies (falls back to the prefab name).</summary>
+    static string AbilityDisplay(int guid)
+    {
+        var i = Core.AbilityMetadata?.Resolve(guid);
+        return (i != null && !string.IsNullOrEmpty(i.Name)) ? i.Name : new Stunlock.Core.PrefabGUID(guid).GetPrefabName();
+    }
+
     [Command("rules", description: "Show the currently loaded ability filter rules.", adminOnly: true)]
     public static void Rules(ChatCommandContext ctx)
     {
@@ -134,8 +144,8 @@ internal static class AdminCommands
         bool added = Core.AbilityRegistry.Add(steamId, unitGuid, abilityGuid, source);
         Core.Persistence.RequestSave();
 
-        string abilityName = new Stunlock.Core.PrefabGUID(abilityGuid).GetPrefabName();
-        string unitName = new Stunlock.Core.PrefabGUID(unitGuid).GetPrefabName();
+        string abilityName = AbilityDisplay(abilityGuid);
+        string unitName = UnitDisplay(unitGuid);
         ctx.Reply(added
             ? $"Granted {abilityName} (from {unitName}, source={source}) to {fullName}."
             : $"{fullName} already has that capture — no change.");
@@ -154,7 +164,7 @@ internal static class AdminCommands
         bool added = Core.AbilityRegistry.AddTransformUnlock(steamId, unitGuid, source);
         Core.Persistence.RequestSave();
 
-        string unitName = new Stunlock.Core.PrefabGUID(unitGuid).GetPrefabName();
+        string unitName = UnitDisplay(unitGuid);
         ctx.Reply(added
             ? $"Granted transform unlock for {unitName} (source={source}) to {fullName}."
             : $"{fullName} already has that transform unlock — no change.");
@@ -231,7 +241,7 @@ internal static class AdminCommands
         var active = Core.AbilityRegistry.GetActiveTransform(steamId);
         if (active != null)
         {
-            sb.Append("  ACTIVE: ").AppendLine(new PrefabGUID(active.UnitPrefabGuid).GetPrefabName());
+            sb.Append("  ACTIVE: ").AppendLine(UnitDisplay(active.UnitPrefabGuid));
         }
 
         int hotkeyCount = Core.AbilityRegistry.HotkeyCount(steamId);
@@ -260,8 +270,8 @@ internal static class AdminCommands
         bool removed = Core.AbilityRegistry.Forget(steamId, unitGuid, abilityGuid);
         Core.Persistence.RequestSave();
 
-        string abilityName = new PrefabGUID(abilityGuid).GetPrefabName();
-        string unitName = new PrefabGUID(unitGuid).GetPrefabName();
+        string abilityName = AbilityDisplay(abilityGuid);
+        string unitName = UnitDisplay(unitGuid);
         if (removed)
         {
             ctx.Reply($"Revoked {abilityName} (from {unitName}) from {fullName}. Reason: {reason}.");
@@ -292,7 +302,7 @@ internal static class AdminCommands
         bool removed = Core.AbilityRegistry.ForgetTransform(steamId, unitGuid);
         Core.Persistence.RequestSave();
 
-        string unitName = new PrefabGUID(unitGuid).GetPrefabName();
+        string unitName = UnitDisplay(unitGuid);
         if (removed)
         {
             ctx.Reply($"Revoked transform unlock for {unitName} from {fullName}. Reason: {reason}.");
@@ -321,7 +331,7 @@ internal static class AdminCommands
         var (ok, message) = Core.Transforms.TryActivate(steamId, unitGuid);
         Core.Persistence.RequestSave();
 
-        string unitName = new PrefabGUID(unitGuid).GetPrefabName();
+        string unitName = UnitDisplay(unitGuid);
         if (ok)
         {
             ctx.Reply($"Forced {fullName} into {unitName}. ({message})");
@@ -346,7 +356,7 @@ internal static class AdminCommands
         var (reverted, _) = Core.Transforms.Revert(steamId, "admin clear");
         Core.Persistence.RequestSave();
 
-        string unitName = new PrefabGUID(active.UnitPrefabGuid).GetPrefabName();
+        string unitName = UnitDisplay(active.UnitPrefabGuid);
         if (reverted)
         {
             ctx.Reply($"Cleared {fullName}'s transformation ({unitName}).");
