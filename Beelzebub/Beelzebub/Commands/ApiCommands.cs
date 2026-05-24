@@ -447,7 +447,13 @@ internal static class ApiCommands
             $"[BEELZ:tx-config] src=V mode={Beelzebub.Config.Settings.Transform_Mode_VBlood.Value}" +
             $" duration={Beelzebub.Config.Settings.Transform_DurationSeconds_VBlood.Value}" +
             $" cooldown={Beelzebub.Config.Settings.Transform_CooldownSeconds_VBlood.Value}");
-        ctx.Reply("[BEELZ:end] cmd=transform-config count=2");
+        // v0.43.0: shard-boss category (src=S) for symmetry with `api cooldowns`'
+        // category=shard bucket. Additive — older parsers ignore the extra line.
+        ctx.Reply(
+            $"[BEELZ:tx-config] src=S mode={Beelzebub.Config.Settings.Transform_Mode_ShardBoss.Value}" +
+            $" duration={Beelzebub.Config.Settings.Transform_DurationSeconds_ShardBoss.Value}" +
+            $" cooldown={Beelzebub.Config.Settings.Transform_CooldownSeconds_ShardBoss.Value}");
+        ctx.Reply("[BEELZ:end] cmd=transform-config count=3");
     }
 
     [Command("bestiary", description: "Stream the caller's collection book — per-unit ability progress + transform status (BCH-readable). Optional page, size 40.")]
