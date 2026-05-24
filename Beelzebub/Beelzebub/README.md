@@ -6,7 +6,7 @@ A **server-side** V Rising mod that turns the whole bestiary into a collection-a
 
 **Source · issues · roadmap:** [github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony) · **License:** MIT
 
-> **Status:** active early access (v0.41.1). Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
+> **Status:** active early access (v0.42.0). Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
 
 ---
 
@@ -35,7 +35,7 @@ A **server-side** V Rising mod that turns the whole bestiary into a collection-a
 - **Become any unit you've unlocked.** Your bar fills with its abilities.
 - **Real boss forms** — Dracula and Morgana transform into their actual in-game forms (model, rig, and the abilities that need them), with **switchable kits** via `.beelz phase`. Animal-type units (wolves, bears, spiders, toads, …) likewise use their real shapeshift form.
 - **Shard bosses are their own tier** — Dracula, Adam the Firstborn, Solarus the Immaculate, The Winged Horror, Megara the Serpent Queen, and Gorecrusher the Behemoth can have their own transform mode/duration/cooldown, separate from ordinary V-Bloods.
-- **Summons fight for you** — abilities that raise minions spawn them as your allies, with caps, leashing, and clean despawn.
+- **Summons fight for you** — abilities that raise minions spawn them as your allies, with caps, leashing, and clean despawn. Hop on a horse and your summons either stash-and-restore or keep following into combat, your choice (`Transform_MountedSummonMode`).
 - **Manual detonation** — fire a boss's signature AoE on demand (`.beelz detonate`).
 
 ### Admin & server control
@@ -65,7 +65,7 @@ Install with [r2modman](https://thunderstore.io/package/ebkr/r2modman/) / Thunde
 
 ## Configuration
 
-`BepInEx\config\kdpen.Beelzebub.cfg` holds server defaults (drop chances, pity, transform modes/durations/cooldowns per category incl. shard bosses, summon caps, hotkey limits, difficulty). Most can also be changed live with `.beelz admin set`. `ability_rules.json` holds the curation matrix (auto-created); `state.json` holds per-player data.
+`BepInEx\config\kdpen.Beelzebub.cfg` holds server defaults (drop chances, pity, transform modes/durations/cooldowns per category incl. shard bosses, summon caps, mounted-summon behavior, hotkey limits, difficulty). Most can also be changed live with `.beelz admin set`. `ability_rules.json` holds the curation matrix (auto-created); `state.json` holds per-player data.
 
 ## Honest caveats
 

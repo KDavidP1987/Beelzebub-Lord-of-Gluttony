@@ -4,6 +4,23 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.42.0] - 2026-05-24
+
+### Summons handle horse-riding your way
+
+When you're transformed with summons fighting for you and you **hop on a horse**,
+admins now choose what happens via the new `Transform_MountedSummonMode` setting:
+
+- **Stash** (default) — your summons are tucked away the moment you mount and
+  brought right back when you dismount, so they don't scramble after a galloping
+  horse.
+- **Follow** — your summons stay in the world, leash to you on the mount, and keep
+  engaging in combat as you ride.
+
+Either way, **dismounting now restores your transformation's ability bar** instead
+of leaving you on the horse's default abilities — the same fix we shipped for
+reverting, bat/waygate travel, and combat shapeshifts.
+
 ## [0.41.1] - 2026-05-24
 
 ### Combat shapeshifts no longer drop your transform kit

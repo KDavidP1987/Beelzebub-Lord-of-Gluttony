@@ -86,6 +86,18 @@ internal static class UpdateBuffsBufferDestroyPatch
                         Core.Log.LogError($"[Beelz SUMMON] HandleArrival failed: {ex}");
                     }
                 }
+                else if (Patches.BuffSpawnServerPatch.IsMountBuff(e, prefab._Value))
+                {
+                    // v0.42.0: the rider's mount buff was destroyed = the player DISMOUNTED.
+                    // The mount overrode the spell bar, so re-apply a transformed player's bar;
+                    // and in Stash mode, restore the summons we stashed on mount. Runs regardless
+                    // of summonsAllies (the bar re-apply must), the summon part self-gates.
+                    try { HandleDismount(target); }
+                    catch (Exception ex)
+                    {
+                        Core.Log.LogError($"[Beelz SUMMON] HandleDismount failed: {ex}");
+                    }
+                }
                 else if (prefab._Value == PvECombatBuff._Value)
                 {
                     // v0.23.15: combat ended → flip summons back to leash mode
@@ -142,6 +154,43 @@ internal static class UpdateBuffsBufferDestroyPatch
             && Beelzebub.Config.Settings.VerboseLogging.Value)
         {
             Core.Log.LogInfo($"[Beelz] re-applied transform bar after native shapeshift exit for {steamId}.");
+        }
+    }
+
+    // v0.42.0: a transformed player dismounted a horse. The mount buff had overridden the
+    // spell bar (gallop/leap/thrust), so re-apply the transform's bar — same fix as form-exit
+    // / waygate arrival, sharing the same per-player debounce. Then, in Stash mode, restore the
+    // summons stashed on mount. A non-transformed player is ignored (V Rising restores their bar).
+    static void HandleDismount(Entity playerCharacter)
+    {
+        ulong steamId = playerCharacter.GetSteamId();
+        if (steamId == 0) return;
+        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
+        if (active == null) return; // not transformed — nothing to restore
+
+        var now = DateTime.UtcNow;
+        if (!(_lastFormExitReapply.TryGetValue(steamId, out var last) && (now - last).TotalSeconds < 1.5))
+        {
+            _lastFormExitReapply[steamId] = now;
+            if (Core.Transforms.ReapplyActiveTransform(steamId, active, playerCharacter)
+                && Beelzebub.Config.Settings.VerboseLogging.Value)
+            {
+                Core.Log.LogInfo($"[Beelz] re-applied transform bar after horse dismount for {steamId}.");
+            }
+        }
+
+        // Stash mode: bring back the summons we stashed when the player mounted.
+        if (Beelzebub.Config.Settings.Transform_MountedSummonMode.Value
+                == Beelzebub.Config.Settings.MountedSummonMode.Stash
+            && Beelzebub.Config.Settings.Transform_SummonsAreAllies.Value
+            && active.StashedSummons != null && active.StashedSummons.Count > 0)
+        {
+            int restored = SummonAllyService.RestoreAll(active, playerCharacter);
+            if (restored > 0)
+            {
+                active.SummonsDisabled = false;
+                Core.Log.LogInfo($"[Beelz SUMMON] auto-restore on dismount: restored {restored} for player {steamId}.");
+            }
         }
     }
 

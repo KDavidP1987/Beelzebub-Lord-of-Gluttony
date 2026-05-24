@@ -48,6 +48,37 @@ internal static class BuffSpawnServerPatch
     // `.beelz summons restore` is the fallback meanwhile.
     static readonly PrefabGUID BatLandingTravelBuff = new(-371745443);
 
+    // v0.42.0: the "rider" buff applied to a PLAYER while mounted on a horse
+    // (AB_Interact_Mount_Owner_Buff_*). It carries BuffCategoryFlag.Mount and a
+    // MountBuff component, LifeTime 999999 (lives until dismount), and overrides the
+    // player's spell bar with the mounted abilities. We watch its SPAWN (mount) here
+    // and its DESTROY (dismount) in UpdateBuffsBufferDestroyPatch — the same enter/exit
+    // pattern as bat form. The GUID set covers the known horse variants; the
+    // BuffCategoryFlag.Mount fallback in IsMountBuff catches any other skins.
+    static readonly System.Collections.Generic.HashSet<int> MountOwnerBuffs = new()
+    {
+        -978792376,   // AB_Interact_Mount_Owner_Buff_Horse_Vampire
+        -2000859158,  // ..._Horse_Vampire_Blackfang
+        -1936451181,  // ..._Horse_Vampire_Gloomrot
+        -1627838818,  // ..._Horse_Vampire_PMKSkeleton
+        854656674,    // AB_Interact_Mount_Owner_Buff_Horse
+        2112789321,   // AB_Interact_Mount_Owner_Buff (generic)
+    };
+
+    /// <summary>
+    /// v0.42.0: is this buff entity the rider-side "mounted on a horse" buff? Matches a
+    /// known mount-owner-buff GUID, or any buff carrying <c>BuffCategoryFlag.Mount</c>
+    /// (catches horse skins not in the GUID list). Shared with the dismount detector.
+    /// </summary>
+    internal static bool IsMountBuff(Entity buffEntity, int prefabGuid)
+    {
+        if (MountOwnerBuffs.Contains(prefabGuid)) return true;
+        if (buffEntity.TryGetComponent<BuffCategory>(out var cat)
+            && (cat.Groups & BuffCategoryFlag.Mount) != BuffCategoryFlag.None)
+            return true;
+        return false;
+    }
+
     // v0.24.8: "teleport-and-detonate" map. When one of these arrival buffs is
     // applied to a transformed player, V Rising's NATIVE chain refuses to spawn
     // the detonation because the SpawnPrefab gameplay event is gated by a
@@ -238,6 +269,17 @@ internal static class BuffSpawnServerPatch
                         Core.Log.LogError($"[Beelz SUMMON] bat-land restore failed: {ex}");
                     }
                 }
+                else if (IsMountBuff(e, prefab._Value))
+                {
+                    // v0.42.0: player mounted a horse. In Stash mode, stash their summons
+                    // (dismount restore lives in UpdateBuffsBufferDestroyPatch). Follow mode
+                    // is a no-op — the summons keep following via the existing leash plumbing.
+                    try { HandleMount(target); }
+                    catch (Exception ex)
+                    {
+                        Core.Log.LogError($"[Beelz SUMMON] HandleMount failed: {ex}");
+                    }
+                }
             }
         }
         finally
@@ -395,6 +437,41 @@ internal static class BuffSpawnServerPatch
         {
             active.SummonsDisabled = true;
             Core.Log.LogInfo($"[Beelz SUMMON] auto-stash on waypoint travel (safety net): stashed {stashed} for player {steamId}.");
+        }
+    }
+
+    /// <summary>
+    /// v0.42.0: a transformed player mounted a horse. In Stash mode, stash their active
+    /// summons (Bloodcraft-style: clear Follower, add Disabled) so they don't try to chase
+    /// the mount; the dismount handler restores them. Follow mode does nothing here — the
+    /// summons stay in-world and the existing leash/combat plumbing keeps them with the
+    /// (now mounted) player.
+    /// </summary>
+    static void HandleMount(Entity playerCharacter)
+    {
+        ulong steamId = playerCharacter.GetSteamId();
+        if (steamId == 0) return;
+
+        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
+        if (active == null) return; // only transformed players have Beelzebub summons
+
+        if (Beelzebub.Config.Settings.Transform_MountedSummonMode.Value
+                != Beelzebub.Config.Settings.MountedSummonMode.Stash)
+        {
+            // Follow mode — leave the summons alone (leash plumbing carries them along).
+            if (Beelzebub.Config.Settings.VerboseLogging.Value
+                && active.SummonedMinions is { Count: > 0 })
+                Core.Log.LogInfo($"[Beelz SUMMON] horse mount (Follow mode): {active.SummonedMinions.Count} summon(s) keep leashing to player {steamId}.");
+            return;
+        }
+
+        if (active.SummonedMinions == null || active.SummonedMinions.Count == 0) return;
+
+        int stashed = SummonAllyService.StashAll(active, playerCharacter);
+        if (stashed > 0)
+        {
+            active.SummonsDisabled = true;
+            Core.Log.LogInfo($"[Beelz SUMMON] auto-stash on horse mount: stashed {stashed} for player {steamId}. Will restore on dismount.");
         }
     }
 

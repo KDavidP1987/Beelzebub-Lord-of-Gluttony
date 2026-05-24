@@ -142,6 +142,14 @@ internal static class Settings
     public enum PhaseControlMode { Manual, Auto }
     public static ConfigEntry<PhaseControlMode> Transform_PhaseMode { get; private set; }
 
+    // v0.42.0: what happens to a transformed player's ally-summons when they MOUNT a horse.
+    //   Stash  — auto-stash on mount, restore on dismount (like the bat-form/waygate stash).
+    //            Safer: summons don't try to chase a galloping horse.
+    //   Follow — summons persist, leash to the (mounted) player, and keep fighting (no special
+    //            handling on mount; the existing leash + combat plumbing carries them along).
+    public enum MountedSummonMode { Stash, Follow }
+    public static ConfigEntry<MountedSummonMode> Transform_MountedSummonMode { get; private set; }
+
     // v0.29.0 (#4): GUID of a buff used as the on-screen summon-count indicator.
     // The buff is applied to the player and its Stacks reflect the live summon
     // count; 0 = feature off. The icon is the chosen buff's own art — pick any
@@ -379,6 +387,15 @@ internal static class Settings
             "thresholds by phase count — e.g. 3 phases advance at 66% and 33% HP), then RESET " +
             "to phase 1 when combat ends, just like a boss resetting on leash. Only affects " +
             "units with curated multi-phase ability sets.");
+
+        Transform_MountedSummonMode = config.Bind(
+            "Transformation", nameof(Transform_MountedSummonMode), MountedSummonMode.Stash,
+            "v0.42.0: what happens to a transformed player's ally-summons when they mount a horse. " +
+            "Stash (default) = auto-stash the summons on mount and restore them on dismount (like the " +
+            "bat-form/waygate stash) — they won't try to chase a galloping horse. " +
+            "Follow = summons stay in-world, leash to the mounted player and keep engaging in combat " +
+            "(the existing leash + combat plumbing carries them along; far ones teleport-follow). " +
+            "Only affects players who have summons active from a transform; requires Transform_SummonsAreAllies.");
 
         Transform_SummonCounterBuffGuid = config.Bind(
             "Transformation", nameof(Transform_SummonCounterBuffGuid), 0,
