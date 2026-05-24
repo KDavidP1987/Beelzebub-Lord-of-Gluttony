@@ -20,6 +20,11 @@
 > **Canonical source of truth for the wire API:**
 > `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 4`). If this doc
 > and that file ever disagree, the file wins — and this doc should be corrected.
+>
+> **Last full audit:** Beelzebub **v0.43.0** (2026-05-24) — every command, event,
+> config key, and `[BEELZ:*]` line below was re-verified against the source
+> (`ApiCommands.cs`, `BeelzCommands.cs`, `TransformCommands.cs`, `HotkeyCommands.cs`,
+> `AdminCommands.cs`, `Config/Settings.cs`).
 
 ---
 
@@ -75,7 +80,7 @@ All under the `.beelz api` group. Verified against `ApiCommands.cs`.
 | `.beelz api info <index>` | `[BEELZ:info]` | One ability's full tooltip data: `desc=` (real ability description, %params% substituted), `weapons=`, `weapon_anim=<family\|None>` (animation weapon, v2), `school=` (v2), `cooldown_seconds=` (v2), `forms=`, `transform_only=`, `enabled=`, `difficulty=`, `damage_scale=`, `cooldown_scale=` |
 | `.beelz api progress` | `[BEELZ:progress]` | Collection %: `abilities_captured= abilities_total= abilities_pct= transforms_unlocked= transforms_total= transforms_pct=` + V-Blood breakdowns |
 | `.beelz api rules` | `[BEELZ:rules]` | Loaded filter rules: `version= deny_patterns= allow_patterns= deny_guids= allow_guids=` |
-| `.beelz api transform-config` | `[BEELZ:tx-config]` … `[BEELZ:end]` | One line per source `R`/`V`: `src= mode=Toggle\|Timed\|Disabled duration= cooldown=` |
+| `.beelz api transform-config` | `[BEELZ:tx-config]` … `[BEELZ:end]` | One line per category `R`/`V`/`S` (shard boss): `src= mode=Toggle\|Timed\|Disabled duration= cooldown=` (count=3, **`src=S` added v0.43.0**). Live cooldown remaining (incl. shard) is in `api cooldowns`. |
 | `.beelz api catalog` | `[BEELZ:catalog-summary]` | `abilities= units= server_mode=Basic\|Brutal` |
 | `.beelz api catalog units [page]` | `[BEELZ:catalog-unit]` … `[BEELZ:end]` | Full curated transform-target list (collection book), 40/page, with matrix attrs |
 | `.beelz api catalog abilities [page]` | `[BEELZ:catalog-ability]` … `[BEELZ:end]` | Full curated ability list, 40/page, with matrix attrs |
@@ -85,7 +90,7 @@ All under the `.beelz api` group. Verified against `ApiCommands.cs`.
 | `.beelz api config` | `[BEELZ:config]` … `[BEELZ:end]` | **(v3)** Every setting: `section= key= value= type= editable=1`. Foundation for a BCH settings panel; all keys are settable via `.beelz admin set`. |
 | `.beelz api cooldowns` | `[BEELZ:cooldown]` … `[BEELZ:end]` | **(v3)** Per-category transform cooldown remaining: `category=regular\|vblood\|shard remaining=<sec>`. For cooldown timers on transform buttons. |
 
-> **(v3)** `api transforms` and `api catalog units` now include `shard=0\|1` (shard boss: Dracula/Morgana/Adam/Gorecrusher/Trizon/Solarus, per `Transform_ShardBossNames`) so BCH can badge/group them. The shard bosses also have their own transform mode/duration/cooldown + cooldown bucket.
+> **(v3)** `api transforms` and `api catalog units` include `shard=0\|1` so BCH can badge/group the shard bosses. The shard bosses — **Dracula, Adam the Firstborn, Solarus the Immaculate, The Winged Horror (Talzur), Megara the Serpent Queen, Gorecrusher the Behemoth** (matched by display/prefab name against `Transform_ShardBossNames`; default also lists "Morgana" as an alias for Megara, whose prefab is `CHAR_…Blackfang_Morgana`) — have their own transform mode/duration/cooldown and a **separate cooldown bucket** (`category=shard` in `api cooldowns`). Don't hard-code the shard list in BCH; read it live from `api config` (`Transform_ShardBossNames`) so admin edits flow through.
 
 ---
 
@@ -127,19 +132,32 @@ re-fetch the affected read command (or wait for the event).
 `.beelz weapon-grant <weapon\|auto> <slot> <index>` ·
 `.beelz weapon-unslot <weapon\|auto> <slot>` ·
 `.beelz transform <index\|name>` · `.beelz revert` · `.beelz phase [n]` ·
+`.beelz preview <index\|name>` (human-text — abilities you'd get per phase if you
+transformed into a unit; backs a "preview before committing" affordance in the
+transform browser) ·
+`.beelz refresh` (re-apply the correct spell bar on demand — fixes a blank/wrong bar
+after reverting, leaving a travel/wolf/bat form, dismounting a horse, or a weapon
+quirk; a good "fix my bar" button. v0.41+) ·
 `.beelz detonate` (fire a transform's signature AoE on demand, if it has one — a
 natural candidate for a BCH HUD button) ·
-`.beelz summons <stash\|restore\|status>` ·
+`.beelz summons <stash\|restore\|status>` (status replies human-text; live/stashed counts) ·
 `.beelz preset <save\|load\|list\|delete> <name>` ·
-`.beelz hotkey <set\|clear\|list> …` ·
+`.beelz hotkey set <name> <index>` · `.beelz hotkey clear <name>` · `.beelz hotkey list`
+(named extra-ability bindings; `set` rejects with a limit message at `Hotkeys_MaxPerPlayer`) ·
 `.beelz cast <hotkey name\|index>` (**v4 — expanded action bar:** force-cast any
 captured ability on demand, beyond the 6 slots; respects the ability's cooldown.
 **This is the BCH-button mechanism** — render each `api hotkeys` binding as a button
 that invokes `.beelz cast <name>`. Gated by `Hotkeys_Enabled`; count capped by
-`Hotkeys_MaxPerPlayer`.) ·
+`Hotkeys_MaxPerPlayer`. Emits `[BEELZ:event] type=cast`.) ·
 `.beelz bestiary [page]` · `.beelz bestiary unit <name>` (collection book — per-unit X/Y abilities + transform status) ·
 `.beelz forget <i>` · `.beelz forget-transform <i>` · `.beelz clear` ·
 `.beelz verbosity <silent\|summary\|verbose>`.
+
+> **Note — human-text player reads.** A few player commands reply in human text, not
+> `[BEELZ:*]`: `.beelz list` / `.beelz search <term>` / `.beelz info <index\|name>` /
+> `.beelz active` / `.beelz current` / `.beelz catalog [page]` / `.beelz preview`. For
+> machine reads BCH should use the `api` equivalents (`api list`, `api info <index>`,
+> `api active`, `api catalog …`) — these human-text ones are for players typing in chat.
 
 **Admin** (BCH admin panel; full list in §6): grant/revoke (ability +
 transform), force/clear-transform, set/clear slot (universal + weapon),
@@ -158,6 +176,7 @@ captures, revert-all, snapshot, inspect/progress, wipe-all.
 | **Transform browser + hunt catalog** — unlocked vs to-hunt, tier sort, preview | `api transforms`, `api catalog units` + `transform`/`revert` | ✅ data ready · 🟡 UI |
 | **Phase switcher** — for multi-form bosses (Dracula warrior↔bloodmage) | `api active` (phase/phases) + `phase <n>` | ✅ · 🟡 UI |
 | **Summon panel** — live/stashed counts, stash for waygates | `summons status`/`stash`/`restore` | ✅ · 🟡 UI |
+| **Mounted-summon behavior** (v0.42) — on a horse, summons auto-stash or keep following per `Transform_MountedSummonMode` (`Stash`\|`Follow`). Server-driven & automatic; surface the setting in the admin/settings panel via `api config` + `admin set`. No player command needed. | `api config` (`Transform_MountedSummonMode`) | ✅ |
 | **Presets & named hotkeys** | `preset …`, `api hotkeys` + `hotkey …` | ✅ · 🟡 UI |
 | **Progress / completion meter** | `api progress` | ✅ · 🟡 UI |
 
@@ -189,8 +208,36 @@ via these admin chat commands (all audited to `LogOutput.log` as
   `admin scan-abilities` · `admin desummon[-all]` ·
   `admin wipe-all CONFIRM-WIPE` (destructive).
 
+**Exact admin signatures** (all `adminOnly`; `<player>` = in-game character name,
+matched fuzzily; `<unitGuid>`/`<abilityGuid>` = integer PrefabGUIDs from `api list` /
+`api transforms` / `api catalog`):
+
+| Command | Signature |
+|---|---|
+| Filter rules | `admin rules` · `admin deny <pattern>` · `admin undeny <pattern>` · `admin allow <pattern>` · `admin unallow <pattern>` · `admin reload` |
+| Runtime config | `admin set <key> <value>` (any `api config` key; live + persists; emits `config-changed`) |
+| Transform settings | `admin transform mode <regular\|vblood> <toggle\|timed\|disabled>` · `admin transform duration <regular\|vblood> <seconds>` · `admin transform cooldown <regular\|vblood> <seconds>` · `admin transform show` |
+| Difficulty | `admin difficulty [basic\|brutal]` (no arg = show) |
+| Grant / revoke | `admin give <player> <unitGuid> <abilityGuid>` · `admin revoke <player> <unitGuid> <abilityGuid> [reason]` · `admin give-transform <player> <unitGuid>` · `admin revoke-transform <player> <unitGuid> [reason]` |
+| Force transform | `admin force-transform <player> <unitGuid>` (bypasses unlock+cooldown) · `admin clear-transform <player>` |
+| Remote slots | `admin set-slot <player> <slot 1-6> <abilityGuid>` · `admin clear-slot <player> <slot>` · `admin set-weapon-slot <player> <weapon> <slot> <abilityGuid>` · `admin clear-weapon-slot <player> <weapon> <slot>` (admin binds bypass the TransformOnly/Enabled guards — reply notes a `[WARNING]`) |
+| Inspect | `admin inspect <player>` · `admin progress <player>` · `admin snapshot` |
+| Bulk / ops | `admin revert-all` · `admin freeze-captures <on\|off\|status>` · `admin scan-abilities` · `admin desummon <player>` · `admin desummon-all` · `admin wipe-all CONFIRM-WIPE` (destructive — literal token required) |
+
+> **Shard-boss transform settings:** there is **no** `admin transform … shard` variant —
+> `admin transform mode/duration/cooldown` accept only `regular`/`vblood`. Change the
+> shard-boss equivalents through `admin set Transform_Mode_ShardBoss <…>` /
+> `Transform_DurationSeconds_ShardBoss` / `Transform_CooldownSeconds_ShardBoss` /
+> `Transform_ShardBossNames`. (All settable because `admin set` covers every `api config` key.)
+>
+> **Reply format:** admin commands reply in **human text** (often multi-line) and
+> audit to `LogOutput.log` as `[Beelz AUDIT] admin=… action=… target=…`. Treat them
+> fire-and-forget; re-read the relevant `api` endpoint or wait for an event.
+
 A BCH **admin panel** would wrap these as forms/toggles, reading current state
-from `api rules` / `api transform-config` / `api catalog units|abilities`.
+from `api config` / `api rules` / `api transform-config` / `api cooldowns` /
+`api catalog units|abilities`. (`admin snapshot` is a chat-only human-text overview —
+there is no `api snapshot`; build the panel's summary from the `api` reads instead.)
 
 ---
 
@@ -273,6 +320,22 @@ per tick) for on-screen ability rings — Beelzebub exposes static cooldown valu
   or wait for the event.
 - **`not_ready`:** any API call before init returns
   `[BEELZ:err] … code=not_ready` — gate on `api version`'s `ready=1`.
+- **`api transform-config` now includes shard (v0.43.0).** It emits `R`+`V`+`S`
+  (`count=3`) — `src=S` is the shard-boss category. Live shard cooldown remaining is in
+  `api cooldowns` (`category=shard`). (You can also read the raw keys via `api config`:
+  `Transform_*_ShardBoss`.)
+- **`config-changed` is per-admin today.** It's sent only to the admin who ran
+  `admin set`, not broadcast to all subscribers — so a BCH panel on another client
+  won't auto-refresh after someone else's change. Re-fetch `api config` on panel open
+  / on a timer until the broadcast-to-all follow-up lands.
+- **Mounted-summon behavior (v0.42)** is fully server-side and automatic — there's no
+  command or event for it; it's a single config key (`Transform_MountedSummonMode`,
+  `Stash`\|`Follow`) read via `api config` and changed via `admin set`. Dismounting also
+  re-applies the transform bar, so no client action is needed around mounting.
+- **Config is reflection-dumped.** `api config` enumerates every `ConfigEntry` on the
+  settings class, so new keys appear automatically (no doc/contract bump). BCH should
+  render the settings panel generically from `section/key/value/type` rather than
+  hard-coding keys — new settings then "just appear."
 
 ---
 
