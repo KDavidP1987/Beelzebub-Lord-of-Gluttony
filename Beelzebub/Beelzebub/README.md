@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/main/Beelzebub/splash.png" alt="Beelzebub, Lord of Gluttony" width="640">
+</p>
+
 # Beelzebub, Lord of Gluttony
 
 > **Devour the bestiary.** Every kill is a chance to steal a unit's abilities — and the rarest of all lets you *become* the unit and fight with its full kit.
