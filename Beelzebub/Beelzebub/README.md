@@ -1,116 +1,81 @@
 # Beelzebub, Lord of Gluttony
 
-> **Devour the bestiary.** Every kill is a chance to steal a unit's abilities — or unlock the form of the unit itself.
+> **Devour the bestiary.** Every kill is a chance to steal a unit's abilities — and the rarest of all lets you *become* the unit and fight with its full kit.
 
-A server-side V Rising mod. Defeat any unit (regular mob or V-Blood boss) and roll a chance to capture its abilities. Assign captures to your spell slots; rare unlocks let you *become* the unit and wield its full ability set.
+A **server-side** V Rising mod that turns the whole bestiary into a collection-and-mastery loop. Defeat anything — a lowly bandit or a Soul Shard boss — and roll a chance to capture its abilities or unlock the power to transform into it. Slot those abilities, bind extras to your own hotkeys, and hunt the realm to complete your collection.
 
-**Source / issues / roadmap:** [github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony)
-**License:** [MIT](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/blob/main/LICENSE)
+**Source · issues · roadmap:** [github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony) · **License:** MIT
 
-> **Status:** early access (v0.4.0). Functional end-to-end; slot changes apply instantly. Drop into a private server and iterate — share weird kills back to the issue tracker.
+> **Status:** active early access (v0.40.0). Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
 
-## What it does
+---
 
-- **Every kill rolls a chance** to capture the unit's abilities (default 5%) and a smaller chance to unlock the ability to transform into that unit (default 1%).
-- **Boss kills (V-Bloods) have their own roll** through the V-Blood event path. Captures are tagged by source so you can see at a glance what came from a boss.
-- **Default filter** strips abilities that won't work in spell slots (melee animations, idle filler, lifecycle events, Brutal-difficulty duplicates) so you're not flooded with useless captures.
-- **Assign captures to your spell slots** via chat command. Applies instantly while unarmed.
-- **Transform into any unit you've unlocked.** All six of your spell slots fill with the unit's filtered ability list. Configurable: toggle until manual revert, or time-limited with cooldown.
-- **Per-player chat verbosity** — silent if you prefer minimum spam, summary for one line per kill, verbose for per-ability detail.
-- **Admin-configurable rules** in a hot-reloadable JSON file plus live `.beelz admin` chat commands.
-- **BCH-ready API** — a structured chat surface for the [BloodCraftHub](https://thunderstore.io) client UI to consume.
+## The loop
+
+1. **Kill things.** Each kill rolls a small chance to capture one of the unit's abilities (default 5%) and a rarer chance to unlock transforming into it (default 1%).
+2. **Bad luck doesn't last** — a built-in pity system nudges your odds up on every dry kill and resets when you finally get a drop.
+3. **Wield what you collect.** Assign abilities to your spell slots, or bind extras to named hotkeys for an expanded action bar.
+4. **Become the unit.** Spend the rare transform unlocks to take on a unit's form and full ability set — including real boss forms.
+5. **Complete the bestiary.** Track your progress per-unit and hunt down what you're missing.
+
+## Features
+
+### Capture & collect
+- **Every kill rolls** for abilities + a transform unlock, with separate odds for regular mobs, V-Bloods, and the shard bosses.
+- **Escalating bad-luck protection (pity)** — the longer your dry streak, the better your odds, until it pays out.
+- **Smart default filter** strips junk (idle/melee-filler/lifecycle abilities) so your collection stays useful.
+- **Bestiary collection book** (`.beelz bestiary`) — see, per unit, how many of its abilities you've captured (X/Y), whether you've unlocked its transform, and what's left to hunt.
+
+### Use your abilities
+- **Assign captures to your six spell slots** — universal, or bound to a specific weapon family. Applies instantly.
+- **Expanded action bar** — you're not capped at six. Bind any captured ability to a named hotkey and fire it on demand with `.beelz cast <name>` (cooldown-respecting). A companion app can surface these as on-screen buttons for 10, 15, 20+ abilities.
+- **Wield-the-right-weapon hints** — weapon-based abilities tell you which weapon makes their animation read correctly.
+
+### Transform into units
+- **Become any unit you've unlocked.** Your bar fills with its abilities.
+- **Real boss forms** — Dracula and Morgana transform into their actual in-game forms (model, rig, and the abilities that need them), with **switchable kits** via `.beelz phase`. Animal-type units (wolves, bears, spiders, toads, …) likewise use their real shapeshift form.
+- **Shard bosses are their own tier** — Dracula, Adam the Firstborn, Solarus the Immaculate, The Winged Horror, Megara the Serpent Queen, and Gorecrusher the Behemoth can have their own transform mode/duration/cooldown, separate from ordinary V-Bloods.
+- **Summons fight for you** — abilities that raise minions spawn them as your allies, with caps, leashing, and clean despawn.
+- **Manual detonation** — fire a boss's signature AoE on demand (`.beelz detonate`).
+
+### Admin & server control
+- **Live config** — change drop rates, transform rules, pity, shard-boss settings and more at runtime with `.beelz admin set <key> <value>` (persists; no restart).
+- **Curated rules** in a hot-reloadable JSON: allow/deny lists, per-ability weapon/difficulty/scaling, per-unit transform tiers and stat scales.
+- **Difficulty gating, grant/revoke, force-transform, inspect, audit logging** — full operator toolkit.
+
+### Companion-app ready (BloodCraftHub)
+A structured `[BEELZ:*]` chat API lets the client-side **BloodCraftHub** mod read your collection, slots, transforms, cooldowns, and settings — and render on-screen buttons (including the expanded action bar) and admin panels.
 
 ## Requirements
 
-- A V Rising **Dedicated Server** (Steam Tool AppID 1829350) — Beelzebub does not run on the client / "Host & Play" private game mode.
-- [BepInExPack_V_Rising](https://thunderstore.io/c/v-rising/p/BepInEx/BepInExPack_V_Rising/) 1.733.2 or compatible.
-- [VampireCommandFramework](https://thunderstore.io/c/v-rising/p/deca/VampireCommandFramework/) 0.10.4 or compatible.
+- A V Rising **Dedicated Server** (Steam Tool AppID 1829350). Beelzebub is server-side — it does **not** run on a "Host & Play" private game.
+- [BepInExPack_V_Rising](https://thunderstore.io/c/v-rising/p/BepInEx/BepInExPack_V_Rising/) and [VampireCommandFramework](https://thunderstore.io/c/v-rising/p/deca/VampireCommandFramework/).
 
 ## Installation
 
-Install via [r2modman](https://thunderstore.io/package/ebkr/r2modman/) (recommended) or drop `Beelzebub.dll` into `<VRisingDedicatedServer>\BepInEx\plugins\`. Stop the server before replacing the DLL — it is file-locked while running.
+Install with [r2modman](https://thunderstore.io/package/ebkr/r2modman/) / Thunderstore Mod Manager (recommended), or drop `Beelzebub.dll` into `<VRisingDedicatedServer>\BepInEx\plugins\`. **Stop the server before replacing the DLL** — it's file-locked while running.
 
 ## Command cheat-sheet
 
-### Player commands
-
-| Command | What it does |
-|---|---|
-| `.beelz list` | List captured abilities (grouped by source, then by unit) and your current slot assignments. |
-| `.beelz transforms` | List unlocked transformations + your currently active transform if any. |
-| `.beelz grant <slot> <index>` | Assign captured ability at `<index>` to spell slot `<1-6>`. **Applies instantly.** |
-| `.beelz unslot <slot>` | Clear a slot assignment. Applies instantly. |
-| `.beelz transform <index\|substring>` | Activate transformation. Applies instantly. |
-| `.beelz revert` | End your current transformation. Swap a weapon to restore. |
-| `.beelz forget <index>` | Delete one captured ability (also clears any slot pointing at it). |
-| `.beelz forget-transform <index>` | Delete one transformation unlock. |
-| `.beelz clear` | Wipe all your captured abilities, slot assignments, and transforms. |
-| `.beelz verbosity <silent\|summary\|verbose>` | Set your in-chat notification level. |
-
-### Admin commands (`adminOnly:true`)
-
-| Command | What it does |
-|---|---|
-| `.beelz admin rules` | Show the loaded ability-filter rules. |
-| `.beelz admin deny <pattern>` / `undeny <pattern>` | Add / remove a substring from the deny list. |
-| `.beelz admin allow <pattern>` / `unallow <pattern>` | Add / remove a substring from the allow list. When non-empty, only matching abilities are captured. |
-| `.beelz admin reload` | Re-read `ability_rules.json` from disk (for hand edits). |
-| `.beelz admin transform mode <regular\|vblood> <toggle\|timed\|disabled>` | Set transform mode per source type. |
-| `.beelz admin transform duration <regular\|vblood> <seconds>` | Auto-revert duration in `Timed` mode. |
-| `.beelz admin transform cooldown <regular\|vblood> <seconds>` | Cooldown after revert. |
-| `.beelz admin transform show` | Show current transform config. |
-
-### BCH-readable API (`[BEELZ:...]` markers)
-
-| Command | Reply marker(s) |
-|---|---|
-| `.beelz api version` | `[BEELZ:version]` |
-| `.beelz api list` | `[BEELZ:list]` streamed + `[BEELZ:end]` |
-| `.beelz api slots` | `[BEELZ:slot]` streamed + `[BEELZ:end]` |
-| `.beelz api transforms` | `[BEELZ:tx]` streamed + `[BEELZ:end]` |
-| `.beelz api active` | `[BEELZ:active]` (one line) |
-| `.beelz api info <index>` | `[BEELZ:info]` (one line) |
-| `.beelz api verbosity` / `rules` / `transform-config` | Single-line state dumps |
+**Collect & inspect:** `.beelz list [vblood|shard|regular]` · `.beelz search <term>` · `.beelz info <i>` · `.beelz bestiary` · `.beelz progress` · `.beelz catalog`
+**Use abilities:** `.beelz grant <slot 1-6> <index>` · `.beelz weapon-grant <weapon> <slot> <index>` · `.beelz hotkey set <name> <index>` → `.beelz cast <name>`
+**Transform:** `.beelz transforms [vblood|shard|regular]` · `.beelz transform <name>` · `.beelz phase [n]` · `.beelz revert` · `.beelz detonate` · `.beelz summons <stash|restore|status>`
+**Admin:** `.beelz admin set <key> <value>` · `.beelz admin transform mode/duration/cooldown …` · `.beelz admin give/revoke …` · `.beelz admin rules` / `deny` / `allow` / `reload` · `.beelz admin difficulty <basic|brutal>`
+**Settings:** `.beelz verbosity <silent|summary|verbose>` · `.beelz help` · `.beelz commands`
 
 ## Configuration
 
-`BepInEx\config\kdpen.Beelzebub.cfg` controls server-wide defaults:
+`BepInEx\config\kdpen.Beelzebub.cfg` holds server defaults (drop chances, pity, transform modes/durations/cooldowns per category incl. shard bosses, summon caps, hotkey limits, difficulty). Most can also be changed live with `.beelz admin set`. `ability_rules.json` holds the curation matrix (auto-created); `state.json` holds per-player data.
 
-```ini
-[Capture]
-CaptureOnKill = true
+## Honest caveats
 
-[Capture.DropChance]
-DropChance_Ability_Regular = 0.05
-DropChance_Ability_VBlood = 0.05
-DropChance_Transform_Regular = 0.01
-DropChance_Transform_VBlood = 0.01
+- **Model changes are limited by the engine.** A server can only render the ~10 forms V Rising actually ships (the boss forms + the native shapeshifts). Most humanoid/undead/construct units transform as **abilities + stats only** (your model doesn't change) — true "become any NPC" would require a client-side companion mod. Boss/animal forms get the full model.
+- **Some boss abilities read best in-form.** A few abilities are tied to a unit's skeleton; cast on your vampire body they may not animate perfectly. They work correctly while transformed into that unit.
+- **Early access** — expect rough edges; reports are gold.
 
-[Notifications]
-DefaultVerbosity = Summary
+## Feedback
 
-[Transformation]
-Transform_Mode_Regular = Toggle
-Transform_Mode_VBlood = Toggle
-Transform_DurationSeconds_Regular = 60
-Transform_DurationSeconds_VBlood = 60
-Transform_CooldownSeconds_Regular = 0
-Transform_CooldownSeconds_VBlood = 0
-```
-
-`BepInEx\config\kdpen.Beelzebub\ability_rules.json` controls the ability filter (auto-created on first run with curated defaults).
-
-`BepInEx\config\kdpen.Beelzebub\state.json` is the per-player state file (captures, slots, transforms, verbosity). Atomic writes, debounced ~1s.
-
-## Known caveats
-
-- **Grants apply only while UNARMED.** Once you equip a weapon, the weapon's natural abilities win for its slots — that's by design. Transforms override the spell bar regardless of weapon. Slot changes (grant/unslot/transform/revert) apply instantly via in-place buffer mutation — no more weapon-swap dance.
-- **No visual shapeshift VFX.** Only the spell bar changes when you transform; your model stays the same. A unit→shapeshift-buff mapping is on the roadmap.
-- **Not every ability works in every slot.** Spell slots 5 and 6 generally accept projectile / AoE abilities; basic melee animations won't appear. The default filter strips most non-castable cases, but a few survive — experiment, and report patterns we should add.
-
-## Bug reports & feedback
-
-Open an issue at [github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/issues](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/issues). Server-side log lines tagged `[Beelz]` in `BepInEx\LogOutput.log` are the most useful diagnostic — paste the relevant lines plus what you were doing.
+Open an issue on [GitHub](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/issues). Log lines tagged `[Beelz]` in `BepInEx\LogOutput.log` are the most useful diagnostic — paste them with what you were doing.
 
 ## License
 
