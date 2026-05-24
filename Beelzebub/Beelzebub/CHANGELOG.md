@@ -3,6 +3,44 @@
 What's new for players. For full implementation history, see the
 [developer changelog on GitHub](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/blob/main/CHANGELOG.md).
 
+## [0.40.0] - 2026-05-24
+
+### Cast abilities beyond your 6 slots — an expanded action bar
+
+You're no longer limited to six abilities. Bind any captured ability to a named
+hotkey (`.beelz hotkey set <name> <index>`) and **fire it on demand with
+`.beelz cast <name>`** (or, soon, a BloodCraftHub button). Each cast respects the
+ability's own cooldown, so it's not spammable. Admins control how many hotkeys a
+player can have with `Hotkeys_MaxPerPlayer`, and can switch the feature off with
+`Hotkeys_Enabled`.
+
+This also answers the "I can't put an ability on my ultimate slot" problem: the
+ultimate slot can't be rebound on the normal action bar, but `.beelz cast` doesn't
+need a slot at all — so any captured ability (ultimates included) can be fired this
+way. (Abilities whose animations are tied to a specific boss's body still read best
+while transformed into that boss.)
+
+## [0.39.0] - 2026-05-24
+
+### Shard bosses, V-Blood filters, and admin/config plumbing
+
+- **Shard bosses are their own category.** Dracula, Adam the Firstborn, Solarus the
+  Immaculate, The Winged Horror (Talzur), Megara the Serpent Queen, and Gorecrusher the
+  Behemoth (configurable via `Transform_ShardBossNames`) now have their
+  own transform mode/duration/cooldown (`Transform_*_ShardBoss`) and a separate
+  cooldown bucket — so you can, say, time-limit the powerful shard-boss forms while
+  leaving other V-Bloods as toggles, and a shard cooldown won't block regular V-Blood transforms.
+- **Filter your lists.** `.beelz transforms vblood` / `.beelz list vblood` (also
+  `shard` / `regular`) show a shorter, focused list. The transforms list also now
+  splits shard bosses into their own section.
+
+### Admin & companion-app plumbing
+- `.beelz admin set <key> <value>` — change any setting live (persists to the
+  config), instead of editing the file + restarting.
+- New BCH-facing reads: `.beelz api config` (all settings), `.beelz api cooldowns`
+  (per-category cooldown timers), a `shard` flag on transform/catalog data, and a
+  `config-changed` event. (API version 3.)
+
 ## [0.38.0] - 2026-05-23
 
 ### Bad-luck protection, Morgana's second form, and friendlier names
