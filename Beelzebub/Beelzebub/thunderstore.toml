@@ -1,18 +1,34 @@
-[package.dependencies]
-BepInEx-BepInExPack_V_Rising = "1.733.2"
-deca-VampireCommandFramework = "0.10.4"
-
-[publish]
-communities = ["v-rising"]
-repository = "https://thunderstore.io"
-
-[publish.categories]
-v-rising = ["mods", "server-side"]
+[config]
+schemaVersion = "0.0.1"
 
 [package]
 namespace = "kdpen"
 name = "Beelzebub"
-versionNumber = "0.42.0"
-description = "Devour the bestiary: defeat any unit to capture its abilities or transform into it (real boss forms included). Slot captures, bind extra hotkey abilities beyond the 6-slot bar, complete your collection. Server-side, admin-configurable."
-websiteUrl = ""
+versionNumber = "0.43.0"
+description = "[ALPHA/TEST] Devour the bestiary: defeat any unit to steal its abilities or transform into it. Slot captures, bind extra hotkeys, complete your collection. Server-side, admin-configurable. Early test build — feedback welcome!"
+websiteUrl = "https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony"
 containsNsfwContent = false
+
+[package.dependencies]
+BepInEx-BepInExPack_V_Rising = "1.733.2"
+deca-VampireCommandFramework = "0.10.4"
+
+[build]
+icon = "icon.png"
+readme = "README.md"
+outdir = "build"
+
+[[build.copy]]
+source = "dist/BepInEx"
+target = "BepInEx"
+
+[[build.copy]]
+source = "CHANGELOG.md"
+target = "CHANGELOG.md"
+
+[publish]
+repository = "https://thunderstore.io"
+communities = ["v-rising"]
+
+[publish.categories]
+v-rising = ["mods", "server-side"]

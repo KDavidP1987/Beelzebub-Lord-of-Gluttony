@@ -4,6 +4,22 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.43.0] - 2026-05-24
+
+### First public test release 🎉
+
+Beelzebub is going out for **server testing** — this is an early alpha/beta build.
+See the mod page for the full testing disclaimer, known limitations, and roadmap.
+Built on the shoulders of the V Rising modding community — special thanks to
+**Bloodcraft** by zfolmt, whose ability-grant, familiar/ally, and ExoForm patterns
+informed several of Beelzebub's systems.
+
+### For companion-app developers (BloodCraftHub)
+
+- `.beelz api transform-config` now reports the **shard-boss** category too
+  (`src=S`, alongside `src=R`/`src=V`) so a client can read all three transform
+  mode/duration/cooldown profiles in one call.
+
 ## [0.42.0] - 2026-05-24
 
 ### Summons handle horse-riding your way
