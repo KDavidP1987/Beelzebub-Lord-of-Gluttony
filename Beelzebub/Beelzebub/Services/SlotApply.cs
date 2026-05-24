@@ -167,6 +167,44 @@ internal static class SlotApply
         }
     }
 
+    /// <summary>
+    /// v0.41.0: re-inject the player's saved grant loadout (universal + current-weapon
+    /// overrides) directly onto their live equip-buff — query-INDEPENDENT, so it works
+    /// on revert / form-exit / `.beelz refresh` without waiting for a weapon swap to
+    /// trigger ReplaceAbilityOnSlotSystemPatch. Mirrors that patch's per-swap injection.
+    /// No-op while transformed (the transform buff owns the bar then). Returns the count applied.
+    /// </summary>
+    public static int RestoreResolvedGrants(Entity character)
+    {
+        if (!character.Exists()) return 0;
+        ulong steamId = character.GetSteamId();
+        if (Core.AbilityRegistry.GetActiveTransform(steamId) is not null) return 0;
+        if (!TryFindEquipBuff(character, out Entity buffEntity, out string equipName)) return 0;
+
+        var weapon = DetectFamily(equipName);
+        var slots = Core.AbilityRegistry.GetSlotsResolved(steamId, weapon);
+        try
+        {
+            var buffer = Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(buffEntity);
+            int applied = 0;
+            foreach (var (slot, abilityGuid) in slots)
+            {
+                if (!IsGrantCompatible(abilityGuid, weapon)) continue;
+                ReplaceSlotEntry(buffer, slot, new PrefabGUID(abilityGuid));
+                applied++;
+            }
+            if (Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+            if (Beelzebub.Config.Settings.VerboseLogging.Value)
+                Core.Log.LogInfo($"[Beelz] RestoreResolvedGrants: re-applied {applied} grant(s) for {steamId} (weapon={weapon}).");
+            return applied;
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError($"[Beelz] SlotApply.RestoreResolvedGrants failed: {ex}");
+            return 0;
+        }
+    }
+
     static void ReplaceSlotEntry(DynamicBuffer<ReplaceAbilityOnSlotBuff> buffer, int slot, PrefabGUID ability)
     {
         RemoveSlotEntries(buffer, slot);

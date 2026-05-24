@@ -190,6 +190,32 @@ internal static class TransformCommands
         ctx.Reply($"Reverted from {unitName}. Spell bar restored.");
     }
 
+    [Command("refresh", description: "Re-apply your current ability bar — fixes a blank or wrong bar after reverting, leaving a travel/wolf/bat form, or a weapon quirk. Usage: .beelz refresh")]
+    public static void Refresh(ChatCommandContext ctx)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        var character = ctx.Event.SenderCharacterEntity;
+
+        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
+        if (active != null)
+        {
+            string unitName = Core.AbilityMetadata?.ResolveUnitName(active.UnitPrefabGuid)
+                              ?? new PrefabGUID(active.UnitPrefabGuid).GetPrefabName();
+            bool ok = Core.Transforms.ReapplyActiveTransform(steamId, active, character);
+            ctx.Reply(ok
+                ? $"Re-applied your {unitName} transformation bar."
+                : "Couldn't re-apply the transformation bar (see server log).");
+        }
+        else
+        {
+            int n = Beelzebub.Services.SlotApply.RestoreResolvedGrants(character);
+            ctx.Reply(n > 0
+                ? $"Restored {n} bound abilit{(n == 1 ? "y" : "ies")} to your spell bar."
+                : "Nothing to restore — assign abilities with .beelz grant / .beelz weapon-grant first.");
+        }
+    }
+
     // #3 (v0.36.0): per-player cooldown tracker for manual detonation.
     static readonly Dictionary<ulong, DateTime> _lastDetonate = new();
 

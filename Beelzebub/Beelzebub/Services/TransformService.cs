@@ -141,7 +141,8 @@ internal sealed class TransformService
         var current = Core.AbilityRegistry.GetActiveTransform(steamId);
         if (current is not null)
         {
-            Revert(steamId, "Switching transformation.");
+            // restoreBar:false — a new transform is applied below; skip the base-loadout restore.
+            Revert(steamId, "Switching transformation.", restoreBar: false);
         }
 
         // Verify we can read the unit's ability list.
@@ -312,7 +313,7 @@ internal sealed class TransformService
     /// End a player's active transformation. Returns (wasReverted, appliedNow).
     /// `appliedNow` is true when the carrier buff was destroyed cleanly this frame.
     /// </summary>
-    public (bool reverted, bool appliedNow) Revert(ulong steamId, string reason = null)
+    public (bool reverted, bool appliedNow) Revert(ulong steamId, string reason = null, bool restoreBar = true)
     {
         var active = Core.AbilityRegistry.GetActiveTransform(steamId);
         if (active is null) return (false, false);
@@ -333,6 +334,13 @@ internal sealed class TransformService
             {
                 ShapeshiftService.Remove(character, new PrefabGUID(active.AppliedShapeshiftForm));
             }
+            // v0.41.0 BUG FIX (#1): explicitly restore the player's saved grant loadout
+            // for their current weapon. Destroying the transform buff alone leaves the bar
+            // on weapon-naturals until the next weapon swap (the re-apply patch only fires
+            // on equip events). Skipped on a transform SWITCH (restoreBar=false) — a new
+            // transform is applied immediately after.
+            if (restoreBar)
+                SlotApply.RestoreResolvedGrants(character);
         }
 
         // v0.23.7: switch from staged Tick-driven drain to immediate-drain.
@@ -600,6 +608,14 @@ internal sealed class TransformService
         }
         return reordered;
     }
+
+    /// <summary>
+    /// v0.41.0: re-apply the player's CURRENT active transform's bar (form or carrier,
+    /// at the current phase) — recovers the bar after a sub-form (bat/wolf) overrode it,
+    /// and backs `.beelz refresh`. Idempotent (delegates to ApplyPhase at the current phase).
+    /// </summary>
+    public bool ReapplyActiveTransform(ulong steamId, ActiveTransform active, Entity character)
+        => active != null && character.Exists() && ApplyPhase(steamId, active, character, active.CurrentPhase);
 
     /// <summary>
     /// v0.27.0: shared phase-swap. Re-fetches the phase's ability list and

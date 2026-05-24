@@ -405,6 +405,14 @@ internal static class BuffSpawnServerPatch
 
         var active = Core.AbilityRegistry.GetActiveTransform(steamId);
         if (active == null) return;
+
+        // v0.41.0 BUG FIX (#2): a travel/bat form overrode the transform's spell bar.
+        // On arrival the player is still transformed, so re-apply the active transform —
+        // otherwise the bar drops to weapon-naturals until a weapon swap. Runs regardless
+        // of whether summons were stashed (the summon restore below early-returns without it).
+        try { Core.Transforms.ReapplyActiveTransform(steamId, active, playerCharacter); }
+        catch (Exception ex) { Core.Log.LogError($"[Beelz] re-apply transform on travel-end failed: {ex}"); }
+
         if (active.StashedSummons == null || active.StashedSummons.Count == 0) return;
 
         int restored = SummonAllyService.RestoreAll(active, playerCharacter);
