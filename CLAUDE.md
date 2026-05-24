@@ -38,6 +38,26 @@ integration goes through chat-command shapes the way BCH already talks to
 Bloodcraft. **Never edit files under `BloodCraftUI 2\` from a session rooted
 in this workspace** unless the user explicitly cross-references the work.
 
+## BCH integration handoff — keep it current
+
+`Beelzebub/Beelzebub/docs/BCH_INTEGRATION_HANDOFF.md` is the **living contract**
+BCH builds against (the chat-command + config + `[BEELZ:*]` API surface, plus
+the experimental model-swap / animation-fidelity work BCH must own). It is
+authored here and carried to the BCH workspace.
+
+**Rule:** whenever ongoing work changes anything BCH-facing — a chat command
+(player/admin/`api`), a `[BEELZ:*]` line or its fields, a config key, or a
+transform capability — update the handoff doc **in the same change** so BCH
+stays buildable. If a change is purely internal (no contract impact), no doc
+update is needed.
+
+A `PostToolUse` hook (`.claude/hooks/bch-relevance-reminder.ps1`, wired in
+`settings.local.json`) fires on edits to `Commands/*.cs` and `Config/Settings.cs`
+and surfaces a reminder. The hook is a backstop covering the most common surface
+files — BCH relevance can be broader, so use judgment: this CLAUDE.md rule is
+authoritative, the hook is just the net. Canonical wire-API source is
+`Commands/ApiCommands.cs` (`ApiVersion`); bump it there and reflect it in the doc.
+
 ## Reference-only paths (do NOT edit)
 
 A `PreToolUse` hook in `.claude/settings.local.json` warns when an edit
