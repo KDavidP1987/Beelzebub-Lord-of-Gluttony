@@ -1,6 +1,12 @@
 # ---- Reference-only data (not part of the mod, kept locally for context) ----
 Reference Data/
 Learning Mods/
+Prefabs/
+
+# ---- Source/working artwork (working files & references, NOT for distribution;
+#      may include third-party/copyrighted reference material). Shipped art lives
+#      in the project as Beelzebub/icon.png + Beelzebub/splash.png, which ARE tracked. ----
+artwork/
 
 # ---- Claude Code workspace settings ----
 .claude/
