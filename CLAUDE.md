@@ -139,6 +139,38 @@ process** before redeploying.
 in `Plugin.cs`. Once tooling is added, the bump-version script will sync
 csproj + `thunderstore.toml` (+ CHANGELOG if added).
 
+## Release & changelog discipline — keep the release surfaces in sync
+
+Three artifacts describe a release and **must move together** in the same
+`chore(release)` commit, or they drift (the README sat at v0.4.0 while the code
+reached v0.40 — don't repeat that):
+
+1. **Version** — `Beelzebub.csproj <Version>` **and** `thunderstore.toml
+   versionNumber`. Keep them identical.
+2. **`CHANGELOG.md`** — player-facing release notes. This **one file is both**
+   changelogs: it ships to Thunderstore (auto-staged to `dist/` by the
+   `BuildToDist` target) **and** lives on GitHub. The Conventional-Commits git
+   log is the deeper technical history — there is intentionally no second
+   changelog file to keep in sync.
+3. **`README.md`** — the Thunderstore mod page (front page) and GitHub landing
+   page. (`thunderstore.toml`'s `description` is the short listing tagline, ≤250
+   chars.)
+
+**On every version bump, in that one commit:**
+- Sync both version fields.
+- Add a `## [x.y.z] - <date>` `CHANGELOG.md` entry in player-facing language.
+  **Multi-phase batches:** if several feature-versions ship together, give
+  **each** version its own entry — never collapse or skip one (that's how gaps
+  appear).
+- Scan `README.md` for staleness vs. what shipped: the status/version line, the
+  feature list, the command cheat-sheet, and the honest-caveats section. Update
+  whatever the release changed.
+
+A `PostToolUse` hook (`.claude/hooks/release-sync-reminder.ps1`, wired in
+`settings.local.json`) fires on edits to `Beelzebub.csproj`/`thunderstore.toml`
+and surfaces this checklist. The hook is a backstop (and `.claude/` is gitignored,
+so it's local-only); **this CLAUDE.md rule is the authoritative, shared process.**
+
 ## Things to watch out for
 
 These will grow as the project hits real gotchas. Empty for now — first

@@ -1,7 +1,8 @@
 # Changelog
 
-What's new for players. For full implementation history, see the
-[developer changelog on GitHub](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/blob/main/CHANGELOG.md).
+What's new for players. This is the canonical changelog — it ships on Thunderstore
+(bundled with the release) and lives in the repo on GitHub. For the full technical
+history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
 ## [0.40.0] - 2026-05-24
 
