@@ -81,6 +81,7 @@ All under the `.beelz api` group. Verified against `ApiCommands.cs`.
 | `.beelz api catalog abilities [page]` | `[BEELZ:catalog-ability]` … `[BEELZ:end]` | Full curated ability list, 40/page, with matrix attrs |
 | `.beelz api hotkeys` | `[BEELZ:hotkeys-config]`, `[BEELZ:hotkey]`, `[BEELZ:end]` | Config footer (`enabled= max=`) + named hotkey bindings |
 | `.beelz api verbosity` | `[BEELZ:verbosity]` | `level=Silent\|Summary\|Verbose default=<server default>` |
+| `.beelz api bestiary [page]` | `[BEELZ:bestiary]` … `[BEELZ:end]` | Collection book — one line per collected unit: `u= un= s=R\|V captured=X total=Y transform=0\|1` (v2). Cross-ref `api list` (per-ability) for which abilities. Page size 40. |
 
 ---
 
@@ -123,6 +124,7 @@ natural candidate for a BCH HUD button) ·
 `.beelz summons <stash\|restore\|status>` ·
 `.beelz preset <save\|load\|list\|delete> <name>` ·
 `.beelz hotkey <set\|clear\|list> …` ·
+`.beelz bestiary [page]` · `.beelz bestiary unit <name>` (collection book — per-unit X/Y abilities + transform status) ·
 `.beelz forget <i>` · `.beelz forget-transform <i>` · `.beelz clear` ·
 `.beelz verbosity <silent\|summary\|verbose>`.
 
@@ -137,7 +139,7 @@ captures, revert-all, snapshot, inspect/progress, wipe-all.
 
 | Feature | Backed by | Status |
 |---|---|---|
-| **Collection book** — captured abilities grid, search, tooltips | `api list`, `api info`, `api catalog abilities` | ✅ data ready · 🟡 UI |
+| **Collection book** — per-unit progress (X/Y abilities + transform), captured-abilities grid, search, tooltips | `api bestiary` (per-unit X/Y + transform), `api list`, `api info`, `api catalog abilities` | ✅ data ready · 🟡 UI |
 | **Slot loadout editor** — drag ability → one of 6 slots, universal vs weapon-specific buckets | `api slots` + `grant`/`weapon-grant`/`unslot` | ✅ data ready · 🟡 UI |
 | **On-screen ability buttons + cooldown display** (the original BCH vision) | spell-bar state via `api active`/`api slots`; cooldowns from ability metadata | 🟡 needs client render + a cooldown feed |
 | **Transform browser + hunt catalog** — unlocked vs to-hunt, tier sort, preview | `api transforms`, `api catalog units` + `transform`/`revert` | ✅ data ready · 🟡 UI |
