@@ -929,7 +929,8 @@ internal static class AdminCommands
         if (character == Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
 
         int tracked = 0;
-        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
+        // v0.45.0: cover both the transform's summons AND any standalone (untransformed) summons.
+        var active = Core.AbilityRegistry.GetSummonOwner(steamId, createIfMissing: false);
         if (active != null && active.SummonedMinions is { Count: > 0 })
         {
             foreach (var m in active.SummonedMinions)
@@ -939,6 +940,7 @@ internal static class AdminCommands
             active.SummonedMinions.Clear();
             active.SummonStacks?.Clear();
         }
+        Core.AbilityRegistry.ClearStandaloneSummons(steamId);
 
         int orphans = SummonAllyService.SweepOrphans(character);
         // v0.23.5: immediate drain for admin cleanup. Tries DestroyUtility, then
@@ -954,9 +956,10 @@ internal static class AdminCommands
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
 
-        // Also clear all live tracked SummonedMinions across active transforms.
+        // Also clear all live tracked SummonedMinions across every summon owner
+        // (transforms + standalone untransformed summoners).
         int tracked = 0;
-        foreach (var (_, active) in Core.AbilityRegistry.AllActiveTransforms())
+        foreach (var (_, active) in Core.AbilityRegistry.AllSummonOwners())
         {
             if (active.SummonedMinions is { Count: > 0 })
             {

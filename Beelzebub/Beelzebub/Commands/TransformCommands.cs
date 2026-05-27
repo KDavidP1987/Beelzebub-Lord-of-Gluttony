@@ -401,14 +401,15 @@ internal static class TransformCommands
         Summons(ctx, "stash");
     }
 
-    [Command("summons", description: "v0.23.8: manage summons. Usage: .beelz summons [stash|restore|off|on|status]. stash = disable + stow (lets you use waygates); restore = re-enable at your position; off/on = stash/restore aliases; status (default) = show counts.")]
+    [Command("summons", description: "Manage your summons (work transformed OR via captured summon abilities). Usage: .beelz summons [stash|restore|off|on|clear|status]. stash = stow (lets you use waygates); restore = bring back; off/on = stash/restore aliases; clear = despawn all; status (default) = counts.")]
     public static void Summons(ChatCommandContext ctx, string action = "status")
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
         Entity character = ctx.Event.SenderCharacterEntity;
         ulong steamId = character.GetSteamId();
-        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
-        if (active is null) { ctx.Reply("You are not currently transformed."); return; }
+        // v0.45.0: resolve the summon owner — transform OR standalone (untransformed) summons.
+        var active = Core.AbilityRegistry.GetSummonOwner(steamId, createIfMissing: false);
+        if (active is null) { ctx.Reply("You have no active summons. Cast a captured summon ability (e.g. a Raise-Dead / Reinforcement) to call allies."); return; }
 
         string normalized = (action ?? "status").Trim().ToLowerInvariant();
         switch (normalized)
@@ -452,6 +453,24 @@ internal static class TransformCommands
                     ctx.Reply("No summons in storage to restore.");
                 }
                 active.SummonsDisabled = false;
+                return;
+            }
+            case "clear":
+            {
+                // v0.45.0: despawn ALL summons (live + stashed) for this owner.
+                int queued = 0;
+                if (active.SummonedMinions != null)
+                    foreach (var e in active.SummonedMinions) if (e.Exists()) { SummonAllyService.EnqueueAdminDespawn(e); queued++; }
+                if (active.StashedSummons != null)
+                    foreach (var e in active.StashedSummons) if (e.Exists()) { SummonAllyService.EnqueueAdminDespawn(e); queued++; }
+                if (queued > 0) SummonAllyService.DrainAdminQueueImmediate();
+                active.SummonedMinions?.Clear();
+                active.StashedSummons?.Clear();
+                active.SummonStacks?.Clear();
+                active.SummonsDisabled = false;
+                // Drop the standalone container if this was an untransformed owner (no-op for a transform).
+                Core.AbilityRegistry.ClearStandaloneSummons(steamId);
+                ctx.Reply($"Cleared {queued} summon(s).");
                 return;
             }
             case "status":

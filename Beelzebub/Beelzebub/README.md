@@ -36,7 +36,7 @@ A **server-side** V Rising mod that turns the whole bestiary into a collection-a
 
 **Source · issues · roadmap:** [github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony) · **License:** MIT
 
-> **Status:** active early access / **public test build (v0.44.0)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
+> **Status:** active early access / **public test build (v0.45.0)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
 
 ---
 
@@ -65,7 +65,7 @@ A **server-side** V Rising mod that turns the whole bestiary into a collection-a
 ### Transform — Dracula & Morgana
 - **Two real boss forms.** Dracula and Morgana transform into their actual in-game forms — model, rig, and the abilities that need them — with **switchable kits** via `.beelz phase`, signature summons, and a manual AoE detonation (`.beelz detonate`).
 - **Why only two?** A server-side mod *cannot* render your character as an arbitrary creature — the game decides your on-screen model on the client. Dracula and Morgana ship as player-renderable forms; every other unit's powers are instead collected as **abilities** (capture / Devour) and slotted onto your normal bar. **Becoming any other unit is a researched, postponed "phase two" feature** — it requires a future client-side companion mod to render the model, which the server alone can't do.
-- **Summons fight for you** — abilities that raise minions spawn them as your allies, with caps, leashing, and clean despawn. They **scale to your level** with an admin power dial; hop on a horse and your summons either stash-and-restore or keep following, your choice (`Transform_MountedSummonMode`).
+- **Summons fight for you — transformed or not.** Abilities that raise minions spawn them as your allies whether you're transformed **or** casting a captured summon ability in normal form (v0.45), with caps, leashing, and clean despawn. They **scale to your level** with an admin power dial; hop on a horse and your summons either stash-and-restore or keep following, your choice (`Transform_MountedSummonMode`). Manage them anytime with `.beelz summons <stash|restore|clear|status>`.
 - **Signature add-summons** (`.beelz summon`) — call the adds a boss normally only spawns at low health (the Toad King's frogs, the Werewolf Chieftain's caged wolves, …). You also **learn a unit's summon as a standalone ability** you can slot or hotkey and use anytime.
 
 ### Admin & server control
@@ -89,8 +89,9 @@ Install with [r2modman](https://thunderstore.io/package/ebkr/r2modman/) / Thunde
 ## Command cheat-sheet
 
 **Collect & inspect:** `.beelz list [vblood|shard|regular]` · `.beelz search <term>` · `.beelz info <i>` · `.beelz bestiary` · `.beelz progress` · `.beelz catalog`
-**Use abilities:** `.beelz grant <slot 1-6> <index>` · `.beelz weapon-grant <weapon> <slot> <index>` · `.beelz unslot <slot>` · `.beelz resetbar` (clear all bindings → vanilla bar) · `.beelz hotkey set <name> <index>` → `.beelz cast <name>`
-**Transform (Dracula & Morgana):** `.beelz transforms` · `.beelz transform <name>` · `.beelz phase [n]` · `.beelz revert` · `.beelz refresh` (re-apply your bar if it ever goes blank) · `.beelz detonate` · `.beelz summon [n]` (call your unit's signature add-summon) · `.beelz summons <stash|restore|status>`
+**Use abilities:** `.beelz grant <slot 1-6> <index>` · `.beelz weapon-grant <weapon> <slot> <index>` · `.beelz loadouts` (view universal + per-weapon sets) · `.beelz unslot <slot>` · `.beelz resetbar` (clear all bindings → vanilla bar) · `.beelz hotkey set <name> <index>` → `.beelz cast <name>`
+**Summons:** `.beelz summons <stash|restore|clear|status>` (works for captured summon abilities, not just transforms) · `.beelz summon [n]` (a transformed boss's signature add-summon)
+**Transform (Dracula & Morgana):** `.beelz transforms` · `.beelz transform <name>` · `.beelz phase [n]` · `.beelz revert` · `.beelz refresh` (re-apply your bar if it ever goes blank) · `.beelz detonate`
 **Admin:** `.beelz admin set <key> <value>` · `.beelz admin devour <player> <unitGuid>` (grant a unit's whole kit) · `.beelz admin give/revoke …` · `.beelz admin rules` / `deny` / `allow` / `reload` · `.beelz admin difficulty <basic|brutal>` · `.beelz admin help`
 **Settings:** `.beelz verbosity <silent|summary|verbose>` · `.beelz help` · `.beelz commands`
 

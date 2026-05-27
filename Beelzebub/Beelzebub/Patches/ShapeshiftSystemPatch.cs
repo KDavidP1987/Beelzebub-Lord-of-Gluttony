@@ -70,7 +70,7 @@ internal static class ShapeshiftSystemPatch
                 ulong steamId = player.GetSteamId();
                 if (steamId == 0) continue;
 
-                var active = Core.AbilityRegistry.GetActiveTransform(steamId);
+                var active = Core.AbilityRegistry.GetSummonOwner(steamId, createIfMissing: false);
                 if (active == null) continue;
                 if (active.SummonedMinions == null || active.SummonedMinions.Count == 0) continue;
 

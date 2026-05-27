@@ -4,6 +4,24 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.45.0] - 2026-05-27
+
+### Summons work without transforming + clearer loadouts
+
+- **Summon abilities now work in normal form.** Captured summon abilities (Raise-Dead,
+  Reinforcements, skeleton/bat callers, and the like) cast while you are **not** transformed now
+  spawn proper player-allied minions that follow you, fight alongside you, respect the
+  per-ability summon cap, and clean up on death / logout — exactly like summons cast while
+  transformed. Previously they only behaved mid-transform, so casting one in normal form could
+  leave an untracked or hostile spawn.
+- **`.beelz summons` works untransformed**, with a new **`clear`** action to despawn all your
+  summons at once (`.beelz summons clear`). Stash / restore (waygate-safe) work the same way.
+- **New `.beelz loadouts`** — at a glance, see your universal "basic" set, each per-weapon set,
+  and which one is active for the weapon you're holding. The per-weapon loadout system already
+  existed (`.beelz weapon-grant <weapon|auto> <slot> <index>`); this just makes it easy to see.
+  A per-weapon set overrides your universal set on its slots, swapping weapons switches sets
+  automatically, and unarmed / spellcasting is its own weapon "family".
+
 ## [0.44.0] - 2026-05-26
 
 ### The mod is now about COLLECTING ABILITIES — "Devour" replaces unit transformation

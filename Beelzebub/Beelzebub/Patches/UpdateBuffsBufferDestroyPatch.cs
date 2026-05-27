@@ -165,30 +165,34 @@ internal static class UpdateBuffsBufferDestroyPatch
     {
         ulong steamId = playerCharacter.GetSteamId();
         if (steamId == 0) return;
-        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
-        if (active == null) return; // not transformed — nothing to restore
-
-        var now = DateTime.UtcNow;
-        if (!(_lastFormExitReapply.TryGetValue(steamId, out var last) && (now - last).TotalSeconds < 1.5))
+        // Re-apply the transform bar if the player is transformed (the mount overrode it).
+        // Debounced. v0.45.0: standalone (untransformed) summoners skip this.
+        var transform = Core.AbilityRegistry.GetActiveTransform(steamId);
+        if (transform != null)
         {
-            _lastFormExitReapply[steamId] = now;
-            if (Core.Transforms.ReapplyActiveTransform(steamId, active, playerCharacter)
-                && Beelzebub.Config.Settings.VerboseLogging.Value)
+            var now = DateTime.UtcNow;
+            if (!(_lastFormExitReapply.TryGetValue(steamId, out var last) && (now - last).TotalSeconds < 1.5))
             {
-                Core.Log.LogInfo($"[Beelz] re-applied transform bar after horse dismount for {steamId}.");
+                _lastFormExitReapply[steamId] = now;
+                if (Core.Transforms.ReapplyActiveTransform(steamId, transform, playerCharacter)
+                    && Beelzebub.Config.Settings.VerboseLogging.Value)
+                {
+                    Core.Log.LogInfo($"[Beelz] re-applied transform bar after horse dismount for {steamId}.");
+                }
             }
         }
 
-        // Stash mode: bring back the summons we stashed when the player mounted.
+        // Stash mode: bring back the summons (transform OR standalone) we stashed on mount.
+        var owner = Core.AbilityRegistry.GetSummonOwner(steamId, createIfMissing: false);
         if (Beelzebub.Config.Settings.Transform_MountedSummonMode.Value
                 == Beelzebub.Config.Settings.MountedSummonMode.Stash
             && Beelzebub.Config.Settings.Transform_SummonsAreAllies.Value
-            && active.StashedSummons != null && active.StashedSummons.Count > 0)
+            && owner != null && owner.StashedSummons != null && owner.StashedSummons.Count > 0)
         {
-            int restored = SummonAllyService.RestoreAll(active, playerCharacter);
+            int restored = SummonAllyService.RestoreAll(owner, playerCharacter);
             if (restored > 0)
             {
-                active.SummonsDisabled = false;
+                owner.SummonsDisabled = false;
                 Core.Log.LogInfo($"[Beelz SUMMON] auto-restore on dismount: restored {restored} for player {steamId}.");
             }
         }
@@ -199,7 +203,7 @@ internal static class UpdateBuffsBufferDestroyPatch
         ulong steamId = playerCharacter.GetSteamId();
         if (steamId == 0) return;
 
-        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
+        var active = Core.AbilityRegistry.GetSummonOwner(steamId, createIfMissing: false);
         if (active == null) return;
         if (active.StashedSummons == null || active.StashedSummons.Count == 0) return;
 

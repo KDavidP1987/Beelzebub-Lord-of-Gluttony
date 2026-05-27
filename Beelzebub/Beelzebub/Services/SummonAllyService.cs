@@ -47,7 +47,7 @@ internal static class SummonAllyService
     {
         owningPlayer = Entity.Null;
         if (!entity.Exists()) return false;
-        foreach (var (steamId, active) in Core.AbilityRegistry.AllActiveTransforms())
+        foreach (var (steamId, active) in Core.AbilityRegistry.AllSummonOwners())
         {
             if (active.SummonedMinions == null) continue;
             for (int i = 0; i < active.SummonedMinions.Count; i++)
@@ -370,7 +370,7 @@ internal static class SummonAllyService
     /// </summary>
     public static void SyncAggroAll()
     {
-        foreach (var (steamId, active) in Core.AbilityRegistry.AllActiveTransforms())
+        foreach (var (steamId, active) in Core.AbilityRegistry.AllSummonOwners())
         {
             if (active.SummonsDisabled) continue;
             if (active.SummonedMinions == null || active.SummonedMinions.Count == 0) continue;
@@ -418,7 +418,7 @@ internal static class SummonAllyService
     /// regardless of Disabled state — just adding Disabled isn't enough.
     /// Returns count stashed.
     /// </summary>
-    public static int StashAll(ActiveTransform active, Entity playerCharacter)
+    public static int StashAll(SummonOwnerState active, Entity playerCharacter)
     {
         if (active.SummonedMinions == null || active.SummonedMinions.Count == 0) return 0;
         int stashed = 0;
@@ -479,7 +479,7 @@ internal static class SummonAllyService
     /// current InverseAggroBuffer so any immediate combat at arrival lands
     /// in the buffer right away.
     /// </summary>
-    public static int RestoreAll(ActiveTransform active, Entity playerCharacter)
+    public static int RestoreAll(SummonOwnerState active, Entity playerCharacter)
     {
         if (active.StashedSummons == null || active.StashedSummons.Count == 0) return 0;
         float3 destPos = float3.zero;
@@ -775,7 +775,7 @@ internal static class SummonAllyService
             Core.Log.LogInfo($"[Beelz SUMMON] DrainDespawnQueues tick #{_drainTickCounter}: adminQueue={adminBefore} budget={budget}");
         }
 
-        foreach (var (_, active) in Core.AbilityRegistry.AllActiveTransforms()) DrainOne(active, budget);
+        foreach (var (_, active) in Core.AbilityRegistry.AllSummonOwners()) DrainOne(active, budget);
         foreach (var active in Core.AbilityRegistry.AllPendingDespawns()) DrainOne(active, budget);
 
         int n = Math.Min(budget, _adminQueue.Count);
@@ -791,7 +791,7 @@ internal static class SummonAllyService
         }
     }
 
-    static void DrainOne(ActiveTransform active, int budget)
+    static void DrainOne(SummonOwnerState active, int budget)
     {
         if (active.DespawnQueue == null || active.DespawnQueue.Count == 0) return;
         int n = Math.Min(budget, active.DespawnQueue.Count);
@@ -838,7 +838,7 @@ internal static class SummonAllyService
     public static void HandleHordeEnteringCombat(ulong steamId, Entity playerCharacter)
     {
         if (steamId == 0 || !playerCharacter.Exists()) return;
-        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
+        var active = Core.AbilityRegistry.GetSummonOwner(steamId, false);
         if (active == null) return;
         if (active.SummonsDisabled) return;
         if (active.SummonedMinions == null || active.SummonedMinions.Count == 0) return;
@@ -934,7 +934,7 @@ internal static class SummonAllyService
     /// </summary>
     public static void SetCombatMode(ulong steamId, bool inCombat)
     {
-        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
+        var active = Core.AbilityRegistry.GetSummonOwner(steamId, false);
         if (active == null) return;
         if (active.SummonedMinions == null || active.SummonedMinions.Count == 0) return;
 
@@ -1020,7 +1020,7 @@ internal static class SummonAllyService
     public static void PushTargetToAllSummons(ulong steamId, Entity target)
     {
         if (!target.Exists()) return;
-        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
+        var active = Core.AbilityRegistry.GetSummonOwner(steamId, false);
         if (active == null) return;
         if (active.SummonsDisabled) return;
         if (active.SummonedMinions == null || active.SummonedMinions.Count == 0) return;
@@ -1078,7 +1078,7 @@ internal static class SummonAllyService
     public static void LeashCheckAll(float leashRadius)
     {
         float leashSq = leashRadius * leashRadius;
-        foreach (var (steamId, active) in Core.AbilityRegistry.AllActiveTransforms())
+        foreach (var (steamId, active) in Core.AbilityRegistry.AllSummonOwners())
         {
             if (active.SummonsDisabled) continue;
             if (active.SummonedMinions == null || active.SummonedMinions.Count == 0) continue;
@@ -1164,7 +1164,7 @@ internal static class SummonAllyService
     /// the 3rd cast silently produced nothing despite passing the cast-start
     /// cap check.
     /// </summary>
-    public static int LiveCastCount(ActiveTransform active, int abilityGuid)
+    public static int LiveCastCount(SummonOwnerState active, int abilityGuid)
         => CountAliveGroups(active, abilityGuid, includeEmptyWithinWindow: true);
 
     /// <summary>
@@ -1174,10 +1174,10 @@ internal static class SummonAllyService
     /// "uses" that the spawn would push past the cap. See <see cref="LiveCastCount"/>
     /// for the full rationale.
     /// </summary>
-    public static int LivePopulatedCastCount(ActiveTransform active, int abilityGuid)
+    public static int LivePopulatedCastCount(SummonOwnerState active, int abilityGuid)
         => CountAliveGroups(active, abilityGuid, includeEmptyWithinWindow: false);
 
-    static int CountAliveGroups(ActiveTransform active, int abilityGuid, bool includeEmptyWithinWindow)
+    static int CountAliveGroups(SummonOwnerState active, int abilityGuid, bool includeEmptyWithinWindow)
     {
         if (active.SummonStacks == null) return 0;
         if (!active.SummonStacks.TryGetValue(abilityGuid, out var groups)) return 0;
@@ -1227,7 +1227,7 @@ internal static class SummonAllyService
     /// (Transform_SummonCounterBuffGuid) for its icon; we strip its gameplay
     /// effects and force it permanent + stacking. 0 = feature off.
     /// </summary>
-    public static void UpdateSummonCounter(ActiveTransform active, Entity character)
+    public static void UpdateSummonCounter(SummonOwnerState active, Entity character)
     {
         int guidInt = Beelzebub.Config.Settings.Transform_SummonCounterBuffGuid.Value;
         if (guidInt == 0 || active == null || !character.Exists()) return;
@@ -1309,7 +1309,7 @@ internal static class SummonAllyService
     /// and are removed from the tracking dictionaries + <c>SummonedMinions</c>.
     /// Returns the number of entities queued. No-op when lifetime &lt;= 0.
     /// </summary>
-    public static int DespawnExpiredGroups(ActiveTransform active, float lifetimeSeconds)
+    public static int DespawnExpiredGroups(SummonOwnerState active, float lifetimeSeconds)
     {
         if (lifetimeSeconds <= 0f) return 0;
         if (active?.SummonStacks == null || active.SummonStacks.Count == 0) return 0;
@@ -1357,7 +1357,7 @@ internal static class SummonAllyService
     /// </summary>
     public static void PruneDeadSummon(Entity diedEntity)
     {
-        foreach (var (_, active) in Core.AbilityRegistry.AllActiveTransforms())
+        foreach (var (_, active) in Core.AbilityRegistry.AllSummonOwners())
         {
             PruneFromActive(active, diedEntity);
         }
@@ -1367,7 +1367,7 @@ internal static class SummonAllyService
         }
     }
 
-    static void PruneFromActive(ActiveTransform active, Entity diedEntity)
+    static void PruneFromActive(SummonOwnerState active, Entity diedEntity)
     {
         if (active.SummonedMinions != null)
         {
@@ -1407,7 +1407,7 @@ internal static class SummonAllyService
     /// so <see cref="LiveCastCount"/> can keep empty groups alive while
     /// attribution is still in flight.
     /// </summary>
-    public static void BeginCastGroup(ActiveTransform active, int abilityGuid)
+    public static void BeginCastGroup(SummonOwnerState active, int abilityGuid)
     {
         if (active.SummonStacks == null)
             active.SummonStacks = new Dictionary<int, List<List<Entity>>>();
@@ -1433,7 +1433,7 @@ internal static class SummonAllyService
     /// for this ability. No-op if no group is open (e.g. orphan natural-chain
     /// spawn that arrived outside any attribution window).
     /// </summary>
-    public static void TrackInCurrentGroup(ActiveTransform active, int abilityGuid, Entity minion)
+    public static void TrackInCurrentGroup(SummonOwnerState active, int abilityGuid, Entity minion)
     {
         bool verbose = Beelzebub.Config.Settings.VerboseLogging.Value;
         if (active.SummonStacks == null)

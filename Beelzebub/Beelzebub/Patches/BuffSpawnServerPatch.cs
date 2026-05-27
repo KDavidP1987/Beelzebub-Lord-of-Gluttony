@@ -457,7 +457,7 @@ internal static class BuffSpawnServerPatch
         ulong steamId = playerCharacter.GetSteamId();
         if (steamId == 0) return;
 
-        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
+        var active = Core.AbilityRegistry.GetSummonOwner(steamId, createIfMissing: false);
         if (active == null) return;
         if (active.SummonedMinions == null || active.SummonedMinions.Count == 0) return;
 
@@ -481,8 +481,8 @@ internal static class BuffSpawnServerPatch
         ulong steamId = playerCharacter.GetSteamId();
         if (steamId == 0) return;
 
-        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
-        if (active == null) return; // only transformed players have Beelzebub summons
+        var active = Core.AbilityRegistry.GetSummonOwner(steamId, createIfMissing: false);
+        if (active == null) return; // v0.45.0: transform OR standalone summon owner
 
         if (Beelzebub.Config.Settings.Transform_MountedSummonMode.Value
                 != Beelzebub.Config.Settings.MountedSummonMode.Stash)
@@ -509,17 +509,19 @@ internal static class BuffSpawnServerPatch
         ulong steamId = playerCharacter.GetSteamId();
         if (steamId == 0) return;
 
-        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
-        if (active == null) return;
-
         // v0.41.0 BUG FIX (#2): a travel/bat form overrode the transform's spell bar.
         // On arrival the player is still transformed, so re-apply the active transform —
-        // otherwise the bar drops to weapon-naturals until a weapon swap. Runs regardless
-        // of whether summons were stashed (the summon restore below early-returns without it).
-        try { Core.Transforms.ReapplyActiveTransform(steamId, active, playerCharacter); }
-        catch (Exception ex) { Core.Log.LogError($"[Beelz] re-apply transform on travel-end failed: {ex}"); }
+        // otherwise the bar drops to weapon-naturals until a weapon swap.
+        var transform = Core.AbilityRegistry.GetActiveTransform(steamId);
+        if (transform != null)
+        {
+            try { Core.Transforms.ReapplyActiveTransform(steamId, transform, playerCharacter); }
+            catch (Exception ex) { Core.Log.LogError($"[Beelz] re-apply transform on travel-end failed: {ex}"); }
+        }
 
-        if (active.StashedSummons == null || active.StashedSummons.Count == 0) return;
+        // v0.45.0: restore stashed summons for the owner (transform OR standalone).
+        var active = Core.AbilityRegistry.GetSummonOwner(steamId, createIfMissing: false);
+        if (active == null || active.StashedSummons == null || active.StashedSummons.Count == 0) return;
 
         int restored = SummonAllyService.RestoreAll(active, playerCharacter);
         if (restored > 0)

@@ -110,7 +110,7 @@ internal static class DealDamageSystemPatch
         // or the patch isn't being invoked.
         if (Beelzebub.Config.Settings.VerboseLogging.Value)
         {
-            var activeLog = Core.AbilityRegistry.GetActiveTransform(steamId);
+            var activeLog = Core.AbilityRegistry.GetSummonOwner(steamId, createIfMissing: false);
             if (activeLog != null)
             {
                 string targetName = target.GetPrefabGuid().GetPrefabName() ?? "?";

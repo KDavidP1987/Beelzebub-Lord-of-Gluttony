@@ -45,7 +45,38 @@ internal static class ServerBootstrapSystemPatch
             if (steamId == 0) return;
 
             var active = Core.AbilityRegistry.GetActiveTransform(steamId);
-            if (active == null) return; // not transformed — nothing to do
+            if (active == null)
+            {
+                // v0.45.0: not transformed — but the player may have STANDALONE summons
+                // (a summon ability cast in normal form). Despawn them so they don't linger
+                // ownerless while the player is offline. Gated by the same config as the
+                // transform path. (Reconnect-grace for standalone summons is a future
+                // enhancement; for now they're cleaned on disconnect.)
+                if (!Beelzebub.Config.Settings.Transform_DespawnSummonsOnDisconnect.Value) return;
+                try
+                {
+                    var owner = Core.AbilityRegistry.GetSummonOwner(steamId, createIfMissing: false);
+                    if (owner != null)
+                    {
+                        int queued = 0;
+                        if (owner.SummonedMinions != null)
+                            foreach (var m in owner.SummonedMinions) if (m.Exists()) { Beelzebub.Services.SummonAllyService.EnqueueAdminDespawn(m); queued++; }
+                        if (owner.StashedSummons != null)
+                            foreach (var m in owner.StashedSummons) if (m.Exists()) { Beelzebub.Services.SummonAllyService.EnqueueAdminDespawn(m); queued++; }
+                        if (queued > 0)
+                        {
+                            Beelzebub.Services.SummonAllyService.DrainAdminQueueImmediate();
+                            Core.Log.LogInfo($"[Beelz SUMMON] disconnect: despawned {queued} standalone summon(s) for player {steamId}.");
+                        }
+                        Core.AbilityRegistry.ClearStandaloneSummons(steamId);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Core.Log.LogWarning($"[Beelz] disconnect standalone-summon cleanup failed for {steamId}: {ex.Message}");
+                }
+                return; // not transformed — transform grace logic below doesn't apply
+            }
 
             // v0.43.7: disconnect policy is governed by Transform_ReconnectGraceSeconds.
             //

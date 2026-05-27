@@ -486,7 +486,7 @@ internal sealed class TransformService
             _lastLifespanCheck = now;
             try
             {
-                foreach (var (_, active) in Core.AbilityRegistry.AllActiveTransforms())
+                foreach (var (_, active) in Core.AbilityRegistry.AllSummonOwners())
                     SummonAllyService.DespawnExpiredGroups(active, summonLifetime);
             }
             catch (Exception ex) { Core.Log.LogWarning($"[Beelz SUMMON] lifespan check failed: {ex.Message}"); }
@@ -510,9 +510,11 @@ internal sealed class TransformService
             _lastCounterCheck = now;
             try
             {
-                foreach (var (steamId, active) in Core.AbilityRegistry.AllActiveTransforms())
+                foreach (var (steamId, active) in Core.AbilityRegistry.AllSummonOwners())
                 {
-                    Entity ch = active.Character.Exists() ? active.Character : EntityExtensions.FindCharacterBySteamId(steamId);
+                    Entity ch = (active is ActiveTransform at && at.Character.Exists())
+                        ? at.Character
+                        : EntityExtensions.FindCharacterBySteamId(steamId);
                     SummonAllyService.UpdateSummonCounter(active, ch);
                 }
             }

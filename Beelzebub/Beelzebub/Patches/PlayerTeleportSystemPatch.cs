@@ -70,7 +70,7 @@ internal static class PlayerTeleportSystemPatch
         ulong steamId = playerCharacter.GetSteamId();
         if (steamId == 0) return;
 
-        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
+        var active = Core.AbilityRegistry.GetSummonOwner(steamId, createIfMissing: false);
         if (active == null) return;
 
         // v0.23.11: auto-restore stashed summons after teleport completes.

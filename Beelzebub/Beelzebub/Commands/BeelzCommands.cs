@@ -40,7 +40,8 @@ internal static class BeelzCommands
         ctx.Reply(".beelz progress — your collection-completion %");
         ctx.Reply("-- SLOTS / LOADOUT --");
         ctx.Reply(".beelz grant <slot 1-6> <index> / .beelz unslot <slot> — universal slot binds");
-        ctx.Reply(".beelz weapon-grant <weapon|auto> <slot> <index> / weapon-unslot <weapon> <slot> — per-weapon binds");
+        ctx.Reply(".beelz weapon-grant <weapon|auto> <slot> <index> / weapon-unslot <weapon> <slot> — per-weapon binds (unarmed = its own family; swapping weapons auto-switches the set)");
+        ctx.Reply(".beelz loadouts — view your universal 'basic' set + each per-weapon set, and which is active");
         ctx.Reply(".beelz preset save|load|list|delete <name> — slot loadout presets");
         ctx.Reply(".beelz cast <hotkey|index> — cast a capture on demand (extra hotkeys: .beelz hotkey help)");
         ctx.Reply(".beelz active / .beelz current — what's effectively on your bar right now");
@@ -49,13 +50,52 @@ internal static class BeelzCommands
         ctx.Reply(".beelz transforms / .beelz transform <name> / .beelz revert — your unlocked transformations");
         ctx.Reply(".beelz preview <name> — a transform's abilities · .beelz phase [n] — switch a boss form's phase loadout");
         ctx.Reply(".beelz summon [n] / .beelz detonate — fire your transform's signature summon / AoE");
-        ctx.Reply(".beelz summons [stash|restore|status] / .beelz tp — manage transform summons (waygate-safe)");
+        ctx.Reply(".beelz summons [stash|restore|clear|status] / .beelz tp — manage summons (works for captured summon abilities too, not just transforms; waygate-safe)");
         ctx.Reply("-- MANAGE --");
         ctx.Reply(".beelz forget <i> / .beelz forget-transform <i> — delete one entry");
         ctx.Reply(".beelz clear CONFIRM — wipe ALL your data (warns first; use .beelz resetbar to keep captures)");
         ctx.Reply(".beelz verbosity <silent|summary|verbose> — chat detail level");
         ctx.Reply(".beelz help — walkthrough · .beelz commands — this list");
         ctx.Reply("Group help: .beelz admin help (admins) · .beelz api help (BCH/UI) · .beelz hotkey help");
+    }
+
+    [Command("loadouts", description: "Show your slot loadouts: the universal 'basic' set + each per-weapon set, and which is active for your equipped weapon. Usage: .beelz loadouts")]
+    public static void Loadouts(ChatCommandContext ctx)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        Entity character = ctx.Event.SenderCharacterEntity;
+        ulong steamId = character.GetSteamId();
+        if (steamId == 0) { ctx.Reply("Could not resolve your Steam ID."); return; }
+
+        var weapon = SlotApply.GetCurrentWeapon(character);
+        ctx.Reply($"=== Your loadouts === (wielding: {weapon}). A per-weapon set overrides the universal set on its slots; swapping weapons switches sets automatically. Unarmed/spellcasting is its own weapon family.");
+
+        EmitLoadoutBucket(ctx, "UNIVERSAL (basic / fallback — fires on any weapon)", Core.AbilityRegistry.GetSlots(steamId));
+
+        var byWeapon = Core.AbilityRegistry.AllWeaponSlots(steamId);
+        if (byWeapon.Count == 0)
+        {
+            ctx.Reply("No per-weapon loadouts yet. Build one: .beelz weapon-grant <weapon|auto> <slot 1-6> <index>");
+            return;
+        }
+        foreach (var (fam, slots) in byWeapon.OrderBy(kv => kv.Key.ToString()))
+        {
+            bool active = fam == weapon;
+            EmitLoadoutBucket(ctx, active ? $"{fam} (ACTIVE — currently wielded)" : fam.ToString(), slots);
+        }
+    }
+
+    static void EmitLoadoutBucket(ChatCommandContext ctx, string label, IReadOnlyDictionary<int, int> slots)
+    {
+        if (slots == null || slots.Count == 0) { ctx.Reply($"-- {label}: (empty)"); return; }
+        ctx.Reply($"-- {label}:");
+        foreach (int slot in slots.Keys.OrderBy(s => s))
+        {
+            int guid = slots[slot];
+            string name = Core.AbilityMetadata?.Resolve(guid).Name;
+            if (string.IsNullOrEmpty(name)) name = new PrefabGUID(guid).GetPrefabName();
+            ctx.Reply($"   slot {slot}: {name}");
+        }
     }
 
     [Command("list", description: "List your captured abilities + slot assignments. Optional filter: vblood | shard | regular. Usage: .beelz list [filter] [page]. Paginated 15/page.")]

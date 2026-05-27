@@ -41,7 +41,73 @@ internal readonly record struct CapturedAbility(int UnitPrefabGuid, int AbilityP
 
 internal readonly record struct UnlockedTransform(int UnitPrefabGuid, CaptureSource Source);
 
-internal sealed class ActiveTransform
+/// <summary>
+/// v0.45.0: per-player summon-tracking state, decoupled from transformation so summon
+/// abilities cast in NORMAL form (the v0.44.0 per-ability playstyle) get the same ally
+/// setup, owner-rebind, cap accounting, leashing and despawn lifecycle as summons cast
+/// while transformed. <see cref="ActiveTransform"/> derives from this, so the transform
+/// path keeps every field it had; untransformed summoners get a bare instance from
+/// <see cref="AbilityRegistry.GetSummonOwner"/>. Runtime-only (never persisted).
+/// </summary>
+internal class SummonOwnerState
+{
+    // v0.20.0: minion entities spawned by summon abilities. AbilityCastStartedSystemPatch
+    // + LinkMinionToOwnerOnSpawnSystemPatch append here as they rebind freshly-spawned
+    // minions. v0.23.0: no cap (was 10); Revert / despawn move these into DespawnQueue and
+    // drain across frames so we don't crash V Rising by destroying 100 entities in a tick.
+    public System.Collections.Generic.List<Unity.Entities.Entity> SummonedMinions;
+
+    // v0.23.6: per-CAST stack tracking. Each cast of a summon ability creates a
+    // new inner list (a "cast group") in SummonStacks[abilityGuid]. The cap
+    // refuses based on the number of LIVE GROUPS (= number of active uses of
+    // the ability), not the number of live entities. Example: cast RaiseHorde
+    // 3 times = 3 groups = 3/3 uses, even though each cast spawned 10 entities.
+    // A group is "alive" if any entity in it still exists. Lazy cleanup on read.
+    public System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<System.Collections.Generic.List<Unity.Entities.Entity>>> SummonStacks
+        = new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<System.Collections.Generic.List<Unity.Entities.Entity>>>();
+
+    // v0.23.16 (B1 fix): parallel to SummonStacks — SummonStackTimes[abilityGuid][i]
+    // is the creation timestamp of the cast group at SummonStacks[abilityGuid][i].
+    // Without this, LiveCastCount prunes empty groups immediately — and any cast
+    // whose natural-chain spawns arrive AFTER the attribution window (Priest's
+    // channeled RaiseHorde/RaiseDead can take 2-3s) leaves an empty group that
+    // gets pruned before attribution lands, breaking the cap entirely. With
+    // this, an empty group is only pruneable after the attribution window
+    // expires (= confirmed no attribution will arrive). BeginCastGroup must
+    // keep these two dictionaries index-aligned per ability.
+    public System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<System.DateTime>> SummonStackTimes
+        = new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<System.DateTime>>();
+
+    // v0.23.0: staged-despawn queue. Revert moves SummonedMinions here in one shot;
+    // TransformService.Tick drains <=N entities/frame to avoid the batch-destroy
+    // server crash (v0.22.0 testing crashed at ~36 entities/frame).
+    public System.Collections.Generic.Queue<Unity.Entities.Entity> DespawnQueue
+        = new System.Collections.Generic.Queue<Unity.Entities.Entity>();
+
+    // v0.23.0: `.beelz summons off` master kill-switch per player. When true:
+    // cast-intercept refuses new summons, natural-chain rebind skips, and any
+    // future re-summon-on-teleport is suppressed.
+    public bool SummonsDisabled;
+
+    // v0.23.0: teleport snapshot. PlayerTeleportSystemPatch moves live summons here
+    // and adds <Disabled> components on teleport-start; on teleport-finish we drain
+    // back into SummonedMinions and remove <Disabled>. Avoids leaving allies behind
+    // in the source zone (V Rising's teleport flow doesn't carry NPC followers).
+    public System.Collections.Generic.List<Unity.Entities.Entity> SuspendedSummons
+        = new System.Collections.Generic.List<Unity.Entities.Entity>();
+
+    // v0.23.8: manual stash/restore for waygate teleport. Bloodcraft-pattern —
+    // when player runs `.beelz summons stash`, all live summons get <Disabled>
+    // component + move from SummonedMinions to StashedSummons. They're out of
+    // the world (don't trigger V Rising's "subdued enemy" pre-check) but still
+    // tied to this owner's runtime state. `.beelz summons restore` reverses:
+    // remove <Disabled>, teleport to current player position, move back to
+    // SummonedMinions list.
+    public System.Collections.Generic.List<Unity.Entities.Entity> StashedSummons
+        = new System.Collections.Generic.List<Unity.Entities.Entity>();
+}
+
+internal sealed class ActiveTransform : SummonOwnerState
 {
     public int UnitPrefabGuid;
     public CaptureSource Source;
@@ -72,61 +138,6 @@ internal sealed class ActiveTransform
     // reverts it once the grace elapses; a reconnect clears this and resumes the form.
     // null = owner connected / transform active normally. Runtime-only (never persisted).
     public System.DateTime? DisconnectedAtUtc;
-    // v0.20.0: minion entities spawned by summon abilities while this transform
-    // was active. AbilityCastStartedSystemPatch + LinkMinionToOwnerOnSpawnSystemPatch
-    // append here as they rebind freshly-spawned minions. v0.23.0: no cap (was 10);
-    // TransformService.Revert moves these into DespawnQueue and drains across frames
-    // so we don't crash V Rising by destroying 100 entities in a single tick.
-    public System.Collections.Generic.List<Unity.Entities.Entity> SummonedMinions;
-
-    // v0.23.6: per-CAST stack tracking. Each cast of a summon ability creates a
-    // new inner list (a "cast group") in SummonStacks[abilityGuid]. The cap
-    // refuses based on the number of LIVE GROUPS (= number of active uses of
-    // the ability), not the number of live entities. Example: cast RaiseHorde
-    // 3 times = 3 groups = 3/3 uses, even though each cast spawned 10 entities.
-    // A group is "alive" if any entity in it still exists. Lazy cleanup on read.
-    public System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<System.Collections.Generic.List<Unity.Entities.Entity>>> SummonStacks
-        = new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<System.Collections.Generic.List<Unity.Entities.Entity>>>();
-
-    // v0.23.16 (B1 fix): parallel to SummonStacks — SummonStackTimes[abilityGuid][i]
-    // is the creation timestamp of the cast group at SummonStacks[abilityGuid][i].
-    // Without this, LiveCastCount prunes empty groups immediately — and any cast
-    // whose natural-chain spawns arrive AFTER the attribution window (Priest's
-    // channeled RaiseHorde/RaiseDead can take 2-3s) leaves an empty group that
-    // gets pruned before attribution lands, breaking the cap entirely. With
-    // this, an empty group is only pruneable after the attribution window
-    // expires (= confirmed no attribution will arrive). BeginCastGroup must
-    // keep these two dictionaries index-aligned per ability.
-    public System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<System.DateTime>> SummonStackTimes
-        = new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<System.DateTime>>();
-
-    // v0.23.0: staged-despawn queue. Revert moves SummonedMinions here in one shot;
-    // TransformService.Tick drains <=N entities/frame to avoid the batch-destroy
-    // server crash (v0.22.0 testing crashed at ~36 entities/frame).
-    public System.Collections.Generic.Queue<Unity.Entities.Entity> DespawnQueue
-        = new System.Collections.Generic.Queue<Unity.Entities.Entity>();
-
-    // v0.23.0: `.beelz summons off` master kill-switch per player+transform. When
-    // true: cast-intercept refuses new summons, natural-chain rebind skips, and
-    // any future re-summon-on-teleport is suppressed.
-    public bool SummonsDisabled;
-
-    // v0.23.0: teleport snapshot. PlayerTeleportSystemPatch moves live summons here
-    // and adds <Disabled> components on teleport-start; on teleport-finish we drain
-    // back into SummonedMinions and remove <Disabled>. Avoids leaving allies behind
-    // in the source zone (V Rising's teleport flow doesn't carry NPC followers).
-    public System.Collections.Generic.List<Unity.Entities.Entity> SuspendedSummons
-        = new System.Collections.Generic.List<Unity.Entities.Entity>();
-
-    // v0.23.8: manual stash/restore for waygate teleport. Bloodcraft-pattern —
-    // when player runs `.beelz summons stash`, all live summons get <Disabled>
-    // component + move from SummonedMinions to StashedSummons. They're out of
-    // the world (don't trigger V Rising's "subdued enemy" pre-check) but still
-    // tied to this transform's runtime state. `.beelz summons restore` reverses:
-    // remove <Disabled>, teleport to current player position, move back to
-    // SummonedMinions list.
-    public System.Collections.Generic.List<Unity.Entities.Entity> StashedSummons
-        = new System.Collections.Generic.List<Unity.Entities.Entity>();
 }
 
 internal sealed class AbilityRegistry
@@ -155,6 +166,10 @@ internal sealed class AbilityRegistry
     // Phase 5: transforms.
     readonly ConcurrentDictionary<ulong, ConcurrentDictionary<int, CaptureSource>> _transformUnlocks = new(); // unitGuid → source
     readonly ConcurrentDictionary<ulong, ActiveTransform> _activeTransforms = new(); // runtime-only
+    // v0.45.0: per-player summon state for players who are NOT transformed. Lets summon
+    // abilities cast in normal form be tracked/allied/despawned exactly like transform
+    // summons. Created on demand by GetSummonOwner; runtime-only (never persisted).
+    readonly ConcurrentDictionary<ulong, SummonOwnerState> _standaloneSummons = new();
     readonly ConcurrentDictionary<ulong, System.DateTime> _cooldownRegularUntil = new(); // runtime-only
     readonly ConcurrentDictionary<ulong, System.DateTime> _cooldownVBloodUntil = new(); // runtime-only
     readonly ConcurrentDictionary<ulong, System.DateTime> _cooldownShardUntil = new(); // runtime-only (v0.39.0)
@@ -543,6 +558,7 @@ internal sealed class AbilityRegistry
         _presets.Clear();
         _transformUnlocks.Clear();
         _activeTransforms.Clear();
+        _standaloneSummons.Clear();
         _cooldownRegularUntil.Clear();
         _cooldownVBloodUntil.Clear();
         _cooldownShardUntil.Clear();
@@ -559,6 +575,7 @@ internal sealed class AbilityRegistry
         _hotkeys.TryRemove(steamId, out _);
         _transformUnlocks.TryRemove(steamId, out _);
         _activeTransforms.TryRemove(steamId, out _);
+        _standaloneSummons.TryRemove(steamId, out _);
         _pity.TryRemove(steamId, out _);
         return _data.TryRemove(steamId, out _);
     }
@@ -652,6 +669,41 @@ internal sealed class AbilityRegistry
     public void SetActiveTransform(ulong steamId, ActiveTransform state) => _activeTransforms[steamId] = state;
     public void ClearActiveTransform(ulong steamId) => _activeTransforms.TryRemove(steamId, out _);
     public IEnumerable<KeyValuePair<ulong, ActiveTransform>> AllActiveTransforms() => _activeTransforms;
+
+    // --- v0.45.0: summon owners (transform OR standalone) ---
+
+    /// <summary>
+    /// Resolve the summon-tracking container for a player. While transformed this is the
+    /// player's <see cref="ActiveTransform"/> (so behavior is byte-identical to before);
+    /// otherwise it's a standalone <see cref="SummonOwnerState"/>. Behaviour/iteration
+    /// call-sites pass <paramref name="createIfMissing"/>=false and keep their null-guard
+    /// (no allocation churn); only the summon-catch hooks (cast / spawn-link) create on
+    /// demand, since that's where a summon is actually being made.
+    /// </summary>
+    public SummonOwnerState GetSummonOwner(ulong steamId, bool createIfMissing)
+    {
+        if (_activeTransforms.TryGetValue(steamId, out var at)) return at;
+        if (createIfMissing) return _standaloneSummons.GetOrAdd(steamId, _ => new SummonOwnerState());
+        return _standaloneSummons.TryGetValue(steamId, out var s) ? s : null;
+    }
+
+    /// <summary>
+    /// Every live summon owner: all active transforms, then standalone owners (skipping any
+    /// player who also has a transform — that container is the live one). Used by the
+    /// per-frame summon behaviour ticks (aggro-sync, leash, despawn-drain, prune, lifespan).
+    /// </summary>
+    public IEnumerable<KeyValuePair<ulong, SummonOwnerState>> AllSummonOwners()
+    {
+        foreach (var kv in _activeTransforms)
+            yield return new KeyValuePair<ulong, SummonOwnerState>(kv.Key, kv.Value);
+        foreach (var kv in _standaloneSummons)
+        {
+            if (_activeTransforms.ContainsKey(kv.Key)) continue;
+            yield return new KeyValuePair<ulong, SummonOwnerState>(kv.Key, kv.Value);
+        }
+    }
+
+    public void ClearStandaloneSummons(ulong steamId) => _standaloneSummons.TryRemove(steamId, out _);
 
     // v0.23.0: post-revert despawn pending records. When a transform reverts with
     // live summons we move the ActiveTransform here (instead of dropping it) until

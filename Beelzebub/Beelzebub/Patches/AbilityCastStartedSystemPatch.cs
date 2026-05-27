@@ -152,8 +152,11 @@ internal static class AbilityCastStartedSystemPatch
         ulong steamId = caster.GetSteamId();
         if (steamId == 0) return;
 
-        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
-        if (active == null) return;
+        // v0.45.0: summons work untransformed. Resolve the EXISTING summon owner (transform
+        // OR standalone) without creating one yet — we only materialize a standalone container
+        // below, once we've confirmed this is actually a summon cast.
+        var active = Core.AbilityRegistry.GetSummonOwner(steamId, createIfMissing: false);
+        bool transformed = active is ActiveTransform;
 
         PrefabGUID abilityPrefab = evt.AbilityGroup.GetPrefabGuid();
 
@@ -168,15 +171,17 @@ internal static class AbilityCastStartedSystemPatch
 
         // v0.25.0: open a chain-trace window for EVERY transformed-player cast
         // (not just summons) so the runtime audit can see what each ability's
-        // chain actually spawns. See ChainTraceService.
-        Services.ChainTraceService.BeginTrace(steamId, abilityPrefab.GetPrefabName() ?? "?");
+        // chain actually spawns. See ChainTraceService. v0.45.0: transform-era
+        // boss-kit diagnostic only — skip for untransformed casts.
+        if (transformed)
+            Services.ChainTraceService.BeginTrace(steamId, abilityPrefab.GetPrefabName() ?? "?");
 
         // v0.23.12: auto-stash on waygate cast. Fires BEFORE we check
         // SummonsDisabled because we want to stash regardless of toggle state
         // when the player is trying to teleport.
         if (WaypointCastAbilityGroups.Contains(abilityPrefab._Value))
         {
-            if (active.SummonedMinions != null && active.SummonedMinions.Count > 0)
+            if (active != null && active.SummonedMinions != null && active.SummonedMinions.Count > 0)
             {
                 int stashed = Services.SummonAllyService.StashAll(active, caster);
                 if (stashed > 0)
@@ -194,7 +199,7 @@ internal static class AbilityCastStartedSystemPatch
             return; // not a summon cast; nothing else to do
         }
 
-        if (active.SummonsDisabled) return; // v0.23.0 toggle
+        if (active != null && active.SummonsDisabled) return; // v0.23.0 toggle
 
         string abilityName = abilityPrefab.GetPrefabName() ?? "";
         if (string.IsNullOrEmpty(abilityName)) return;
@@ -209,6 +214,10 @@ internal static class AbilityCastStartedSystemPatch
             }
         }
         if (!isSummon) return;
+
+        // v0.45.0: confirmed a summon cast — ensure a tracking container exists now
+        // (materializes the standalone owner for an untransformed summoner on first use).
+        active ??= Core.AbilityRegistry.GetSummonOwner(steamId, createIfMissing: true);
 
         var dedupeKey = (steamId, abilityPrefab._Value);
         DateTime now = DateTime.UtcNow;

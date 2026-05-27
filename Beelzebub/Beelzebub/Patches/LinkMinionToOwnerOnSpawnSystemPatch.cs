@@ -85,12 +85,11 @@ internal static class LinkMinionToOwnerOnSpawnSystemPatch
         ulong steamId = playerCharacter.GetSteamId();
         if (steamId == 0) return;
 
-        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
-        if (active == null)
-        {
-            if (verbose) Core.Log.LogInfo($"[Beelz SUMMON][link] skip {minion}: player {steamId} has no active transform.");
-            return;
-        }
+        // v0.45.0: resolve the summon owner (active transform OR standalone untransformed
+        // state). createIfMissing:true — a summon is being linked to this player right now.
+        var active = Core.AbilityRegistry.GetSummonOwner(steamId, createIfMissing: true);
+        if (active == null) return; // never null with createIfMissing, but guard anyway
+        bool transformed = active is ActiveTransform;
         if (active.SummonsDisabled) return; // v0.23.0 toggle
 
         // Attribute to recent cast (v0.23.0). If a cast of a summon ability fired
@@ -117,6 +116,17 @@ internal static class LinkMinionToOwnerOnSpawnSystemPatch
         else if (verbose)
         {
             Core.Log.LogInfo($"[Beelz SUMMON][link] {minion} prefab={minion.GetPrefabGuid().GetPrefabName()} attribution: NO recent summon cast registered for this player.");
+        }
+
+        // v0.45.0: when NOT transformed, only adopt minions attributable to a recent
+        // Beelzebub summon cast — otherwise we'd grab unrelated player minions (coffin
+        // servants, other mods' familiars) that merely link to the player this frame.
+        // While transformed we keep prior behaviour (boss-kit natural-chain spawns can
+        // arrive late / unattributed and are still legitimately the player's).
+        if (!transformed && !abilityGuid.HasValue)
+        {
+            if (verbose) Core.Log.LogInfo($"[Beelz SUMMON][link] skip {minion}: untransformed with no recent summon-cast attribution.");
+            return;
         }
 
         // v0.23.6: over-cap natural-chain spawns — destroy IMMEDIATELY via the

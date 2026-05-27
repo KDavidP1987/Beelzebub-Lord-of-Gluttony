@@ -30,9 +30,26 @@
 > expect at most the two boss entries; the collection UI should center on abilities
 > (`api list` / `api bestiary`) + the Devour event.
 >
-> **Last full audit:** Beelzebub **v0.44.0** (2026-05-27) — re-verified through the
-> per-ability pivot: every command, event, config key, and `[BEELZ:*]` line below was
-> checked against the source (`ApiCommands.cs`, `BeelzCommands.cs`, `TransformCommands.cs`,
+> **⚠️ v0.45.0 — SUMMONS WORK UNTRANSFORMED + loadout discoverability.** Two changes,
+> **no wire/event/ApiVersion change (still 6)** — both are additive behavior + chat-only:
+> - **Summons are no longer transform-gated.** Casting a captured *summon* ability in
+>   normal form (e.g. a Raise-Dead / Reinforcement) now spawns tracked player-allies just
+>   like a transform summon did. **Implication for BCH:** `[BEELZ:active] none=1` (no active
+>   transform) **no longer implies "no summons"** — summon state is now independent of
+>   transformation. `.beelz summons [stash|restore|clear|status]` and `.beelz tp` work
+>   untransformed; **new `clear` action** despawns all of a player's summons. Standalone
+>   summons are despawned on disconnect (same `Transform_DespawnSummonsOnDisconnect` gate).
+> - **Loadout surfacing.** New read-only player command **`.beelz loadouts`** (summary of
+>   the universal "basic" set + each per-weapon set + which is active). No new wire surface —
+>   BCH already has everything to build a loadout UI from **`api slots`** (`bucket=any` =
+>   universal fallback, `bucket=<WeaponFamily>` = per-weapon override, `[BEELZ:slot-current]
+>   weapon=` = active bucket). **Semantics to render correctly:** a per-weapon set overrides
+>   the universal set *on its bound slots only*; swapping weapons auto-switches the active
+>   set; **Unarmed is its own weapon family** (the spellcasting/fists loadout).
+>
+> **Last full audit:** Beelzebub **v0.44.0** (2026-05-27); **v0.45.0** delta (summons
+> untransformed + `.beelz loadouts` + `.beelz summons clear`) folded in above — re-verified
+> against the source (`ApiCommands.cs`, `BeelzCommands.cs`, `TransformCommands.cs`,
 > `HotkeyCommands.cs`, `AdminCommands.cs`, `DevourService.cs`, `Config/Settings.cs`).
 
 ---
@@ -221,6 +238,8 @@ re-fetch the affected read command (or wait for the event).
 (v3 filter — also splits shard bosses into their own group) ·
 `.beelz weapon-grant <weapon\|auto> <slot> <index>` ·
 `.beelz weapon-unslot <weapon\|auto> <slot>` ·
+`.beelz loadouts` (v0.45 — human-text summary of the universal set + each per-weapon set +
+the active weapon; the wire-data equivalent is `api slots`) ·
 `.beelz transform <index\|name>` · `.beelz revert` · `.beelz phase [n]` ·
 `.beelz preview <index\|name>` (human-text — abilities you'd get per phase if you
 transformed into a unit; backs a "preview before committing" affordance in the
@@ -230,7 +249,9 @@ after reverting, leaving a travel/wolf/bat form, dismounting a horse, or a weapo
 quirk; a good "fix my bar" button. v0.41+) ·
 `.beelz detonate` (fire a transform's signature AoE on demand, if it has one — a
 natural candidate for a BCH HUD button) ·
-`.beelz summons <stash\|restore\|status>` (status replies human-text; live/stashed counts) ·
+`.beelz summons <stash\|restore\|clear\|status>` (status replies human-text; live/stashed
+counts. **v0.45:** works for summons cast UNTRANSFORMED too — not just transform summons;
+new `clear` despawns all your summons) ·
 `.beelz preset <save\|load\|list\|delete> <name>` ·
 `.beelz hotkey set <name> <index>` · `.beelz hotkey clear <name>` · `.beelz hotkey list`
 (named extra-ability bindings; `set` rejects with a limit message at `Hotkeys_MaxPerPlayer`) ·
