@@ -157,6 +157,10 @@ internal sealed class AbilityRules
                 AllowDenied = entry.AllowDenied,
                 DamageScale = entry.DamageScale > 0f ? entry.DamageScale : 1.0f,
                 CooldownScale = entry.CooldownScale > 0f ? entry.CooldownScale : 1.0f,
+                // v0.46.0 ability tuning (null/false/unset = leave the prefab's baked value).
+                Interruptible = entry.Interruptible,
+                FreeMoveAfterCast = entry.FreeMoveAfterCast,
+                CastMovementSpeed = entry.CastMovementSpeed,
                 Notes = entry.Notes ?? "",
             };
         }
@@ -762,6 +766,16 @@ internal sealed class AbilityRules
         public bool AllowDenied { get; set; } = false;
         public float DamageScale { get; set; } = 1.0f;
         public float CooldownScale { get; set; } = 1.0f;
+        // v0.46.0 ability tuning (applied at init when AbilityTuning_Enabled; GLOBAL prefab edit):
+        // - Interruptible: null = leave baked; true = cast can be cancelled by player action
+        //   (dash / raise shield → AbilityInterruptData.ManualInterrupt); false = uninterruptible.
+        // - FreeMoveAfterCast: true = the player is freed to move when the CAST finishes
+        //   (clamps ModifyMovementDuringCastData to the cast duration instead of the effect's).
+        // - CastMovementSpeed: override the move-speed multiplier DURING the cast
+        //   (0 = rooted … 1 = full speed). null = leave baked.
+        public bool? Interruptible { get; set; }
+        public bool FreeMoveAfterCast { get; set; }
+        public float? CastMovementSpeed { get; set; }
         public string Notes { get; set; } = "";
     }
 

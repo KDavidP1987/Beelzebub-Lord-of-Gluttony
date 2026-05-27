@@ -40,6 +40,7 @@ internal static class AdminCommands
         ctx.Reply("=== Beelzebub ADMIN commands === (player commands: .beelz commands)");
         ctx.Reply("-- RULES / CAPTURE FILTERS --");
         ctx.Reply(".beelz admin rules / reload — show / re-read the ability rules");
+        ctx.Reply(".beelz admin tune <ability> <interrupt|freemove|castspeed> <on|off|0..1> / tune-list — cast tuning (needs AbilityTuning_Enabled)");
         ctx.Reply(".beelz admin deny|undeny|allow|unallow <pattern> — capture-filter substring patterns");
         ctx.Reply(".beelz admin freeze-captures <on|off|status> — master CaptureOnKill toggle");
         ctx.Reply("-- TRANSFORM CONFIG --");
@@ -125,7 +126,81 @@ internal static class AdminCommands
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
         Core.AbilityRules.Load();
-        ctx.Reply($"Rules reloaded from {Core.AbilityRules.RulesFilePath}.");
+        // v0.46.0: re-apply ability cast-tuning from the freshly-loaded rules (no-op unless
+        // AbilityTuning_Enabled). Lets admins hand-edit Interruptible/FreeMoveAfterCast and
+        // reload without a server restart.
+        int tuned = AbilityTuningService.ApplyAll();
+        string tuneNote = Beelzebub.Config.Settings.AbilityTuning_Enabled.Value
+            ? $" Ability tuning re-applied to {tuned} cast prefab(s)."
+            : " (Ability tuning disabled — set AbilityTuning_Enabled to use it.)";
+        ctx.Reply($"Rules reloaded from {Core.AbilityRules.RulesFilePath}.{tuneNote}");
+    }
+
+    [Command("tune", description: "Tune a captured ability's CAST: interrupt on|off (dash/shield can cancel), freemove on|off (free to move once the cast ends), or castspeed <0..1> (move speed during cast). Needs AbilityTuning_Enabled. Usage: .beelz admin tune <ability name> <interrupt|freemove|castspeed> <on|off|0..1>", adminOnly: true)]
+    public static void Tune(ChatCommandContext ctx, string ability, string knob, string value)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        string name = (ability ?? "").Trim();
+        if (name.Length == 0) { ctx.Reply("Usage: .beelz admin tune <ability name> <interrupt|freemove|castspeed> <on|off|0..1>. Use the ability/group prefab name from .beelz list / .beelz api list."); return; }
+
+        var map = Core.AbilityRules.Current.AbilityMap;
+        if (!map.TryGetValue(name, out var e)) { e = new AbilityRules.AbilityEntry(); map[name] = e; }
+
+        string k = (knob ?? "").Trim().ToLowerInvariant();
+        string v = (value ?? "").Trim().ToLowerInvariant();
+        bool? onOff = v is "on" or "true" or "1" ? true : v is "off" or "false" or "0" ? false : (bool?)null;
+
+        switch (k)
+        {
+            case "interrupt":
+                if (onOff == null) { ctx.Reply("interrupt expects on|off."); return; }
+                e.Interruptible = onOff.Value;
+                break;
+            case "freemove":
+                if (onOff == null) { ctx.Reply("freemove expects on|off."); return; }
+                e.FreeMoveAfterCast = onOff.Value;
+                break;
+            case "castspeed":
+                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float f) || f < 0f)
+                { ctx.Reply("castspeed expects a number >= 0 (0 = rooted during cast, 1 = full speed)."); return; }
+                e.CastMovementSpeed = f;
+                break;
+            default:
+                ctx.Reply("Unknown knob. Use: interrupt | freemove | castspeed.");
+                return;
+        }
+        Core.AbilityRules.Save();
+
+        if (!Beelzebub.Config.Settings.AbilityTuning_Enabled.Value)
+        {
+            ctx.Reply($"Saved {k}={v} for '{name}', but AbilityTuning_Enabled is OFF — set it true (it applies on next load / reload).");
+            return;
+        }
+        int applied = AbilityTuningService.ApplyAll();
+        ctx.Reply($"Tuned '{name}': {k}={v}. Re-applied to {applied} cast prefab(s). NOTE: this is a GLOBAL prefab edit — the original NPC/boss cast of this ability changes too.");
+        Audit(ctx, "tune", 0, name, $"{k}={v} applied={applied}");
+    }
+
+    [Command("tune-list", description: "List abilities with cast-tuning set (interrupt / freemove / castspeed). Usage: .beelz admin tune-list", adminOnly: true)]
+    public static void TuneList(ChatCommandContext ctx)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        var map = Core.AbilityRules.Current.AbilityMap;
+        bool enabled = Beelzebub.Config.Settings.AbilityTuning_Enabled.Value;
+        ctx.Reply($"=== Ability cast-tuning === (AbilityTuning_Enabled={(enabled ? "ON" : "OFF")})");
+        int n = 0;
+        foreach (var (name, e) in map.OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            if (e.Interruptible == null && !e.FreeMoveAfterCast && e.CastMovementSpeed == null) continue;
+            string parts = "";
+            if (e.Interruptible.HasValue) parts += $" interrupt={(e.Interruptible.Value ? "on" : "off")}";
+            if (e.FreeMoveAfterCast) parts += " freemove=on";
+            if (e.CastMovementSpeed.HasValue) parts += $" castspeed={e.CastMovementSpeed.Value:F2}";
+            ctx.Reply($"  {name}:{parts}");
+            n++;
+        }
+        if (n == 0) ctx.Reply("  (none — e.g. .beelz admin tune AB_Vampire_VeilOfChaos_Group interrupt on)");
+        else ctx.Reply($"{n} tuned ability(ies).{(enabled ? "" : " Set AbilityTuning_Enabled to apply them.")}");
     }
 
     [Command("transform mode", description: "Set transform mode. Usage: .beelz admin transform mode <regular|vblood> <toggle|timed|disabled>", adminOnly: true)]

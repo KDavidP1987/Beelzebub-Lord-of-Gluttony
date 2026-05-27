@@ -138,6 +138,13 @@ internal static class Settings
     // is safely returned to base form on reconnect via the on-connect reconciliation).
     public static ConfigEntry<float> Transform_ReconnectGraceSeconds { get; private set; }
 
+    // v0.46.0: master switch for ability-tuning (cast interrupt + post-cast movement
+    // unlock). When true, Beelzebub rewrites baked fields on the curated abilities'
+    // CAST prefabs at server init (AbilityRules AbilityMap entries with Interruptible /
+    // FreeMoveAfterCast / CastMovementSpeed set). The edit is GLOBAL — it also changes
+    // how the original NPC/boss casts that same ability. Default false (opt-in).
+    public static ConfigEntry<bool> AbilityTuning_Enabled { get; private set; }
+
     // v0.23.1: max distance (world units) a summon can wander from its player
     // before being teleported back. 0 = no leashing.
     public static ConfigEntry<float> Transform_SummonLeashRadius { get; private set; }
@@ -533,5 +540,17 @@ internal static class Settings
             "typical max gear level. Bloodcraft servers with raised level caps should bump this " +
             "to match (the curve continues to apply at this:1 ratio even above; clamp keeps it " +
             "from exploding past 100% boss-tier).");
+
+        AbilityTuning_Enabled = config.Bind(
+            "AbilityTuning", nameof(AbilityTuning_Enabled), false,
+            "v0.46.0: master switch for per-ability CAST tuning — making long-cast abilities " +
+            "interruptible (dash/shield out of a cast) and freeing the player to move once the " +
+            "cast finishes. When true, Beelzebub rewrites baked fields (AbilityInterruptData / " +
+            "ModifyMovementDuringCastData) on the CAST prefabs of abilities you curate in " +
+            "ability_rules.json (AbilityMap entries with Interruptible / FreeMoveAfterCast / " +
+            "CastMovementSpeed). Set them per-ability there or via `.beelz admin tune`, then " +
+            "`.beelz admin reload`. WARNING: the edit is GLOBAL — the original NPC/boss casts of " +
+            "that same ability change too. Default false (opt-in). Verify one ability in-game " +
+            "before curating broadly (these are baked-data edits).");
     }
 }

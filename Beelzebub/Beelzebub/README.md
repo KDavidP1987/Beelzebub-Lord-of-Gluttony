@@ -36,7 +36,7 @@ A **server-side** V Rising mod that turns the whole bestiary into a collection-a
 
 **Source · issues · roadmap:** [github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony) · **License:** MIT
 
-> **Status:** active early access / **public test build (v0.45.0)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
+> **Status:** active early access / **public test build (v0.46.0)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
 
 ---
 
@@ -72,6 +72,7 @@ A **server-side** V Rising mod that turns the whole bestiary into a collection-a
 - **Live config** — change drop rates, transform rules, pity, shard-boss settings and more at runtime with `.beelz admin set <key> <value>` (persists; no restart).
 - **Power scaling, your way** — transforms and granted abilities already scale with the player's stats (so they track level/gear/prestige); on top of that, admins get global scaling modes and **per-ability damage tuning**, plus summon level-matching and a summon power factor.
 - **Curated rules** in a hot-reloadable JSON: allow/deny lists, per-ability weapon/difficulty/scaling, per-unit transform tiers and stat scales.
+- **Cast tuning (opt-in, v0.46)** — make long casts **interruptible** (dash out / raise a shield to cancel) and **free the player to move once the cast finishes** (instead of staying rooted for the whole effect), per-ability via the rules file or `.beelz admin tune`. Off by default (`AbilityTuning_Enabled`); note it edits the ability's shared cast data, so the source NPC/boss cast changes too — enable, tune one ability, and test.
 - **Difficulty gating, grant/revoke, `devour` (bulk-grant a unit's whole kit), inspect, audit logging** — full operator toolkit.
 
 ### Companion-app ready (BloodCraftHub)
@@ -92,7 +93,7 @@ Install with [r2modman](https://thunderstore.io/package/ebkr/r2modman/) / Thunde
 **Use abilities:** `.beelz grant <slot 1-6> <index>` · `.beelz weapon-grant <weapon> <slot> <index>` · `.beelz loadouts` (view universal + per-weapon sets) · `.beelz unslot <slot>` · `.beelz resetbar` (clear all bindings → vanilla bar) · `.beelz hotkey set <name> <index>` → `.beelz cast <name>`
 **Summons:** `.beelz summons <stash|restore|clear|status>` (works for captured summon abilities, not just transforms) · `.beelz summon [n]` (a transformed boss's signature add-summon)
 **Transform (Dracula & Morgana):** `.beelz transforms` · `.beelz transform <name>` · `.beelz phase [n]` · `.beelz revert` · `.beelz refresh` (re-apply your bar if it ever goes blank) · `.beelz detonate`
-**Admin:** `.beelz admin set <key> <value>` · `.beelz admin devour <player> <unitGuid>` (grant a unit's whole kit) · `.beelz admin give/revoke …` · `.beelz admin rules` / `deny` / `allow` / `reload` · `.beelz admin difficulty <basic|brutal>` · `.beelz admin help`
+**Admin:** `.beelz admin set <key> <value>` · `.beelz admin devour <player> <unitGuid>` (grant a unit's whole kit) · `.beelz admin give/revoke …` · `.beelz admin rules` / `deny` / `allow` / `reload` · `.beelz admin difficulty <basic|brutal>` · `.beelz admin tune <ability> <interrupt|freemove|castspeed>` (opt-in cast tuning) · `.beelz admin help`
 **Settings:** `.beelz verbosity <silent|summary|verbose>` · `.beelz help` · `.beelz commands`
 
 ## Configuration

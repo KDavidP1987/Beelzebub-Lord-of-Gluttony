@@ -120,6 +120,12 @@ internal static class Core
             }
             catch (System.Exception ex) { Log.LogWarning($"[Beelz] transform→Devour migration failed: {ex.Message}"); }
 
+            // v0.46.0: apply curated cast-tuning (interrupt + post-cast movement unlock) to the
+            // ability CAST prefabs. No-op unless AbilityTuning_Enabled. Runs here because the
+            // prefab map + ability rules are both loaded above; re-runs on `.beelz admin reload`.
+            try { Services.AbilityTuningService.ApplyAll(); }
+            catch (System.Exception ex) { Log.LogWarning($"[Beelz] ability-tuning apply failed: {ex.Message}"); }
+
             IsReady = true;
             Log.LogInfo($"Beelzebub initialized via {trigger} (attempt #{_initAttempts}). Registry size: {AbilityRegistry.PlayerCount} player(s). Prefab map has {prefabSystem.SpawnableNameToPrefabGuidDictionary.Count} entries. Built reverse name map with {PrefabNames.Count} entries.");
         }

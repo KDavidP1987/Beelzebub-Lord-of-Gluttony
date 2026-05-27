@@ -55,6 +55,9 @@ Each ability gets one entry, keyed by its exact prefab name (no quotes around th
 | `Enabled` | bool (default `true`) | Admin kill-switch. `false` = blocks both capture on kill AND `.beelz grant` / transform pickup. The ability vanishes from the mod entirely without affecting NPC casters. |
 | `DamageScale` | float (default `1.0`) | Multiplier on damage when the ability is cast from a Beelzebub-granted slot. **Currently inert** — value is stored but takes no effect until the W5 runtime ships. Curate now; runtime catches up. |
 | `CooldownScale` | float (default `1.0`) | Multiplier on cooldown for Beelzebub-granted casts. Same inert-for-now caveat as DamageScale. |
+| `Interruptible` | bool (omit = leave baked) | **v0.46.0 cast tuning** (needs `AbilityTuning_Enabled`). `true` = the cast can be cancelled by player action — dash out / raise a shield (`ManualInterrupt`); `false` = uninterruptible; omit = leave the prefab's baked value. **GLOBAL edit** — also changes the source NPC/boss cast. Set live with `.beelz admin tune <ability> interrupt on\|off`. |
+| `FreeMoveAfterCast` | bool (default `false`) | **v0.46.0 cast tuning**. `true` = clamp the movement-lock to the cast duration so the player is free to move the instant the cast bar finishes (instead of staying rooted until the whole effect ends). **GLOBAL edit.** `.beelz admin tune <ability> freemove on\|off`. (A root that comes from a buff rather than the cast isn't covered.) |
+| `CastMovementSpeed` | float (omit = leave baked) | **v0.46.0 cast tuning**. Override the move-speed multiplier DURING the cast (`0` = rooted … `1` = full speed). **GLOBAL edit.** `.beelz admin tune <ability> castspeed <0..1>`. |
 | `Notes` | string | Free-text annotation — ignored by the mod, for your own reference. |
 
 ### Valid `Weapons` values

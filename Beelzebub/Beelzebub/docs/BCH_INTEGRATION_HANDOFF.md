@@ -47,10 +47,22 @@
 >   the universal set *on its bound slots only*; swapping weapons auto-switches the active
 >   set; **Unarmed is its own weapon family** (the spellcasting/fists loadout).
 >
-> **Last full audit:** Beelzebub **v0.44.0** (2026-05-27); **v0.45.0** delta (summons
-> untransformed + `.beelz loadouts` + `.beelz summons clear`) folded in above — re-verified
-> against the source (`ApiCommands.cs`, `BeelzCommands.cs`, `TransformCommands.cs`,
-> `HotkeyCommands.cs`, `AdminCommands.cs`, `DevourService.cs`, `Config/Settings.cs`).
+> **⚠️ v0.46.0 — ABILITY CAST TUNING (admin/server-side; no wire change, ApiVersion still 6).**
+> New opt-in server feature: make long casts interruptible (dash/shield-cancel) and free the
+> player to move once the cast finishes. **No new `[BEELZ:*]` line or event** — admin surface only:
+> - Config key **`AbilityTuning_Enabled`** (default false) — appears automatically in `api config`
+>   (reflection-streamed), so a BCH settings panel can toggle it via `.beelz admin set`.
+> - New admin commands **`.beelz admin tune <ability> <interrupt|freemove|castspeed> <on|off|0..1>`**
+>   and **`.beelz admin tune-list`**; `.beelz admin reload` re-applies tuning live (no restart).
+> - Per-ability state lives in `ability_rules.json` (`AbilityMap[...]` fields `Interruptible`,
+>   `FreeMoveAfterCast`, `CastMovementSpeed`) — not streamed over the wire; a BCH admin panel would
+>   edit it via the chat commands above. The edit is GLOBAL — it also changes the source NPC/boss cast.
+>
+> **Last full audit:** Beelzebub **v0.44.0** (2026-05-27); **v0.45.0 + v0.46.0** deltas (summons
+> untransformed, `.beelz loadouts`, `.beelz summons clear`, ability cast-tuning) folded in above —
+> re-verified against the source (`ApiCommands.cs`, `BeelzCommands.cs`, `TransformCommands.cs`,
+> `HotkeyCommands.cs`, `AdminCommands.cs`, `AbilityTuningService.cs`, `DevourService.cs`,
+> `Config/Settings.cs`, `Services/AbilityRules.cs`).
 
 ---
 

@@ -4,6 +4,28 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.46.0] - 2026-05-27
+
+### Make long casts interruptible + free movement after a cast (opt-in)
+
+Two admin-curated cast tweaks, **off by default** — turn on the new `AbilityTuning_Enabled` server
+setting, then tag abilities in `ability_rules.json` (or with `.beelz admin tune`):
+
+- **Interruptible casts.** Mark an ability `interrupt on` and its long cast can be cancelled by
+  player action — dash out of danger or raise a shield mid-cast instead of being locked into the
+  cast. `interrupt off` makes it uninterruptible.
+- **Free movement after the cast.** Some spells keep you rooted *after* the cast bar finishes,
+  until the whole effect ends. Mark an ability `freemove on` and the movement lock is clamped to
+  the cast itself, so you can move the moment casting completes. `castspeed <0..1>` also tunes how
+  fast you move *during* the cast (0 = rooted, 1 = full speed).
+- New admin commands: `.beelz admin tune <ability> <interrupt|freemove|castspeed> <on|off|0..1>`
+  and `.beelz admin tune-list`; `.beelz admin reload` re-applies tuning live (no restart).
+
+> **Heads-up:** this rewrites the ability's shared cast data, so it also changes how the original
+> NPC/boss casts that same ability. It's opt-in — enable it, tune one ability, and test in-game
+> before curating broadly. (A movement-lock that comes from a buff rather than the cast itself
+> isn't covered by this.)
+
 ## [0.45.0] - 2026-05-27
 
 ### Summons work without transforming + clearer loadouts
