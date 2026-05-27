@@ -122,6 +122,13 @@ internal sealed class ActiveTransform : SummonOwnerState
     // when Transform_NativeShapeshift_Enabled is false). Used by revert to know
     // which buff to destroy. Runtime-only.
     public int AppliedShapeshiftForm;
+    // v0.47.0 (Phase 1 native-form test): when non-zero, this transform is a NATIVE shapeshift
+    // form (Wolf/Bear/…) applied via the persistent ExoForm recipe with a custom ability set,
+    // NOT a curated boss form. Marks it exempt from the non-boss "stale transform" guard in
+    // ReapplyActiveTransform (so it resumes on reconnect/refresh instead of being reverted), and
+    // carries the set so reapply re-runs ApplyForm. Runtime-only. 0 = not a native-form test.
+    public int NativeFormBuffGuid;
+    public int[] NativeFormSet;
     // TX5: which boss-phase loadout is currently on the spell bar. Default 1.
     // Switched via `.beelz phase <n>`.
     public int CurrentPhase = 1;

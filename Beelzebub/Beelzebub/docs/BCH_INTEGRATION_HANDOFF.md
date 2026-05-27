@@ -58,11 +58,21 @@
 >   `FreeMoveAfterCast`, `CastMovementSpeed`) — not streamed over the wire; a BCH admin panel would
 >   edit it via the chat commands above. The edit is GLOBAL — it also changes the source NPC/boss cast.
 >
-> **Last full audit:** Beelzebub **v0.44.0** (2026-05-27); **v0.45.0 + v0.46.0** deltas (summons
-> untransformed, `.beelz loadouts`, `.beelz summons clear`, ability cast-tuning) folded in above —
-> re-verified against the source (`ApiCommands.cs`, `BeelzCommands.cs`, `TransformCommands.cs`,
-> `HotkeyCommands.cs`, `AdminCommands.cs`, `AbilityTuningService.cs`, `DevourService.cs`,
-> `Config/Settings.cs`, `Services/AbilityRules.cs`).
+> **v0.47.0 — EXPERIMENTAL native-form test (admin-only; no wire change, ApiVersion still 6).**
+> New admin command **`.beelz admin testform <wolf|bear|off>`** drops the admin into a native
+> Wolf/Bear form (persistent ExoForm recipe) carrying their loadout's abilities — Phase-1
+> feasibility probe for a future per-form loadout system (does the form hold through casting?).
+> Routes through the normal transform lifecycle (`.beelz revert` / logout both clear it). **No
+> BCH impact** — no `[BEELZ:*]` line/event, no config a panel needs. If the test holds, a Phase-2
+> per-form loadout feature (parallel to the per-weapon buckets) would follow and *then* get a wire
+> surface; until then BCH needs nothing here.
+>
+> **Last full audit:** Beelzebub **v0.44.0** (2026-05-27); **v0.45.0 + v0.46.0 + v0.47.0** deltas
+> (summons untransformed, `.beelz loadouts`, `.beelz summons clear`, ability cast-tuning, the
+> experimental native-form test) folded in above — re-verified against the source
+> (`ApiCommands.cs`, `BeelzCommands.cs`, `TransformCommands.cs`, `HotkeyCommands.cs`,
+> `AdminCommands.cs`, `AbilityTuningService.cs`, `DevourService.cs`, `Config/Settings.cs`,
+> `Services/AbilityRules.cs`, `Services/TransformService.cs`).
 
 ---
 

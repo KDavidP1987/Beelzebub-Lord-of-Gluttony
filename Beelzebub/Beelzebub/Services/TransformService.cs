@@ -891,6 +891,10 @@ internal sealed class TransformService
     public bool ReapplyActiveTransform(ulong steamId, ActiveTransform active, Entity character)
     {
         if (active == null || !character.Exists()) return false;
+        // v0.47.0: a native-form test resumes by re-applying its form buff + custom set
+        // directly (single set, no phases). Exempt from the non-boss guard below.
+        if (active.NativeFormBuffGuid != 0)
+            return TransformBuffService.ApplyForm(character, active.NativeFormBuffGuid, active.NativeFormSet, null);
         // v0.44.0 defense-in-depth: transformation is Dracula/Morgana-only now. If a stale
         // non-boss active-transform record is ever resumed (e.g. reconnect grace), DON'T
         // re-apply its bar — clean-revert instead, so we can't reintroduce a stuck bar.
@@ -900,6 +904,48 @@ internal sealed class TransformService
             return false;
         }
         return ApplyPhase(steamId, active, character, active.CurrentPhase);
+    }
+
+    /// <summary>
+    /// v0.47.0 Phase-1 feasibility test: drop the player into a NATIVE shapeshift form
+    /// (Wolf/Bear/…) via the persistent ExoForm recipe (<see cref="TransformBuffService.ApplyForm"/>)
+    /// with a custom ability set, to verify in-game whether the form HOLDS the model+rig through
+    /// casting non-form abilities — the open question that gates the per-form-loadout feature.
+    /// Routes through the normal transform lifecycle (a registered <see cref="ActiveTransform"/>
+    /// marked with NativeFormBuffGuid), so <c>.beelz revert</c>, reconnect-grace, and the on-login
+    /// orphan reconcile all tear it down cleanly — it can never strand the bar. Returns (ok, message).
+    /// </summary>
+    public (bool ok, string message) ApplyNativeFormTest(ulong steamId, Entity character, int formBuffGuid, int[] set, string label)
+    {
+        if (!character.Exists()) return (false, "Could not resolve your character entity.");
+        if (formBuffGuid == 0) return (false, "Unknown form.");
+        if (set == null || set.Length == 0)
+            return (false, "No abilities to load — set up your universal loadout with .beelz grant (or capture some abilities) first, then retry.");
+
+        // End any current transform first (clean carrier/form teardown).
+        if (Core.AbilityRegistry.GetActiveTransform(steamId) is not null)
+            Revert(steamId, "switching to form test", restoreBar: false);
+
+        if (!TransformBuffService.ApplyForm(character, formBuffGuid, set, null))
+            return (false, "ApplyForm returned false — the form buff could not be applied.");
+
+        var active = new ActiveTransform
+        {
+            UnitPrefabGuid = formBuffGuid,   // the form buff doubles as the "unit" id for this test
+            Source = CaptureSource.Regular,
+            ActivatedAtUtc = DateTime.UtcNow,
+            Duration = null,                 // toggle — no auto-revert
+            Character = character,
+            NativeFormBuffGuid = formBuffGuid,
+            NativeFormSet = set,
+        };
+        Core.AbilityRegistry.SetActiveTransform(steamId, active);
+
+        string names = string.Join(", ", System.Array.ConvertAll(set, a => new PrefabGUID(a).GetPrefabName()));
+        Core.Log.LogInfo($"[Beelz FORMTEST] {steamId} → {label} form={new PrefabGUID(formBuffGuid).GetPrefabName()} set=[{names}]");
+        return (true,
+            $"Now in {label} form with {set.Length} custom ability(ies). TEST: cast one — does the form HOLD (stay {label}) " +
+            $"or drop back to vampire on the first cast? Exit with '.beelz admin testform off' (or .beelz revert). Logging out auto-clears it.");
     }
 
     /// <summary>

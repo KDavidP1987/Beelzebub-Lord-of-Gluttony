@@ -4,6 +4,24 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.47.0] - 2026-05-27
+
+### Experimental: native-form test (admin) — groundwork for per-form ability sets
+
+First step toward "wolf/bear/etc. forms with your own ability set" (the same idea as the
+per-weapon loadouts, but for shapeshift forms). This release adds an **admin test command only**,
+so we can verify the make-or-break question in-game before building the full feature: does a
+native shapeshift form *hold* when you cast your own (non-form) abilities, or does it drop on
+the first cast?
+
+- **`.beelz admin testform <wolf|bear|off>`** — puts you into Wolf or Bear form (using the same
+  persistent form mechanism Dracula and Morgana use) carrying your current loadout's abilities,
+  so you can test casting them in-form. `off` exits. It routes through the normal transform
+  lifecycle, so `.beelz revert` ends it and logging out clears it automatically — it cannot get
+  your action bar stuck.
+
+Nothing changes for normal play — this only does anything when an admin runs the test command.
+
 ## [0.46.0] - 2026-05-27
 
 ### Make long casts interruptible + free movement after a cast (opt-in)

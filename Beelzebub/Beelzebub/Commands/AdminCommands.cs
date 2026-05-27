@@ -46,6 +46,7 @@ internal static class AdminCommands
         ctx.Reply("-- TRANSFORM CONFIG --");
         ctx.Reply(".beelz admin transform mode|duration|cooldown <regular|vblood> <...> — transform tuning");
         ctx.Reply(".beelz admin transform show — current transform settings · difficulty [basic|brutal] — server gating");
+        ctx.Reply(".beelz admin testform <wolf|bear|off> — [PHASE-1 TEST] enter a native form with your loadout's abilities (does it hold through casting?)");
         ctx.Reply("-- PLAYER GRANTS --");
         ctx.Reply(".beelz admin give|revoke <player> <unitGuid> <abilityGuid> — grant / remove one captured ability");
         ctx.Reply(".beelz admin devour <player> <unitGuid> — grant ALL of a unit's abilities at once (alternative to transformation)");
@@ -201,6 +202,46 @@ internal static class AdminCommands
         }
         if (n == 0) ctx.Reply("  (none — e.g. .beelz admin tune AB_Vampire_VeilOfChaos_Group interrupt on)");
         else ctx.Reply($"{n} tuned ability(ies).{(enabled ? "" : " Set AbilityTuning_Enabled to apply them.")}");
+    }
+
+    [Command("testform", description: "Phase-1 native-form test: drop YOU into wolf/bear form (persistent ExoForm recipe) carrying your current loadout's abilities, to test whether the form HOLDS through casting custom abilities. Usage: .beelz admin testform <wolf|bear|off>", adminOnly: true)]
+    public static void TestForm(ChatCommandContext ctx, string form)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        Entity character = ctx.Event.SenderCharacterEntity;
+        ulong steamId = character.GetSteamId();
+        if (steamId == 0) { ctx.Reply("Could not resolve your Steam ID."); return; }
+
+        string f = (form ?? "").Trim().ToLowerInvariant();
+        if (f is "off" or "revert" or "exit")
+        {
+            var (reverted, _) = Core.Transforms.Revert(steamId, "testform-off");
+            ctx.Reply(reverted ? "Exited the form test — your normal bar is restored." : "You're not currently in a form test.");
+            return;
+        }
+
+        int formGuid = f switch
+        {
+            "wolf" => -351718282,   // AB_Shapeshift_Wolf_Buff
+            "bear" => -1569370346,  // AB_Shapeshift_Bear_Buff
+            _ => 0,
+        };
+        if (formGuid == 0) { ctx.Reply("Usage: .beelz admin testform <wolf|bear|off>."); return; }
+
+        // Build the test ability set: prefer your universal loadout, else your first few captures.
+        var set = new System.Collections.Generic.List<int>();
+        foreach (var (slot, ag) in Core.AbilityRegistry.GetSlots(steamId).OrderBy(kv => kv.Key))
+            if (ag != 0) set.Add(ag);
+        if (set.Count == 0)
+            foreach (var c in Core.AbilityRegistry.ListFor(steamId))
+            {
+                set.Add(c.AbilityPrefabGuid);
+                if (set.Count >= 6) break;
+            }
+
+        var (ok, message) = Core.Transforms.ApplyNativeFormTest(steamId, character, formGuid, set.ToArray(), f == "wolf" ? "Wolf" : "Bear");
+        ctx.Reply(message);
+        if (ok) Audit(ctx, "testform", steamId, "self", $"form={f} abilities={set.Count}");
     }
 
     [Command("transform mode", description: "Set transform mode. Usage: .beelz admin transform mode <regular|vblood> <toggle|timed|disabled>", adminOnly: true)]
