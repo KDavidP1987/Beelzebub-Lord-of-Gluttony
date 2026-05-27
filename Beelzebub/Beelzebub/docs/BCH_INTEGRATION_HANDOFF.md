@@ -85,6 +85,50 @@
 
 ---
 
+## 0.0 — ⚡ SINCE YOUR LAST BUILD (BCH baseline v0.44.0 → now v0.48.0) — READ THIS FIRST
+
+**Context (2026-05-27):** BCH began building its Beelzebub UI against the **v0.44.0** handoff
+(commit `306026f`, **ApiVersion 6**). Beelzebub then shipped **v0.45.0 → v0.48.0** the same day.
+**The important news: nothing you already built breaks** — the wire API (`[BEELZ:*]` lines, event
+types, ApiVersion) is UNCHANGED at **6**. This is the consolidated delta so you can fold the new
+bits into the UI without re-reading every callout. (Per-version detail is in the callouts above.)
+
+**A) Needs NO action — your existing build still works as-is:**
+- ApiVersion is still **6**. No new/changed/removed `[BEELZ:*]` lines or event types. Your parser,
+  state cache, and event-router need zero changes.
+- All of v0.46–v0.48 (cast tuning, form work) is server-side/admin/config — no new read stream.
+
+**B) BEHAVIOR CHANGE to account for in the UI (the one thing to actually fix):**
+- **Summons are no longer tied to transformation (v0.45.0).** A player can have live summons while
+  NOT transformed (casting a captured summon ability in normal form). So **`[BEELZ:active] none=1`
+  (no active transform) no longer implies "no summons."** Do NOT gate a summon counter/panel on
+  having an active transform — treat summon state as independent of transform state. `.beelz summons
+  status` and the management commands all work untransformed now.
+
+**C) New things you CAN surface (optional UI wins, no wire schema change):**
+- **Per-weapon loadout UI — build it now.** `api slots` already streams it (unchanged): `bucket=any`
+  = the universal "basic" set, `bucket=<WeaponFamily>` = a per-weapon override set,
+  `[BEELZ:slot-current] weapon=<fam>` = the active bucket. Weapon-specific overrides universal *on
+  its slots only*; the **server auto-switches** the active set on weapon swap (you just re-read
+  `api slots` / reflect `slot-current` — no client logic needed). Unarmed is its own family. New
+  human-readable helper if useful: `.beelz loadouts`.
+- **New player command** for a summons panel button: `.beelz summons clear` (despawn all the
+  player's summons) — alongside the existing `stash|restore|status`.
+- **New config keys** auto-appear in `api config` (same `[BEELZ:config]` rows, no schema change):
+  `AbilityTuning_Enabled`, `Forms_CustomAbilities_Enabled` — a settings panel toggles them via
+  `.beelz admin set <key> <value>` like any other.
+- **New admin commands** (if you build admin panels): `.beelz admin tune <ability>
+  <interrupt|freemove|castspeed> <on|off|0..1>`, `.beelz admin tune-list`, `.beelz admin testform
+  <wolf|bear|off>`.
+
+**D) Experimental — NO BCH wire surface yet (a Phase-2 delta will follow):**
+- Cast tuning (interrupt / post-cast move-unlock) and custom-abilities-on-forms (Wolf/Bear test) are
+  live as server/admin features but expose nothing new over the wire. If the form test holds in-game,
+  a Phase-2 **per-form loadout** (parallel to the per-weapon buckets, with an `api`/grant surface +
+  an ApiVersion bump) follows — you'll get a new "since your last build" section here then.
+
+---
+
 ## 0. Integration model
 
 Beelzebub is **server-side only** and cannot draw anything on a client. BCH is
