@@ -4,7 +4,7 @@
 
 # Beelzebub, Lord of Gluttony
 
-> **Devour the bestiary.** Every kill is a chance to steal a unit's abilities — and the rarest of all lets you *become* the unit and fight with its full kit.
+> **Devour the bestiary.** Every kill is a chance to steal a unit's abilities — and the rarest of all lets you *devour its entire kit in one blow*.
 
 ---
 
@@ -32,48 +32,47 @@ release is for.** 🦇
 
 ---
 
-A **server-side** V Rising mod that turns the whole bestiary into a collection-and-mastery loop. Defeat anything — a lowly bandit or a Soul Shard boss — and roll a chance to capture its abilities or unlock the power to transform into it. Slot those abilities, bind extras to your own hotkeys, and hunt the realm to complete your collection.
+A **server-side** V Rising mod that turns the whole bestiary into a collection-and-mastery loop. Defeat anything — a lowly bandit or a Soul Shard boss — and roll a chance to capture one of its abilities, or hit the rare **Devour** jackpot and learn its *entire* kit at once. Slot those abilities, bind extras to your own hotkeys, and hunt the realm to complete your collection.
 
 **Source · issues · roadmap:** [github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony) · **License:** MIT
 
-> **Status:** active early access / **public test build (v0.43.23)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
+> **Status:** active early access / **public test build (v0.44.0)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
 
 ---
 
 ## The loop
 
-1. **Kill things.** Each kill rolls a small chance to capture one of the unit's abilities (default 5%) and a rarer chance to unlock transforming into it (default 1%).
+1. **Kill things.** Each kill rolls a small chance to capture one of the unit's abilities (default 5%), plus a rare **Devour** jackpot (default ~0.25%) that grants the unit's *entire* eligible kit at once.
 2. **Bad luck doesn't last** — a built-in pity system nudges your odds up on every dry kill and resets when you finally get a drop.
 3. **Wield what you collect.** Assign abilities to your spell slots, or bind extras to named hotkeys for an expanded action bar.
-4. **Become the unit.** Spend the rare transform unlocks to take on a unit's form and full ability set — including real boss forms.
+4. **Devour the rare ones.** The jackpot teaches you a whole unit's kit in a single kill. (Dracula & Morgana additionally unlock a true visual *transformation* — see below.)
 5. **Complete the bestiary.** Track your progress per-unit and hunt down what you're missing.
 
 ## Features
 
 ### Capture & collect
-- **Every kill rolls** for abilities + a transform unlock, with separate odds for regular mobs, V-Bloods, and the shard bosses.
+- **Every kill rolls** for a single ability, plus a rare **Devour** jackpot that grants the unit's *whole* eligible kit at once — separate odds for regular mobs, V-Bloods, and shard bosses.
+- **"⭐ DEVOURED Foulrot — learned all 6 of its abilities!"** The jackpot is the headline moment: a full kit in one kill, then you pick what to slot.
 - **Escalating bad-luck protection (pity)** — the longer your dry streak, the better your odds, until it pays out.
 - **Smart default filter** strips junk (idle/melee-filler/lifecycle abilities) so your collection stays useful.
-- **Bestiary collection book** (`.beelz bestiary`) — see, per unit, how many of its abilities you've captured (X/Y), whether you've unlocked its transform, and what's left to hunt.
+- **Bestiary collection book** (`.beelz bestiary`) — see, per unit, how many of its abilities you've captured (X/Y) and what's left to hunt.
 
 ### Use your abilities
 - **Assign captures to your six spell slots** — universal, or bound to a specific weapon family. Applies instantly.
 - **Expanded action bar** — you're not capped at six. Bind any captured ability to a named hotkey and fire it on demand with `.beelz cast <name>` (cooldown-respecting). A companion app can surface these as on-screen buttons for 10, 15, 20+ abilities.
 - **Wield-the-right-weapon hints** — weapon-based abilities tell you which weapon makes their animation read correctly.
 
-### Transform into units
-- **Become any unit you've unlocked.** Your bar fills with its abilities.
-- **Real boss forms** — Dracula and Morgana transform into their actual in-game forms (model, rig, and the abilities that need them), with **switchable kits** via `.beelz phase`. Animal-type units (wolves, bears, spiders, toads, …) likewise use their real shapeshift form.
-- **Shard bosses are their own tier** — Dracula, Adam the Firstborn, Solarus the Immaculate, The Winged Horror, Megara the Serpent Queen, and Gorecrusher the Behemoth can have their own transform mode/duration/cooldown, separate from ordinary V-Bloods.
-- **Summons fight for you** — abilities that raise minions spawn them as your allies, with caps, leashing, and clean despawn. They **scale to your level** so they don't fall behind, with an admin power dial. Hop on a horse and your summons either stash-and-restore or keep following into combat, your choice (`Transform_MountedSummonMode`).
-- **Signature add-summons** (`.beelz summon`) — call the adds a boss normally only spawns at low health (the Toad King's frogs, the Werewolf Chieftain's caged wolves, …). Unlock a unit and you also **learn its summon as a standalone ability** you can slot or hotkey and use even when not transformed.
-- **Manual detonation** — fire a boss's signature AoE on demand (`.beelz detonate`).
+### Transform — Dracula & Morgana
+- **Two real boss forms.** Dracula and Morgana transform into their actual in-game forms — model, rig, and the abilities that need them — with **switchable kits** via `.beelz phase`, signature summons, and a manual AoE detonation (`.beelz detonate`).
+- **Why only two?** A server-side mod *cannot* render your character as an arbitrary creature — the game decides your on-screen model on the client. Dracula and Morgana ship as player-renderable forms; every other unit's powers are instead collected as **abilities** (capture / Devour) and slotted onto your normal bar. **Becoming any other unit is a researched, postponed "phase two" feature** — it requires a future client-side companion mod to render the model, which the server alone can't do.
+- **Summons fight for you** — abilities that raise minions spawn them as your allies, with caps, leashing, and clean despawn. They **scale to your level** with an admin power dial; hop on a horse and your summons either stash-and-restore or keep following, your choice (`Transform_MountedSummonMode`).
+- **Signature add-summons** (`.beelz summon`) — call the adds a boss normally only spawns at low health (the Toad King's frogs, the Werewolf Chieftain's caged wolves, …). You also **learn a unit's summon as a standalone ability** you can slot or hotkey and use anytime.
 
 ### Admin & server control
 - **Live config** — change drop rates, transform rules, pity, shard-boss settings and more at runtime with `.beelz admin set <key> <value>` (persists; no restart).
 - **Power scaling, your way** — transforms and granted abilities already scale with the player's stats (so they track level/gear/prestige); on top of that, admins get global scaling modes and **per-ability damage tuning**, plus summon level-matching and a summon power factor.
 - **Curated rules** in a hot-reloadable JSON: allow/deny lists, per-ability weapon/difficulty/scaling, per-unit transform tiers and stat scales.
-- **Difficulty gating, grant/revoke, force-transform, inspect, audit logging** — full operator toolkit.
+- **Difficulty gating, grant/revoke, `devour` (bulk-grant a unit's whole kit), inspect, audit logging** — full operator toolkit.
 
 ### Companion-app ready (BloodCraftHub)
 A structured `[BEELZ:*]` chat API lets the client-side **BloodCraftHub** mod read your collection, slots, transforms, cooldowns, and settings — and render on-screen buttons (including the expanded action bar) and admin panels. *(BloodCraftHub integration is in development.)*
@@ -91,8 +90,8 @@ Install with [r2modman](https://thunderstore.io/package/ebkr/r2modman/) / Thunde
 
 **Collect & inspect:** `.beelz list [vblood|shard|regular]` · `.beelz search <term>` · `.beelz info <i>` · `.beelz bestiary` · `.beelz progress` · `.beelz catalog`
 **Use abilities:** `.beelz grant <slot 1-6> <index>` · `.beelz weapon-grant <weapon> <slot> <index>` · `.beelz unslot <slot>` · `.beelz resetbar` (clear all bindings → vanilla bar) · `.beelz hotkey set <name> <index>` → `.beelz cast <name>`
-**Transform:** `.beelz transforms [vblood|shard|regular]` · `.beelz transform <name>` · `.beelz phase [n]` · `.beelz revert` · `.beelz refresh` (re-apply your bar if it ever goes blank) · `.beelz detonate` · `.beelz summon [n]` (call your unit's signature add-summon) · `.beelz summons <stash|restore|status>`
-**Admin:** `.beelz admin set <key> <value>` · `.beelz admin transform mode/duration/cooldown …` · `.beelz admin give/revoke …` · `.beelz admin rules` / `deny` / `allow` / `reload` · `.beelz admin difficulty <basic|brutal>`
+**Transform (Dracula & Morgana):** `.beelz transforms` · `.beelz transform <name>` · `.beelz phase [n]` · `.beelz revert` · `.beelz refresh` (re-apply your bar if it ever goes blank) · `.beelz detonate` · `.beelz summon [n]` (call your unit's signature add-summon) · `.beelz summons <stash|restore|status>`
+**Admin:** `.beelz admin set <key> <value>` · `.beelz admin devour <player> <unitGuid>` (grant a unit's whole kit) · `.beelz admin give/revoke …` · `.beelz admin rules` / `deny` / `allow` / `reload` · `.beelz admin difficulty <basic|brutal>` · `.beelz admin help`
 **Settings:** `.beelz verbosity <silent|summary|verbose>` · `.beelz help` · `.beelz commands`
 
 ## Configuration
@@ -107,12 +106,15 @@ Honest, up front. These are the areas we **know** are rough or unverified at wid
 scale — they're exactly what this test release is meant to shake out. If you can
 help confirm or break any of these, that's the most valuable feedback we can get.
 
-- **Full transformations / model fidelity is limited by the engine.** A server can
-  only render the ~10 forms V Rising actually ships (the boss forms + the native
-  animal shapeshifts). Most humanoid/undead/construct units transform as
-  **abilities + stats only** — your *model* doesn't change, you just get the kit.
-  True "become any NPC" visually would require a client-side companion mod
-  (planned via BloodCraftHub). Boss/animal forms get the full model.
+- **Transformation is intentionally Dracula & Morgana only.** A server-side mod
+  *cannot* render your character as an arbitrary creature — the game decides your
+  on-screen model on the client. Rather than ship "transformations" that don't
+  visually change anything for most units, every other unit's powers are collected
+  as **abilities** (capture / the Devour jackpot) and slotted onto your normal bar.
+  True "become any unit" visuals are a **researched, postponed phase-two feature**
+  that needs a client-side companion mod to render the model (planned via
+  BloodCraftHub). Dracula & Morgana ship as player-renderable forms, so they remain
+  full transformations today.
 - **Ability chaining can misfire.** Some captured boss abilities are multi-stage
   "chains" (a cast that spawns a projectile that spawns an AoE, etc.). A handful of
   these don't fully complete when cast by a player instead of the original NPC —
@@ -130,7 +132,7 @@ help confirm or break any of these, that's the most valuable feedback we can get
   transforms in particular benefit from real-world tuning feedback.
 - **Things we'd especially love tested:** the expanded action bar (`.beelz cast`),
   ability-bar persistence across weapon swaps / transforms / dismounting, summon
-  behavior in group combat, whether shard-boss transforms feel balanced, and
+  behavior in group combat, whether the Devour jackpot rate feels right, and
   **disconnect/reconnect while transformed** — a quick relog should resume your form
   and summons (within `Transform_ReconnectGraceSeconds`, default 90s), and any login
   should always land you on a working ability bar.
@@ -147,8 +149,9 @@ Where this is heading (subject to change based on your feedback):
 - **BloodCraftHub companion UI** — on-screen ability buttons (including the expanded
   action bar), live cooldown rings, the collection book, a transform browser, and
   admin panels. The server-side contract for this already ships in Beelzebub.
-- **Model & animation fidelity** — true "look like the unit you've become" for
-  non-boss transforms, achievable only via that client-side companion mod.
+- **Phase two: creature transformation** — becoming units beyond Dracula & Morgana
+  (model + animation), achievable only via a client-side companion mod (BloodCraftHub).
+  Researched and on the roadmap; postponed because a server can't drive client rendering.
 - **Continued ability-chain auditing** — get more boss kits firing cleanly when cast
   by a player, and expand the manual-detonation roster.
 - **Quality of life** — persisting pity across restarts, broadcasting config changes

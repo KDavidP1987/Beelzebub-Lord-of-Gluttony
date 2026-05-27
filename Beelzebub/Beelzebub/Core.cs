@@ -88,6 +88,38 @@ internal static class Core
             }
             catch (System.Exception ex) { Log.LogWarning($"[Beelz] signature-summon backfill failed: {ex.Message}"); }
 
+            // v0.44.0 migration: the mod moved to a per-ability baseline — only Dracula &
+            // Morgana remain real transforms. Convert every OTHER legacy transform unlock
+            // into a Devour (grant that unit's whole eligible kit into the captured pool),
+            // then drop the now-defunct unlock. Idempotent: converted unlocks are removed,
+            // so a later run finds nothing to do. Players keep everything they earned.
+            try
+            {
+                int converted = 0, granted = 0, deferred = 0;
+                foreach (var (steamId, list) in AbilityRegistry.TransformSnapshot())
+                {
+                    foreach (var t in list)
+                    {
+                        if (Services.BossFormRegistry.Has(t.UnitPrefabGuid)) continue; // keep Dracula/Morgana
+                        var unitPg = new Stunlock.Core.PrefabGUID(t.UnitPrefabGuid);
+                        // Only convert+drop when the unit's kit is actually readable this run.
+                        // If the prefab can't be resolved, LEAVE the unlock (a later run converts
+                        // it) rather than dropping it for nothing — no silent data loss.
+                        if (!Services.DevourService.CanResolveKit(unitPg)) { deferred++; continue; }
+                        granted += Services.DevourService.Devour(steamId, unitPg, t.Source);
+                        AbilityRegistry.ForgetTransform(steamId, t.UnitPrefabGuid);
+                        converted++;
+                    }
+                }
+                if (deferred > 0) Log.LogWarning($"[Beelz] v0.44.0 migration: {deferred} legacy unlock(s) left unconverted (unit prefab not resolvable this run); will retry next load.");
+                if (converted > 0)
+                {
+                    Persistence.RequestSave();
+                    Log.LogInfo($"[Beelz] v0.44.0 migration: converted {converted} legacy transform unlock(s) into Devour (granted {granted} ability(ies)); kept Dracula/Morgana transforms.");
+                }
+            }
+            catch (System.Exception ex) { Log.LogWarning($"[Beelz] transform→Devour migration failed: {ex.Message}"); }
+
             IsReady = true;
             Log.LogInfo($"Beelzebub initialized via {trigger} (attempt #{_initAttempts}). Registry size: {AbilityRegistry.PlayerCount} player(s). Prefab map has {prefabSystem.SpawnableNameToPrefabGuidDictionary.Count} entries. Built reverse name map with {PrefabNames.Count} entries.");
         }

@@ -102,6 +102,11 @@ internal static class BossFormRegistry
     public static bool TryGet(int unitGuid, out BossForm form) => _forms.TryGetValue(unitGuid, out form);
     public static bool Has(int unitGuid) => _forms.ContainsKey(unitGuid);
 
+    /// <summary>v0.44.0: number of units that can actually be transformed into (Dracula + Morgana).
+    /// Used as the honest denominator for transform progress now that the per-unit transform
+    /// system is retired in favour of per-ability Devour.</summary>
+    public static int Count => _forms.Count;
+
     // ---------------------------------------------------------------------
     // v0.33.0 (#17): native shapeshift forms reused as REAL (persistent)
     // ExoForms. V Rising ships these form buffs and the client knows how to

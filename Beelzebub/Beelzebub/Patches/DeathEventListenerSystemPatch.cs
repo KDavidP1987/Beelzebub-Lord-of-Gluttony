@@ -21,7 +21,8 @@ internal static class DeathEventListenerSystemPatch
         public bool AnySave;
         // Unit name → captures from that unit (preserves order of first appearance)
         public Dictionary<string, int> ByUnit = new();
-        public List<string> TransformUnlocks = new();
+        // v0.44.0: units "Devoured" this batch (the rare jackpot grants the whole kit).
+        public List<(string unit, int learned)> Devoured = new();
     }
 
     [HarmonyPostfix]
@@ -211,45 +212,40 @@ internal static class DeathEventListenerSystemPatch
             }
         }
 
-        // Transform-unlock roll happens once per kill, independent of ability captures.
-        // TX1: skip the roll entirely if the unit is admin-disabled in TransformMap.
-        if (!Core.AbilityRules.IsTransformUnitEnabled(unitGuid._Value)) return;
-        // TX4: skip the roll if the unit's transformation is Brutal-only and the server is Basic.
-        if (!Beelzebub.Services.AbilityRules.IsDifficultyAllowed(
-                Core.AbilityRules.GetTransformDifficulty(unitGuid._Value),
-                Beelzebub.Services.AbilityRules.GetServerDifficulty())) return;
-        // AUDIT-7 (v0.20.1): gate-boss variants don't roll for transforms. They're
-        // easier prefab copies of main V-Bloods (e.g. CHAR_Bandit_StoneBreaker_VBlood_GateBoss_Minor),
-        // and granting a separate "lesser" transform unlock from one would clutter
-        // the player's collection with a weaker duplicate that's confusing alongside
-        // the real version. Ability captures still happen — gate-boss kits ARE the
-        // boss's kits, so capturing from them is a legitimate "preview" pathway
-        // before the main fight.
+        // v0.44.0 — the rare jackpot roll, once per kill, independent of the per-ability
+        // captures above. Per-ability baseline: instead of unlocking a (non-renderable)
+        // transform, the jackpot "DEVOURS" the unit — granting ALL of its eligible
+        // abilities at once into the player's pool. Real transformation is now reserved
+        // for Dracula & Morgana (the only units the client can render); arbitrary-unit
+        // forms are a postponed phase-two feature. No regular mob is a Tier-1 boss, so the
+        // regular path is always a Devour.
+        //
+        // AUDIT-7 (v0.20.1): gate-boss variants still skip the jackpot — their kit is a
+        // preview of the real boss, so a full-kit Devour off the easy variant would
+        // trivialize the main fight. (Per-ability captures off them still happen above.)
         if (unitName.IndexOf("_GateBoss_", System.StringComparison.OrdinalIgnoreCase) >= 0)
         {
             if (Settings.VerboseLogging.Value)
-                Core.Log.LogInfo($"[Beelz] skip transform-roll for gate-boss variant {unitName} (still captures abilities)");
+                Core.Log.LogInfo($"[Beelz] skip Devour jackpot for gate-boss variant {unitName} (per-ability capture still applies)");
             return;
         }
 
-        float transformChance = Settings.DropChance_Transform_Regular.Value * died.ResolveTierMultiplier();
-        if (transformChance > 0f)
+        float devourChance = Settings.DropChance_Transform_Regular.Value * died.ResolveTierMultiplier();
+        if (devourChance > 0f)
         {
-            // v0.38.0: apply + resolve transform pity for this source.
-            transformChance += Core.AbilityRegistry.GetPityBonus(steamId, CaptureSource.Regular, PityKind.Transform);
-            if (System.Random.Shared.NextDouble() <= transformChance)
+            // v0.38.0 pity carries over: the same bad-luck-protection bucket now feeds the Devour roll.
+            devourChance += Core.AbilityRegistry.GetPityBonus(steamId, CaptureSource.Regular, PityKind.Transform);
+            if (System.Random.Shared.NextDouble() <= devourChance)
             {
                 Core.AbilityRegistry.ResetPity(steamId, CaptureSource.Regular, PityKind.Transform);
-                if (Core.AbilityRegistry.AddTransformUnlock(steamId, unitGuid._Value, CaptureSource.Regular))
-                {
-                    agg.TransformUnlocks.Add(unitDisplay);
-                    agg.AnySave = true;
-                    Core.Log.LogInfo($"[Beelz] {steamId} unlocked transform: {unitName} (Regular).");
-                    Core.Chat.SendEvent(participant,
-                        $"[BEELZ:event] type=transform-unlock s=R u={unitGuid._Value} un={unitName}");
-                    // v0.43.4: learn this unit's signature add-summon(s) as standalone abilities.
-                    Services.SummonRegistry.GrantAndNotify(participant, steamId, unitGuid, CaptureSource.Regular);
-                }
+                int learned = Services.DevourService.Devour(steamId, unitGuid, CaptureSource.Regular);
+                agg.AnySave = true;
+                agg.Devoured.Add((unitDisplay, learned));
+                Core.Log.LogInfo($"[Beelz] {steamId} DEVOURED {unitName} (Regular): granted {learned} new ability(ies).");
+                Core.Chat.SendEvent(participant,
+                    $"[BEELZ:event] type=devour s=R u={unitGuid._Value} un={unitName} count={learned}");
+                // v0.43.4: some bosses' adds aren't on the slot buffer — learn their signature summon(s) too.
+                Services.SummonRegistry.GrantAndNotify(participant, steamId, unitGuid, CaptureSource.Regular);
             }
             else
             {
@@ -276,13 +272,12 @@ internal static class DeathEventListenerSystemPatch
                 Core.Chat.Send(agg.Character, Verbosity.Summary, summary);
             }
 
-            if (agg.TransformUnlocks.Count > 0)
+            foreach (var (unit, learned) in agg.Devoured)
             {
-                string names = string.Join(", ", agg.TransformUnlocks);
                 Core.Chat.Send(agg.Character, Verbosity.Summary,
-                    agg.TransformUnlocks.Count == 1
-                        ? $"Unlocked transformation: {names}. Use .beelz transforms."
-                        : $"Unlocked {agg.TransformUnlocks.Count} transformations: {names}.");
+                    learned > 0
+                        ? $"⭐ DEVOURED {unit} — learned all {learned} of its abilities at once! Slot them with .beelz grant."
+                        : $"⭐ DEVOURED {unit} — you already knew all of its abilities.");
             }
 
             Core.Persistence.RequestSave();

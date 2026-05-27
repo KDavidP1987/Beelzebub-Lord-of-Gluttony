@@ -21,8 +21,8 @@ internal static class BeelzCommands
         ctx.Reply("3. .beelz grant <slot 1-6> <index> — universal slot (any weapon).");
         ctx.Reply("   For a weapon-specific loadout: .beelz weapon-grant <weapon|auto> <slot> <index>");
         ctx.Reply("   Wielding that weapon overrides your universal slots with the weapon-specific ones.");
-        ctx.Reply("4. Rarer rolls unlock TRANSFORM into the unit. .beelz transforms / transform / revert.");
-        ctx.Reply("   Transforms override your spell bar regardless of weapon.");
+        ctx.Reply("4. RARE jackpot = DEVOUR: learn ALL of a unit's abilities in one kill (vs one at a time).");
+        ctx.Reply("   Dracula & Morgana also unlock a true TRANSFORM (.beelz transforms / transform / revert). Other unit forms are a postponed phase-two feature.");
         ctx.Reply("5. .beelz verbosity <silent|summary|verbose> — tune chat noise.");
         ctx.Reply("Full command list: .beelz commands. Group detail: .beelz admin help · .beelz api help · .beelz hotkey help.");
     }
@@ -35,7 +35,7 @@ internal static class BeelzCommands
         ctx.Reply(".beelz list [vblood|shard|regular] [page] — your captured abilities + slot binds");
         ctx.Reply(".beelz transforms [filter] — your transform unlocks");
         ctx.Reply(".beelz bestiary [page] / .beelz bestiary unit <name> — collection book, per unit");
-        ctx.Reply(".beelz catalog [page] — hunt list of every curated transform (✓ owned / · still to hunt)");
+        ctx.Reply(".beelz catalog [page] — curated boss-kit reference (transformation is Dracula/Morgana only; collect others as abilities)");
         ctx.Reply(".beelz search <term> — search your captures · .beelz info <index|name> — full ability detail");
         ctx.Reply(".beelz progress — your collection-completion %");
         ctx.Reply("-- SLOTS / LOADOUT --");
@@ -45,10 +45,9 @@ internal static class BeelzCommands
         ctx.Reply(".beelz cast <hotkey|index> — cast a capture on demand (extra hotkeys: .beelz hotkey help)");
         ctx.Reply(".beelz active / .beelz current — what's effectively on your bar right now");
         ctx.Reply(".beelz resetbar — reset action bar to vanilla (keeps captures) · .beelz refresh — re-apply your bar");
-        ctx.Reply("-- TRANSFORM --");
-        ctx.Reply(".beelz transform <index|name> / .beelz revert — activate / end a transform");
-        ctx.Reply(".beelz preview <index|name> — see a transform's abilities before committing");
-        ctx.Reply(".beelz phase [n] — switch a boss form's phase loadout");
+        ctx.Reply("-- TRANSFORM (Dracula & Morgana only; every other unit's kit is learned as abilities / Devoured) --");
+        ctx.Reply(".beelz transforms / .beelz transform <name> / .beelz revert — your unlocked transformations");
+        ctx.Reply(".beelz preview <name> — a transform's abilities · .beelz phase [n] — switch a boss form's phase loadout");
         ctx.Reply(".beelz summon [n] / .beelz detonate — fire your transform's signature summon / AoE");
         ctx.Reply(".beelz summons [stash|restore|status] / .beelz tp — manage transform summons (waygate-safe)");
         ctx.Reply("-- MANAGE --");
@@ -167,6 +166,9 @@ internal static class BeelzCommands
         // Per-ability cooldown — the ability's own cooldown (min 1s anti-spam).
         var info = Core.AbilityMetadata?.Resolve(abilityGuid);
         double cd = info?.CooldownSeconds ?? 0;
+        // v0.44.0: per-ability CooldownScale (ability_rules.json) is now LIVE for force-casts —
+        // admins can lengthen/shorten an on-demand ability's cooldown. Floor applied after scaling.
+        cd *= Core.AbilityRules.GetCooldownScale(abilityName);
         if (cd < 1.0) cd = 1.0;
         string label = (info != null && !string.IsNullOrEmpty(info.Name)) ? info.Name : abilityName;
         var key = (steamId, abilityGuid);
@@ -880,27 +882,24 @@ internal static class BeelzCommands
         // Total abilities = size of curated AbilityMap (admins control the denominator
         // by editing ability_rules.json). Falls back to 0 if no matrix is loaded.
         int totalAbilities = Core.AbilityRules?.Current?.AbilityMap?.Count ?? 0;
-        // TX2-curated TransformMap is the source of truth for transformation totals (was a
-        // hardcoded 61 placeholder pre-TX2). Fall back to the V-Blood count if no matrix loaded.
-        int TotalTransforms_Approx = Core.AbilityRules?.Current?.TransformMap?.Count ?? 61;
-        if (TotalTransforms_Approx == 0) TotalTransforms_Approx = 61;
+        // v0.44.0: transformation is Dracula/Morgana-only now, so the honest denominator is
+        // the number of real transform forms (BossFormRegistry.Count), not the full curated
+        // TransformMap. Other units' kits surface in the Abilities line (via capture / Devour).
+        int totalTransforms = Beelzebub.Services.BossFormRegistry.Count;
 
         int vbloodCaptures = captured.Count(c => c.Source == Beelzebub.Services.CaptureSource.VBlood);
-        int vbloodTx = transforms.Count(t => t.Source == Beelzebub.Services.CaptureSource.VBlood);
 
         float abilityPct = totalAbilities > 0
             ? captured.Count * 100f / totalAbilities
             : 0f;
-        float transformPct = transforms.Count * 100f / TotalTransforms_Approx;
 
         var sb = new System.Text.StringBuilder();
         sb.Append(subjectLabel).AppendLine(" progress:");
         sb.Append("  Abilities: ").Append(captured.Count).Append(" / ~").Append(totalAbilities)
           .Append(" (").Append(abilityPct.ToString("F1")).Append("%)")
           .Append("   V-Blood ").Append(vbloodCaptures).Append(" • Regular ").Append(captured.Count - vbloodCaptures).AppendLine();
-        sb.Append("  Transforms: ").Append(transforms.Count).Append(" / ").Append(TotalTransforms_Approx)
-          .Append(" (").Append(transformPct.ToString("F1")).Append("%)")
-          .Append("   V-Blood ").Append(vbloodTx).Append(" • Regular ").Append(transforms.Count - vbloodTx).AppendLine();
+        sb.Append("  Transformations: ").Append(transforms.Count).Append(" / ").Append(totalTransforms)
+          .Append(" (Dracula/Morgana)").AppendLine();
         sb.Append("  Slots bound: ").Append(Core.AbilityRegistry.GetSlots(steamId).Count)
           .Append(" universal");
         int weaponBindings = Core.AbilityRegistry.AllWeaponSlots(steamId).Sum(kv => kv.Value.Count);
@@ -934,9 +933,11 @@ internal static class BeelzCommands
         foreach (var e in entries.Skip(page * pageSize).Take(pageSize))
         {
             string src = e.Source == Beelzebub.Services.CaptureSource.VBlood ? " [V]" : "";
-            string tx = e.TransformUnlocked ? "✓" : "·";
             string done = e.Complete ? " (complete)" : "";
-            ctx.Reply($"  {e.UnitName}{src} — abilities {e.CapturedCount}/{e.TotalCount} · transform {tx}{done}");
+            // v0.44.0: only Dracula/Morgana can transform — show the marker only for them.
+            string tx = Beelzebub.Services.BossFormRegistry.Has(e.UnitPrefabGuid)
+                ? (e.TransformUnlocked ? " · transform ✓" : " · transform ·") : "";
+            ctx.Reply($"  {e.UnitName}{src} — abilities {e.CapturedCount}/{e.TotalCount}{tx}{done}");
         }
         ctx.Reply($"(.beelz bestiary {page + 2} for next page · .beelz bestiary unit <name> for detail)");
     }
@@ -956,7 +957,10 @@ internal static class BeelzCommands
 
         var e = Beelzebub.Services.BestiaryService.BuildForUnit(steamId, unitGuid);
         string src = e.Source == Beelzebub.Services.CaptureSource.VBlood ? "[V-Blood]" : "[Regular]";
-        ctx.Reply($"--- {e.UnitName} {src} — abilities {e.CapturedCount}/{e.TotalCount} · transform {(e.TransformUnlocked ? "unlocked ✓" : "locked ·")} ---");
+        // v0.44.0: transform status is only meaningful for the two renderable bosses.
+        string tx = Beelzebub.Services.BossFormRegistry.Has(e.UnitPrefabGuid)
+            ? (e.TransformUnlocked ? " · transform unlocked ✓" : " · transform locked ·") : "";
+        ctx.Reply($"--- {e.UnitName} {src} — abilities {e.CapturedCount}/{e.TotalCount}{tx} ---");
 
         var heldSet = new System.Collections.Generic.HashSet<int>(e.CapturedAbilityGuids);
         if (e.AllAbilityGuids.Count == 0)

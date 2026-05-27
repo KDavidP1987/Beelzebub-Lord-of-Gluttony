@@ -241,12 +241,12 @@ internal static class Settings
             "Per-ability chance (0.0-1.0) to capture each eligible ability from a V-Blood kill.");
 
         DropChance_Transform_Regular = config.Bind(
-            "Capture.DropChance", nameof(DropChance_Transform_Regular), 0.01f,
-            "Per-kill chance (0.0-1.0) to unlock the transform-into-unit form from a regular mob (Phase 5).");
+            "Capture.DropChance", nameof(DropChance_Transform_Regular), 0.0025f,
+            "Per-kill JACKPOT chance (0.0-1.0) on a regular mob. The jackpot DEVOURS the unit — grants ALL of its eligible abilities at once instead of one at a time. (Arbitrary-unit transformation is a postponed phase-two feature; only Dracula & Morgana, both V-Bloods, transform.)");
 
         DropChance_Transform_VBlood = config.Bind(
-            "Capture.DropChance", nameof(DropChance_Transform_VBlood), 0.01f,
-            "Per-kill chance (0.0-1.0) to unlock the transform-into-unit form from a V-Blood (Phase 5).");
+            "Capture.DropChance", nameof(DropChance_Transform_VBlood), 0.0025f,
+            "Per-kill JACKPOT chance (0.0-1.0) on a V-Blood. The jackpot DEVOURS the unit (all abilities at once); for Dracula & Morgana it unlocks their TRANSFORMATION instead.");
 
         Capture_PityIncrementPerKill = config.Bind(
             "Capture.Pity", nameof(Capture_PityIncrementPerKill), 0.0025f,
@@ -338,7 +338,9 @@ internal static class Settings
 
         Transform_NativeShapeshift_Enabled = config.Bind(
             "Transformation", nameof(Transform_NativeShapeshift_Enabled), false,
-            "Z2 (v0.14.0): apply a native V Rising shapeshift form (Wolf/Bear/Rat/Spider/Toad) " +
+            "DEPRECATED (v0.44.0): inert — transformation is now Dracula/Morgana-only and non-boss " +
+            "units no longer transform (their kits are collected as abilities / Devour). Native " +
+            "animal-form transforms return in 'phase two'. — Z2 (v0.14.0): apply a native V Rising shapeshift form (Wolf/Bear/Rat/Spider/Toad) " +
             "as the visual when a player transforms into a matching unit. WARNING: native shapeshift " +
             "forms auto-exit when the player casts any ability NOT in the form's own moveset — which " +
             "captured abilities always are — so the visual will drop the moment any spell fires. " +
@@ -348,7 +350,9 @@ internal static class Settings
 
         Transform_RealFormWhenAvailable = config.Bind(
             "Transformation", nameof(Transform_RealFormWhenAvailable), true,
-            "v0.33.0 (#17): for units that map to a real V Rising form/shapeshift buff " +
+            "DEPRECATED (v0.44.0): inert for the common path — only Dracula/Morgana transform now " +
+            "(they always use their form buff regardless of this flag); other units' native-form " +
+            "transforms are postponed to 'phase two'. — v0.33.0 (#17): for units that map to a real V Rising form/shapeshift buff " +
             "(boss forms Dracula/Morgana, or native Wolf/Bear/Rat/Spider/Toad/Werewolf/Gargoyle), " +
             "transform using that actual form buff (persistent ExoForm recipe) so the player gets " +
             "the form's model+rig AND it survives ability casts. Default true. Units with no matching " +

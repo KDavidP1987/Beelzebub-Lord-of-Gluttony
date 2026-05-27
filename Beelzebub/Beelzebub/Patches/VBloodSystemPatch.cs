@@ -131,44 +131,59 @@ internal static class VBloodSystemPatch
                     Settings.Capture_PityIncrementPerKill.Value, Settings.Capture_PityMaxBonus.Value);
         }
 
-        // V-Blood transform unlock roll (typically rarer than ability captures).
-        // TX1: respect the per-unit admin kill-switch in TransformMap.
-        // TX4: skip if the V-Blood's transform is Brutal-only on a Basic server.
-        // AUDIT-7 (v0.20.1): gate-boss variants (e.g. CHAR_Bandit_StoneBreaker_VBlood_GateBoss_Minor)
-        // skip the transform-unlock roll — see DeathEventListenerSystemPatch for full rationale.
-        // Ability captures (above) are unaffected.
+        // v0.44.0 — jackpot roll (rarer than per-ability captures). TIER-1 bosses
+        // (Dracula/Morgana) are the only units the client can render as a real form, so they
+        // keep the "transform unlock". EVERY OTHER V-Blood is DEVOURED on the jackpot — all
+        // of its eligible abilities granted at once into the player's pool (per-ability
+        // baseline; arbitrary-unit transformation is a postponed phase-two feature).
+        // AUDIT-7: gate-boss variants skip the jackpot (full kit off an easy copy trivializes
+        // the real fight). Per-ability captures above are unaffected.
         string vbloodNameOuter = vBloodGuid.GetPrefabName();
+        bool isTier1 = BossFormRegistry.Has(vBloodGuid._Value);
         bool isGateBossVariant = !string.IsNullOrEmpty(vbloodNameOuter)
             && vbloodNameOuter.IndexOf("_GateBoss_", System.StringComparison.OrdinalIgnoreCase) >= 0;
-        if (isGateBossVariant && Settings.VerboseLogging.Value)
-            Core.Log.LogInfo($"[Beelz] skip V-Blood transform-roll for gate-boss variant {vbloodNameOuter}");
 
-        float transformChance = Settings.DropChance_Transform_VBlood.Value * vBloodPrefabEntity.ResolveTierMultiplier();
-        bool gotTransform = false;
-        bool transformRollEligible = !isGateBossVariant
-            && transformChance > 0f
-            && Core.AbilityRules.IsTransformUnitEnabled(vBloodGuid._Value)
-            && Beelzebub.Services.AbilityRules.IsDifficultyAllowed(
-                Core.AbilityRules.GetTransformDifficulty(vBloodGuid._Value),
-                Beelzebub.Services.AbilityRules.GetServerDifficulty());
-        if (transformRollEligible)
+        float jackpotChance = Settings.DropChance_Transform_VBlood.Value * vBloodPrefabEntity.ResolveTierMultiplier();
+        bool gotJackpot = false;
+        // Tier-1 keeps the transform gates (admin kill-switch + difficulty); the Devour path
+        // only excludes gate-boss variants.
+        bool rollEligible = !isGateBossVariant && jackpotChance > 0f
+            && (!isTier1
+                || (Core.AbilityRules.IsTransformUnitEnabled(vBloodGuid._Value)
+                    && Beelzebub.Services.AbilityRules.IsDifficultyAllowed(
+                        Core.AbilityRules.GetTransformDifficulty(vBloodGuid._Value),
+                        Beelzebub.Services.AbilityRules.GetServerDifficulty())));
+        if (rollEligible)
         {
-            // v0.38.0: apply + resolve transform pity for the V-Blood source.
-            transformChance += Core.AbilityRegistry.GetPityBonus(steamId, CaptureSource.VBlood, PityKind.Transform);
-            if (System.Random.Shared.NextDouble() <= transformChance)
+            // v0.38.0 pity bucket now feeds the jackpot roll.
+            jackpotChance += Core.AbilityRegistry.GetPityBonus(steamId, CaptureSource.VBlood, PityKind.Transform);
+            if (System.Random.Shared.NextDouble() <= jackpotChance)
             {
                 Core.AbilityRegistry.ResetPity(steamId, CaptureSource.VBlood, PityKind.Transform);
-                if (Core.AbilityRegistry.AddTransformUnlock(steamId, vBloodGuid._Value, CaptureSource.VBlood))
+                if (isTier1)
                 {
-                    gotTransform = true;
-                    string unitName = vBloodGuid.GetPrefabName();
-                    Core.Log.LogInfo($"[Beelz] {steamId} unlocked V-Blood transform: {unitName}.");
+                    if (Core.AbilityRegistry.AddTransformUnlock(steamId, vBloodGuid._Value, CaptureSource.VBlood))
+                    {
+                        gotJackpot = true;
+                        Core.Log.LogInfo($"[Beelz] {steamId} unlocked TRANSFORMATION: {vbloodNameOuter}.");
+                        Core.Chat.Send(playerCharacter, Verbosity.Summary,
+                            $"⭐ Unlocked TRANSFORMATION: {vbDisplay}! Use .beelz transform {vbDisplay}.");
+                        Core.Chat.SendEvent(playerCharacter,
+                            $"[BEELZ:event] type=transform-unlock s=V u={vBloodGuid._Value} un={vbloodNameOuter}");
+                        SummonRegistry.GrantAndNotify(playerCharacter, steamId, vBloodGuid, CaptureSource.VBlood);
+                    }
+                }
+                else
+                {
+                    int learned = DevourService.Devour(steamId, vBloodGuid, CaptureSource.VBlood);
+                    gotJackpot = true; // a rare jackpot fired → ensure we save below
+                    Core.Log.LogInfo($"[Beelz] {steamId} DEVOURED V-Blood {vbloodNameOuter}: granted {learned} new ability(ies).");
                     Core.Chat.Send(playerCharacter, Verbosity.Summary,
-                        $"Unlocked V-Blood transformation: {vbDisplay}!");
+                        learned > 0
+                            ? $"⭐ DEVOURED {vbDisplay} — learned all {learned} of its abilities at once! Slot them with .beelz grant."
+                            : $"⭐ DEVOURED {vbDisplay} — you already knew all of its abilities.");
                     Core.Chat.SendEvent(playerCharacter,
-                        $"[BEELZ:event] type=transform-unlock s=V u={vBloodGuid._Value} un={unitName}");
-                    // v0.43.4: also learn this unit's signature add-summon(s) as standalone
-                    // captured abilities — grant/hotkey them and use WITHOUT transforming.
+                        $"[BEELZ:event] type=devour s=V u={vBloodGuid._Value} un={vbloodNameOuter} count={learned}");
                     SummonRegistry.GrantAndNotify(playerCharacter, steamId, vBloodGuid, CaptureSource.VBlood);
                 }
             }
@@ -179,7 +194,7 @@ internal static class VBloodSystemPatch
             }
         }
 
-        if (captured > 0 || gotTransform)
+        if (captured > 0 || gotJackpot)
         {
             if (captured > 0)
             {

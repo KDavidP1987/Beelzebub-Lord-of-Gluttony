@@ -482,6 +482,21 @@ internal sealed class AbilityRegistry
         return false;
     }
 
+    /// <summary>
+    /// v0.44.0 "Devour": add many abilities from one unit in a single shot (the jackpot
+    /// that replaced the per-unit transform unlock for non-renderable units). Returns the
+    /// count NEWLY added (already-captured ones are skipped / upgraded Regular→VBlood).
+    /// Caller is responsible for pre-filtering eligibility (AbilityFilter) and saving.
+    /// </summary>
+    public int DevourAbilities(ulong steamId, int unitPrefabGuid, IEnumerable<int> abilityPrefabGuids, CaptureSource source)
+    {
+        if (abilityPrefabGuids == null) return 0;
+        int added = 0;
+        foreach (int a in abilityPrefabGuids)
+            if (a != 0 && Add(steamId, unitPrefabGuid, a, source)) added++;
+        return added;
+    }
+
     /// <summary>v0.43.5: true if the player has captured this ability group from any unit.</summary>
     public bool HasCaptured(ulong steamId, int abilityPrefabGuid)
     {
@@ -533,6 +548,7 @@ internal sealed class AbilityRegistry
         _cooldownShardUntil.Clear();
         _verbosity.Clear();
         _emitApiEvents.Clear();
+        _pity.Clear();
         return (players, abilities, transforms);
     }
 
@@ -543,6 +559,7 @@ internal sealed class AbilityRegistry
         _hotkeys.TryRemove(steamId, out _);
         _transformUnlocks.TryRemove(steamId, out _);
         _activeTransforms.TryRemove(steamId, out _);
+        _pity.TryRemove(steamId, out _);
         return _data.TryRemove(steamId, out _);
     }
 
@@ -677,7 +694,8 @@ internal sealed class AbilityRegistry
     //   0 Regular+Ability · 1 Regular+Transform · 2 VBlood+Ability · 3 VBlood+Transform.
     // Bumped on a kill whose roll of that kind failed; reset to 0 on a success — so a
     // dry streak gradually raises the chance until it pays out, then drops to baseline.
-    // In-memory only (resets on server restart); persistence is a follow-up.
+    // v0.44.0: PERSISTED across restarts (PitySnapshot / LoadPity ↔ PersistenceService),
+    // so a long dry streak isn't wiped by a server reboot.
     readonly System.Collections.Concurrent.ConcurrentDictionary<ulong, float[]> _pity = new();
 
     static int PityIndex(CaptureSource source, PityKind kind)
@@ -699,6 +717,25 @@ internal sealed class AbilityRegistry
     public void ResetPity(ulong steamId, CaptureSource source, PityKind kind)
     {
         if (_pity.TryGetValue(steamId, out var arr)) arr[PityIndex(source, kind)] = 0f;
+    }
+
+    /// <summary>v0.44.0: snapshot per-player pity arrays for persistence (skips all-zero players).</summary>
+    public IEnumerable<KeyValuePair<ulong, float[]>> PitySnapshot()
+    {
+        foreach (var (sid, arr) in _pity)
+        {
+            bool any = false;
+            foreach (var v in arr) if (v != 0f) { any = true; break; }
+            if (any) yield return new KeyValuePair<ulong, float[]>(sid, (float[])arr.Clone());
+        }
+    }
+
+    /// <summary>v0.44.0: restore a player's pity array from persistence (length-tolerant).</summary>
+    public void LoadPity(ulong steamId, float[] values)
+    {
+        if (values == null || values.Length == 0) return;
+        var arr = _pity.GetOrAdd(steamId, _ => new float[4]);
+        for (int i = 0; i < arr.Length && i < values.Length; i++) arr[i] = values[i];
     }
 
     public IEnumerable<KeyValuePair<ulong, IReadOnlyList<CapturedAbility>>> Snapshot()

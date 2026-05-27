@@ -33,8 +33,14 @@ internal static class ApiCommands
     //   add-summon (Toad King frogs, Werewolf cages, …) that bosses trigger at a low-HP
     //   soft phase; new event type=summon (u=, ability=). Config key
     //   Transform_SummonCooldownSeconds (flows through api config / admin set).
+    // v6 (v0.44.0): PER-ABILITY BASELINE. Transformation is now Dracula/Morgana-only;
+    //   every other unit's "jackpot" roll DEVOURS the unit (grants its whole ability kit
+    //   at once). New event type=devour (s= u= un= count=). type=transform-unlock now ONLY
+    //   fires for Dracula/Morgana. `.beelz transform`/`transforms` resolve only those two.
+    //   New admin command `.beelz admin devour`. Arbitrary-unit transformation = postponed
+    //   phase-two feature. All additive — older parsers ignore the unknown type=devour.
     // All additive — backward-compatible with older parsers (unknown keys/events ignored).
-    const int ApiVersion = 5;
+    const int ApiVersion = 6;
 
     [Command("help", description: "List the Beelzebub API/BCH read commands (machine-readable data streams).")]
     public static void Help(ChatCommandContext ctx)

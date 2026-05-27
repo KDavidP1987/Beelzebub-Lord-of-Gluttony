@@ -4,6 +4,43 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.44.0] - 2026-05-26
+
+### The mod is now about COLLECTING ABILITIES — "Devour" replaces unit transformation
+
+Beelzebub's focus is now squarely on **stealing abilities and stacking them on your bar**. The
+big change to how the mod works:
+
+- **"Devour" — the new jackpot.** Every kill still has a small chance to capture **one** of a
+  unit's abilities. On a rare jackpot roll you now **Devour** the unit instead: you learn **ALL**
+  of its eligible abilities at once ("⭐ DEVOURED Foulrot — learned all 6 of its abilities!").
+  Slot whichever you like with `.beelz grant`. This replaces the old "unlock a transform into the
+  unit" jackpot for every unit that can't actually be rendered.
+- **Transformation is now Dracula & Morgana only.** Those are the only two units the game can
+  actually render you as, so they remain true transformations (`.beelz transform` / `revert`,
+  with their phases, summons, and detonations intact). **Becoming any other unit has been moved to
+  a researched, postponed "phase two"** — it needs a future client-side companion mod to render
+  the model, which the server alone cannot do.
+- **Your collection is safe.** If you'd previously unlocked transforms into other units, those are
+  automatically converted on first load: you simply **keep all of those units' abilities** (granted
+  to your pool via Devour). Nothing you earned is lost. Dracula/Morgana transforms are preserved.
+- **New admin command `.beelz admin devour <player> <unitGuid>`** — grant a player a unit's entire
+  ability kit in one go (the admin alternative to the old force-transform for non-boss units).
+- Drop rates retuned: per-ability capture stays ~5%, the Devour jackpot defaults to ~0.25% (both
+  admin-configurable).
+- **Pity now survives restarts.** Your bad-luck-protection streak (the bonus that builds on dry
+  kills) is saved with the rest of your data, so a server reboot no longer resets your progress
+  toward the next drop.
+- **Per-ability cooldown tuning is live for on-demand casts.** Admins can set a `CooldownScale` per
+  ability in the rules file; it now applies to `.beelz cast` (the expanded-hotkey action bar), so a
+  powerful captured ability can be given a longer on-demand cooldown.
+
+> **Why the change?** A server-side mod can't render your character as an arbitrary creature — the
+> game decides your model on the client. Rather than ship "transformations" that didn't visually do
+> anything for most units, the mod now leans into what it does brilliantly: a deep
+> ability-collection game. Full creature transformation remains on the roadmap as a phase-two
+> feature pending a client-side renderer.
+
 ## [0.43.23] - 2026-05-26
 
 ### Friendly names, a safer `.beelz clear`, and grouped help

@@ -18,8 +18,17 @@
 > in the BCH workspace.
 >
 > **Canonical source of truth for the wire API:**
-> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 5`). If this doc
+> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 6`). If this doc
 > and that file ever disagree, the file wins — and this doc should be corrected.
+>
+> **⚠️ v0.44.0 — PER-ABILITY BASELINE.** Transformation is now **Dracula & Morgana
+> only**; every other unit's "jackpot" roll **Devours** the unit (grants its whole
+> ability kit at once). New event `type=devour`; `type=transform-unlock` now fires
+> **only** for Dracula/Morgana; `.beelz transform`/`transforms` resolve only those
+> two; new admin `.beelz admin devour`. Arbitrary-unit transformation is a postponed
+> phase-two feature (needs a client-side renderer). A BCH "transform browser" should
+> expect at most the two boss entries; the collection UI should center on abilities
+> (`api list` / `api bestiary`) + the Devour event.
 >
 > **Last full audit:** Beelzebub **v0.43.0** (2026-05-24) — every command, event,
 > config key, and `[BEELZ:*]` line below was re-verified against the source
@@ -105,7 +114,8 @@ All under the `.beelz api` group. Verified against `ApiCommands.cs`.
   | `type=` | Fields | When |
   |---|---|---|
   | `capture` | `s=R\|V u= un= a= an=` | A new ability is captured from a kill |
-  | `transform-unlock` | `s=R\|V u= un=` | A new transform unit is unlocked |
+  | `devour` | `s=R\|V u= un= count=` | **(v6)** Jackpot DEVOURED the unit — `count` abilities granted at once. Fires for every non-boss unit (replaces the old per-unit transform unlock). Re-fetch `api list`. |
+  | `transform-unlock` | `s=R\|V u= un=` | A transformation unlocked. **(v6) Now ONLY fires for Dracula & Morgana** — the only renderable forms. |
   | `slot-granted` / `slot-cleared` | `slot= [a= an=]` | Universal-bucket grant/clear |
   | `weapon-slot-granted` / `weapon-slot-cleared` | `weapon= slot= [a= an=]` | Weapon-bucket grant/clear |
   | `hotkey-set` / `hotkey-cleared` | `name= [a= an=]` | Named hotkey bind/clear |
@@ -239,7 +249,8 @@ matched fuzzily; `<unitGuid>`/`<abilityGuid>` = integer PrefabGUIDs from `api li
 | Transform settings | `admin transform mode <regular\|vblood> <toggle\|timed\|disabled>` · `admin transform duration <regular\|vblood> <seconds>` · `admin transform cooldown <regular\|vblood> <seconds>` · `admin transform show` |
 | Difficulty | `admin difficulty [basic\|brutal]` (no arg = show) |
 | Grant / revoke | `admin give <player> <unitGuid> <abilityGuid>` · `admin revoke <player> <unitGuid> <abilityGuid> [reason]` · `admin give-transform <player> <unitGuid>` · `admin revoke-transform <player> <unitGuid> [reason]` |
-| Force transform | `admin force-transform <player> <unitGuid>` (bypasses unlock+cooldown) · `admin clear-transform <player>` |
+| **Devour (v6)** | `admin devour <player> <unitGuid>` — grant the player ALL of a unit's eligible abilities at once (the admin alternative to transformation for non-renderable units) |
+| Force transform | `admin force-transform <player> <unitGuid>` (bypasses unlock+cooldown) · `admin clear-transform <player>`. **(v6) `give-transform`/`force-transform` accept ONLY Dracula & Morgana** — other units reply pointing to `admin devour`. |
 | Remote slots | `admin set-slot <player> <slot 1-6> <abilityGuid>` · `admin clear-slot <player> <slot>` · `admin set-weapon-slot <player> <weapon> <slot> <abilityGuid>` · `admin clear-weapon-slot <player> <weapon> <slot>` (admin binds bypass the TransformOnly/Enabled guards — reply notes a `[WARNING]`) |
 | Inspect / recovery | `admin inspect <player>` · `admin progress <player>` · `admin snapshot` · `admin buffs [player]` (v0.43.9 diagnostic — dumps a player's live buffs, entity prefab, equipped-ability slots + override sources to the server log) · `admin respawn [player]` (v0.43.15 — respawn the character in place via the engine's RespawnCharacter; preserves inventory/progress) · `admin clearslotmods [player]` (v0.43.17 — clears orphaned ability-slot modifications) · `admin rebuildslots [player]` (v0.43.19 — safe re-sync of active ability slots to their base values) · `admin copy-collection <player>` / `admin paste-collection <player>` (v0.43.20 — back up a player's captures+transforms to an admin clipboard and paste onto another character; additive, skips dupes) · `admin reset-character <player> CONFIRM-RESET` (v0.43.21 — unbind Steam ID + kick → player creates a fresh character on next login; Beelzebub collection preserved; self-contained, no KindredCommands needed) |
 | Bulk / ops | `admin revert-all` · `admin freeze-captures <on\|off\|status>` · `admin scan-abilities` · `admin desummon <player>` · `admin desummon-all` · `admin wipe-all CONFIRM-WIPE` (destructive — literal token required) |
@@ -368,8 +379,9 @@ per tick) for on-screen ability rings — Beelzebub exposes static cooldown valu
 - `docs/INTEROP_BLOODCRAFT.md` — coexistence with Bloodcraft (shared patch
   surfaces; relevant if BCH talks to both).
 - `docs/SETUP_GUIDE.md` — install / first-run.
-- `Commands/ApiCommands.cs` — **canonical** wire API (`ApiVersion = 5`).
+- `Commands/ApiCommands.cs` — **canonical** wire API (`ApiVersion = 6`).
 - `Services/SummonRegistry.cs` — curated unit→signature-summon map for `.beelz summon` (v5).
+- `Services/DevourService.cs` — reads a unit's prefab kit + grants it all at once (the v6 Devour jackpot, migration, and `admin devour`).
 
 ---
 

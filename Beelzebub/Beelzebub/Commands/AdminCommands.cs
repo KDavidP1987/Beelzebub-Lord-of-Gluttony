@@ -46,9 +46,9 @@ internal static class AdminCommands
         ctx.Reply(".beelz admin transform mode|duration|cooldown <regular|vblood> <...> — transform tuning");
         ctx.Reply(".beelz admin transform show — current transform settings · difficulty [basic|brutal] — server gating");
         ctx.Reply("-- PLAYER GRANTS --");
-        ctx.Reply(".beelz admin give|revoke <player> <unitGuid> <abilityGuid> — grant / remove a captured ability");
-        ctx.Reply(".beelz admin give-transform|revoke-transform <player> <unitGuid> — grant / remove a transform unlock");
-        ctx.Reply(".beelz admin force-transform|clear-transform <player> [unitGuid] — force / end a transform");
+        ctx.Reply(".beelz admin give|revoke <player> <unitGuid> <abilityGuid> — grant / remove one captured ability");
+        ctx.Reply(".beelz admin devour <player> <unitGuid> — grant ALL of a unit's abilities at once (alternative to transformation)");
+        ctx.Reply(".beelz admin give-transform|revoke-transform|force-transform|clear-transform <player> [unitGuid] — Dracula/Morgana transform only");
         ctx.Reply(".beelz admin set-slot|clear-slot <player> <slot> [abilityGuid] — universal slot binds");
         ctx.Reply(".beelz admin set-weapon-slot|clear-weapon-slot <player> <weapon> <slot> [abilityGuid] — per-weapon binds");
         ctx.Reply("-- INSPECT --");
@@ -187,10 +187,17 @@ internal static class AdminCommands
             : $"{fullName} already has that capture — no change.");
     }
 
-    [Command("give-transform", description: "Grant a transform unlock to a player. Usage: .beelz admin give-transform <player> <unitGuid>", adminOnly: true)]
+    [Command("give-transform", description: "Grant a TRANSFORMATION unlock to a player. Only Dracula & Morgana transform in this version — for any other unit use .beelz admin devour to grant its full ability kit. Usage: .beelz admin give-transform <player> <unitGuid>", adminOnly: true)]
     public static void GiveTransform(ChatCommandContext ctx, string player, int unitGuid)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        // v0.44.0: only Dracula & Morgana support a real transformation. For everything else,
+        // steer the admin to Devour (grant the kit as abilities).
+        if (!Beelzebub.Services.BossFormRegistry.Has(unitGuid))
+        {
+            ctx.Reply($"Only Dracula & Morgana support transformation in this version. To grant {UnitDisplay(unitGuid)}'s full kit, use .beelz admin devour {player} {unitGuid}. (Arbitrary-unit transformation is a postponed phase-two feature.)");
+            return;
+        }
         var character = EntityExtensions.FindCharacterByName(player, out ulong steamId, out string fullName);
         if (character == Unity.Entities.Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
 
@@ -202,8 +209,28 @@ internal static class AdminCommands
 
         string unitName = UnitDisplay(unitGuid);
         ctx.Reply(added
-            ? $"Granted transform unlock for {unitName} (source={source}) to {fullName}."
-            : $"{fullName} already has that transform unlock — no change.");
+            ? $"Granted transformation unlock for {unitName} (source={source}) to {fullName}."
+            : $"{fullName} already has that transformation unlock — no change.");
+    }
+
+    [Command("devour", description: "Grant a player ALL of a unit's eligible abilities at once — the admin equivalent of the rare Devour jackpot, and the alternative to transformation for non-renderable units. Usage: .beelz admin devour <player> <unitGuid>", adminOnly: true)]
+    public static void Devour(ChatCommandContext ctx, string player, int unitGuid)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        var character = EntityExtensions.FindCharacterByName(player, out ulong steamId, out string fullName);
+        if (character == Unity.Entities.Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
+
+        var source = new Stunlock.Core.PrefabGUID(unitGuid).IsVBloodUnit()
+            ? Beelzebub.Services.CaptureSource.VBlood
+            : Beelzebub.Services.CaptureSource.Regular;
+        int learned = Beelzebub.Services.DevourService.Devour(steamId, new Stunlock.Core.PrefabGUID(unitGuid), source);
+        Core.Persistence.RequestSave();
+
+        string unitName = UnitDisplay(unitGuid);
+        ctx.Reply(learned > 0
+            ? $"Devoured {unitName} for {fullName}: granted {learned} new ability(ies) (source={source}). They can slot them with .beelz grant."
+            : $"{fullName} already had all of {unitName}'s eligible abilities (or it has none capturable).");
+        Audit(ctx, "devour", steamId, fullName, $"unit={unitGuid} ({unitName}) granted={learned}");
     }
 
     [Command("difficulty", description: "Set or show the server's difficulty mode for TX4 gating. Usage: .beelz admin difficulty [basic|brutal]", adminOnly: true)]
@@ -836,10 +863,16 @@ internal static class AdminCommands
 
     // --- AT4: force / clear transform on another player ---
 
-    [Command("force-transform", description: "Force a transformation on another player (bypasses unlock + cooldown). Usage: .beelz admin force-transform <player> <unitGuid>", adminOnly: true)]
+    [Command("force-transform", description: "Force a transformation on another player (bypasses unlock + cooldown). Only Dracula & Morgana transform in this version. Usage: .beelz admin force-transform <player> <unitGuid>", adminOnly: true)]
     public static void ForceTransform(ChatCommandContext ctx, string player, int unitGuid)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        // v0.44.0: only Dracula & Morgana render a real form — guard before creating an unlock.
+        if (!Beelzebub.Services.BossFormRegistry.Has(unitGuid))
+        {
+            ctx.Reply($"Only Dracula & Morgana can be transformed into in this version. To give {UnitDisplay(unitGuid)}'s kit, use .beelz admin devour. (Full unit transformation is a postponed phase-two feature.)");
+            return;
+        }
         var character = EntityExtensions.FindCharacterByName(player, out ulong steamId, out string fullName);
         if (character == Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
 

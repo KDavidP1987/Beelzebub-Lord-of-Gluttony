@@ -137,6 +137,11 @@ internal sealed class PersistenceService
                 {
                     registry.LoadHotkeysSnapshot(steamId, new Dictionary<string, int>(player.Hotkeys));
                 }
+                // v0.44.0 / v7: persisted pity streaks.
+                if (player.Pity is not null && player.Pity.Length > 0)
+                {
+                    registry.LoadPity(steamId, player.Pity);
+                }
             }
 
             Core.Log.LogInfo($"Loaded {registry.PlayerCount} player(s), {slotCount} universal slot(s), {weaponSlotCount} weapon-specific slot(s), {verbositySet} verbosity, {transformCount} transform unlock(s) from {StateFilePath}.");
@@ -159,6 +164,7 @@ internal sealed class PersistenceService
             var presetsSnapshot = Core.AbilityRegistry.PresetsSnapshot();
             var weaponSlotsSnapshot = Core.AbilityRegistry.WeaponSlotsSnapshot();
             var hotkeysSnapshot = Core.AbilityRegistry.HotkeysSnapshot();
+            var pitySnapshot = Core.AbilityRegistry.PitySnapshot().ToDictionary(kv => kv.Key, kv => kv.Value);
 
             var playerIds = new HashSet<ulong>(Core.AbilityRegistry.Snapshot().Select(kv => kv.Key));
             foreach (var sid in allVerbosity.Keys) playerIds.Add(sid);
@@ -167,6 +173,7 @@ internal sealed class PersistenceService
             foreach (var sid in presetsSnapshot.Keys) playerIds.Add(sid);
             foreach (var sid in weaponSlotsSnapshot.Keys) playerIds.Add(sid);
             foreach (var sid in hotkeysSnapshot.Keys) playerIds.Add(sid);
+            foreach (var sid in pitySnapshot.Keys) playerIds.Add(sid);
 
             var players = new Dictionary<string, PlayerDto>();
             foreach (var steamId in playerIds)
@@ -221,12 +228,13 @@ internal sealed class PersistenceService
                     }).ToList(),
                     Presets = presetsForPlayer,
                     Hotkeys = hotkeysForPlayer,
+                    Pity = pitySnapshot.TryGetValue(steamId, out var pity) ? pity : null,
                 };
             }
 
             var dto = new StateDto
             {
-                Version = 6,
+                Version = 7,
                 Players = players,
             };
 
@@ -264,6 +272,9 @@ internal sealed class PersistenceService
         public Dictionary<string, Dictionary<string, int>> Presets { get; set; }
         // W4 / v6: named hotkey bindings, hotkey-name → ability prefab GUID.
         public Dictionary<string, int> Hotkeys { get; set; }
+        // v0.44.0 / v7: escalating pity bonuses [Regular+Ability, Regular+Transform,
+        // VBlood+Ability, VBlood+Transform]; null/absent for players with no streak.
+        public float[] Pity { get; set; }
     }
 
     sealed class TransformDto

@@ -90,6 +90,15 @@ internal sealed class TransformService
     /// </summary>
     public (bool ok, string message) TryActivate(ulong steamId, int unitPrefabGuid)
     {
+        // v0.44.0: per-ability baseline — only Dracula & Morgana render a real form, so they're
+        // the only true transformations. Every other unit's kit is learned as abilities
+        // (capture / the Devour jackpot) and slotted onto the normal bar. Arbitrary-unit
+        // transformation is a researched, postponed phase-two feature.
+        if (!BossFormRegistry.Has(unitPrefabGuid))
+        {
+            return (false, "Only Dracula and Morgana can be transformed into in this version. Every other unit's kit is learned as abilities — see .beelz list, then .beelz grant (the rare Devour jackpot grants a whole kit at once). Full unit transformation is a postponed phase-two feature.");
+        }
+
         if (!Core.AbilityRegistry.HasTransformUnlock(steamId, unitPrefabGuid))
         {
             return (false, "You haven't unlocked transformation for that unit.");
@@ -878,7 +887,18 @@ internal sealed class TransformService
     /// and backs `.beelz refresh`. Idempotent (delegates to ApplyPhase at the current phase).
     /// </summary>
     public bool ReapplyActiveTransform(ulong steamId, ActiveTransform active, Entity character)
-        => active != null && character.Exists() && ApplyPhase(steamId, active, character, active.CurrentPhase);
+    {
+        if (active == null || !character.Exists()) return false;
+        // v0.44.0 defense-in-depth: transformation is Dracula/Morgana-only now. If a stale
+        // non-boss active-transform record is ever resumed (e.g. reconnect grace), DON'T
+        // re-apply its bar — clean-revert instead, so we can't reintroduce a stuck bar.
+        if (!BossFormRegistry.Has(active.UnitPrefabGuid))
+        {
+            Revert(steamId, "stale-nonboss-transform");
+            return false;
+        }
+        return ApplyPhase(steamId, active, character, active.CurrentPhase);
+    }
 
     /// <summary>
     /// v0.27.0: shared phase-swap. Re-fetches the phase's ability list and

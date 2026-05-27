@@ -312,8 +312,10 @@ internal sealed class AbilityRules
     }
 
     /// <summary>
-    /// Per-ability cooldown multiplier (1.0 = no change). Used by the W5 cooldown
-    /// hook once that ships. Until then, this is just stored — no runtime effect.
+    /// Per-ability cooldown multiplier (1.0 = no change). v0.44.0: LIVE for FORCE-CASTS —
+    /// <c>.beelz cast &lt;hotkey|index&gt;</c> multiplies the ability's own cooldown by this
+    /// before enforcing it (floor 1s). Native spell-BAR slot cooldowns are still V Rising's
+    /// own (scaling those needs a cooldown-component hook — a follow-up).
     /// </summary>
     public float GetCooldownScale(string abilityName)
     {
@@ -735,8 +737,8 @@ internal sealed class AbilityRules
     ///   Beelzebub-granted slot/hotkey in normal form. 1.0 = no change. v0.43.5: LIVE —
     ///   applied as a brief Physical+Spell power buff around the cast by
     ///   GrantPowerScalingService (combines with the global Grant_PowerScalingMode).
-    /// - <c>CooldownScale</c>: multiplier on cooldown when the ability is cast via a
-    ///   Beelzebub-granted slot. 1.0 = no change. Same W5-dependent caveat.
+    /// - <c>CooldownScale</c>: multiplier on cooldown. 1.0 = no change. v0.44.0: LIVE for
+    ///   force-casts (<c>.beelz cast</c>); native spell-bar slot cooldowns still pending a hook.
     /// - <c>Notes</c>: free-text annotation, ignored by the runtime.
     /// </summary>
     public sealed class AbilityEntry

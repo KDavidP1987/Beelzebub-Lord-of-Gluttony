@@ -20,7 +20,8 @@ internal static class TransformCommands
         var unlocks = Core.AbilityRegistry.ListTransforms(steamId);
         if (unlocks.Count == 0)
         {
-            ctx.Reply("No transformation unlocks yet. Defeat units (each kill rolls a small chance to unlock).");
+            ctx.Reply("No transformation unlocks yet. In this version only DRACULA and MORGANA transform — defeat them for a rare chance to unlock it.");
+            ctx.Reply("Every other unit's powers are collected as ABILITIES: capture them one at a time, or hit the rare 'Devour' jackpot to learn a unit's whole kit at once, then slot with .beelz grant. (Becoming any unit is a researched, postponed phase-two feature.)");
             return;
         }
 
@@ -545,7 +546,7 @@ internal static class TransformCommands
         }
     }
 
-    [Command("catalog", description: "Hunt list — every curated transformation V-Blood with ✓ for ones you've unlocked, · for ones still to hunt. Usage: .beelz catalog [page]. Sorted by tier ascending. 10 per page.")]
+    [Command("catalog", description: "Curated boss-kit reference — every curated boss V-Blood with its tier/difficulty. NOTE: only Dracula & Morgana transform in this version; every other unit's kit is collected as abilities (see .beelz bestiary). Usage: .beelz catalog [page]. Sorted by tier ascending. 10 per page.")]
     public static void Catalog(ChatCommandContext ctx, int page = 0)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
@@ -582,7 +583,9 @@ internal static class TransformCommands
             if (TryResolveUnitGuid(k, out int g) && unlockedGuids.Contains(g)) unlockedTotal++;
         }
 
-        ctx.Reply($"[CATALOG] Transformations: {unlockedTotal}/{total} unlocked. Page {page + 1}/{pages}.");
+        // v0.44.0: real transformation is Dracula/Morgana-only now; this curated list is best
+        // read as a boss-kit reference. Use .beelz bestiary to track your ability collection.
+        ctx.Reply($"[CATALOG] Curated boss kits ({total}). NOTE: only Dracula & Morgana transform in this version — others are collected as ABILITIES (see .beelz bestiary). Page {page + 1}/{pages}.");
         foreach (var (name, entry) in ordered.Skip(page * pageSize).Take(pageSize))
         {
             bool unlocked = TryResolveUnitGuid(name, out int unitGuid) && unlockedGuids.Contains(unitGuid);
