@@ -4,6 +4,26 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.48.0] - 2026-05-27
+
+### Experimental: custom abilities on vanilla forms (Wolf/Bear test) — the real mechanism
+
+This implements the **actual** path for "use your own abilities in a shapeshift form": you unlock
+forms from bosses and enter them with the in-game shapeshift wheel as normal, and Beelzebub
+recognizes the form and loads your abilities into it. (v0.47.0's admin command forced the form a
+different way; this is how it really works in play.)
+
+- Enable `Forms_CustomAbilities_Enabled` (off by default). Then, when you shift into **Wolf or
+  Bear** (the current test forms), your current loadout's abilities are placed on the form's bar,
+  and the form's "break on cast" trigger is removed — so you can actually *cast* them without
+  dropping out of the form (vanilla travel forms normally exit the instant you cast something).
+- Safe by design: the form keeps its normal "exit on logout" behavior, and the changes live on the
+  form buff itself, so it can't get your action bar stuck. Turn the setting off to restore vanilla.
+
+This is the make-or-break feasibility test. If Wolf/Bear hold through casting in-game, the next
+step is full per-form ability assignment (a loadout per form, auto-applied when you shift into it,
+like the per-weapon loadouts) across all the forms. If a form won't hold, we'll learn which and why.
+
 ## [0.47.0] - 2026-05-27
 
 ### Experimental: native-form test (admin) — groundwork for per-form ability sets

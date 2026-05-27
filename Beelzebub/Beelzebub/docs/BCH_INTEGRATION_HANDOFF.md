@@ -67,9 +67,18 @@
 > per-form loadout feature (parallel to the per-weapon buckets) would follow and *then* get a wire
 > surface; until then BCH needs nothing here.
 >
-> **Last full audit:** Beelzebub **v0.44.0** (2026-05-27); **v0.45.0 + v0.46.0 + v0.47.0** deltas
+> **v0.48.0 — EXPERIMENTAL custom abilities on vanilla forms (server-side; no wire change, ApiVersion still 6).**
+> Config `Forms_CustomAbilities_Enabled` (default false, auto-streams via `api config`): entering a
+> vanilla Wolf/Bear form via the shapeshift wheel injects the player's loadout onto the form bar +
+> strips the break-on-cast trigger so the form holds. Feasibility probe for a future per-form
+> loadout system — **no BCH impact yet** (no `[BEELZ:*]` line/event). If it holds in-game, a Phase-2
+> per-form loadout (parallel to per-weapon buckets, with `api`/grant surface) would follow and get a
+> wire surface then.
+>
+> **Last full audit:** Beelzebub **v0.44.0** (2026-05-27); **v0.45.0 + v0.46.0 + v0.47.0 + v0.48.0** deltas
 > (summons untransformed, `.beelz loadouts`, `.beelz summons clear`, ability cast-tuning, the
-> experimental native-form test) folded in above — re-verified against the source
+> experimental native-form test, custom abilities on vanilla Wolf/Bear forms) folded in above —
+> re-verified against the source
 > (`ApiCommands.cs`, `BeelzCommands.cs`, `TransformCommands.cs`, `HotkeyCommands.cs`,
 > `AdminCommands.cs`, `AbilityTuningService.cs`, `DevourService.cs`, `Config/Settings.cs`,
 > `Services/AbilityRules.cs`, `Services/TransformService.cs`).

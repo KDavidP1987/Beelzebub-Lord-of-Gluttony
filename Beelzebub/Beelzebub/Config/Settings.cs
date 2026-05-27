@@ -145,6 +145,13 @@ internal static class Settings
     // how the original NPC/boss casts that same ability. Default false (opt-in).
     public static ConfigEntry<bool> AbilityTuning_Enabled { get; private set; }
 
+    // v0.48.0 (Phase-1.5 native-form abilities test): when true, entering a VANILLA shapeshift
+    // form (Wolf/Bear — the test set) via the in-game shapeshift wheel injects the player's
+    // loadout abilities onto the form bar AND strips the form's break-on-cast trigger
+    // (RemoveBuffOnGameplayEvent) so the form HOLDS while casting them. Default false — this
+    // changes vanilla form behavior; it's the feasibility probe for the per-form-loadout feature.
+    public static ConfigEntry<bool> Forms_CustomAbilities_Enabled { get; private set; }
+
     // v0.23.1: max distance (world units) a summon can wander from its player
     // before being teleported back. 0 = no leashing.
     public static ConfigEntry<float> Transform_SummonLeashRadius { get; private set; }
@@ -552,5 +559,16 @@ internal static class Settings
             "`.beelz admin reload`. WARNING: the edit is GLOBAL — the original NPC/boss casts of " +
             "that same ability change too. Default false (opt-in). Verify one ability in-game " +
             "before curating broadly (these are baked-data edits).");
+
+        Forms_CustomAbilities_Enabled = config.Bind(
+            "Forms", nameof(Forms_CustomAbilities_Enabled), false,
+            "v0.48.0 [EXPERIMENTAL TEST]: when you enter a vanilla shapeshift form (currently the " +
+            "Wolf/Bear test set) via the in-game shapeshift wheel, inject your current loadout's " +
+            "abilities onto the form's bar AND strip the form's break-on-cast trigger so the form " +
+            "HOLDS while you cast them (vanilla travel forms normally exit on the first cast). This " +
+            "is the feasibility probe for a full per-form-loadout feature (assign abilities per " +
+            "form, auto-applied when you shift into it, like the per-weapon loadouts). Default " +
+            "false — it changes vanilla form behavior for every player when on. The form buff keeps " +
+            "its own RemoveOnDisconnect, so logging out still exits the form cleanly.");
     }
 }

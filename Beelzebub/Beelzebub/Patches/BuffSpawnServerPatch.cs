@@ -309,6 +309,17 @@ internal static class BuffSpawnServerPatch
                         Core.Log.LogError($"[Beelz SUMMON] HandleMount failed: {ex}");
                     }
                 }
+                else if (Services.ShapeshiftAbilityService.IsTestForm(prefab._Value))
+                {
+                    // v0.48.0: player entered a vanilla shapeshift form (Wolf/Bear test) via the
+                    // in-game wheel → inject their loadout onto the form bar + strip the
+                    // break-on-cast trigger so the form holds while casting. Gated by config.
+                    try { Services.ShapeshiftAbilityService.ApplyFormLoadout(e, target, prefab._Value); }
+                    catch (Exception ex)
+                    {
+                        Core.Log.LogError($"[Beelz FORM] ApplyFormLoadout failed: {ex}");
+                    }
+                }
             }
         }
         finally
