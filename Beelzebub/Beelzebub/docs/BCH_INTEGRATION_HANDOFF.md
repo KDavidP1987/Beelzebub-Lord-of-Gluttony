@@ -30,10 +30,10 @@
 > expect at most the two boss entries; the collection UI should center on abilities
 > (`api list` / `api bestiary`) + the Devour event.
 >
-> **Last full audit:** Beelzebub **v0.43.0** (2026-05-24) — every command, event,
-> config key, and `[BEELZ:*]` line below was re-verified against the source
-> (`ApiCommands.cs`, `BeelzCommands.cs`, `TransformCommands.cs`, `HotkeyCommands.cs`,
-> `AdminCommands.cs`, `Config/Settings.cs`).
+> **Last full audit:** Beelzebub **v0.44.0** (2026-05-27) — re-verified through the
+> per-ability pivot: every command, event, config key, and `[BEELZ:*]` line below was
+> checked against the source (`ApiCommands.cs`, `BeelzCommands.cs`, `TransformCommands.cs`,
+> `HotkeyCommands.cs`, `AdminCommands.cs`, `DevourService.cs`, `Config/Settings.cs`).
 
 ---
 
@@ -51,6 +51,81 @@ This mirrors the BCH ↔ Bloodcraft pattern. BCH owns: parsing, caching,
 rendering on-screen UI (ability buttons, cooldowns, collection book, transform
 browser, admin panels), and any **client-side rendering** work (the model-swap
 and animation-fidelity experiments — see §7).
+
+---
+
+## 0.5 — BCH build plan (architecture · lifecycle · phased roadmap) — START HERE
+
+This section is the *how to assemble it* layer. §1–§7 are the wire reference; this
+is the recommended structure so the BCH-side build stays comprehensive, testable,
+and resilient as Beelzebub's API grows. Build it as a self-contained **Beelzebub
+subcomponent** inside BCH (its own folder/namespace), so it can evolve independently
+of BCH's existing Bloodcraft integration.
+
+### 0.5.1 Module breakdown (BCH side)
+Keep four concerns separate — it makes the integration unit-testable and means a new
+Beelzebub API field rarely touches more than one layer:
+
+- **`BeelzClient`** — the *only* thing that talks to the server. `Send(string cmd)`
+  issues `.beelz api …` reads and `.beelz …` mutations over chat. No parsing here.
+- **`BeelzWireParser`** — pure/stateless. Turns an inbound `[BEELZ:*]` line into a
+  typed record. Must handle: the `[BEELZ:<tag>] k=v k=v` grammar (split on spaces,
+  first token is the tag, rest are `key=value`); comma-lists (`k=a,b,c`); multi-record
+  **streams** that terminate on `[BEELZ:end] cmd=<name> count=<n>`; and
+  `[BEELZ:err] cmd= code= msg=` (treat `code=not_ready` as "retry later").
+- **`BeelzState`** — the cached client model (see 0.5.3). Single source of truth the
+  UI binds to; updated by parsed reads and by events. UI never parses raw lines.
+- **`BeelzEventRouter`** — routes `[BEELZ:event] type=…` lines to `BeelzState` deltas +
+  targeted UI refreshes (prefer applying the event's delta over a full re-hydrate).
+- **UI components** bind to `BeelzState`: Collection book · Loadout editor · Action-bar
+  buttons + cooldown rings · Transform panel · Settings/Admin panel.
+
+### 0.5.2 Integration lifecycle (state machine)
+1. **Detect** — on world-join, `.beelz api version`. No reply or `ready=0` or
+   `code=not_ready` → retry with backoff. Gate everything on `ready=1`.
+2. **Subscribe** — `.beelz api bch on` (subscribes this player to the live event stream).
+3. **Hydrate** — initial snapshot: `api list`, `api slots`, `api transforms`,
+   `api active`, `api progress`, `api hotkeys`, `api bestiary`; for panels also
+   `api config`, `api rules`, `api cooldowns`.
+4. **Live** — react to `[BEELZ:event]` lines (apply delta → refresh affected UI). After
+   any **mutation** command (they reply in human text, *not* API), re-fetch the affected
+   `api` read OR rely on the event it emits.
+5. **Reconnect** — RE-HYDRATE and re-send `api bch on`. Do **not** assume a fresh login is
+   untransformed — a transform persists across a brief DC within
+   `Transform_ReconnectGraceSeconds`, so re-read `api active`/`api transforms`.
+
+### 0.5.3 Cached client state (`BeelzState` fields)
+- `apiVersion`, `pluginVersion`, `ready`
+- `captures[]` `{index, source R|V, unitGuid, unitName, abilityGuid, abilityName, …}` ← `api list`
+- `slots{1..6}` (universal) + `weaponSlots{family→{1..6}}` + `currentWeapon` ← `api slots`
+- `transforms[]` (Dracula/Morgana only now) ← `api transforms`
+- `active` `{unitGuid, phase, phases, ttl}` | none ← `api active`
+- `hotkeys[]` `{name, abilityGuid, abilityName}` ← `api hotkeys` (these drive the action-bar buttons)
+- `progress`, `bestiary[]`, `config{}`, `cooldowns{category→remaining}`
+- **Index caveat:** capture indices are session-stable but shift after `forget`/`clear`/new
+  captures — re-fetch `api list` before any index-based command (`grant`, `info <index>`, …).
+
+### 0.5.4 Phased build order (ship value early)
+- **Phase A — MVP (the headline win):** handshake + parser + a **Collection view**
+  (`api list`/`bestiary`/`progress`) + **on-screen action-bar buttons** — render each
+  `api hotkeys` binding as a button that sends `.beelz cast <name>`. This is the original
+  "abilities beyond the 6 slots" vision and the fastest visible payoff. Wire the `capture`
+  and `devour` events so the collection updates live.
+- **Phase B — Loadout & transform:** the **Loadout editor** (6 slots, universal + weapon
+  buckets; `grant`/`weapon-grant`/`unslot`) and the **Transform panel** for Dracula/Morgana
+  (`transform`/`revert`/`phase`/`summon`/`detonate` + the summon stash/restore panel),
+  all event-driven.
+- **Phase C — Admin & polish:** a **Settings/Admin panel** rendered *generically* from
+  `api config` (`section/key/value/type` → controls; mutate via `admin set`) plus `api rules`
+  and the grant/devour/recovery admin commands; **cooldown rings** (transform cooldowns from
+  `api cooldowns`; a force-cast button's cooldown = `api info` `cooldown_seconds × cooldown_scale`).
+- **Phase D — phase two (research):** client-side **model rendering** (§7.1) and **animation
+  fidelity** (§7.2) — the hard, BCH-only frontier. Beelzebub already emits the events you'd hook.
+
+### 0.5.5 Minimum viable integration
+`api version` (gate `ready=1`) → `api bch on` → `api hotkeys` → render a button per binding →
+click sends `.beelz cast <name>`. That alone is an on-screen expanded action bar. Everything
+else layers on top of the same client + parser + state.
 
 ---
 
@@ -84,14 +159,14 @@ All under the `.beelz api` group. Verified against `ApiCommands.cs`.
 | `.beelz api version` | `[BEELZ:version]` | `api=<int> plugin=<ver> ready=0\|1` |
 | `.beelz api list` | `[BEELZ:list]` … `[BEELZ:end]` | Caller's captured abilities: `i= s=R\|V u=<unitGuid> un=<unitName> a=<abilityGuid> an=<abilityName>` (+ category/type fields) |
 | `.beelz api slots` | `[BEELZ:slot]`, `[BEELZ:slot-current]`, `[BEELZ:end]` | Slot assignments per bucket: `bucket=any\|<WeaponFamily> slot=1-6 a= an=`; footer `weapon=<current>` |
-| `.beelz api transforms` | `[BEELZ:tx]` … `[BEELZ:end]` | Transform unlocks + matrix attrs: `i= s= u= un= enabled= difficulty= tier= damage_scale= cooldown_scale= health_scale= speed_scale= type= full_replace= scaling_mode=` |
+| `.beelz api transforms` | `[BEELZ:tx]` … `[BEELZ:end]` | Transform unlocks + matrix attrs: `i= s= u= un= enabled= difficulty= tier= damage_scale= cooldown_scale= health_scale= speed_scale= type= full_replace= scaling_mode=`. **(v6) Now 0–2 entries — Dracula/Morgana only.** |
 | `.beelz api active` | `[BEELZ:active]` | Active transform: `u= un= s= ttl=<sec>\|toggle` + phase info; or `none=1` |
 | `.beelz api info <index>` | `[BEELZ:info]` | One ability's full tooltip data: `desc=` (real ability description, %params% substituted), `weapons=`, `weapon_anim=<family\|None>` (animation weapon, v2), `school=` (v2), `cooldown_seconds=` (v2), `forms=`, `transform_only=`, `enabled=`, `difficulty=`, `damage_scale=`, `cooldown_scale=` |
 | `.beelz api progress` | `[BEELZ:progress]` | Collection %: `abilities_captured= abilities_total= abilities_pct= transforms_unlocked= transforms_total= transforms_pct=` + V-Blood breakdowns |
 | `.beelz api rules` | `[BEELZ:rules]` | Loaded filter rules: `version= deny_patterns= allow_patterns= deny_guids= allow_guids=` |
 | `.beelz api transform-config` | `[BEELZ:tx-config]` … `[BEELZ:end]` | One line per category `R`/`V`/`S` (shard boss): `src= mode=Toggle\|Timed\|Disabled duration= cooldown=` (count=3, **`src=S` added v0.43.0**). Live cooldown remaining (incl. shard) is in `api cooldowns`. |
 | `.beelz api catalog` | `[BEELZ:catalog-summary]` | `abilities= units= server_mode=Basic\|Brutal` |
-| `.beelz api catalog units [page]` | `[BEELZ:catalog-unit]` … `[BEELZ:end]` | Full curated transform-target list (collection book), 40/page, with matrix attrs |
+| `.beelz api catalog units [page]` | `[BEELZ:catalog-unit]` … `[BEELZ:end]` | Curated boss-KIT reference, 40/page, with matrix attrs. **(v6) Read as Devour/collection targets, NOT transform targets** — only Dracula/Morgana transform. |
 | `.beelz api catalog abilities [page]` | `[BEELZ:catalog-ability]` … `[BEELZ:end]` | Full curated ability list, 40/page, with matrix attrs |
 | `.beelz api hotkeys` | `[BEELZ:hotkeys-config]`, `[BEELZ:hotkey]`, `[BEELZ:end]` | Config footer (`enabled= max=`) + named hotkey bindings |
 | `.beelz api verbosity` | `[BEELZ:verbosity]` | `level=Silent\|Summary\|Verbose default=<server default>` |
@@ -202,7 +277,8 @@ captures, revert-all, snapshot, inspect/progress, wipe-all.
 | **Collection book** — per-unit progress (X/Y abilities + transform), captured-abilities grid, search, tooltips | `api bestiary` (per-unit X/Y + transform), `api list`, `api info`, `api catalog abilities` | ✅ data ready · 🟡 UI |
 | **Slot loadout editor** — drag ability → one of 6 slots, universal vs weapon-specific buckets | `api slots` + `grant`/`weapon-grant`/`unslot` | ✅ data ready · 🟡 UI |
 | **On-screen ability buttons + cooldown display** (the original BCH vision) | spell-bar state via `api active`/`api slots`; cooldowns from ability metadata | 🟡 needs client render + a cooldown feed |
-| **Transform browser + hunt catalog** — unlocked vs to-hunt, tier sort, preview | `api transforms`, `api catalog units` + `transform`/`revert` | ✅ data ready · 🟡 UI |
+| **Transform panel (Dracula & Morgana only)** — the two real transforms: activate/revert, phase switch, signature summon/detonate | `api transforms` (now 0–2 entries) + `transform`/`revert`/`phase`/`summon`/`detonate` | ✅ data ready · 🟡 UI |
+| **Devour-target / boss-kit reference** — `api catalog units` is now a boss-KIT reference (not transform targets); pair with `api bestiary` to show ABILITY-collection progress | `api catalog units`, `api bestiary` | ✅ data ready · 🟡 UI |
 | **Phase switcher** — for multi-form bosses (Dracula warrior↔bloodmage) | `api active` (phase/phases) + `phase <n>` | ✅ · 🟡 UI |
 | **Summon panel** — live/stashed counts, stash for waygates | `summons status`/`stash`/`restore` | ✅ · 🟡 UI |
 | **Mounted-summon behavior** (v0.42) — on a horse, summons auto-stash or keep following per `Transform_MountedSummonMode` (`Stash`\|`Follow`). Server-driven & automatic; surface the setting in the admin/settings panel via `api config` + `admin set`. No player command needed. | `api config` (`Transform_MountedSummonMode`) | ✅ |
@@ -367,6 +443,14 @@ per tick) for on-screen ability rings — Beelzebub exposes static cooldown valu
   settings class, so new keys appear automatically (no doc/contract bump). BCH should
   render the settings panel generically from `section/key/value/type` rather than
   hard-coding keys — new settings then "just appear."
+- **Force-cast cooldown is scaled (v0.44.0).** `.beelz cast` now multiplies the ability's
+  cooldown by its `CooldownScale` before enforcing it (floor 1s). For an accurate cooldown
+  ring on a force-cast/hotkey button, use `cooldown_seconds × cooldown_scale` (both from
+  `api info`). Native spell-bar slot cooldowns are unchanged (V Rising's own).
+- **Transform is Dracula/Morgana only (v0.44.0).** Don't build a generic "transform into any
+  unit" browser — `api transforms` returns at most those two. The collection/progression UI
+  should center on **abilities** (`api list`/`api bestiary`/the `devour` event), with a small
+  dedicated panel for the two boss transforms. Arbitrary-unit transformation is §7.1 (phase two).
 
 ---
 
