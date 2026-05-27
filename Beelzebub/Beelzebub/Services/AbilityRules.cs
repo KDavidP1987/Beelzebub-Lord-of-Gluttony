@@ -298,8 +298,10 @@ internal sealed class AbilityRules
     }
 
     /// <summary>
-    /// Per-ability damage multiplier (1.0 = no change). Used by the W5 damage hook
-    /// once that ships. Until then, this is just stored — no runtime effect.
+    /// Per-ability damage multiplier (1.0 = no change). v0.43.5: now LIVE for GRANTED
+    /// abilities cast in normal form — <see cref="Services.GrantPowerScalingService"/>
+    /// applies it (× the global Grant_PowerScalingMode factor) as a brief power buff
+    /// around the cast. (Not applied to transform casts — those use Transform scaling.)
     /// </summary>
     public float GetDamageScale(string abilityName)
     {
@@ -730,8 +732,9 @@ internal sealed class AbilityRules
     /// - <c>Enabled</c>: admin kill-switch. False blocks both capture AND use (grant
     ///   and transform pickup). Default true.
     /// - <c>DamageScale</c>: multiplier on damage when the ability is cast via a
-    ///   Beelzebub-granted slot. 1.0 = no change. Requires the W5 runtime to be live
-    ///   (until then, this value is inert).
+    ///   Beelzebub-granted slot/hotkey in normal form. 1.0 = no change. v0.43.5: LIVE —
+    ///   applied as a brief Physical+Spell power buff around the cast by
+    ///   GrantPowerScalingService (combines with the global Grant_PowerScalingMode).
     /// - <c>CooldownScale</c>: multiplier on cooldown when the ability is cast via a
     ///   Beelzebub-granted slot. 1.0 = no change. Same W5-dependent caveat.
     /// - <c>Notes</c>: free-text annotation, ignored by the runtime.

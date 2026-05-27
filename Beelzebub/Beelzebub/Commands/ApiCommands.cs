@@ -29,8 +29,25 @@ internal static class ApiCommands
     //   new event type=config-changed (from `.beelz admin set`).
     // v4 (v0.40.0): expanded action bar — `.beelz cast <hotkey|index>` force-casts any
     //   captured ability (the BCH-button mechanism); new event type=cast.
+    // v5 (v0.43.3): `.beelz summon [n]` force-casts a transformed unit's signature
+    //   add-summon (Toad King frogs, Werewolf cages, …) that bosses trigger at a low-HP
+    //   soft phase; new event type=summon (u=, ability=). Config key
+    //   Transform_SummonCooldownSeconds (flows through api config / admin set).
     // All additive — backward-compatible with older parsers (unknown keys/events ignored).
-    const int ApiVersion = 4;
+    const int ApiVersion = 5;
+
+    [Command("help", description: "List the Beelzebub API/BCH read commands (machine-readable data streams).")]
+    public static void Help(ChatCommandContext ctx)
+    {
+        ctx.Reply("=== Beelzebub API commands === (BCH-readable; emit [BEELZ:*] data lines for client UIs)");
+        ctx.Reply(".beelz api version — API + plugin version · .beelz api bch <on|off|status> — toggle your event stream");
+        ctx.Reply(".beelz api list / slots / transforms / hotkeys / active — stream your own data");
+        ctx.Reply(".beelz api info <index> — ability tooltip data · .beelz api progress — completion data");
+        ctx.Reply(".beelz api bestiary [page] — collection book · .beelz api verbosity — your verbosity setting");
+        ctx.Reply(".beelz api catalog [units|abilities] [page] — curated-catalog streams");
+        ctx.Reply(".beelz api rules / config / cooldowns / transform-config — server config + state streams");
+        ctx.Reply("These power BloodCraftHub's on-screen UI; most just stream data and don't change anything.");
+    }
 
     [Command("version", description: "Return the Beelzebub API version (BCH-readable).")]
     public static void Version(ChatCommandContext ctx)

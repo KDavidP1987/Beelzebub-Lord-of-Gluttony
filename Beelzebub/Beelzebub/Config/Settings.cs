@@ -127,7 +127,16 @@ internal static class Settings
     // v0.23.0: when a player disconnects, dismiss their active summons.
     // Bloodcraft does this for familiars; we mirror the pattern. Setting false
     // leaves summons in-world during DC — useful for short reconnects.
+    // v0.43.7: superseded by Transform_ReconnectGraceSeconds while the player is
+    // actively transformed (the grace window governs that case).
     public static ConfigEntry<bool> Transform_DespawnSummonsOnDisconnect { get; private set; }
+
+    // v0.43.7: reconnect grace window for a disconnected player's active transform
+    // + summons. >0 = keep them and resume on a reconnect within N seconds (else
+    // revert + despawn); 0 = revert immediately on disconnect; -1 = keep until a
+    // manual revert. A server restart during the window ends the grace (the player
+    // is safely returned to base form on reconnect via the on-connect reconciliation).
+    public static ConfigEntry<float> Transform_ReconnectGraceSeconds { get; private set; }
 
     // v0.23.1: max distance (world units) a summon can wander from its player
     // before being teleported back. 0 = no leashing.
@@ -137,6 +146,13 @@ internal static class Settings
     // auto-despawned. 0 = infinite (default). Prevents indefinite horde
     // accumulation on long-lived servers / AFK players.
     public static ConfigEntry<float> Transform_SummonLifetimeSeconds { get; private set; }
+
+    // v0.43.6: summon scaling — keeps summoned allies relevant as the player levels.
+    // MatchPlayerLevel sets the summon's UnitLevel to the player's; PowerFactor multiplies
+    // its Physical/Spell power + max health. Applies to BOTH transform summons and
+    // standalone (untransformed) signature summons.
+    public static ConfigEntry<bool> Transform_SummonMatchPlayerLevel { get; private set; }
+    public static ConfigEntry<float> Transform_SummonPowerFactor { get; private set; }
 
     // v0.27.0: how multi-phase boss transforms switch combat phases.
     public enum PhaseControlMode { Manual, Auto }
@@ -160,6 +176,29 @@ internal static class Settings
     // per player. Prevents spamming a transformed boss's signature AoE. 0 = no
     // cooldown. Only applies to units that have a registered manual detonation.
     public static ConfigEntry<float> Transform_ManualDetonateCooldownSeconds { get; private set; }
+
+    // v0.43.3: cooldown (seconds) between `.beelz summon` manual signature-summon casts,
+    // per player. Force-casts a transformed unit's add-summon (e.g. the Toad King's frogs)
+    // that the boss normally only triggers at a health-threshold soft phase. 0 = no
+    // cooldown. Only affects units with a registered summon (see SummonRegistry).
+    public static ConfigEntry<float> Transform_SummonCooldownSeconds { get; private set; }
+
+    // v0.43.4: when true, unlocking a unit's transform also adds that unit's signature
+    // add-summon(s) to the player's CAPTURED pool as standalone abilities — so they can be
+    // granted to a normal spell slot or bound to the custom hotkey bar and used WITHOUT
+    // transforming. Applies retroactively to already-unlocked units on load. Off = summons
+    // stay transform-only (usable via `.beelz summon` while transformed).
+    public static ConfigEntry<bool> Capture_GrantSignatureSummons { get; private set; }
+
+    // v0.43.5: GRANTED-ability power scaling (the deferred W5 runtime, now live).
+    // Granted abilities already scale with the caster's Physical/Spell Power + crit
+    // (vanilla). These add an OPTIONAL admin multiplier on top.
+    //   Mode: "PlayerScaled" (default — no extra, pure vanilla) | "Boosted" (× the factor).
+    //   Factor: the multiplier used in Boosted mode.
+    // Combined with the per-ability AbilityMap DamageScale (now applied). Safe-by-default:
+    // PlayerScaled + factor 1.0 + per-ability 1.0 = zero change.
+    public static ConfigEntry<string> Grant_PowerScalingMode { get; private set; }
+    public static ConfigEntry<float> Grant_PowerScalingFactor { get; private set; }
 
     public static void Initialize(ConfigFile config)
     {
@@ -379,6 +418,21 @@ internal static class Settings
             "preventing indefinite horde accumulation. Uses the same crash-safe staged despawn " +
             "as revert/disconnect cleanup.");
 
+        Transform_SummonMatchPlayerLevel = config.Bind(
+            "Transformation", nameof(Transform_SummonMatchPlayerLevel), true,
+            "v0.43.6: when true (default), a summoned ally's UnitLevel is set to its owner's " +
+            "level on spawn — so a low-level boss-add stays relevant as you out-level it (V Rising's " +
+            "level-difference modifier keeps its damage/defense appropriate vs your tier of enemies). " +
+            "Applies to transform summons AND standalone signature summons. False = keep the unit's " +
+            "baked level.");
+
+        Transform_SummonPowerFactor = config.Bind(
+            "Transformation", nameof(Transform_SummonPowerFactor), 1.0f,
+            "v0.43.6: multiplier applied to a summoned ally's PhysicalPower, SpellPower and MaxHealth " +
+            "on spawn. 1.0 = no change (default), 1.5 = +50% tankier/harder-hitting summons, 0.75 = -25%. " +
+            "This is the lever for summon DAMAGE output (UnitLevel mainly drives the level-difference " +
+            "modifier). Combine with Transform_SummonMatchPlayerLevel.");
+
         Transform_PhaseMode = config.Bind(
             "Transformation", nameof(Transform_PhaseMode), PhaseControlMode.Manual,
             "v0.27.0: how multi-phase boss transforms (e.g. Dracula) switch phases. " +
@@ -412,13 +466,60 @@ internal static class Settings
             "(fires a transformed boss's signature AoE — e.g. the Undead Priest's Nova — on demand). " +
             "Prevents spamming the AoE. 0 = no cooldown. Only affects units with a registered detonation.");
 
+        Transform_SummonCooldownSeconds = config.Bind(
+            "Transformation", nameof(Transform_SummonCooldownSeconds), 12f,
+            "v0.43.3: cooldown in seconds between `.beelz summon` manual signature-summon casts per " +
+            "player (force-casts a transformed unit's add-summon — e.g. the Toad King's frogs — that " +
+            "the boss normally only triggers at a low-HP soft phase). 0 = no cooldown. Only affects " +
+            "units with a registered summon.");
+
+        Grant_PowerScalingMode = config.Bind(
+            "Abilities", nameof(Grant_PowerScalingMode), "PlayerScaled",
+            "v0.43.5: how GRANTED abilities (captured boss abilities on your normal bar/hotkeys) " +
+            "scale in power. 'PlayerScaled' (default) = pure vanilla — the ability already scales " +
+            "with YOUR Physical/Spell Power + crit, so it tracks your level/gear/prestige automatically " +
+            "(no extra applied). 'Boosted' = additionally multiply granted-ability power by " +
+            "Grant_PowerScalingFactor (server-wide dial for under/over-tuned boss abilities). Combines " +
+            "with each ability's AbilityMap DamageScale. Does NOT affect transforms (those use " +
+            "Transform_PowerScalingMode).");
+
+        Grant_PowerScalingFactor = config.Bind(
+            "Abilities", nameof(Grant_PowerScalingFactor), 1.0f,
+            "v0.43.5: the multiplier applied to granted-ability power when Grant_PowerScalingMode = " +
+            "'Boosted'. 1.0 = no change, 1.5 = +50%, 0.75 = -25%. Ignored in PlayerScaled mode. " +
+            "Implemented as a brief Physical+Spell power buff around the cast, so other actions in a " +
+            "~1.5s window are also affected (a tuning approximation, not a surgical per-hit multiply).");
+
+        Capture_GrantSignatureSummons = config.Bind(
+            "Capture", nameof(Capture_GrantSignatureSummons), true,
+            "v0.43.4: when true, unlocking a unit's transform ALSO grants that unit's signature " +
+            "add-summon(s) into the player's captured pool as standalone abilities — usable WITHOUT " +
+            "transforming (grant to a spell slot or bind to a `.beelz hotkey` / `.beelz cast`). Applies " +
+            "retroactively to already-unlocked units on load. False = summons stay transform-only " +
+            "(via `.beelz summon`). Note: cast in normal form (no boss rig) the spawn usually still " +
+            "fires, but the cast animation may look off and a few scripted summons may no-op.");
+
         Transform_DespawnSummonsOnDisconnect = config.Bind(
             "Transformation", nameof(Transform_DespawnSummonsOnDisconnect), true,
             "v0.23.0: when a player disconnects (logout, network drop, kick), queue their " +
             "active summons for staged despawn. Mirrors Bloodcraft's familiar pattern. " +
             "Set false to leave summons in-world during DC — useful if you want short " +
             "reconnects to resume with intact summons, but risks accumulating offline " +
-            "minion clutter on long disconnects. Default true.");
+            "minion clutter on long disconnects. Default true. NOTE (v0.43.7): while a " +
+            "player is actively TRANSFORMED, Transform_ReconnectGraceSeconds governs their " +
+            "summons instead of this setting (a kept transform keeps its summons).");
+
+        Transform_ReconnectGraceSeconds = config.Bind(
+            "Transformation", nameof(Transform_ReconnectGraceSeconds), 90f,
+            "v0.43.7: grace window (seconds) for a disconnected player's ACTIVE TRANSFORM and " +
+            "its summons. >0 (default 90) = on disconnect the transform is kept and its summons " +
+            "are stashed; if the player reconnects within this window, both are restored intact. " +
+            "If the window elapses with no reconnect, the transform is reverted and its summons " +
+            "despawned. 0 = revert immediately on disconnect (no grace). -1 = keep indefinitely " +
+            "until a manual revert. Independent of how they disconnected (logout, drop, kick). " +
+            "On EVERY login Beelzebub also reconciles state: a transform buff left stuck from a " +
+            "previous session (e.g. a server restart, which clears the in-memory transform record) " +
+            "is detected and cleared so the player always returns with a working ability bar.");
 
         Transform_PlayerLeveled_MaxLevel = config.Bind(
             "Transformation", nameof(Transform_PlayerLeveled_MaxLevel), 90,

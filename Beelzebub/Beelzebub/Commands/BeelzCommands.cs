@@ -24,31 +24,39 @@ internal static class BeelzCommands
         ctx.Reply("4. Rarer rolls unlock TRANSFORM into the unit. .beelz transforms / transform / revert.");
         ctx.Reply("   Transforms override your spell bar regardless of weapon.");
         ctx.Reply("5. .beelz verbosity <silent|summary|verbose> — tune chat noise.");
-        ctx.Reply("Type .beelz commands for a full command list.");
+        ctx.Reply("Full command list: .beelz commands. Group detail: .beelz admin help · .beelz api help · .beelz hotkey help.");
     }
 
-    [Command("commands", description: "List all Beelzebub chat commands.")]
+    [Command("commands", description: "List all Beelzebub player commands. For a specific group's detail: .beelz admin help · .beelz api help · .beelz hotkey help.")]
     public static void Commands(ChatCommandContext ctx)
     {
-        ctx.Reply("Beelzebub player commands:");
-        ctx.Reply(".beelz list / .beelz transforms — see captures and transform unlocks");
-        ctx.Reply(".beelz info <index|name> — full ability info: title, description, cooldown, source");
+        ctx.Reply("=== Beelzebub player commands === (group detail: .beelz admin help · .beelz api help · .beelz hotkey help)");
+        ctx.Reply("-- COLLECTION --");
+        ctx.Reply(".beelz list [vblood|shard|regular] [page] — your captured abilities + slot binds");
+        ctx.Reply(".beelz transforms [filter] — your transform unlocks");
+        ctx.Reply(".beelz bestiary [page] / .beelz bestiary unit <name> — collection book, per unit");
+        ctx.Reply(".beelz catalog [page] — hunt list of every curated transform (✓ owned / · still to hunt)");
+        ctx.Reply(".beelz search <term> — search your captures · .beelz info <index|name> — full ability detail");
+        ctx.Reply(".beelz progress — your collection-completion %");
+        ctx.Reply("-- SLOTS / LOADOUT --");
         ctx.Reply(".beelz grant <slot 1-6> <index> / .beelz unslot <slot> — universal slot binds");
         ctx.Reply(".beelz weapon-grant <weapon|auto> <slot> <index> / weapon-unslot <weapon> <slot> — per-weapon binds");
-        ctx.Reply(".beelz transform <index|name> / .beelz revert — activate/end a transform");
-        ctx.Reply(".beelz forget <i> / .beelz forget-transform <i> — delete one entry");
-        ctx.Reply(".beelz clear — wipe all your data");
         ctx.Reply(".beelz preset save|load|list|delete <name> — slot loadout presets");
-        ctx.Reply(".beelz hotkey set|clear|list — named hotkey bindings (extra slots, BCH-driven)");
-        ctx.Reply(".beelz progress — your collection-completion %.");
-        ctx.Reply(".beelz verbosity <silent|summary|verbose> — chat detail");
-        ctx.Reply(".beelz help — walkthrough.   .beelz commands — this list.");
-        ctx.Reply("Admin: .beelz admin rules / deny / undeny / allow / unallow / reload");
-        ctx.Reply("Admin: .beelz admin transform mode|duration|cooldown|show <regular|vblood> ...");
-        ctx.Reply("Admin: .beelz admin give|revoke <player> <unitGuid> <abilityGuid>");
-        ctx.Reply("Admin: .beelz admin give-transform|revoke-transform|force-transform|clear-transform <player> <unitGuid?>");
-        ctx.Reply("Admin: .beelz admin inspect <player> / .beelz admin progress <player>");
-        ctx.Reply("BCH API: .beelz api version|list|slots|transforms|active|info|bch|hotkeys|progress|catalog ...");
+        ctx.Reply(".beelz cast <hotkey|index> — cast a capture on demand (extra hotkeys: .beelz hotkey help)");
+        ctx.Reply(".beelz active / .beelz current — what's effectively on your bar right now");
+        ctx.Reply(".beelz resetbar — reset action bar to vanilla (keeps captures) · .beelz refresh — re-apply your bar");
+        ctx.Reply("-- TRANSFORM --");
+        ctx.Reply(".beelz transform <index|name> / .beelz revert — activate / end a transform");
+        ctx.Reply(".beelz preview <index|name> — see a transform's abilities before committing");
+        ctx.Reply(".beelz phase [n] — switch a boss form's phase loadout");
+        ctx.Reply(".beelz summon [n] / .beelz detonate — fire your transform's signature summon / AoE");
+        ctx.Reply(".beelz summons [stash|restore|status] / .beelz tp — manage transform summons (waygate-safe)");
+        ctx.Reply("-- MANAGE --");
+        ctx.Reply(".beelz forget <i> / .beelz forget-transform <i> — delete one entry");
+        ctx.Reply(".beelz clear CONFIRM — wipe ALL your data (warns first; use .beelz resetbar to keep captures)");
+        ctx.Reply(".beelz verbosity <silent|summary|verbose> — chat detail level");
+        ctx.Reply(".beelz help — walkthrough · .beelz commands — this list");
+        ctx.Reply("Group help: .beelz admin help (admins) · .beelz api help (BCH/UI) · .beelz hotkey help");
     }
 
     [Command("list", description: "List your captured abilities + slot assignments. Optional filter: vblood | shard | regular. Usage: .beelz list [filter] [page]. Paginated 15/page.")]
@@ -496,6 +504,53 @@ internal static class BeelzCommands
             $"[BEELZ:event] type=slot-cleared slot={slot}");
     }
 
+    [Command("resetbar", description: "Reset your action bar to its vanilla in-game state: ends any active transformation and removes ALL Beelzebub slot bindings (universal + weapon-specific), so your normal spells and weapon skills return. Keeps your captured abilities and transform unlocks — re-grant anytime with .beelz grant. Usage: .beelz resetbar")]
+    public static void ResetBar(ChatCommandContext ctx)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        Entity character = ctx.Event.SenderCharacterEntity;
+        ulong steamId = character.GetSteamId();
+
+        // 1) End any active transformation first (destroys its carrier/form buff, despawns
+        //    its summons, clears the record). restoreBar:false — we re-resolve the bar below.
+        var (reverted, _) = Core.Transforms.Revert(steamId, "resetbar", restoreBar: false);
+
+        // 2) Snapshot which universal slots were bound (for the BCH events), then drop EVERY
+        //    binding (universal + weapon-specific) from the saved loadout.
+        var boundSlots = new System.Collections.Generic.List<int>(Core.AbilityRegistry.GetSlots(steamId).Keys);
+        int cleared = Core.AbilityRegistry.ClearAllSlots(steamId);
+
+        // 3) Wipe the injected overrides off the LIVE bar so it returns to vanilla right now
+        //    (mirrors `.beelz unslot`, which only the player can otherwise do one slot at a time).
+        for (int slot = 1; slot <= 6; slot++)
+            Beelzebub.Services.SlotApply.ClearGrant(character, slot);
+
+        // 4) Hardened teardown: walk the live buff buffer and destroy any lingering
+        //    carrier/form buff OR stuck shapeshift/transformation buff driving the bar
+        //    (catches buffs that TryGetBuff-based removal misses). EquipBuff is left alone.
+        int buffsKilled = Beelzebub.Services.TransformBuffService.RemoveAllFormsAndShapeshifts(character);
+
+        // 5) DEEP FIX: destroy any player-owned ability-slot OVERRIDE SOURCE that isn't gear/
+        //    jewels — including an orphaned carrier/form source that left the BuffBuffer but is
+        //    still injecting abilities and freezing the bar (invisible to the BuffBuffer sweep).
+        int orphanSources = Beelzebub.Services.TransformBuffService.DestroyOwnedAbilitySlotOrphans(character);
+
+        // Re-resolve the bar to vanilla now that grants + override buffs/sources are gone.
+        Beelzebub.Services.SlotApply.RestoreResolvedGrants(character);
+
+        Core.Persistence.RequestSave();
+
+        string buffNote = (buffsKilled + orphanSources) > 0 ? $", removed {buffsKilled + orphanSources} override source(s)" : "";
+        ctx.Reply(reverted
+            ? $"Transformation ended and your action bar is reset to vanilla ({cleared} binding(s){buffNote}). Your captures + unlocks are intact — re-grant with .beelz grant. (If your bar is stuck on a creature kit from a previous shapeshift, an admin can run .beelz admin respawn to fully rebuild it.)"
+            : $"Action bar reset to vanilla ({cleared} binding(s) removed{buffNote}). Your captures + unlocks are intact — re-grant with .beelz grant. (If your bar is stuck on a creature kit from a previous shapeshift, an admin can run .beelz admin respawn to fully rebuild it.)");
+
+        // Reuse the existing slot-cleared event per previously-bound slot so BCH refreshes
+        // its loadout view (no new event type → no wire-API change).
+        foreach (int slot in boundSlots)
+            Core.Chat.SendEvent(character, $"[BEELZ:event] type=slot-cleared slot={slot}");
+    }
+
     /// <summary>
     /// W3: weapon-family-specific slot bind. Lets the player keep a sword loadout
     /// AND a crossbow loadout AND a universal loadout simultaneously; switching
@@ -765,15 +820,34 @@ internal static class BeelzCommands
         }
     }
 
-    [Command("clear", description: "Forget all captured abilities and slot assignments. Cannot be undone.")]
-    public static void Clear(ChatCommandContext ctx)
+    [Command("clear", description: "Wipe ALL your Beelzebub data — captured abilities, transform unlocks, every slot bind, hotkey, and preset. Cannot be undone. Requires confirmation: .beelz clear CONFIRM. (To only reset your action bar while KEEPING your collection, use .beelz resetbar.)")]
+    public static void Clear(ChatCommandContext ctx, string confirm = null)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
         ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+
+        // v0.43.23: guard this destructive wipe behind a confirmation token so a player
+        // can't nuke their whole collection with a single mistyped/auto-complete command.
+        // Typing `.beelz clear` (no token) shows what's at stake + the safer alternative.
+        if (!string.Equals(confirm?.Trim(), "CONFIRM", System.StringComparison.OrdinalIgnoreCase))
+        {
+            int abilities = Core.AbilityRegistry.ListFor(steamId).Count;
+            int transforms = Core.AbilityRegistry.ListTransforms(steamId).Count;
+            if (abilities == 0 && transforms == 0)
+            {
+                ctx.Reply("You have no Beelzebub data to clear.");
+                return;
+            }
+            ctx.Reply($"⚠ WARNING: this permanently wipes ALL your Beelzebub progress — {abilities} captured abilities, {transforms} transform unlock(s), plus every slot bind, hotkey, and preset. This CANNOT be undone.");
+            ctx.Reply("If you only want to reset your action bar to vanilla while KEEPING your collection, use .beelz resetbar instead.");
+            ctx.Reply("To confirm the full wipe, type:  .beelz clear CONFIRM");
+            return;
+        }
+
         if (Core.AbilityRegistry.Clear(steamId))
         {
             Core.Persistence.RequestSave();
-            ctx.Reply("Captured abilities and slot assignments cleared.");
+            ctx.Reply("Confirmed — all your captured abilities, transform unlocks, and slot assignments have been wiped.");
             // v0.35.0: BCH event — wipe the client's cached collection + slots.
             Core.Chat.SendEvent(ctx.Event.SenderCharacterEntity, "[BEELZ:event] type=cleared");
         }

@@ -67,6 +67,11 @@ internal sealed class ActiveTransform
     // to 1 when combat ends (mirrors a boss leash-reset).
     public bool InCombat;
     public Unity.Entities.Entity Character;
+    // v0.43.7: when set, the owner is DISCONNECTED and this transform is parked in the
+    // reconnect-grace window (Transform_ReconnectGraceSeconds). TransformService.Tick
+    // reverts it once the grace elapses; a reconnect clears this and resumes the form.
+    // null = owner connected / transform active normally. Runtime-only (never persisted).
+    public System.DateTime? DisconnectedAtUtc;
     // v0.20.0: minion entities spawned by summon abilities while this transform
     // was active. AbilityCastStartedSystemPatch + LinkMinionToOwnerOnSpawnSystemPatch
     // append here as they rebind freshly-spawned minions. v0.23.0: no cap (was 10);
@@ -355,6 +360,23 @@ internal sealed class AbilityRegistry
     }
 
     /// <summary>
+    /// v0.43.8: drop EVERY slot binding for a player — both the universal bucket and
+    /// all weapon-specific buckets — returning the number of bindings removed. Backs
+    /// <c>.beelz resetbar</c>: returns the player's action bar to its vanilla in-game
+    /// state. Captured abilities and transform unlocks are untouched (re-grant anytime).
+    /// </summary>
+    public int ClearAllSlots(ulong steamId)
+    {
+        int removed = 0;
+        if (_slotAssignments.TryRemove(steamId, out var uni)) removed += uni.Count;
+        if (_weaponSlots.TryRemove(steamId, out var byWeapon))
+        {
+            foreach (var slots in byWeapon.Values) removed += slots.Count;
+        }
+        return removed;
+    }
+
+    /// <summary>
     /// Returns the universal-bucket slots. Backward-compatible — pre-W3 callers
     /// (like `.beelz list`, presets) keep seeing only the universal bindings.
     /// </summary>
@@ -457,6 +479,15 @@ internal sealed class AbilityRegistry
         {
             abilities[abilityPrefabGuid] = CaptureSource.VBlood;
         }
+        return false;
+    }
+
+    /// <summary>v0.43.5: true if the player has captured this ability group from any unit.</summary>
+    public bool HasCaptured(ulong steamId, int abilityPrefabGuid)
+    {
+        if (!_data.TryGetValue(steamId, out var byUnit)) return false;
+        foreach (var abilities in byUnit.Values)
+            if (abilities.ContainsKey(abilityPrefabGuid)) return true;
         return false;
     }
 

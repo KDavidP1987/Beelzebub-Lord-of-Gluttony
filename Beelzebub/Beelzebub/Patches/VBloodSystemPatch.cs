@@ -78,6 +78,9 @@ internal static class VBloodSystemPatch
 
         var slots = Core.EntityManager.GetBuffer<AbilityGroupSlotBuffer>(vBloodPrefabEntity);
         int captured = 0, skipped = 0;
+        // v0.43.23: friendly in-game name for player-facing chat (the [BEELZ:event]
+        // wire lines keep the raw, space-free prefab name for BCH parsing).
+        string vbDisplay = FriendlyUnit(vBloodGuid);
         // v0.38.0 pity (V-Blood ability source).
         float pityAbility = Core.AbilityRegistry.GetPityBonus(steamId, CaptureSource.VBlood, PityKind.Ability);
         int abilityRolls = 0, abilityWins = 0;
@@ -112,7 +115,7 @@ internal static class VBloodSystemPatch
                 string vbName = vBloodGuid.GetPrefabName();
                 if (Settings.VerboseLogging.Value)
                     Core.Log.LogInfo($"[Beelz] capture (VBlood) {abilityName} from {vbName} for {steamId}");
-                Core.Chat.Send(playerCharacter, Verbosity.Verbose, $"Acquired V-Blood ability: {abilityName} (from {vbName}).");
+                Core.Chat.Send(playerCharacter, Verbosity.Verbose, $"Acquired V-Blood ability: {FriendlyAbility(ability)} (from {vbDisplay}).");
                 Core.Chat.SendEvent(playerCharacter,
                     $"[BEELZ:event] type=capture s=V u={vBloodGuid._Value} un={vbName} a={ability._Value} an={abilityName}");
             }
@@ -161,9 +164,12 @@ internal static class VBloodSystemPatch
                     string unitName = vBloodGuid.GetPrefabName();
                     Core.Log.LogInfo($"[Beelz] {steamId} unlocked V-Blood transform: {unitName}.");
                     Core.Chat.Send(playerCharacter, Verbosity.Summary,
-                        $"Unlocked V-Blood transformation: {unitName}!");
+                        $"Unlocked V-Blood transformation: {vbDisplay}!");
                     Core.Chat.SendEvent(playerCharacter,
                         $"[BEELZ:event] type=transform-unlock s=V u={vBloodGuid._Value} un={unitName}");
+                    // v0.43.4: also learn this unit's signature add-summon(s) as standalone
+                    // captured abilities — grant/hotkey them and use WITHOUT transforming.
+                    SummonRegistry.GrantAndNotify(playerCharacter, steamId, vBloodGuid, CaptureSource.VBlood);
                 }
             }
             else
@@ -181,10 +187,21 @@ internal static class VBloodSystemPatch
                 Core.Log.LogInfo($"[Beelz] {steamId} defeated V-Blood {unitName}: captured {captured} ability(ies), skipped {skipped}.");
                 Core.Chat.Send(playerCharacter, Verbosity.Summary,
                     captured == 1
-                        ? $"Defeated V-Blood {unitName}: acquired 1 new ability."
-                        : $"Defeated V-Blood {unitName}: acquired {captured} new abilities.");
+                        ? $"Defeated V-Blood {vbDisplay}: acquired 1 new ability."
+                        : $"Defeated V-Blood {vbDisplay}: acquired {captured} new abilities.");
             }
             Core.Persistence.RequestSave();
         }
+    }
+
+    /// <summary>v0.43.23: friendly in-game unit name for chat (falls back to the raw prefab name).</summary>
+    static string FriendlyUnit(PrefabGUID unit) =>
+        Core.AbilityMetadata?.ResolveUnitName(unit._Value) ?? unit.GetPrefabName();
+
+    /// <summary>v0.43.23: friendly in-game ability name for chat (falls back to the raw prefab name).</summary>
+    static string FriendlyAbility(PrefabGUID ability)
+    {
+        var i = Core.AbilityMetadata?.Resolve(ability._Value);
+        return (i != null && !string.IsNullOrEmpty(i.Name)) ? i.Name : ability.GetPrefabName();
     }
 }

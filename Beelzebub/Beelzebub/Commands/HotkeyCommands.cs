@@ -20,6 +20,16 @@ namespace Beelzebub.Commands;
 [CommandGroup("beelz hotkey")]
 internal static class HotkeyCommands
 {
+    [Command("help", description: "List the Beelzebub hotkey commands (extra cast slots beyond your 6).")]
+    public static void Help(ChatCommandContext ctx)
+    {
+        ctx.Reply("=== Beelzebub hotkey commands === (named cast slots beyond V Rising's 6)");
+        ctx.Reply(".beelz hotkey set <name> <index> — bind a captured ability (by .beelz list index) to a named hotkey");
+        ctx.Reply(".beelz hotkey clear <name> — remove a hotkey binding");
+        ctx.Reply(".beelz hotkey list — show your current hotkey bindings");
+        ctx.Reply("Cast a bound hotkey with .beelz cast <name>. BloodCraftHub can surface these as on-screen buttons.");
+    }
+
     [Command("set", description: "Bind a hotkey name to a captured ability by index. Usage: .beelz hotkey set <name> <index>")]
     public static void Set(ChatCommandContext ctx, string name, int index)
     {

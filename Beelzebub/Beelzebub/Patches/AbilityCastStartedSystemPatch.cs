@@ -110,7 +110,6 @@ internal static class AbilityCastStartedSystemPatch
     public static void OnUpdatePrefix(AbilityCastStarted_SetupAbilityTargetSystem_Shared __instance)
     {
         if (!Core.IsReady) return;
-        if (!Beelzebub.Config.Settings.Transform_SummonsAreAllies.Value) return;
 
         NativeArray<AbilityCastStartedEvent> events;
         try
@@ -123,12 +122,23 @@ internal static class AbilityCastStartedSystemPatch
             return;
         }
 
+        // v0.43.5: granted-ability power scaling runs for ANY player cast — independent of
+        // the summons-allies config AND of being transformed. (The service self-gates to
+        // captured abilities in normal form and no-ops unless an admin enabled scaling.)
+        bool summonsAllies = Beelzebub.Config.Settings.Transform_SummonsAreAllies.Value;
         try
         {
             foreach (var evt in events)
             {
-                try { ProcessCast(evt); }
-                catch (Exception ex) { Core.Log.LogError($"[Beelz] ProcessCast failed: {ex}"); }
+                try { Services.GrantPowerScalingService.OnGrantedCast(evt.Character, evt.AbilityGroup.GetPrefabGuid()); }
+                catch (Exception ex) { Core.Log.LogWarning($"[Beelz] grant power-scale failed: {ex.Message}"); }
+
+                // Summon-ally cast handling (transform-only) stays gated by its config.
+                if (summonsAllies)
+                {
+                    try { ProcessCast(evt); }
+                    catch (Exception ex) { Core.Log.LogError($"[Beelz] ProcessCast failed: {ex}"); }
+                }
             }
         }
         finally { events.Dispose(); }

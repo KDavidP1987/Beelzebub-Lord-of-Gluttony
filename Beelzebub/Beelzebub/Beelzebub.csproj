@@ -4,7 +4,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<AssemblyName>Beelzebub</AssemblyName>
 		<RootNamespace>Beelzebub</RootNamespace>
-		<Version>0.43.0</Version>
+		<Version>0.43.23</Version>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<LangVersion>12.0</LangVersion>
 		<BepInExPluginGuid>kdpen.Beelzebub</BepInExPluginGuid>

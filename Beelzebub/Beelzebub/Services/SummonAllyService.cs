@@ -234,6 +234,13 @@ internal static class SummonAllyService
             // immediately rather than waiting for the next SyncAggroAll tick.
             SyncAggro(playerCharacter, minion);
 
+            // 15. v0.43.6: scale the summon to the player so it stays relevant.
+            // A summoned add keeps the boss's BAKED level/stats by default — a
+            // level-40-boss add stays level-40-weak as the player out-levels it.
+            // Match the player's UnitLevel (survivability + level-appropriate
+            // damage modifier) + apply the admin power factor to its stats/health.
+            ScaleSummonToPlayer(minion, playerCharacter);
+
             // v0.23.16 (B2 diagnostic): log post-setup component state per summon
             // so we can confirm setup was complete when verbose-logging is on.
             if (Beelzebub.Config.Settings.VerboseLogging.Value)
@@ -264,6 +271,55 @@ internal static class SummonAllyService
         {
             Core.Log.LogWarning($"[Beelz SUMMON] ApplyPlayerAllySetup failed on {minion}: {ex}");
             return false;
+        }
+    }
+
+    /// <summary>
+    /// v0.43.6: scale a summoned ally to its owning player so it doesn't go stale.
+    ///   * <c>Transform_SummonMatchPlayerLevel</c> (default true): set the summon's
+    ///     UnitLevel to the player's — V Rising's level-difference modifier then keeps
+    ///     its damage/defense appropriate against the player's tier of enemies.
+    ///   * <c>Transform_SummonPowerFactor</c> (default 1.0): multiply the summon's
+    ///     PhysicalPower / SpellPower / MaxHealth (admin dial; the lever for raw
+    ///     damage-output, since UnitLevel mainly drives the level-difference modifier).
+    /// Best-effort + fully guarded — never throws into the caller.
+    /// </summary>
+    static void ScaleSummonToPlayer(Entity minion, Entity playerCharacter)
+    {
+        try
+        {
+            if (Beelzebub.Config.Settings.Transform_SummonMatchPlayerLevel.Value
+                && minion.Has<UnitLevel>()
+                && playerCharacter.TryGetComponent<UnitLevel>(out var playerLevel))
+            {
+                int lvl = playerLevel.Level._Value;
+                minion.With((ref UnitLevel ul) => ul.Level._Value = lvl);
+            }
+
+            float factor = Beelzebub.Config.Settings.Transform_SummonPowerFactor.Value;
+            if (factor > 0f && System.Math.Abs(factor - 1f) > 0.001f)
+            {
+                if (minion.Has<UnitStats>())
+                {
+                    minion.With((ref UnitStats s) =>
+                    {
+                        s.PhysicalPower._Value *= factor;
+                        s.SpellPower._Value *= factor;
+                    });
+                }
+                if (minion.Has<Health>())
+                {
+                    minion.With((ref Health h) =>
+                    {
+                        h.MaxHealth._Value *= factor;
+                        h.Value *= factor;
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogWarning($"[Beelz SUMMON] ScaleSummonToPlayer failed on {minion}: {ex.Message}");
         }
     }
 

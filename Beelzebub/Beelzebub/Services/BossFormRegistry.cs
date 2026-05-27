@@ -74,24 +74,27 @@ internal static class BossFormRegistry
                 new[] { 797450963, -7407393, -1765846328, 1270706044, -1161896955, -1406000418, -1284243288, -1940289109 },
             },
         }},
-        // Morgana → CorruptedSerpent form buff (Transformation_SnakePhaseBuff).
-        // v0.38.0: two switchable kits on the serpent form (like Dracula), via .beelz phase 1/2.
-        //   Form 1 "Serpent" — the proven Bloodcraft CorruptedSerpent set (melee + a few spectral).
-        //   Form 2 "Spectral" — her ranged spectral barrage kit. EXPERIMENTAL: several of these
-        //     are heavily scripted boss casts and may not all fire for a player; curate per testing.
+        // Morgana → CorruptedSerpent form buff (SnakePhase), TWO switchable kits like Dracula
+        // (v0.43.2, after testing: the humanoid-stage attempt was dropped — V Rising has no
+        // player-renderable humanoid-Morgana model AND her humanoid casts are rig-bound so
+        // they wouldn't fire on the player's own body; see [[project_model_swap_hard_limit]]).
+        // Both phases wear the serpent form (so the model renders + abilities fire); `.beelz
+        // phase 1/2` (or Auto-on-HP) swaps the KIT, not the model.
+        //   Phase 1 "Spectral" — her ranged spectral-barrage kit (caster playstyle).
+        //   Phase 2 "Serpent"  — the proven Bloodcraft CorruptedSerpent melee+spectral set.
         { 591725925, new BossForm {
             Label = "Morgana",
-            FormBuffGuid = -1859425781,
-            FormNames = new[] { "Serpent", "Spectral" },
+            FormBuffGuid = -1859425781,             // serpent form — used for BOTH phases
+            FormNames = new[] { "Spectral", "Serpent" },
             FormSets = new[]
             {
-                // Form 1 Serpent: MeleeAttack, GroundPiercer, QuickTeleport, MistSpinners,
-                // CrossWindSlash, SpectralBlast, SpectralBeam, EyeOfTheCorruption.
-                new[] { 2134120100, -668068170, -1940289109, 1278045964, 846291757, 1173842428, 2099754785, 734658196 },
-                // Form 2 Spectral: SpectralBeam (primary), QuickTeleport, SpectralSwarm,
+                // Phase 1 Spectral (8 form slots): SpectralBeam, QuickTeleport, SpectralSwarm,
                 // CorruptionFountain, SpectralOrbBarrage, RingsOfTerror, SpectralHell,
-                // TravelingOrbBarrage (ult).
+                // TravelingOrbBarrage (ult). (Heavily scripted boss casts — curate per testing.)
                 new[] { 2099754785, -1940289109, 1485893437, 1298623256, 1990869093, -616120746, 1185642044, 1242557903 },
+                // Phase 2 Serpent (8 form slots): MeleeAttack, GroundPiercer, QuickTeleport,
+                // MistSpinners, CrossWindSlash, SpectralBlast, SpectralBeam, EyeOfTheCorruption.
+                new[] { 2134120100, -668068170, -1940289109, 1278045964, 846291757, 1173842428, 2099754785, 734658196 },
             },
         }},
     };

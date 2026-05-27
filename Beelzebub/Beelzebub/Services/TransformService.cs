@@ -319,6 +319,10 @@ internal sealed class TransformService
         if (active is null) return (false, false);
 
         Core.AbilityRegistry.ClearActiveTransform(steamId);
+        // v0.43.2: arm the revert-orphan guard so a form buff from an in-flight async
+        // apply (queued just before this revert) gets destroyed when it lands, instead
+        // of stranding the player in an untracked form they can't revert.
+        TransformBuffService.MarkReverted(steamId);
 
         // Z1: destroying the carrier buff lets V Rising re-resolve slot bindings
         // naturally — player spell-book selections return to slots 5/6, weapon
@@ -410,9 +414,32 @@ internal sealed class TransformService
     DateTime _lastCounterCheck = DateTime.MinValue;
     static readonly TimeSpan CounterCheckInterval = TimeSpan.FromSeconds(1);
 
+    // v0.43.7: steamIds that (re)connected and still need a login reconcile. The
+    // connect Harmony postfix records the timestamp; Tick polls for the character
+    // entity (not ready at connect) then runs ReconcileOnLogin and removes the entry.
+    // Both writers run on the main server thread, so a plain dictionary is safe;
+    // we snapshot keys before iterating to mutate during the walk.
+    readonly Dictionary<ulong, DateTime> _pendingReconnects = new();
+    const double ReconnectPollTimeoutSeconds = 30.0;
+
     public void Tick()
     {
         var now = DateTime.UtcNow;
+
+        // v0.43.7: reconcile players who just (re)connected. The connect hook only
+        // QUEUES a steamId — the player's character entity isn't reliably spawned at
+        // OnUserConnected — so we poll here until it exists, then resume a parked
+        // transform or clear any orphaned form buff. Fully guarded: never throws.
+        if (_pendingReconnects.Count > 0)
+        {
+            try { ProcessPendingReconnects(now); }
+            catch (Exception ex) { Core.Log.LogWarning($"[Beelz] reconnect reconcile tick failed: {ex.Message}"); }
+        }
+
+        // v0.43.7: expire reconnect-grace parks — revert transforms whose disconnected
+        // owner didn't return within Transform_ReconnectGraceSeconds.
+        try { ExpireReconnectGrace(now); }
+        catch (Exception ex) { Core.Log.LogWarning($"[Beelz] reconnect grace expiry failed: {ex.Message}"); }
 
         // v0.23.0: drain staged-despawn queues. Budget is per-active-transform AND
         // per-pending-despawn record, so multiple players' reverts proceed in parallel
@@ -531,6 +558,242 @@ internal sealed class TransformService
                     $"[BEELZ:event] type=transform-ended u={active.UnitPrefabGuid} un={unitName} reason=auto");
             }
         }
+    }
+
+    // =====================================================================
+    // v0.43.7 — disconnect/reconnect handling.
+    //
+    // The active-transform registry is RUNTIME-ONLY (never persisted), but a
+    // transform's form/shapeshift buff can outlive it (a Toggle form buff has
+    // infinite lifetime, and async-applied native forms may miss the
+    // RemoveOnDisconnect flag, so they can survive a disconnect or a server
+    // restart). That mismatch left players "stuck": a live form buff with no
+    // transform record — un-revertable, blocking grants, bar frozen.
+    //
+    // Two cooperating pieces fix it:
+    //   * a reconnect GRACE window (Transform_ReconnectGraceSeconds) that keeps a
+    //     transform + summons across a brief disconnect and resumes them, and
+    //   * an on-connect RECONCILIATION that always clears an orphaned form buff so
+    //     a player can never log in to a broken bar.
+    // =====================================================================
+
+    /// <summary>
+    /// Called from the OnUserConnected Harmony postfix. Records that this player needs
+    /// a login reconcile; the actual work is deferred to <see cref="Tick"/> because the
+    /// character entity isn't reliably spawned at connect time. Cheap + allocation-free
+    /// so the connect/login path is never slowed or blocked.
+    /// </summary>
+    public void QueueReconnectReconcile(ulong steamId)
+    {
+        if (steamId == 0) return;
+        _pendingReconnects[steamId] = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Called from the OnUserDisconnected Harmony prefix when grace is enabled
+    /// (Transform_ReconnectGraceSeconds != 0). Parks the active transform: stash its
+    /// summons (so they don't wander, get killed, or churn per-frame logic while the
+    /// owner is offline) and stamp DisconnectedAtUtc. We also tear the form/carrier buff down
+    /// CLEANLY here (v0.43.16) so its ability-slot modifications are removed before the character
+    /// is saved on disconnect — leaving it for V Rising's RemoveOnDisconnect strip orphans those
+    /// modifications and permanently freezes the bar. <see cref="ReconcileOnLogin"/> re-applies
+    /// the form on reconnect. We deliberately do NOT clear the registry entry (grace resume).
+    /// </summary>
+    public void BeginReconnectGrace(ulong steamId, ActiveTransform active)
+    {
+        if (active == null) return;
+        active.DisconnectedAtUtc = DateTime.UtcNow;
+
+        Entity character = active.Character.Exists()
+            ? active.Character
+            : EntityExtensions.FindCharacterBySteamId(steamId);
+
+        try
+        {
+            if (active.SummonedMinions is { Count: > 0 })
+            {
+                int stashed = SummonAllyService.StashAll(active, character);
+                active.SummonsDisabled = true;
+                Core.Log.LogInfo($"[Beelz] reconnect-grace: parked transform for {steamId}, stashed {stashed} summon(s).");
+            }
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogWarning($"[Beelz] reconnect-grace stash failed for {steamId}: {ex.Message}");
+        }
+
+        // v0.43.16 ROOT-CAUSE FIX (stuck/frozen ability bar): tear the form/carrier buff down
+        // CLEANLY right now, while the player is still present, so V Rising removes the
+        // ability-slot MODIFICATIONS this buff applied (its modification source = the buff entity;
+        // destroying the entity triggers the engine's modification cleanup, exactly like a normal
+        // online revert). If we instead leave the buff for V Rising's RemoveOnDisconnect to strip
+        // during disconnect teardown, those modifications get ORPHANED and saved onto the
+        // character — the permanent "stuck on a creature kit" bar that no reset can reach. The
+        // transform stays REGISTERED (DisconnectedAtUtc set) and is re-applied fresh on reconnect
+        // by ReconcileOnLogin → ReapplyActiveTransform, so the grace/resume behavior is preserved.
+        try
+        {
+            if (character.Exists())
+            {
+                bool removed = TransformBuffService.Remove(character);
+                if (removed && Beelzebub.Config.Settings.VerboseLogging.Value)
+                    Core.Log.LogInfo($"[Beelz] reconnect-grace: cleanly removed {steamId}'s form/carrier buff on disconnect (modifications cleaned; will re-apply on reconnect).");
+            }
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogWarning($"[Beelz] reconnect-grace buff-teardown failed for {steamId}: {ex.Message}");
+        }
+
+        Core.AbilityRegistry.SetActiveTransform(steamId, active);
+    }
+
+    /// <summary>
+    /// Tick helper: for each queued (re)connect, once the character entity exists run
+    /// <see cref="ReconcileOnLogin"/> and drop the entry. Stale entries (character never
+    /// materialized) time out so the dictionary can't grow unbounded.
+    /// </summary>
+    void ProcessPendingReconnects(DateTime now)
+    {
+        // Snapshot keys — ReconcileOnLogin can mutate registry state, and we remove entries.
+        List<ulong> keys = null;
+        foreach (var k in _pendingReconnects.Keys) (keys ??= new List<ulong>()).Add(k);
+        if (keys == null) return;
+
+        foreach (ulong steamId in keys)
+        {
+            if (!_pendingReconnects.TryGetValue(steamId, out var queuedAt)) continue;
+            Entity character = EntityExtensions.FindCharacterBySteamId(steamId);
+            if (character.Exists())
+            {
+                _pendingReconnects.Remove(steamId);
+                try { ReconcileOnLogin(steamId, character); }
+                catch (Exception ex) { Core.Log.LogWarning($"[Beelz] ReconcileOnLogin failed for {steamId}: {ex.Message}"); }
+            }
+            else if ((now - queuedAt).TotalSeconds > ReconnectPollTimeoutSeconds)
+            {
+                // Character never appeared (rare). Give up — the next login attempt
+                // re-queues, and the orphan safety net runs then.
+                _pendingReconnects.Remove(steamId);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tick helper: revert any transform whose disconnected owner didn't return within
+    /// the grace window. grace &lt;= 0 means "never expire here" (0 = immediate revert is
+    /// handled at disconnect; -1 = keep indefinitely until manual revert).
+    /// </summary>
+    void ExpireReconnectGrace(DateTime now)
+    {
+        float grace = Settings.Transform_ReconnectGraceSeconds.Value;
+        if (grace <= 0f) return;
+
+        // Snapshot — Revert removes from the live registry.
+        List<ulong> expired = null;
+        foreach (var (steamId, active) in Core.AbilityRegistry.AllActiveTransforms())
+        {
+            if (active?.DisconnectedAtUtc == null) continue;
+            if ((now - active.DisconnectedAtUtc.Value).TotalSeconds < grace) continue;
+            (expired ??= new List<ulong>()).Add(steamId);
+        }
+        if (expired == null) return;
+
+        foreach (ulong steamId in expired)
+        {
+            var active = Core.AbilityRegistry.GetActiveTransform(steamId);
+            if (active?.DisconnectedAtUtc == null) continue; // resumed in between
+            string un = new PrefabGUID(active.UnitPrefabGuid).GetPrefabName();
+            Core.Log.LogInfo($"[Beelz] reconnect-grace expired for {steamId} ({un}) after {grace:F0}s — reverting + despawning summons.");
+            // Revert only drains SummonedMinions; fold the stashed/suspended lists in
+            // so the grace despawn sweeps every summon this transform owns.
+            MergeSummonListsForDespawn(active);
+            // Owner is offline → no live bar to restore.
+            try { Revert(steamId, "disconnect-timeout", restoreBar: false); }
+            catch (Exception ex) { Core.Log.LogWarning($"[Beelz] grace-expiry revert failed for {steamId}: {ex.Message}"); }
+        }
+    }
+
+    static void MergeSummonListsForDespawn(ActiveTransform active)
+    {
+        if (active == null) return;
+        active.SummonedMinions ??= new List<Entity>();
+        if (active.StashedSummons is { Count: > 0 })
+        {
+            active.SummonedMinions.AddRange(active.StashedSummons);
+            active.StashedSummons.Clear();
+        }
+        if (active.SuspendedSummons is { Count: > 0 })
+        {
+            active.SummonedMinions.AddRange(active.SuspendedSummons);
+            active.SuspendedSummons.Clear();
+        }
+    }
+
+    /// <summary>
+    /// Run once per login, after the character entity exists. If the player still has a
+    /// transform record (parked in grace, or a non-restart reconnect), RESUME it: re-apply
+    /// the form/carrier bar and restore stashed summons. Otherwise run the orphan safety net
+    /// so a buff stranded from a previous session can't leave the player with a broken bar.
+    /// </summary>
+    void ReconcileOnLogin(ulong steamId, Entity character)
+    {
+        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
+        if (active != null)
+        {
+            bool wasParked = active.DisconnectedAtUtc.HasValue;
+            active.DisconnectedAtUtc = null;
+            active.Character = character;
+            Core.AbilityRegistry.SetActiveTransform(steamId, active);
+
+            bool reapplied = ReapplyActiveTransform(steamId, active, character);
+
+            int restored = 0;
+            if (active.StashedSummons is { Count: > 0 })
+            {
+                active.SummonsDisabled = false;
+                try { restored = SummonAllyService.RestoreAll(active, character); }
+                catch (Exception ex) { Core.Log.LogWarning($"[Beelz] reconnect summon-restore failed for {steamId}: {ex.Message}"); }
+            }
+
+            string un = new PrefabGUID(active.UnitPrefabGuid).GetPrefabName();
+            Core.Log.LogInfo($"[Beelz] reconnect: resumed transform {un} for {steamId} (parked={wasParked}, bar reapplied={reapplied}, summons restored={restored}).");
+            try
+            {
+                Core.Chat.Send(character, Verbosity.Summary,
+                    restored > 0
+                        ? $"Welcome back — your {un} transformation resumed ({restored} summon(s) restored)."
+                        : $"Welcome back — your {un} transformation resumed.");
+            }
+            catch { /* chat non-critical */ }
+            return;
+        }
+
+        // No record → make sure nothing is stuck (covers a server restart that wiped the
+        // runtime-only registry while a form buff survived on the saved character).
+        ReconcileOrphanBuffs(steamId, character);
+    }
+
+    /// <summary>
+    /// Safety net: when the player has NO active transform but one of our carrier/form/
+    /// native-shapeshift buffs is still on their character (an orphan from a previous
+    /// session), destroy it and restore the player's base/granted ability bar. Cheap no-op
+    /// for the common case (no Beelzebub buff present → nothing removed).
+    /// </summary>
+    void ReconcileOrphanBuffs(ulong steamId, Entity character)
+    {
+        if (Core.AbilityRegistry.GetActiveTransform(steamId) is not null) return;
+        bool removed = TransformBuffService.Remove(character); // carrier + every boss/native form buff
+        if (!removed) return;
+
+        SlotApply.RestoreResolvedGrants(character);
+        Core.Log.LogInfo($"[Beelz] reconnect: cleared orphaned transform buff(s) for {steamId} and restored the base ability bar.");
+        try
+        {
+            Core.Chat.Send(character, Verbosity.Summary,
+                "Recovered a stuck transformation left over from a previous session — your normal abilities are restored.");
+        }
+        catch { /* chat non-critical */ }
     }
 
     /// <summary>

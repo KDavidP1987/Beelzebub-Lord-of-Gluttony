@@ -182,79 +182,285 @@ internal static class TransformBuffService
 
         try
         {
-            RemoveInternal(character); // clear any prior carrier/form buff
+            RemoveInternal(character); // clear any prior carrier/form buff (also clears stale pending form)
 
             var formBuff = new PrefabGUID(formBuffGuid);
-            if (!Core.ServerGameManager.TryInstantiateBuffEntityImmediate(character, character, formBuff, out Entity buffEntity)
-                || !buffEntity.Exists())
+
+            // v0.43.1 CRASH FIX: some form/shapeshift buff prefabs do NOT bake a
+            // LifeTime component — Morgana's AB_Blackfang_Morgana_Transformation_
+            // SnakePhaseBuff (-1859425781) is one. V Rising's immediate buff-spawn
+            // path (TryInstantiateBuffEntityImmediate → BuffUtility.SpawnBuff) ASSERTS
+            // the buff entity already has a LifeTime and throws
+            //   "A component with type:ProjectM.LifeTime has not been added to the entity"
+            // for those prefabs. That aborted the Morgana transform and, with the boss's
+            // half-applied form context, cascaded into a Burst-job server crash on the
+            // next chained ability cast. There is no instantiate overload that skips the
+            // assertion (confirmed against the reference assemblies — neither
+            // Instantiate nor TryInstantiate takes a duration to suppress it).
+            //
+            // Fix mirrors Bloodcraft's shapeshift recipe (Shapeshifts.ModifyShapeshiftBuff):
+            // for a LifeTime-less prefab, apply the buff via the ASYNC
+            // DebugEventsSystem.ApplyBuff path (which does NOT write a duration during
+            // spawn → no LifeTime assertion) and ENRICH it on the spawn hook, where we
+            // AddComponent<LifeTime> after the entity exists. Prefabs that already carry
+            // a LifeTime (Dracula's SpellPhase, the carrier buff) keep the proven
+            // same-frame immediate path untouched.
+            bool prefabHasLifeTime =
+                Core.PrefabCollectionSystem._PrefabLookupMap.TryGetValue(formBuff, out var prefabEntity)
+                && prefabEntity.Has<LifeTime>();
+
+            if (prefabHasLifeTime)
             {
-                Core.Log.LogError($"[Beelz] ApplyForm: TryInstantiateBuffEntityImmediate failed for form buff {formBuffGuid}.");
+                if (!Core.ServerGameManager.TryInstantiateBuffEntityImmediate(character, character, formBuff, out Entity buffEntity)
+                    || !buffEntity.Exists())
+                {
+                    Core.Log.LogError($"[Beelz] ApplyForm: TryInstantiateBuffEntityImmediate failed for form buff {formBuffGuid}.");
+                    return false;
+                }
+
+                EnrichFormBuff(buffEntity, abilities, durationSeconds);
+
+                if (Core.ReplaceAbilityOnSlotSystem != null)
+                    Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+
+                Core.Log.LogInfo($"[Beelz] ApplyForm: applied form buff {formBuff.GetPrefabName()} + {abilities.Count} abilities to {character} (immediate; duration={DurationLabel(durationSeconds)}).");
+                return true;
+            }
+
+            // Async path for LifeTime-less form prefabs. Queue the buff and record a
+            // pending enrichment; the spawn hooks (BuffSpawnServerPatch /
+            // ScriptSpawnServerPatch) call TryEnrichSpawnedForm / TryEnrichPendingByPoll
+            // once the buff entity exists, where we add LifeTime + slot the abilities.
+            ulong steamId = character.GetSteamId();
+            if (steamId == 0)
+            {
+                Core.Log.LogError($"[Beelz] ApplyForm: could not resolve steamId for {character}; LifeTime-less form {formBuffGuid} not applied.");
                 return false;
             }
 
-            // Neuter the form's own chained "advance to next phase" buff so applying
-            // it to a player doesn't kick off the boss's scripted phase sequence.
-            if (Core.EntityManager.HasBuffer<ApplyBuffOnGameplayEvent>(buffEntity))
-            {
-                var ab = Core.EntityManager.GetBuffer<ApplyBuffOnGameplayEvent>(buffEntity);
-                if (ab.Length > 0) { var e0 = ab[0]; e0.Buff0 = PrefabGUID.Empty; ab[0] = e0; }
-            }
+            var abilityCopy = new int[abilities.Count];
+            for (int i = 0; i < abilityCopy.Length; i++) abilityCopy[i] = abilities[i];
+            _pendingForms[steamId] = new PendingForm { FormBuffGuid = formBuffGuid, Abilities = abilityCopy, Duration = durationSeconds };
 
-            // Shapeshift enrichment (Bloodcraft recipe): the two script/data tags make
-            // slot replacement integrate with the shapeshift; categorize as a
-            // shapeshift that auto-clears on disconnect; Block buff type.
-            if (!Core.EntityManager.HasComponent<ReplaceAbilityOnSlotData>(buffEntity))
-                Core.EntityManager.AddComponent<ReplaceAbilityOnSlotData>(buffEntity);
-            if (!Core.EntityManager.HasComponent<Script_Buff_Shapeshift_DataShared>(buffEntity))
-                Core.EntityManager.AddComponent<Script_Buff_Shapeshift_DataShared>(buffEntity);
-            if (Core.EntityManager.HasComponent<BuffCategory>(buffEntity))
-                buffEntity.With((ref BuffCategory cat) => cat.Groups = BuffCategoryFlag.Shapeshift | BuffCategoryFlag.RemoveOnDisconnect);
-            if (Core.EntityManager.HasComponent<Buff>(buffEntity))
-                buffEntity.With((ref Buff b) => b.BuffType = BuffType.Block);
+            var applyEvent = new ApplyBuffDebugEvent { BuffPrefabGUID = formBuff, Who = GetNetworkId(character) };
+            var fromCharacter = new FromCharacter { Character = character, User = GetUserEntity(character) };
+            Core.DebugEventsSystem.ApplyBuff(fromCharacter, applyEvent);
 
-            // Lifetime: timed → Destroy after duration; toggle → infinite (revert destroys).
-            if (!Core.EntityManager.HasComponent<LifeTime>(buffEntity))
-                Core.EntityManager.AddComponent<LifeTime>(buffEntity);
-            if (durationSeconds.HasValue && durationSeconds.Value > 0f)
-                buffEntity.With((ref LifeTime lt) => { lt.Duration = durationSeconds.Value; lt.EndAction = LifeTimeEndAction.Destroy; });
-            else
-                buffEntity.With((ref LifeTime lt) => { lt.Duration = -1f; lt.EndAction = LifeTimeEndAction.None; });
-
-            // Slot the curated abilities on the form's 0-7 bar (forms expose 8 slots,
-            // unlike the player's normal 1-6; Bloodcraft slots 0-7 here).
-            DynamicBuffer<ReplaceAbilityOnSlotBuff> replaceBuffer;
-            if (Core.EntityManager.HasBuffer<ReplaceAbilityOnSlotBuff>(buffEntity))
-            {
-                replaceBuffer = Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(buffEntity);
-                replaceBuffer.Clear();
-            }
-            else
-            {
-                replaceBuffer = Core.EntityManager.AddBuffer<ReplaceAbilityOnSlotBuff>(buffEntity);
-            }
-
-            for (int i = 0; i < abilities.Count && i < 8; i++)
-            {
-                replaceBuffer.Add(new ReplaceAbilityOnSlotBuff
-                {
-                    Target = ReplaceAbilityTarget.BuffTarget,
-                    Slot = i,
-                    NewGroupId = new PrefabGUID(abilities[i]),
-                    Priority = 99,
-                    CopyCooldown = true,
-                    CastBlockType = GroupSlotModificationCastBlockType.WholeCast,
-                });
-            }
-
-            if (Core.ReplaceAbilityOnSlotSystem != null)
-                Core.ReplaceAbilityOnSlotSystem.OnUpdate();
-
-            Core.Log.LogInfo($"[Beelz] ApplyForm: applied form buff {formBuff.GetPrefabName()} + {abilities.Count} abilities to {character} (duration={(durationSeconds.HasValue ? durationSeconds.Value.ToString("F0") + "s" : "toggle")}).");
+            Core.Log.LogInfo($"[Beelz] ApplyForm: queued LifeTime-less form buff {formBuff.GetPrefabName()} (async) for player {steamId}; will enrich + slot {abilities.Count} abilities on spawn (duration={DurationLabel(durationSeconds)}).");
             return true;
         }
         catch (Exception ex)
         {
             Core.Log.LogError($"[Beelz] ApplyForm failed: {ex}");
+            return false;
+        }
+    }
+
+    static string DurationLabel(float? durationSeconds) =>
+        durationSeconds.HasValue ? durationSeconds.Value.ToString("F0") + "s" : "toggle";
+
+    /// <summary>
+    /// Shapeshift enrichment shared by the immediate path (Dracula et al.) and the
+    /// async spawn-hook path (Morgana et al.): neuter the form's chained phase-advance
+    /// buff, add the slot/shapeshift script tokens, set the category + buff type +
+    /// LifeTime, and slot the curated abilities on the form's 0-7 bar. Mirrors
+    /// Bloodcraft's <c>Shapeshifts.ModifyShapeshiftBuff</c>. Safe to run on an already
+    /// fully-spawned buff entity (uses AddComponent for anything the prefab lacks).
+    /// </summary>
+    static void EnrichFormBuff(Entity buffEntity, IReadOnlyList<int> abilities, float? durationSeconds)
+    {
+        // Neuter the form's own chained "advance to next phase" buff so applying
+        // it to a player doesn't kick off the boss's scripted phase sequence.
+        if (Core.EntityManager.HasBuffer<ApplyBuffOnGameplayEvent>(buffEntity))
+        {
+            var ab = Core.EntityManager.GetBuffer<ApplyBuffOnGameplayEvent>(buffEntity);
+            if (ab.Length > 0) { var e0 = ab[0]; e0.Buff0 = PrefabGUID.Empty; ab[0] = e0; }
+        }
+
+        // The two script/data tags make slot replacement integrate with the
+        // shapeshift; categorize as a shapeshift that auto-clears on disconnect;
+        // Block buff type.
+        if (!Core.EntityManager.HasComponent<ReplaceAbilityOnSlotData>(buffEntity))
+            Core.EntityManager.AddComponent<ReplaceAbilityOnSlotData>(buffEntity);
+        if (!Core.EntityManager.HasComponent<Script_Buff_Shapeshift_DataShared>(buffEntity))
+            Core.EntityManager.AddComponent<Script_Buff_Shapeshift_DataShared>(buffEntity);
+        // v0.43.2 FIX (frog/native-form "kept dropping"): the native shapeshift buffs
+        // (Wolf/Bear/Toad/…) bake DestroyOnAbilityEnd + RemoveOnDamageTaken — so the form
+        // self-exits the instant the player casts or takes a hit. That destroy fires the
+        // native-shapeshift-exit handler, which re-applies → re-adds the buff → flaps, and
+        // the player never visually stays in form. Clear both so OUR transform form persists
+        // until revert (boss forms like Dracula/Morgana don't set these, so this is a no-op
+        // for them). Mirrors how a persistent ExoForm must behave.
+        buffEntity.With((ref Script_Buff_Shapeshift_DataShared s) =>
+        {
+            s.DestroyOnAbilityEnd = false;
+            s.RemoveOnDamageTaken = false;
+        });
+        if (Core.EntityManager.HasComponent<BuffCategory>(buffEntity))
+            buffEntity.With((ref BuffCategory cat) => cat.Groups = BuffCategoryFlag.Shapeshift | BuffCategoryFlag.RemoveOnDisconnect);
+        if (Core.EntityManager.HasComponent<Buff>(buffEntity))
+            buffEntity.With((ref Buff b) => b.BuffType = BuffType.Block);
+
+        // Lifetime: timed → Destroy after duration; toggle → infinite (revert destroys).
+        if (!Core.EntityManager.HasComponent<LifeTime>(buffEntity))
+            Core.EntityManager.AddComponent<LifeTime>(buffEntity);
+        if (durationSeconds.HasValue && durationSeconds.Value > 0f)
+            buffEntity.With((ref LifeTime lt) => { lt.Duration = durationSeconds.Value; lt.EndAction = LifeTimeEndAction.Destroy; });
+        else
+            buffEntity.With((ref LifeTime lt) => { lt.Duration = -1f; lt.EndAction = LifeTimeEndAction.None; });
+
+        // Slot the curated abilities on the form's 0-7 bar (forms expose 8 slots,
+        // unlike the player's normal 1-6; Bloodcraft slots 0-7 here).
+        DynamicBuffer<ReplaceAbilityOnSlotBuff> replaceBuffer;
+        if (Core.EntityManager.HasBuffer<ReplaceAbilityOnSlotBuff>(buffEntity))
+        {
+            replaceBuffer = Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(buffEntity);
+            replaceBuffer.Clear();
+        }
+        else
+        {
+            replaceBuffer = Core.EntityManager.AddBuffer<ReplaceAbilityOnSlotBuff>(buffEntity);
+        }
+
+        for (int i = 0; i < abilities.Count && i < 8; i++)
+        {
+            replaceBuffer.Add(new ReplaceAbilityOnSlotBuff
+            {
+                Target = ReplaceAbilityTarget.BuffTarget,
+                Slot = i,
+                NewGroupId = new PrefabGUID(abilities[i]),
+                Priority = 99,
+                CopyCooldown = true,
+                CastBlockType = GroupSlotModificationCastBlockType.WholeCast,
+            });
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // v0.43.1: pending async form enrichment. A LifeTime-less form buff
+    // (e.g. Morgana's SnakePhase) is applied via DebugEventsSystem.ApplyBuff
+    // and enriched once it spawns. The registry bridges the apply (a command
+    // tick) and the enrich (a later spawn-hook tick). Keyed by steamId so it
+    // survives the player-entity churn that can happen across ticks.
+    // ---------------------------------------------------------------------
+    internal struct PendingForm { public int FormBuffGuid; public int[] Abilities; public float? Duration; }
+    static readonly Dictionary<ulong, PendingForm> _pendingForms = new();
+
+    /// <summary>True if any player has an async form buff awaiting spawn-hook enrichment.</summary>
+    public static bool HasPendingForms => _pendingForms.Count > 0;
+
+    /// <summary>
+    /// Spawn-hook entry: if <paramref name="buffEntity"/> is <paramref name="targetPlayer"/>'s
+    /// pending async form buff, enrich it now and clear the pending entry. Idempotent —
+    /// the registry removal means only the first matching spawn wins. Returns true if enriched.
+    /// </summary>
+    public static bool TryEnrichSpawnedForm(Entity buffEntity, Entity targetPlayer)
+    {
+        if (_pendingForms.Count == 0) return false;
+        if (!buffEntity.Exists() || !targetPlayer.Exists()) return false;
+        ulong steamId = targetPlayer.GetSteamId();
+        if (steamId == 0 || !_pendingForms.TryGetValue(steamId, out var pending)) return false;
+        if (buffEntity.GetPrefabGuid()._Value != pending.FormBuffGuid) return false;
+
+        try
+        {
+            EnrichFormBuff(buffEntity, pending.Abilities, pending.Duration);
+            _pendingForms.Remove(steamId);
+            if (Core.ReplaceAbilityOnSlotSystem != null)
+                Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+            Core.Log.LogInfo($"[Beelz] ApplyForm: enriched async form buff {new PrefabGUID(pending.FormBuffGuid).GetPrefabName()} on spawn for player {steamId} ({pending.Abilities.Length} abilities).");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError($"[Beelz] TryEnrichSpawnedForm failed for player {steamId}: {ex}");
+            _pendingForms.Remove(steamId); // don't retry a broken entry forever
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Fallback enricher: poll each pending player for their form buff via TryGetBuff
+    /// and enrich if it has spawned. Hook-agnostic — covers the case where the buff
+    /// isn't in the spawn-query a given hook iterates. Cheap: no-ops unless something
+    /// is pending. Call from a frequently-firing hook.
+    /// </summary>
+    public static void TryEnrichPendingByPoll()
+    {
+        if (_pendingForms.Count == 0) return;
+        var keys = new List<ulong>(_pendingForms.Keys);
+        foreach (var steamId in keys)
+        {
+            if (!_pendingForms.TryGetValue(steamId, out var pending)) continue;
+            Entity player = EntityExtensions.FindCharacterBySteamId(steamId);
+            if (!player.Exists()) continue;
+            if (Core.ServerGameManager.TryGetBuff(player, new PrefabGUID(pending.FormBuffGuid).ToIdentifier(), out Entity buffEntity)
+                && buffEntity.Exists())
+            {
+                TryEnrichSpawnedForm(buffEntity, player);
+            }
+        }
+    }
+
+    /// <summary>Drop a player's pending async form (e.g. on revert before the buff spawned).</summary>
+    public static void ClearPendingForm(ulong steamId) => _pendingForms.Remove(steamId);
+
+    // v0.43.2: revert-orphan guard. A revert clears the pending entry, but a
+    // DebugEventsSystem.ApplyBuff queued just before the revert can still spawn the
+    // form buff a tick LATER — stranding the player in an untracked form they can't
+    // revert (the "reverted but bar didn't change / stuck as toad" bug). Revert marks
+    // the player here; the spawn hook destroys any of OUR form buffs that land while the
+    // mark is fresh AND the player has no active transform. Time-boxed so a legit later
+    // shapeshift (normal wolf form, a fresh re-transform) is never touched.
+    static readonly Dictionary<ulong, DateTime> _recentlyReverted = new();
+    const double RevertGuardSeconds = 3.0;
+
+    /// <summary>Revert calls this so a late async form-buff spawn can be cleaned up.</summary>
+    public static void MarkReverted(ulong steamId) { if (steamId != 0) _recentlyReverted[steamId] = DateTime.UtcNow; }
+
+    /// <summary>True if any player reverted recently enough to still need orphan-form cleanup.</summary>
+    public static bool HasRecentReverts
+    {
+        get
+        {
+            if (_recentlyReverted.Count == 0) return false;
+            var now = DateTime.UtcNow;
+            foreach (var t in _recentlyReverted.Values) if ((now - t).TotalSeconds < RevertGuardSeconds) return true;
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Spawn-hook entry: if a form buff lands on a player who just reverted (so it's an
+    /// orphan from an in-flight async apply) and they're no longer transformed, destroy it.
+    /// Returns true if it destroyed an orphan. Idempotent / safe.
+    /// </summary>
+    public static bool TryDestroyOrphanForm(Entity buffEntity, Entity targetPlayer)
+    {
+        if (_recentlyReverted.Count == 0) return false;
+        if (!buffEntity.Exists() || !targetPlayer.Exists()) return false;
+        ulong steamId = targetPlayer.GetSteamId();
+        if (steamId == 0) return false;
+        if (!_recentlyReverted.TryGetValue(steamId, out var t) || (DateTime.UtcNow - t).TotalSeconds >= RevertGuardSeconds)
+            return false;
+        // Only OUR form buffs, and only if the player genuinely has no active transform
+        // (a fresh re-transform during the guard window sets one → leave that alone).
+        int guid = buffEntity.GetPrefabGuid()._Value;
+        bool isOurForm = false;
+        foreach (int g in Services.BossFormRegistry.FormBuffGuids) { if (g == guid) { isOurForm = true; break; } }
+        if (!isOurForm) return false;
+        if (Core.AbilityRegistry?.GetActiveTransform(steamId) is not null) return false;
+        if (_pendingForms.ContainsKey(steamId)) return false; // a new transform is mid-apply
+
+        try
+        {
+            DestroyUtility.Destroy(Core.EntityManager, buffEntity, DestroyDebugReason.TryRemoveBuff);
+            Core.Log.LogInfo($"[Beelz] ApplyForm: destroyed orphan form buff {new PrefabGUID(guid).GetPrefabName()} that spawned after revert for player {steamId}.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogWarning($"[Beelz] TryDestroyOrphanForm failed for player {steamId}: {ex.Message}");
             return false;
         }
     }
@@ -321,6 +527,11 @@ internal static class TransformBuffService
     {
         bool removed = false;
 
+        // v0.43.1: drop any pending async form enrichment for this player so a revert
+        // (or a re-apply) can't enrich a later-spawned form buff against a stale entry.
+        ulong sid = character.GetSteamId();
+        if (sid != 0) _pendingForms.Remove(sid);
+
         // Default ability-only carrier buff.
         if (Core.ServerGameManager.TryGetBuff(character, CarrierBuff.ToIdentifier(), out Entity buffEntity)
             && buffEntity.Exists())
@@ -346,6 +557,204 @@ internal static class TransformBuffService
         }
 
         return removed;
+    }
+
+    /// <summary>
+    /// v0.43.9: hardened teardown for `.beelz resetbar`. Unlike <see cref="Remove"/>
+    /// (which looks each buff up by identifier via TryGetBuff — and can MISS a buff that
+    /// is actually present), this walks the character's live <see cref="BuffBuffer"/>
+    /// directly and destroys: our carrier buff, every registered boss/native form buff,
+    /// and ANY buff whose prefab name contains "Shapeshift" or "_Transformation_" (a stuck
+    /// vanilla shapeshift / boss-phase form that left the player wearing a creature bar).
+    /// The player's EquipBuff_Weapon is never touched. Returns the number destroyed.
+    /// </summary>
+    public static int RemoveAllFormsAndShapeshifts(Entity character)
+    {
+        if (!character.Exists() || !Core.EntityManager.HasBuffer<BuffBuffer>(character)) return 0;
+
+        // Drop any pending async form so a late spawn can't re-enrich after this.
+        ulong sid = character.GetSteamId();
+        if (sid != 0) _pendingForms.Remove(sid);
+
+        var toDestroy = new List<Entity>();
+        var buffs = Core.EntityManager.GetBuffer<BuffBuffer>(character);
+        for (int i = 0; i < buffs.Length; i++)
+        {
+            Entity be = buffs[i].Entity;
+            if (!be.Exists()) continue;
+            int guid = buffs[i].PrefabGuid._Value;
+            string name = buffs[i].PrefabGuid.GetPrefabName() ?? "";
+
+            if (name.StartsWith("EquipBuff", StringComparison.OrdinalIgnoreCase)) continue; // never touch the weapon equip buff
+
+            bool ours = guid == CarrierBuff._Value;
+            if (!ours)
+                foreach (int g in Services.BossFormRegistry.FormBuffGuids) { if (g == guid) { ours = true; break; } }
+
+            bool shapeshifty = name.IndexOf("Shapeshift", StringComparison.OrdinalIgnoreCase) >= 0
+                            || name.IndexOf("_Transformation_", StringComparison.OrdinalIgnoreCase) >= 0;
+
+            if (ours || shapeshifty) toDestroy.Add(be);
+        }
+
+        int destroyed = 0;
+        foreach (Entity be in toDestroy)
+        {
+            if (!be.Exists()) continue;
+            try
+            {
+                Core.Log.LogInfo($"[Beelz] resetbar: destroying buff {be.GetPrefabGuid().GetPrefabName()} (#{be.GetPrefabGuid()._Value}).");
+                DestroyUtility.Destroy(Core.EntityManager, be, DestroyDebugReason.TryRemoveBuff);
+                destroyed++;
+            }
+            catch (Exception ex)
+            {
+                Core.Log.LogWarning($"[Beelz] resetbar: failed destroying a buff: {ex.Message}");
+            }
+        }
+
+        if (destroyed > 0 && Core.ReplaceAbilityOnSlotSystem != null)
+            Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+        return destroyed;
+    }
+
+    /// <summary>
+    /// v0.43.12: the deep fix for a FROZEN ability bar. V Rising's ReplaceAbilityOnSlotSystem
+    /// resolves a player's bar from EVERY entity that is owned by them (EntityOwner.Owner ==
+    /// character) and carries a ReplaceAbilityOnSlotBuff — NOT just buffs in their BuffBuffer.
+    /// A transform's carrier/form buff that got unlinked from the BuffBuffer (e.g. logout mid-
+    /// form) but still exists and is still owned by the player keeps injecting its abilities at
+    /// Priority 99, pinning the bar and blocking spellbook/weapon resolution — and it's invisible
+    /// to BuffBuffer-based cleanup. This walks ALL such owned sources and destroys the ones that
+    /// aren't legitimate gear/jewel sources (EquipBuff_* / Item_*), then forces a re-resolve.
+    /// Returns the number destroyed. Logs each (also used by the diagnostic, read-only variant).
+    /// </summary>
+    public static int DestroyOwnedAbilitySlotOrphans(Entity character)
+    {
+        if (!character.Exists()) return 0;
+        int destroyed = 0;
+        try
+        {
+            EntityQuery q = Core.EntityManager.CreateEntityQuery(
+                ComponentType.ReadOnly<ReplaceAbilityOnSlotBuff>(),
+                ComponentType.ReadOnly<EntityOwner>());
+            var arr = q.ToEntityArray(Unity.Collections.Allocator.Temp);
+            var toDestroy = new List<Entity>();
+            for (int i = 0; i < arr.Length; i++)
+            {
+                Entity e = arr[i];
+                if (!e.Exists()) continue;
+                if (!e.TryGetComponent<EntityOwner>(out var owner) || owner.Owner != character) continue;
+                string name = e.GetPrefabGuid().GetPrefabName() ?? "";
+                // Keep the legitimate vanilla bar sources: equipped gear + magic-source jewels.
+                if (name.StartsWith("EquipBuff", StringComparison.OrdinalIgnoreCase)) continue;
+                if (name.StartsWith("Item_", StringComparison.OrdinalIgnoreCase)) continue;
+                toDestroy.Add(e);
+            }
+            arr.Dispose();
+
+            foreach (Entity e in toDestroy)
+            {
+                if (!e.Exists()) continue;
+                try
+                {
+                    Core.Log.LogInfo($"[Beelz] resetbar: destroying owned ability-slot source {e.GetPrefabGuid().GetPrefabName()} (#{e.GetPrefabGuid()._Value}).");
+                    DestroyUtility.Destroy(Core.EntityManager, e, DestroyDebugReason.TryRemoveBuff);
+                    destroyed++;
+                }
+                catch (Exception ex) { Core.Log.LogWarning($"[Beelz] orphan-source destroy failed: {ex.Message}"); }
+            }
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogWarning($"[Beelz] DestroyOwnedAbilitySlotOrphans failed: {ex.Message}");
+        }
+
+        if (destroyed > 0 && Core.ReplaceAbilityOnSlotSystem != null)
+            Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+        return destroyed;
+    }
+
+    /// <summary>
+    /// v0.43.13: authoritatively reset the player's resolved ability slots via
+    /// <c>ServerGameManager.ModifyAbilityGroupOnSlot</c> (the engine's own slot setter, as used
+    /// by Bloodcraft). This is the cure for a FROZEN bar: a transform applies abilities at
+    /// Priority 99; if the bar's resolved/cached value keeps that priority after the source is
+    /// gone, low-priority vanilla sources (weapon/spellbook, Priority 0) can't overwrite it and
+    /// the bar is stuck (only another Priority-99 transform changes it). Modify clears each slot
+    /// authoritatively and networks the change to the client, forcing a clean re-resolve from the
+    /// current equipment + spellbook. Returns the number of slots cleared.
+    /// </summary>
+    public static int ForceResetAbilitySlots(Entity character)
+    {
+        if (!character.Exists() || !Core.EntityManager.HasBuffer<BuffBuffer>(character)) return 0;
+
+        // ModifyAbilityGroupOnSlot needs a modification-source buff; the equipped-weapon buff is
+        // always present (even Unarmed) and is the natural owner of the player's weapon slots.
+        Entity equipBuff = Entity.Null;
+        var buffs = Core.EntityManager.GetBuffer<BuffBuffer>(character);
+        for (int i = 0; i < buffs.Length; i++)
+        {
+            string n = buffs[i].PrefabGuid.GetPrefabName();
+            if (n != null && n.StartsWith("EquipBuff_Weapon", StringComparison.OrdinalIgnoreCase))
+            {
+                equipBuff = buffs[i].Entity;
+                break;
+            }
+        }
+        if (!equipBuff.Exists())
+        {
+            Core.Log.LogWarning("[Beelz] ForceResetAbilitySlots: no EquipBuff_Weapon found; cannot reset slots.");
+            return 0;
+        }
+
+        int cleared = 0;
+        var sgm = Core.ServerGameManager;
+        for (int slot = 0; slot <= 8; slot++)
+        {
+            try { sgm.ModifyAbilityGroupOnSlot(equipBuff, character, slot, PrefabGUID.Empty); cleared++; }
+            catch (Exception ex) { Core.Log.LogWarning($"[Beelz] ForceResetAbilitySlots slot {slot} failed: {ex.Message}"); }
+        }
+
+        if (Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+        Core.Log.LogInfo($"[Beelz] resetbar: force-cleared {cleared} ability slot(s) via ModifyAbilityGroupOnSlot (authoritative client push).");
+        return cleared;
+    }
+
+    /// <summary>
+    /// v0.43.14: force V Rising to REBUILD the player's ability bar from scratch. The engine
+    /// builds the resolved bar once, gated by the enableable <c>AbilityBarInitializationState</c>
+    /// tag (ProjectM). A shapeshift triggers a rebuild for the form; if the player left the form
+    /// abnormally (logout mid-form), the resolved bar can stay stuck on the creature kit and never
+    /// re-derive from the vampire's equipment — a "frozen bar" that ModifyAbilityGroupOnSlot and
+    /// buff/source cleanup can't fix because the inputs are already correct, only the cached
+    /// resolution is stale. ENABLING the init-state tag makes the ability-bar init system re-run
+    /// and rebuild from the current equipment + spells. Returns true if the tag was toggled.
+    /// </summary>
+    public static bool ForceAbilityBarReinit(Entity character)
+    {
+        if (!character.Exists()) return false;
+        try
+        {
+            var ctInit = Unity.Entities.ComponentType.ReadWrite(
+                Il2CppInterop.Runtime.Il2CppType.Of<AbilityBarInitializationState>());
+            bool hasInit = Core.EntityManager.HasComponent(character, ctInit);
+            bool hasServerBar = Core.EntityManager.HasComponent(character,
+                Unity.Entities.ComponentType.ReadOnly(Il2CppInterop.Runtime.Il2CppType.Of<AbilityBar_Server>()));
+            Core.Log.LogInfo($"[Beelz] rebuildbar: hasInitState={hasInit} hasServerBar={hasServerBar}.");
+
+            // NOTE (v0.43.15): AbilityBarInitializationState is NOT an IEnableableComponent
+            // (confirmed at runtime — SetComponentEnabled throws), so it can't be toggled to force
+            // a rebuild. Diagnostic only. The working rebuild is `.beelz admin respawn`
+            // (ServerBootstrapSystem.RespawnCharacter), which constructs a FRESH character entity
+            // with clean AbilityGroupSlot entities, discarding the stuck modifications.
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogWarning($"[Beelz] ForceAbilityBarReinit failed: {ex.Message}");
+            return false;
+        }
     }
 
     static NetworkId GetNetworkId(Entity entity) =>

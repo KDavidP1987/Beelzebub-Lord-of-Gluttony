@@ -29,7 +29,6 @@ internal static class ServerBootstrapSystemPatch
     public static void OnUserDisconnectedPrefix(ServerBootstrapSystem __instance, NetConnectionId netConnectionId)
     {
         if (!Core.IsReady) return;
-        if (!Beelzebub.Config.Settings.Transform_DespawnSummonsOnDisconnect.Value) return;
 
         try
         {
@@ -46,27 +45,87 @@ internal static class ServerBootstrapSystemPatch
             if (steamId == 0) return;
 
             var active = Core.AbilityRegistry.GetActiveTransform(steamId);
-            if (active == null) return;
-            if (active.SummonedMinions == null || active.SummonedMinions.Count == 0) return;
+            if (active == null) return; // not transformed — nothing to do
 
-            // v0.23.7: immediate-drain on disconnect (matches revert path).
-            int queued = 0;
-            foreach (Entity minion in active.SummonedMinions)
+            // v0.43.7: disconnect policy is governed by Transform_ReconnectGraceSeconds.
+            //
+            // CORRECTION to the v0.43.2 note: the active-transform registry is RUNTIME-ONLY
+            // (never persisted). A form/carrier buff, however, can outlive it (a Toggle form
+            // buff has infinite lifetime; async-applied native forms can miss RemoveOnDisconnect)
+            // and survive a disconnect or a server restart — which is what stranded players in
+            // an un-revertable, bar-frozen state. The grace window + the on-connect reconcile
+            // (TransformService) together close that gap.
+            //
+            //   grace == 0  → revert immediately (clean): despawn summons, destroy the buff,
+            //                 clear the record. (The v0.43.2 behavior, now one branch.)
+            //   grace  > 0  → park the transform + stash its summons; resume on reconnect, or
+            //                 revert when the window elapses (Tick.ExpireReconnectGrace).
+            //   grace  < 0  → park indefinitely (manual revert only).
+            try
             {
-                if (minion.Exists()) { Services.SummonAllyService.EnqueueAdminDespawn(minion); queued++; }
+                float grace = Beelzebub.Config.Settings.Transform_ReconnectGraceSeconds.Value;
+                string unitName = new Stunlock.Core.PrefabGUID(active.UnitPrefabGuid).GetPrefabName();
+                if (grace == 0f)
+                {
+                    Core.Transforms.Revert(steamId, "disconnect", restoreBar: false);
+                    Core.Log.LogInfo($"[Beelz] disconnect: immediate revert for player {steamId} (was {unitName}; grace=0).");
+                }
+                else
+                {
+                    Core.Transforms.BeginReconnectGrace(steamId, active);
+                    string window = grace < 0f ? "indefinite" : $"{grace:F0}s";
+                    Core.Log.LogInfo($"[Beelz] disconnect: parked transform for player {steamId} (was {unitName}; grace window {window}).");
+                }
             }
-            active.SummonedMinions.Clear();
-            active.SummonStacks?.Clear();
-
-            if (queued > 0)
+            catch (Exception ex)
             {
-                int processed = Services.SummonAllyService.DrainAdminQueueImmediate();
-                Core.Log.LogInfo($"[Beelz SUMMON] disconnect cleanup: queued {queued}, processed {processed} from player {steamId}.");
+                Core.Log.LogWarning($"[Beelz] disconnect transform handler failed for {steamId}: {ex.Message}");
             }
         }
         catch (Exception ex)
         {
-            Core.Log.LogWarning($"[Beelz SUMMON] disconnect cleanup failed: {ex.Message}");
+            Core.Log.LogWarning($"[Beelz] disconnect handler failed: {ex.Message}");
+        }
+    }
+}
+
+/// <summary>
+/// v0.43.7 — on (re)connect, reconcile the player's transform state. This is the safety
+/// net that guarantees a player never logs in to a broken ability bar:
+///   * if they have a transform parked in the reconnect-grace window, it resumes;
+///   * if a form/carrier buff was stranded from a previous session (e.g. a server
+///     restart wiped the runtime-only transform registry but the buff survived on the
+///     saved character), it is detected and cleared, restoring the base/granted bar.
+///
+/// The hook itself only QUEUES the steamId — the actual work happens in
+/// TransformService.Tick once the player's character entity has spawned (it isn't ready
+/// at OnUserConnected; Bloodcraft defers the same way). Everything is wrapped so a fault
+/// here can never slow or block the login path.
+/// </summary>
+[HarmonyPatch(typeof(ServerBootstrapSystem), nameof(ServerBootstrapSystem.OnUserConnected))]
+internal static class ServerBootstrapSystemConnectPatch
+{
+    [HarmonyPostfix]
+    public static void OnUserConnectedPostfix(ServerBootstrapSystem __instance, NetConnectionId netConnectionId)
+    {
+        if (!Core.IsReady) return;
+        try
+        {
+            if (!__instance._NetEndPointToApprovedUserIndex.ContainsKey(netConnectionId)) return;
+            int userIndex = __instance._NetEndPointToApprovedUserIndex[netConnectionId];
+            ServerBootstrapSystem.ServerClient serverClient = __instance._ApprovedUsersLookup[userIndex];
+            Entity userEntity = serverClient.UserEntity;
+            if (!userEntity.Exists()) return;
+            if (!userEntity.TryGetComponent<User>(out var user)) return;
+            ulong steamId = user.PlatformId;
+            if (steamId == 0) return;
+
+            Core.Transforms.QueueReconnectReconcile(steamId);
+        }
+        catch (Exception ex)
+        {
+            // NEVER let a reconcile fault touch the login path.
+            Core.Log.LogWarning($"[Beelz] connect handler failed: {ex.Message}");
         }
     }
 }

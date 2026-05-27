@@ -18,7 +18,7 @@
 > in the BCH workspace.
 >
 > **Canonical source of truth for the wire API:**
-> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 4`). If this doc
+> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 5`). If this doc
 > and that file ever disagree, the file wins — and this doc should be corrected.
 >
 > **Last full audit:** Beelzebub **v0.43.0** (2026-05-24) — every command, event,
@@ -117,6 +117,7 @@ All under the `.beelz api` group. Verified against `ApiCommands.cs`.
   | `detonate` | `u=` | Player manually fired a transform's detonation AoE via `.beelz detonate` (v2) |
   | `config-changed` | `key= value=` | An admin changed a setting via `.beelz admin set` (v3). Re-fetch `api config`. (Currently sent to the acting admin; broadcast-to-all-subscribers is a follow-up.) |
   | `cast` | `a= an=` | Player force-cast an ability via `.beelz cast` (v4 — expanded action bar). |
+  | `summon` | `u= ability=` | Player force-cast a transform's signature add-summon via `.beelz summon` (v5). Spawns become allies. |
 
 ---
 
@@ -127,6 +128,10 @@ BCH sends these exactly as a player would type them. Replies are
 re-fetch the affected read command (or wait for the event).
 
 **Player:** `.beelz grant <slot 1-6> <index>` · `.beelz unslot <slot>` ·
+`.beelz resetbar` (v0.43.8 — end any active transform + clear ALL slot bindings
+[universal + weapon] → vanilla in-game bar; keeps captures/unlocks; emits a
+`slot-cleared` event per previously-bound slot, so no new event type. A natural
+"reset my bar" button alongside `refresh`) ·
 `.beelz transforms [vblood\|shard\|regular]` / `.beelz list [vblood\|shard\|regular] [page]`
 (v3 filter — also splits shard bosses into their own group) ·
 `.beelz weapon-grant <weapon\|auto> <slot> <index>` ·
@@ -149,9 +154,23 @@ captured ability on demand, beyond the 6 slots; respects the ability's cooldown.
 **This is the BCH-button mechanism** — render each `api hotkeys` binding as a button
 that invokes `.beelz cast <name>`. Gated by `Hotkeys_Enabled`; count capped by
 `Hotkeys_MaxPerPlayer`. Emits `[BEELZ:event] type=cast`.) ·
+`.beelz summon [n]` (**v5 — signature summon:** force-cast a transformed unit's
+add-summon — e.g. the Toad King's frogs, the Werewolf Chieftain's caged wolves — that
+the boss normally only triggers at a low-HP soft phase. No-arg lists options (or casts
+the only one); `<n>` picks one. Spawns become allies. Only units with a registered
+summon respond; cooldown `Transform_SummonCooldownSeconds`. A natural BCH HUD button
+per `api`-exposed summon. Emits `[BEELZ:event] type=summon`.) ·
 `.beelz bestiary [page]` · `.beelz bestiary unit <name>` (collection book — per-unit X/Y abilities + transform status) ·
-`.beelz forget <i>` · `.beelz forget-transform <i>` · `.beelz clear` ·
+`.beelz forget <i>` · `.beelz forget-transform <i>` ·
+`.beelz clear CONFIRM` (v0.43.23 — now requires the literal `CONFIRM` token; bare `.beelz clear`
+replies with a warning + the count of what would be lost and does **not** wipe. A BCH "clear"
+button must send `.beelz clear CONFIRM`. Still emits `[BEELZ:event] type=cleared` on success.) ·
 `.beelz verbosity <silent\|summary\|verbose>`.
+
+> **Discoverability (v0.43.23).** Each command group has its own help command —
+> `.beelz admin help`, `.beelz api help`, `.beelz hotkey help` — and `.beelz commands` is a full
+> sectioned list. These reply in human text (not `[BEELZ:*]`); they're for players typing in chat,
+> not a machine surface.
 
 > **Note — human-text player reads.** A few player commands reply in human text, not
 > `[BEELZ:*]`: `.beelz list` / `.beelz search <term>` / `.beelz info <index\|name>` /
@@ -177,6 +196,7 @@ captures, revert-all, snapshot, inspect/progress, wipe-all.
 | **Phase switcher** — for multi-form bosses (Dracula warrior↔bloodmage) | `api active` (phase/phases) + `phase <n>` | ✅ · 🟡 UI |
 | **Summon panel** — live/stashed counts, stash for waygates | `summons status`/`stash`/`restore` | ✅ · 🟡 UI |
 | **Mounted-summon behavior** (v0.42) — on a horse, summons auto-stash or keep following per `Transform_MountedSummonMode` (`Stash`\|`Follow`). Server-driven & automatic; surface the setting in the admin/settings panel via `api config` + `admin set`. No player command needed. | `api config` (`Transform_MountedSummonMode`) | ✅ |
+| **Reconnect resilience** (v0.43.7) — a transform + its summons survive a brief disconnect and resume on reconnect within `Transform_ReconnectGraceSeconds` (default 90s; `0` = revert on DC, `-1` = keep until manual revert). On EVERY login Beelzebub reconciles state so a form buff stranded from a previous session is cleared (no stuck bar). Server-driven & automatic — no new command/event. Note: a player's transform state may now **persist across a brief DC**, so re-fetch `api active`/`api transforms` on (re)connect rather than assuming a fresh login is untransformed. | `api config` (`Transform_ReconnectGraceSeconds`) | ✅ |
 | **Presets & named hotkeys** | `preset …`, `api hotkeys` + `hotkey …` | ✅ · 🟡 UI |
 | **Progress / completion meter** | `api progress` | ✅ · 🟡 UI |
 
@@ -221,7 +241,7 @@ matched fuzzily; `<unitGuid>`/`<abilityGuid>` = integer PrefabGUIDs from `api li
 | Grant / revoke | `admin give <player> <unitGuid> <abilityGuid>` · `admin revoke <player> <unitGuid> <abilityGuid> [reason]` · `admin give-transform <player> <unitGuid>` · `admin revoke-transform <player> <unitGuid> [reason]` |
 | Force transform | `admin force-transform <player> <unitGuid>` (bypasses unlock+cooldown) · `admin clear-transform <player>` |
 | Remote slots | `admin set-slot <player> <slot 1-6> <abilityGuid>` · `admin clear-slot <player> <slot>` · `admin set-weapon-slot <player> <weapon> <slot> <abilityGuid>` · `admin clear-weapon-slot <player> <weapon> <slot>` (admin binds bypass the TransformOnly/Enabled guards — reply notes a `[WARNING]`) |
-| Inspect | `admin inspect <player>` · `admin progress <player>` · `admin snapshot` |
+| Inspect / recovery | `admin inspect <player>` · `admin progress <player>` · `admin snapshot` · `admin buffs [player]` (v0.43.9 diagnostic — dumps a player's live buffs, entity prefab, equipped-ability slots + override sources to the server log) · `admin respawn [player]` (v0.43.15 — respawn the character in place via the engine's RespawnCharacter; preserves inventory/progress) · `admin clearslotmods [player]` (v0.43.17 — clears orphaned ability-slot modifications) · `admin rebuildslots [player]` (v0.43.19 — safe re-sync of active ability slots to their base values) · `admin copy-collection <player>` / `admin paste-collection <player>` (v0.43.20 — back up a player's captures+transforms to an admin clipboard and paste onto another character; additive, skips dupes) · `admin reset-character <player> CONFIRM-RESET` (v0.43.21 — unbind Steam ID + kick → player creates a fresh character on next login; Beelzebub collection preserved; self-contained, no KindredCommands needed) |
 | Bulk / ops | `admin revert-all` · `admin freeze-captures <on\|off\|status>` · `admin scan-abilities` · `admin desummon <player>` · `admin desummon-all` · `admin wipe-all CONFIRM-WIPE` (destructive — literal token required) |
 
 > **Shard-boss transform settings:** there is **no** `admin transform … shard` variant —
@@ -348,7 +368,8 @@ per tick) for on-screen ability rings — Beelzebub exposes static cooldown valu
 - `docs/INTEROP_BLOODCRAFT.md` — coexistence with Bloodcraft (shared patch
   surfaces; relevant if BCH talks to both).
 - `docs/SETUP_GUIDE.md` — install / first-run.
-- `Commands/ApiCommands.cs` — **canonical** wire API (`ApiVersion = 4`).
+- `Commands/ApiCommands.cs` — **canonical** wire API (`ApiVersion = 5`).
+- `Services/SummonRegistry.cs` — curated unit→signature-summon map for `.beelz summon` (v5).
 
 ---
 

@@ -49,6 +49,18 @@ internal static class ScriptSpawnServerPatch
     public static void OnUpdatePrefix(ScriptSpawnServer __instance)
     {
         if (!Core.IsReady) return;
+
+        // v0.43.1 CRASH FIX: fallback enricher for pending async form buffs
+        // (LifeTime-less shapeshift forms). BuffSpawnServerPatch catches them in the
+        // spawn query first; this polls via TryGetBuff in case the buff isn't in that
+        // query on a given tick. Idempotent (registry self-clears). No-op when nothing
+        // is pending — runs before the AbilityRegistry guard below so it isn't skipped.
+        if (TransformBuffService.HasPendingForms)
+        {
+            try { TransformBuffService.TryEnrichPendingByPoll(); }
+            catch (Exception ex) { Core.Log.LogWarning($"[Beelz] form-enrich poll failed: {ex.Message}"); }
+        }
+
         if (Core.AbilityRegistry is null) return;
 
         // v0.24.8 DIAGNOSTIC: watch the Undead Priest ProjectileNova chain

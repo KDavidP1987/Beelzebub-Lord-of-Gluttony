@@ -143,8 +143,11 @@ internal static class TransformCommands
 
         if (n <= 0)
         {
-            // Show-only mode.
-            ctx.Reply($"Currently in phase {active.CurrentPhase} of {Core.AbilityMetadata.ResolveUnitName(pg._Value)}. Available phases: {string.Join(", ", available)}. " +
+            // Show-only mode. v0.43.1: surface named phases (e.g. "1=Humanoid, 2=Serpent").
+            string phaseList = DescribePhases(active.UnitPrefabGuid, available);
+            string cur = PhaseName(active.UnitPrefabGuid, active.CurrentPhase);
+            string curLabel = cur != null ? $"phase {active.CurrentPhase} ({cur})" : $"phase {active.CurrentPhase}";
+            ctx.Reply($"Currently in {curLabel} of {Core.AbilityMetadata.ResolveUnitName(pg._Value)}. Available phases: {phaseList}. " +
                       (available.Count > 1 ? "Switch via .beelz phase <n>." : "(This unit doesn't have multi-phase mechanics curated.)"));
             return;
         }
@@ -173,7 +176,33 @@ internal static class TransformCommands
         bool appliedNow = Core.Transforms.ApplyPhase(steamId, active, character, n);
 
         string applyHint = appliedNow ? "Spell bar swapped." : "Spell bar will swap this frame.";
-        ctx.Reply($"Phase {n} active: {abilities.Count} abilities now on the bar. {applyHint}");
+        string name = PhaseName(active.UnitPrefabGuid, n);
+        string phaseLabel = name != null ? $"Phase {n} ({name})" : $"Phase {n}";
+        ctx.Reply($"{phaseLabel} active: {abilities.Count} abilities now on the bar. {applyHint}");
+    }
+
+    /// <summary>v0.43.1: the curated name of a boss form-phase (e.g. "Humanoid"/"Serpent"), or null.</summary>
+    static string PhaseName(int unitGuid, int phase)
+    {
+        if (Beelzebub.Services.BossFormRegistry.TryGet(unitGuid, out var bossForm)
+            && bossForm.FormNames != null
+            && phase >= 1 && phase <= bossForm.FormNames.Length)
+        {
+            return bossForm.FormNames[phase - 1];
+        }
+        return null;
+    }
+
+    /// <summary>v0.43.1: render the available phases with their names, e.g. "1=Humanoid, 2=Serpent".</summary>
+    static string DescribePhases(int unitGuid, System.Collections.Generic.List<int> available)
+    {
+        var parts = new System.Collections.Generic.List<string>(available.Count);
+        foreach (int p in available)
+        {
+            string name = PhaseName(unitGuid, p);
+            parts.Add(name != null ? $"{p}={name}" : p.ToString());
+        }
+        return string.Join(", ", parts);
     }
 
     [Command("revert", description: "Revert your current transformation. Spell bar restored immediately.")]
@@ -252,6 +281,58 @@ internal static class TransformCommands
         ctx.Reply("Detonation unleashed!");
         Core.Chat.SendEvent(ctx.Event.SenderCharacterEntity,
             $"[BEELZ:event] type=detonate u={active.UnitPrefabGuid}");
+    }
+
+    // v0.43.3: per-player cooldown tracker for the manual signature-summon.
+    static readonly Dictionary<ulong, DateTime> _lastSummon = new();
+
+    [Command("summon", description: "Force-cast your transformed unit's signature add-summon (e.g. the Toad King's frogs) — the one bosses normally trigger at a low-HP soft phase. Usage: .beelz summon [n]. No arg lists options / casts the only one.")]
+    public static void Summon(ChatCommandContext ctx, int n = -1)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        Entity character = ctx.Event.SenderCharacterEntity;
+        ulong steamId = character.GetSteamId();
+        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
+        if (active is null) { ctx.Reply("You must be transformed to summon."); return; }
+
+        var pgUnit = new PrefabGUID(active.UnitPrefabGuid);
+        var summons = Beelzebub.Services.SummonRegistry.ForUnit(pgUnit);
+        if (summons.Count == 0)
+        {
+            ctx.Reply($"{Core.AbilityMetadata.ResolveUnitName(pgUnit._Value)} has no signature summon. (Many bosses spawn adds via AI/health-phase, not a castable ability.)");
+            return;
+        }
+
+        // No-arg with multiple options → list them. With one → cast it.
+        if (n <= 0 && summons.Count > 1)
+        {
+            ctx.Reply($"{Core.AbilityMetadata.ResolveUnitName(pgUnit._Value)} summons: " +
+                      string.Join(", ", summons.Select((s, i) => $"{i + 1}={s.Label}")) +
+                      ". Cast with .beelz summon <n>.");
+            return;
+        }
+        int idx = (n <= 0) ? 0 : (n - 1);
+        if (idx < 0 || idx >= summons.Count)
+        {
+            ctx.Reply($"No summon #{n}. Available: 1-{summons.Count}. Use .beelz summon to list them.");
+            return;
+        }
+
+        // Anti-spam cooldown (config; 0 = none).
+        float cd = Beelzebub.Config.Settings.Transform_SummonCooldownSeconds.Value;
+        if (cd > 0f && _lastSummon.TryGetValue(steamId, out var last))
+        {
+            double remaining = cd - (DateTime.UtcNow - last).TotalSeconds;
+            if (remaining > 0) { ctx.Reply($"Summon on cooldown ({remaining:F0}s)."); return; }
+        }
+
+        var def = summons[idx];
+        bool ok = Services.ForceCastService.Cast(character, new PrefabGUID(def.AbilityGuid));
+        if (!ok) { ctx.Reply("Summon failed (see server log)."); return; }
+
+        _lastSummon[steamId] = DateTime.UtcNow;
+        ctx.Reply($"Summoning: {def.Label}. (Spawns fight as your allies; some scripted boss summons may not fire off the player rig — report any that no-op.)");
+        Core.Chat.SendEvent(character, $"[BEELZ:event] type=summon u={active.UnitPrefabGuid} ability={def.AbilityGuid}");
     }
 
     [Command("active", description: "v0.24.1: show your current spell bar with full ability info per slot (name, school, cooldown, description). Useful for transforms since V Rising's action-bar tooltip can't render NPC ability text. Usage: .beelz active")]

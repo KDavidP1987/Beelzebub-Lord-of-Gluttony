@@ -146,6 +146,10 @@ internal static class DeathEventListenerSystemPatch
             aggregates[steamId] = agg;
         }
 
+        // v0.43.23: friendly in-game name for player-facing chat (the [BEELZ:event]
+        // wire lines below keep the raw, space-free prefab name for BCH parsing).
+        string unitDisplay = FriendlyUnit(unitGuid);
+
         if (Core.EntityManager.HasBuffer<AbilityGroupSlotBuffer>(died))
         {
             // v0.38.0 pity: current accumulated ability-bonus for this source, and
@@ -183,12 +187,12 @@ internal static class DeathEventListenerSystemPatch
                 {
                     abilityWins++;
                     agg.Captured++;
-                    agg.ByUnit[unitName] = agg.ByUnit.TryGetValue(unitName, out var n) ? n + 1 : 1;
+                    agg.ByUnit[unitDisplay] = agg.ByUnit.TryGetValue(unitDisplay, out var n) ? n + 1 : 1;
                     agg.AnySave = true;
                     if (Settings.VerboseLogging.Value)
                         Core.Log.LogInfo($"[Beelz] capture {abilityName} from {unitName} for {steamId}");
                     // Verbose: per-ability chat line stays inline so the player sees individual unlocks.
-                    Core.Chat.Send(participant, Verbosity.Verbose, $"Acquired ability: {abilityName} (from {unitName}).");
+                    Core.Chat.Send(participant, Verbosity.Verbose, $"Acquired ability: {FriendlyAbility(ability)} (from {unitDisplay}).");
                     // Phase E4: parseable event for BCH (gated by per-player EmitApiEvents flag).
                     Core.Chat.SendEvent(participant,
                         $"[BEELZ:event] type=capture s=R u={unitGuid._Value} un={unitName} a={ability._Value} an={abilityName}");
@@ -238,11 +242,13 @@ internal static class DeathEventListenerSystemPatch
                 Core.AbilityRegistry.ResetPity(steamId, CaptureSource.Regular, PityKind.Transform);
                 if (Core.AbilityRegistry.AddTransformUnlock(steamId, unitGuid._Value, CaptureSource.Regular))
                 {
-                    agg.TransformUnlocks.Add(unitName);
+                    agg.TransformUnlocks.Add(unitDisplay);
                     agg.AnySave = true;
                     Core.Log.LogInfo($"[Beelz] {steamId} unlocked transform: {unitName} (Regular).");
                     Core.Chat.SendEvent(participant,
                         $"[BEELZ:event] type=transform-unlock s=R u={unitGuid._Value} un={unitName}");
+                    // v0.43.4: learn this unit's signature add-summon(s) as standalone abilities.
+                    Services.SummonRegistry.GrantAndNotify(participant, steamId, unitGuid, CaptureSource.Regular);
                 }
             }
             else
@@ -281,6 +287,17 @@ internal static class DeathEventListenerSystemPatch
 
             Core.Persistence.RequestSave();
         }
+    }
+
+    /// <summary>v0.43.23: friendly in-game unit name for chat (falls back to the raw prefab name).</summary>
+    static string FriendlyUnit(PrefabGUID unit) =>
+        Core.AbilityMetadata?.ResolveUnitName(unit._Value) ?? unit.GetPrefabName();
+
+    /// <summary>v0.43.23: friendly in-game ability name for chat (falls back to the raw prefab name).</summary>
+    static string FriendlyAbility(PrefabGUID ability)
+    {
+        var i = Core.AbilityMetadata?.Resolve(ability._Value);
+        return (i != null && !string.IsNullOrEmpty(i.Name)) ? i.Name : ability.GetPrefabName();
     }
 
     static string BuildSingleUnitSummary(KillAggregate agg)

@@ -4,6 +4,223 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.43.23] - 2026-05-26
+
+### Friendly names, a safer `.beelz clear`, and grouped help
+
+- **Capture notifications now show in-game names.** When you capture an ability or unlock a
+  transformation, the chat message uses the unit's and ability's friendly in-game name (e.g.
+  "Kodiak the Bear") instead of the raw asset id — matching what `.beelz list` and
+  `.beelz transforms` already show.
+- **`.beelz clear` now asks for confirmation.** Typing `.beelz clear` shows exactly what would be
+  wiped (your captures, transform unlocks, slot binds, hotkeys, presets) and points you to
+  `.beelz resetbar` if you only meant to reset your action bar. To actually wipe everything you now
+  type `.beelz clear CONFIRM` — no more nuking your collection with one mistyped command.
+- **Grouped, discoverable help.** Every command is reachable from chat: `.beelz commands` is now a
+  complete, sectioned list, and each command group has its own help —
+  `.beelz admin help`, `.beelz api help`, and `.beelz hotkey help` — so you can drill into just the
+  commands you care about.
+
+## [0.43.22] - 2026-05-26
+
+### Recovery commands in the help list + admin recovery guide
+
+- The recovery commands now appear in `.beelz commands`, and `.beelz resetbar` is listed for
+  players. Added a **"Repair a Stuck Player"** admin guide (`docs/RECOVERY_GUIDE.md`) covering
+  the full toolkit and recommended flow. No gameplay changes.
+
+## [0.43.21] - 2026-05-26
+
+### Reset a character from the server — `.beelz admin reset-character`
+
+- **New admin command `.beelz admin reset-character <player> CONFIRM-RESET`.** Cleanly resets a
+  player's character: it unbinds their Steam ID and kicks them, so on next login they create a
+  brand-new character — no second mod required. Their Beelzebub collection is preserved (it's
+  tied to their Steam account), and it pairs with `copy/paste-collection` for a full
+  recover-from-corruption flow. The old body remains in the world but unplayable. Confirmation
+  token required since it's a character-level action.
+
+## [0.43.20] - 2026-05-26
+
+### Back up & transfer a player's collection — `.beelz admin copy/paste-collection`
+
+- **New admin commands `.beelz admin copy-collection <player>` and `.beelz admin
+  paste-collection <player>`.** Copy a player's captured abilities + transform unlocks to an
+  admin clipboard, then paste them onto any character — a fast way to back up a collection
+  before a character re-roll (or transfer it to another player). Pasting is additive and skips
+  duplicates. *(Note: your collection is tied to your Steam account, not the character, so a
+  normal re-roll keeps it automatically — this is for backups, transfers, and restoring after
+  a `.beelz clear`.)*
+
+## [0.43.19] - 2026-05-26
+
+### Safe ability-slot re-sync — `.beelz admin rebuildslots`
+
+- **`.beelz admin rebuildslots [player]` is now safe and non-destructive.** It re-syncs a
+  character's active ability slots back to their stored base abilities using the game's own
+  slot-setter — repairing a bar stuck on creature/shapeshift abilities by writing *values*, never
+  destroying slot entities. (The previous build's version destroyed the slot entities, which could
+  crash the server on the player's next login — that approach is removed.)
+
+## [0.43.18] - 2026-05-26
+
+### Last-resort ability-bar rebuild — `.beelz admin rebuildslots` (withdrawn)
+
+- *(Withdrawn in 0.43.19 — the entity-destruction approach could crash the server on relog.)*
+
+## [0.43.17] - 2026-05-26
+
+### Recovery for an already-stuck ability bar — `.beelz admin clearslotmods`
+
+- **New admin command `.beelz admin clearslotmods [player]`** repairs a character whose ability
+  bar got frozen on a creature kit by the old transform bug. It clears the orphaned ability-slot
+  modifications left behind in the game's modification system and forces the slots to rebuild
+  from your real abilities — reaching the deep engine state that resets, respawns, and even
+  wiping your data couldn't touch.
+
+## [0.43.16] - 2026-05-26
+
+### Root-cause fix: logging out while transformed no longer corrupts your bar
+
+- **Fixed the cause of the stuck/frozen ability bar.** If you logged out (or dropped) while
+  transformed, the game's ungraceful removal of the form on disconnect could leave the
+  creature's abilities permanently welded to your action bar — surviving relogs, resets, even
+  a respawn. Beelzebub now tears the transform down **cleanly the moment you disconnect**, so
+  the game properly removes those abilities before your character is saved. Your transform is
+  still kept for the reconnect grace window and re-applied when you return. New transforms are
+  protected going forward; a character already stuck from the old bug is a separate recovery.
+
+## [0.43.15] - 2026-05-26
+
+### Definitive fix for a stuck/frozen ability bar — `.beelz admin respawn`
+
+- **New admin command `.beelz admin respawn [player]`** rebuilds a player's character on the
+  spot using the game's own respawn, giving them a fresh, clean ability bar. This is the
+  reliable cure for a bar frozen on a creature kit after a shapeshift was left ungracefully
+  (e.g. logging out mid-form) — the kind of stuck bar that ignores `resetbar`, weapon swaps,
+  and even relogging. Inventory, equipment, blood, and progress are preserved (same as a
+  normal death + respawn). `.beelz resetbar` points you here if your bar is stuck this way.
+- Backed out the previous slot-clearing/reinit reset attempts that couldn't reach the
+  stuck state (and produced console noise); `resetbar` keeps the binding/buff cleanup.
+
+## [0.43.13] - 2026-05-26
+
+### `resetbar` now force-clears a frozen ability bar
+
+- **`.beelz resetbar` now authoritatively resets your ability slots.** A transformation
+  applies its abilities at high priority; if those stuck in your bar's resolved state after
+  the transform ended, your normal weapon/spell abilities (lower priority) couldn't overwrite
+  them — leaving the bar frozen on creature abilities and ignoring spellbook/weapon changes.
+  `resetbar` now clears the resolved slots directly through the game's own slot system and
+  pushes the change to your client. If any slots look empty afterward, re-equip your weapon
+  and re-slot your spells to repopulate them.
+- Also clears orphaned ability-override sources (by ownership) and, for admins, `.beelz admin
+  buffs` reports your entity type, equipped-ability catalog, and every override source you own.
+- *(Admins)* `.beelz admin buffs` now also reports your character's entity type, persistent
+  equipped-ability catalog, and **every ability-slot override source that belongs to you**
+  — the full picture for diagnosing a stuck bar.
+
+## [0.43.9] - 2026-05-26
+
+### `resetbar` now clears a stuck creature/shapeshift bar too
+
+- **`.beelz resetbar` is more thorough.** It now scans your *live* buffs directly and
+  strips any lingering transform, creature/shapeshift, or boss-form buff that was holding
+  your action bar hostage — not just the bindings it knew about. If a transform ever
+  leaves you wearing a creature's abilities, this fully returns you to your vampire bar.
+- *(Admins)* New diagnostic `.beelz admin buffs [player]` dumps a player's active buffs
+  and which ones override ability slots to the server log — for tracking down a stuck bar.
+
+## [0.43.8] - 2026-05-26
+
+### Reset your bar to normal in one command
+
+- **New: `.beelz resetbar`.** Ends any active transformation and removes **all** your
+  Beelzebub slot bindings at once, snapping your action bar back to its normal vampire
+  state (your spells + weapon skills). Handy if you've granted boss abilities to your
+  slots and want your original bar back — previously you had to clear each slot with
+  `.beelz unslot` one at a time. Your captured abilities and transform unlocks are kept;
+  re-grant anything with `.beelz grant`.
+
+## [0.43.7] - 2026-05-26
+
+### No more getting stuck after a disconnect
+
+- **Fixed: logging out while transformed could leave you "stuck."** You could come back
+  to a frozen ability bar locked to the transformed unit — unable to revert, unable to
+  grant abilities to your bar, with new transforms not taking effect. Beelzebub now
+  **reconciles your state every time you log in**: any leftover transform from a previous
+  session (including one stranded by a server restart) is cleared and your normal
+  abilities are restored. You should never log in to a broken bar again.
+- **New: reconnect grace window.** If you disconnect while transformed, your
+  transformation and its summons are now **kept for a short window** (default **90s**) so
+  an abrupt drop or a quick relog puts you right back where you were — same form, same
+  summons. If you don't return in time, the transform reverts and the summons are
+  dismissed cleanly. Configurable via `Transform_ReconnectGraceSeconds` (`0` = revert
+  immediately on disconnect, `-1` = keep until you manually revert).
+
+## [0.43.6] - 2026-05-24
+
+### Summons keep up with you
+
+- **Summoned allies now scale to you.** A summon used to keep the original boss-add's
+  level and damage, so it fell behind as you levelled. Now a summon matches **your
+  level** on spawn (`Transform_SummonMatchPlayerLevel`, on by default), with an admin
+  power dial (`Transform_SummonPowerFactor`) to make summons hit/tank harder or softer.
+  Applies to transform summons and your standalone signature summons alike.
+
+## [0.43.5] - 2026-05-24
+
+### Tune ability power
+
+- **Granted abilities already scale with you** — when you cast a captured boss ability,
+  it uses *your* Physical/Spell Power and crit, so it grows with your level, gear, and
+  prestige (it isn't frozen at boss-level damage).
+- **New admin scaling controls on top:** a global `Grant_PowerScalingMode`
+  (`PlayerScaled` default / `Boosted`) with `Grant_PowerScalingFactor`, plus the
+  **per-ability `DamageScale`** in the rules file is now actually applied — for nerfing,
+  buffing, or rescuing the occasional flat-damage ability.
+
+## [0.43.4] - 2026-05-24
+
+### Keep a boss's summon as your own
+
+- **Unlocking a unit's transform now also teaches you its signature summon** as a
+  standalone ability. Slot it or bind it to a hotkey and summon **even when you're not
+  transformed**. Applies retroactively to units you've already unlocked. Toggle with
+  `Capture_GrantSignatureSummons`.
+
+## [0.43.3] - 2026-05-24
+
+### Call in the adds — `.beelz summon`
+
+- **New `.beelz summon` command.** While transformed, call your unit's signature
+  add-summon — the Toad King's frogs, the Werewolf Chieftain's caged wolves, and more —
+  the ones bosses normally only trigger at low health. The spawns fight as your allies.
+  Cooldown via `Transform_SummonCooldownSeconds`.
+
+## [0.43.2] - 2026-05-24
+
+### Transform stability fixes
+
+- **Animal forms stay put.** Native shapeshift forms (frog/toad, wolf, bear, …) no
+  longer flicker out the instant you cast or take a hit.
+- **Revert always works.** Fixed a case where reverting reported success but left your
+  spell bar unchanged.
+- **Log out safely while transformed.** Disconnecting now returns you to your base form
+  on next login instead of leaving you in a half-transformed state.
+
+## [0.43.1] - 2026-05-24
+
+### Morgana fixed + reworked (critical)
+
+- **Fixed a server crash when transforming into Morgana.** Her serpent form could
+  abort the server on transform; that's resolved.
+- **Morgana is now a two-stage serpent**, like Dracula's switchable kits: a ranged
+  **Spectral** kit and a melee **Serpent** kit, swapped with `.beelz phase 1/2`. (A
+  humanoid first stage isn't possible — V Rising can't render her human model on a
+  player — so both stages use her serpent form.)
+
 ## [0.43.0] - 2026-05-24
 
 ### First public test release 🎉

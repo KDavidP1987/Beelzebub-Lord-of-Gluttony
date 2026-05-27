@@ -2,6 +2,9 @@ using System;
 using System.Linq;
 using System.Text;
 using Beelzebub.Services;
+using ProjectM;
+using ProjectM.Network;
+using ProjectM.Shared;
 using Stunlock.Core;
 using Unity.Entities;
 using VampireCommandFramework;
@@ -29,6 +32,39 @@ internal static class AdminCommands
     {
         var i = Core.AbilityMetadata?.Resolve(guid);
         return (i != null && !string.IsNullOrEmpty(i.Name)) ? i.Name : new Stunlock.Core.PrefabGUID(guid).GetPrefabName();
+    }
+
+    [Command("help", description: "List all Beelzebub admin commands, grouped by purpose.", adminOnly: true)]
+    public static void Help(ChatCommandContext ctx)
+    {
+        ctx.Reply("=== Beelzebub ADMIN commands === (player commands: .beelz commands)");
+        ctx.Reply("-- RULES / CAPTURE FILTERS --");
+        ctx.Reply(".beelz admin rules / reload — show / re-read the ability rules");
+        ctx.Reply(".beelz admin deny|undeny|allow|unallow <pattern> — capture-filter substring patterns");
+        ctx.Reply(".beelz admin freeze-captures <on|off|status> — master CaptureOnKill toggle");
+        ctx.Reply("-- TRANSFORM CONFIG --");
+        ctx.Reply(".beelz admin transform mode|duration|cooldown <regular|vblood> <...> — transform tuning");
+        ctx.Reply(".beelz admin transform show — current transform settings · difficulty [basic|brutal] — server gating");
+        ctx.Reply("-- PLAYER GRANTS --");
+        ctx.Reply(".beelz admin give|revoke <player> <unitGuid> <abilityGuid> — grant / remove a captured ability");
+        ctx.Reply(".beelz admin give-transform|revoke-transform <player> <unitGuid> — grant / remove a transform unlock");
+        ctx.Reply(".beelz admin force-transform|clear-transform <player> [unitGuid] — force / end a transform");
+        ctx.Reply(".beelz admin set-slot|clear-slot <player> <slot> [abilityGuid] — universal slot binds");
+        ctx.Reply(".beelz admin set-weapon-slot|clear-weapon-slot <player> <weapon> <slot> [abilityGuid] — per-weapon binds");
+        ctx.Reply("-- INSPECT --");
+        ctx.Reply(".beelz admin inspect <player> / progress <player> — view a player's state");
+        ctx.Reply(".beelz admin snapshot — server-wide summary · scan-abilities — dump ability metadata to disk");
+        ctx.Reply("-- SUMMONS --");
+        ctx.Reply(".beelz admin desummon <player> / desummon-all — clean up ally summons · revert-all — end all transforms");
+        ctx.Reply("-- RECOVERY (fix a stuck player, no server wipe) --");
+        ctx.Reply(".beelz admin respawn <player> — rebuild a stuck bar by respawning in place (keeps progress)");
+        ctx.Reply(".beelz admin rebuildslots / clearslotmods / rebuildbar <player> — slot/bar repair levers");
+        ctx.Reply(".beelz admin buffs <player> — DIAGNOSTIC: dump buffs + slot overrides to the server log");
+        ctx.Reply(".beelz admin copy-collection <player> / paste-collection <player> — backup + restore a collection");
+        ctx.Reply(".beelz admin reset-character <player> CONFIRM-RESET — fresh character (collection preserved)");
+        ctx.Reply("-- DANGER --");
+        ctx.Reply(".beelz admin set <key> <value> — set any config live (keys via .beelz api config)");
+        ctx.Reply(".beelz admin wipe-all CONFIRM-WIPE — wipe ALL player data on the server");
     }
 
     [Command("rules", description: "Show the currently loaded ability filter rules.", adminOnly: true)]
@@ -256,6 +292,490 @@ internal static class AdminCommands
 
         ctx.Reply(sb.ToString());
         Audit(ctx, "inspect", steamId, fullName, "");
+    }
+
+    [Command("buffs", description: "DIAGNOSTIC: dump a player's active buffs and which ones override ability slots, to the server log (with a chat summary). Use to find what's driving a stuck ability bar. Usage: .beelz admin buffs [player] (default: you)", adminOnly: true)]
+    public static void Buffs(ChatCommandContext ctx, string player = null)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+
+        Entity character;
+        ulong steamId;
+        string fullName;
+        if (string.IsNullOrWhiteSpace(player))
+        {
+            character = ctx.Event.SenderCharacterEntity;
+            steamId = character.GetSteamId();
+            fullName = "you";
+        }
+        else
+        {
+            character = EntityExtensions.FindCharacterByName(player, out steamId, out fullName);
+            if (character == Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
+        }
+
+        if (!character.Exists() || !Core.EntityManager.HasBuffer<BuffBuffer>(character))
+        {
+            ctx.Reply("No buff buffer on that character.");
+            return;
+        }
+
+        // v0.43.10: dump the CHARACTER ENTITY's own prefab — the decisive check for a
+        // server-side shapeshift. A normal vampire reads CHAR_Vampire_*; if this shows a
+        // creature/bear prefab, the player is genuinely shapeshifted server-side (and the
+        // fix must operate on this entity), not just a stale client HUD.
+        var charPg = character.GetPrefabGuid();
+        Core.Log.LogInfo($"[Beelz BUFFS] character entity prefab = {charPg._Value} {charPg.GetPrefabName()}");
+
+        // v0.43.11: dump the character's OWN equipped-ability slots (the persistent base
+        // the cast resolves from). If a shapeshift baked creature abilities in here and the
+        // form buff was removed abnormally (logout w/o revert), these stick — and normal
+        // equipment/spellbook changes won't overwrite them. This is what a "frozen bar" looks like.
+        if (Core.EntityManager.HasBuffer<AbilityGroupSlotBuffer>(character))
+        {
+            var slotBuf = Core.EntityManager.GetBuffer<AbilityGroupSlotBuffer>(character);
+            Core.Log.LogInfo($"[Beelz BUFFS] character AbilityGroupSlotBuffer ({slotBuf.Length} slot(s)):");
+            for (int s = 0; s < slotBuf.Length; s++)
+            {
+                int ag = slotBuf[s].BaseAbilityGroupOnSlot._Value;
+                Core.Log.LogInfo($"[Beelz BUFFS]   baseSlot[{s}] = {ag} {(ag == 0 ? "(empty)" : new Stunlock.Core.PrefabGUID(ag).GetPrefabName())}");
+            }
+        }
+        else
+        {
+            Core.Log.LogInfo($"[Beelz BUFFS] character has NO AbilityGroupSlotBuffer.");
+        }
+
+        var buffs = Core.EntityManager.GetBuffer<BuffBuffer>(character);
+        int total = buffs.Length, overriders = 0;
+        bool hasBearShapeshift = false, hasCarrier = false;
+        Core.Log.LogInfo($"[Beelz BUFFS] === {fullName} (SteamID {steamId}) has {total} buff(s) ===");
+        for (int i = 0; i < buffs.Length; i++)
+        {
+            int guid = buffs[i].PrefabGuid._Value;
+            if (guid == -1569370346) hasBearShapeshift = true; // AB_Shapeshift_Bear_Buff
+            if (guid == 1171608023) hasCarrier = true;          // Beelzebub ability carrier
+            string name = buffs[i].PrefabGuid.GetPrefabName() ?? "(unknown)";
+            Entity be = buffs[i].Entity;
+            string overrideInfo = "";
+            if (be.Exists() && Core.EntityManager.HasBuffer<ReplaceAbilityOnSlotBuff>(be))
+            {
+                var ovr = Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(be);
+                var sbo = new StringBuilder();
+                int entries = 0;
+                for (int j = 0; j < ovr.Length; j++)
+                {
+                    var e = ovr[j];
+                    if (e.NewGroupId._Value == 0) continue;
+                    entries++;
+                    sbo.Append($" [slot{e.Slot}={AbilityDisplay(e.NewGroupId._Value)}#{e.NewGroupId._Value}/p{e.Priority}/{e.Target}]");
+                }
+                if (entries > 0) { overriders++; overrideInfo = " OVERRIDES:" + sbo; }
+            }
+            Core.Log.LogInfo($"[Beelz BUFFS]   #{i} guid={guid} {name}{overrideInfo}");
+        }
+        // v0.43.12: hunt ALL player-owned ability-slot override SOURCES — including ones NOT in
+        // the BuffBuffer (the orphan that can freeze the bar). This is what actually drives the
+        // resolved bar via ReplaceAbilityOnSlotSystem.
+        try
+        {
+            EntityQuery q = Core.EntityManager.CreateEntityQuery(
+                ComponentType.ReadOnly<ReplaceAbilityOnSlotBuff>(),
+                ComponentType.ReadOnly<EntityOwner>());
+            var arr = q.ToEntityArray(Unity.Collections.Allocator.Temp);
+            int ownedSrc = 0;
+            Core.Log.LogInfo($"[Beelz BUFFS] --- owned ReplaceAbilityOnSlot sources ---");
+            for (int i = 0; i < arr.Length; i++)
+            {
+                Entity e = arr[i];
+                if (!e.Exists() || !e.TryGetComponent<EntityOwner>(out var o) || o.Owner != character) continue;
+                ownedSrc++;
+                var pg = e.GetPrefabGuid();
+                var ob = Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(e);
+                var sbo = new StringBuilder();
+                for (int j = 0; j < ob.Length; j++)
+                {
+                    if (ob[j].NewGroupId._Value == 0) continue;
+                    sbo.Append($" [slot{ob[j].Slot}={AbilityDisplay(ob[j].NewGroupId._Value)}#{ob[j].NewGroupId._Value}/p{ob[j].Priority}]");
+                }
+                Core.Log.LogInfo($"[Beelz BUFFS]   src {pg._Value} {pg.GetPrefabName()}{sbo}");
+            }
+            arr.Dispose();
+            Core.Log.LogInfo($"[Beelz BUFFS] --- {ownedSrc} owned source(s) ---");
+        }
+        catch (Exception ex) { Core.Log.LogWarning($"[Beelz BUFFS] owned-source query failed: {ex.Message}"); }
+
+        Core.Log.LogInfo($"[Beelz BUFFS] === end ({overriders} override slots) | charPrefab={charPg.GetPrefabName()} bearShapeshiftBuff={hasBearShapeshift} carrierBuff={hasCarrier} ===");
+        ctx.Reply($"Dumped {total} buff(s) for {fullName} to the server log; {overriders} override ability slots; entity prefab = {charPg.GetPrefabName()}. See BepInEx LogOutput.log lines tagged [Beelz BUFFS].");
+        Audit(ctx, "buffs", steamId, fullName, $"total={total} overriders={overriders} charPrefab={charPg._Value} bear={hasBearShapeshift} carrier={hasCarrier}");
+    }
+
+    [Command("rebuildbar", description: "Force a player's ability bar to rebuild from scratch via the engine's init-state (fixes a bar frozen at the resolved level, e.g. stuck after a shapeshift). Usage: .beelz admin rebuildbar [player] (default: you)", adminOnly: true)]
+    public static void RebuildBar(ChatCommandContext ctx, string player = null)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+
+        Entity character;
+        ulong steamId;
+        string fullName;
+        if (string.IsNullOrWhiteSpace(player))
+        {
+            character = ctx.Event.SenderCharacterEntity;
+            steamId = character.GetSteamId();
+            fullName = "you";
+        }
+        else
+        {
+            character = EntityExtensions.FindCharacterByName(player, out steamId, out fullName);
+            if (character == Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
+        }
+
+        bool ok = TransformBuffService.ForceAbilityBarReinit(character);
+        ctx.Reply(ok
+            ? $"Forced an ability-bar rebuild for {fullName}. If the bar still looks wrong, try equipping a weapon to trigger the rebuild, and tell me — the server log has the details."
+            : $"Could not toggle the ability-bar init-state for {fullName} (logged details). Tell me what the server log says under [Beelz] rebuildbar.");
+        Audit(ctx, "rebuildbar", steamId, fullName, $"ok={ok}");
+    }
+
+    [Command("respawn", description: "Respawn a player's character AT THEIR CURRENT SPOT — V Rising rebuilds the character fresh, which fixes a stuck/frozen ability bar (the bear-form bug). Inventory, equipment, blood, and progress are preserved (same as dying + respawning). Usage: .beelz admin respawn [player] (default: you)", adminOnly: true)]
+    public static void Respawn(ChatCommandContext ctx, string player = null)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+
+        Entity character;
+        ulong steamId;
+        string fullName;
+        if (string.IsNullOrWhiteSpace(player))
+        {
+            character = ctx.Event.SenderCharacterEntity;
+            steamId = character.GetSteamId();
+            fullName = "you";
+        }
+        else
+        {
+            character = EntityExtensions.FindCharacterByName(player, out steamId, out fullName);
+            if (character == Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
+        }
+
+        // First clear any Beelzebub state so the rebuilt character starts clean.
+        try { Core.Transforms.Revert(steamId, "respawn", restoreBar: false); } catch { /* not transformed */ }
+        try { TransformBuffService.RemoveAllFormsAndShapeshifts(character); } catch { /* best effort */ }
+
+        try
+        {
+            if (!character.TryGetComponent<PlayerCharacter>(out var pc))
+            {
+                ctx.Reply("That entity isn't a player character."); return;
+            }
+            Entity userEntity = pc.UserEntity;
+            var pos = Core.EntityManager.GetComponentData<Unity.Transforms.LocalToWorld>(character).Position;
+            var spawnLoc = new Il2CppSystem.Nullable_Unboxed<Unity.Mathematics.float3> { value = pos };
+
+            var sbs = Core.Server.GetExistingSystemManaged<ServerBootstrapSystem>();
+            var bufferSystem = Core.Server.GetExistingSystemManaged<Unity.Entities.EntityCommandBufferSystem>();
+            var buffer = bufferSystem.CreateCommandBuffer();
+            sbs.RespawnCharacter(buffer, userEntity, customSpawnLocation: spawnLoc, previousCharacter: character);
+
+            Core.Log.LogInfo($"[Beelz] respawn: RespawnCharacter requested for {fullName} ({steamId}) at current position to rebuild a clean character + ability bar.");
+            ctx.Reply($"Respawning {fullName} on the spot to rebuild the character — this clears a stuck/frozen ability bar. Equipment + progress are preserved. Give it a moment, then check your bar.");
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError($"[Beelz] respawn failed for {fullName}: {ex}");
+            ctx.Reply($"Respawn failed: {ex.Message}");
+        }
+        Audit(ctx, "respawn", steamId, fullName, "");
+    }
+
+    [Command("clearslotmods", description: "RECOVERY: clear orphaned ability-slot MODIFICATIONS on a player's character (the deep cause of a bar frozen on a creature kit) and force the slots to rebuild from base. Run after .beelz clear if a stuck bar survives everything. Usage: .beelz admin clearslotmods [player] (default: you)", adminOnly: true)]
+    public static void ClearSlotMods(ChatCommandContext ctx, string player = null)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+
+        Entity character;
+        ulong steamId;
+        string fullName;
+        if (string.IsNullOrWhiteSpace(player))
+        {
+            character = ctx.Event.SenderCharacterEntity;
+            steamId = character.GetSteamId();
+            fullName = "you";
+        }
+        else
+        {
+            character = EntityExtensions.FindCharacterByName(player, out steamId, out fullName);
+            if (character == Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
+        }
+
+        if (!character.Exists() || !Core.EntityManager.HasBuffer<AbilityGroupSlotBuffer>(character))
+        {
+            ctx.Reply("No ability-slot buffer on that character.");
+            return;
+        }
+
+        int slots = 0, withMods = 0, modsCleared = 0, dirtied = 0;
+        try
+        {
+            var dirtyTag = Unity.Entities.ComponentType.ReadWrite(Il2CppInterop.Runtime.Il2CppType.Of<AbilityGroupSlot.DirtyTag>());
+
+            // Snapshot the slot entities first — adding components / clearing buffers below can
+            // cause structural changes that invalidate the character's live buffer handle.
+            var slotEntities = new System.Collections.Generic.List<Entity>();
+            var slotBuffer = Core.EntityManager.GetBuffer<AbilityGroupSlotBuffer>(character);
+            for (int i = 0; i < slotBuffer.Length; i++)
+            {
+                Entity se = slotBuffer[i].GroupSlotEntity._Entity;
+                if (se != Entity.Null) slotEntities.Add(se);
+            }
+
+            foreach (Entity slotEntity in slotEntities)
+            {
+                if (!slotEntity.Exists()) continue;
+                slots++;
+
+                if (Core.EntityManager.HasBuffer<AbilityGroupSlotModificationBuffer>(slotEntity))
+                {
+                    var modBuf = Core.EntityManager.GetBuffer<AbilityGroupSlotModificationBuffer>(slotEntity);
+                    if (modBuf.Length > 0)
+                    {
+                        withMods++;
+                        modsCleared += modBuf.Length;
+                        Core.Log.LogInfo($"[Beelz CLEARMODS] slot entity {slotEntity} had {modBuf.Length} modification(s) — clearing.");
+                        modBuf.Clear();
+                    }
+                }
+
+                if (!Core.EntityManager.HasComponent(slotEntity, dirtyTag))
+                {
+                    Core.EntityManager.AddComponent(slotEntity, dirtyTag);
+                    dirtied++;
+                }
+            }
+
+            if (Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError($"[Beelz] clearslotmods failed for {fullName}: {ex}");
+            ctx.Reply($"clearslotmods failed: {ex.Message}");
+            return;
+        }
+
+        Core.Log.LogInfo($"[Beelz CLEARMODS] {fullName} ({steamId}): {slots} slot(s) scanned, {withMods} had modifications, {modsCleared} cleared, {dirtied} marked dirty for rebuild.");
+        ctx.Reply($"Cleared {modsCleared} ability-slot modification(s) across {withMods}/{slots} slot(s) for {fullName} and forced a rebuild. Check your bar — equip/swap a weapon to refresh it if needed.");
+        Audit(ctx, "clearslotmods", steamId, fullName, $"slots={slots} withMods={withMods} cleared={modsCleared} dirtied={dirtied}");
+    }
+
+    [Command("rebuildslots", description: "RECOVERY (safe): re-sync a player's active ability slots back to their stored base abilities via the engine's slot-setter — fixes a bar stuck on creature/shapeshift abilities. Values only; never destroys entities. Usage: .beelz admin rebuildslots [player] (default: you)", adminOnly: true)]
+    public static void RebuildSlots(ChatCommandContext ctx, string player = null)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+
+        Entity character;
+        ulong steamId;
+        string fullName;
+        if (string.IsNullOrWhiteSpace(player))
+        {
+            character = ctx.Event.SenderCharacterEntity;
+            steamId = character.GetSteamId();
+            fullName = "you";
+        }
+        else
+        {
+            character = EntityExtensions.FindCharacterByName(player, out steamId, out fullName);
+            if (character == Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
+        }
+
+        if (!character.Exists() || !Core.EntityManager.HasBuffer<AbilityGroupSlotBuffer>(character))
+        {
+            ctx.Reply("No ability-slot buffer on that character.");
+            return;
+        }
+
+        int active = 0, resynced = 0, mismatched = 0;
+        try
+        {
+            // Find the equipped-weapon buff — ModifyAbilityGroupOnSlot needs a modification source
+            // (Bloodcraft uses the equip buff the same way).
+            Entity equipBuff = Entity.Null;
+            var bb = Core.EntityManager.GetBuffer<BuffBuffer>(character);
+            for (int i = 0; i < bb.Length; i++)
+            {
+                string n = bb[i].PrefabGuid.GetPrefabName();
+                if (n != null && n.StartsWith("EquipBuff_Weapon", StringComparison.OrdinalIgnoreCase)) { equipBuff = bb[i].Entity; break; }
+            }
+            if (!equipBuff.Exists())
+            {
+                ctx.Reply("Couldn't find your equipped-weapon buff to drive the re-sync.");
+                return;
+            }
+
+            // Snapshot the ACTIVE-region slots (0-8): their stored base ability + slot entity.
+            // (Structural changes below can invalidate the live buffer handle, so snapshot first.)
+            var slotBuffer = Core.EntityManager.GetBuffer<AbilityGroupSlotBuffer>(character);
+            int count = System.Math.Min(slotBuffer.Length, 9);
+            var snap = new System.Collections.Generic.List<(int idx, Stunlock.Core.PrefabGUID baseAbility, Entity slot)>();
+            for (int i = 0; i < count; i++)
+                snap.Add((i, slotBuffer[i].BaseAbilityGroupOnSlot, slotBuffer[i].GroupSlotEntity._Entity));
+
+            // DIAGNOSTIC: log active (what it casts) vs base (what it should be) per slot.
+            Core.Log.LogInfo($"[Beelz REBUILDSLOTS] {fullName} ({steamId}) active vs base (pre-resync):");
+            foreach (var (idx, baseAbility, slot) in snap)
+            {
+                string activeName = "(none)";
+                if (slot.Exists() && Core.EntityManager.HasComponent<AbilityGroupSlot>(slot))
+                {
+                    var ags = Core.EntityManager.GetComponentData<AbilityGroupSlot>(slot);
+                    Entity st = ags.StateEntity._Entity;
+                    activeName = st.Exists() ? (st.GetPrefabGuid().GetPrefabName() ?? "?") : "(none)";
+                }
+                string baseName = baseAbility._Value == 0 ? "(empty)" : (baseAbility.GetPrefabName() ?? "?");
+                if (!string.Equals(activeName, baseName)) mismatched++;
+                Core.Log.LogInfo($"[Beelz REBUILDSLOTS]   slot[{idx}] active={activeName} base={baseName}");
+            }
+
+            // SAFE FIX: write each active slot back to its stored BASE ability (the vanilla value
+            // already on your character) via the engine's own slot-setter. Values only — NO entity
+            // destruction (that crashed the server). Mark each slot dirty so the bar re-resolves.
+            var sgm = Core.ServerGameManager;
+            var dirty = Unity.Entities.ComponentType.ReadWrite(Il2CppInterop.Runtime.Il2CppType.Of<AbilityGroupSlot.DirtyTag>());
+            foreach (var (idx, baseAbility, slot) in snap)
+            {
+                active++;
+                try { sgm.ModifyAbilityGroupOnSlot(equipBuff, character, idx, baseAbility); resynced++; }
+                catch (Exception ex) { Core.Log.LogWarning($"[Beelz REBUILDSLOTS] resync slot {idx} failed: {ex.Message}"); }
+                try { if (slot.Exists() && !Core.EntityManager.HasComponent(slot, dirty)) Core.EntityManager.AddComponent(slot, dirty); }
+                catch (Exception ex) { Core.Log.LogWarning($"[Beelz REBUILDSLOTS] dirty slot {idx} failed: {ex.Message}"); }
+            }
+            if (Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError($"[Beelz] rebuildslots failed for {fullName}: {ex}");
+            ctx.Reply($"rebuildslots failed: {ex.Message}");
+            return;
+        }
+
+        Core.Log.LogInfo($"[Beelz REBUILDSLOTS] {fullName} ({steamId}): re-synced {resynced}/{active} active slot(s) to base ({mismatched} were mismatched).");
+        ctx.Reply($"Re-synced {resynced} ability slot(s) to your base abilities for {fullName} ({mismatched} were mismatched). No entities destroyed. Equip/swap a weapon to refresh your bar; if it's still off, relog. Details in the server log under [Beelz REBUILDSLOTS].");
+        Audit(ctx, "rebuildslots", steamId, fullName, $"active={active} resynced={resynced} mismatched={mismatched}");
+    }
+
+    // --- v0.43.20: collection copy/paste (admin backup-and-restore redundancy) ---
+
+    // In-memory admin clipboard for a player's collected captures + transform unlocks. Survives
+    // for the server session (the copy -> re-roll -> paste flow happens in one session: the
+    // re-roll just kicks + recreates the character, it doesn't restart the server).
+    static System.Collections.Generic.List<CapturedAbility> _clipboardCaptures;
+    static System.Collections.Generic.List<UnlockedTransform> _clipboardTransforms;
+    static string _clipboardSource;
+
+    [Command("copy-collection", description: "Copy a player's captured abilities + transform unlocks into the admin clipboard (to paste onto another character — e.g. as a backup before a re-roll). Usage: .beelz admin copy-collection <player>", adminOnly: true)]
+    public static void CopyCollection(ChatCommandContext ctx, string player)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        var character = EntityExtensions.FindCharacterByName(player, out ulong steamId, out string fullName);
+        if (character == Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
+
+        _clipboardCaptures = Core.AbilityRegistry.ListFor(steamId).ToList();
+        _clipboardTransforms = Core.AbilityRegistry.ListTransforms(steamId).ToList();
+        _clipboardSource = fullName;
+
+        ctx.Reply($"Copied {_clipboardCaptures.Count} captured ability(ies) + {_clipboardTransforms.Count} transform unlock(s) from {fullName} to the clipboard. Use .beelz admin paste-collection <player> to apply (clipboard lasts until the server restarts).");
+        Audit(ctx, "copy-collection", steamId, fullName, $"captures={_clipboardCaptures.Count} transforms={_clipboardTransforms.Count}");
+    }
+
+    [Command("paste-collection", description: "Paste the admin clipboard's captured abilities + transform unlocks onto a player (additive — keeps anything they already have). Run .beelz admin copy-collection first. Usage: .beelz admin paste-collection <player>", adminOnly: true)]
+    public static void PasteCollection(ChatCommandContext ctx, string player)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        if (_clipboardCaptures == null && _clipboardTransforms == null)
+        {
+            ctx.Reply("Clipboard is empty — run .beelz admin copy-collection <player> first.");
+            return;
+        }
+        var character = EntityExtensions.FindCharacterByName(player, out ulong steamId, out string fullName);
+        if (character == Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
+
+        int abilities = 0, transforms = 0;
+        if (_clipboardCaptures != null)
+            foreach (var c in _clipboardCaptures)
+                if (Core.AbilityRegistry.Add(steamId, c.UnitPrefabGuid, c.AbilityPrefabGuid, c.Source)) abilities++;
+        if (_clipboardTransforms != null)
+            foreach (var t in _clipboardTransforms)
+                if (Core.AbilityRegistry.AddTransformUnlock(steamId, t.UnitPrefabGuid, t.Source)) transforms++;
+
+        Core.Persistence.RequestSave();
+
+        ctx.Reply($"Pasted {abilities} new ability(ies) + {transforms} new transform unlock(s) onto {fullName}" +
+            (string.IsNullOrEmpty(_clipboardSource) ? "" : $" (copied from {_clipboardSource})") +
+            ". Their existing collection was kept; duplicates were skipped.");
+        Audit(ctx, "paste-collection", steamId, fullName, $"newAbilities={abilities} newTransforms={transforms} from={_clipboardSource}");
+    }
+
+    [Command("reset-character", description: "Reset a player's CHARACTER to a fresh start: unbinds their Steam ID + kicks them, so they create a NEW character on next login. Their Beelzebub collection (captures/transforms) is preserved (it's tied to their Steam account). The old body stays in-world but unplayable. Requires a confirm token. Usage: .beelz admin reset-character <player> CONFIRM-RESET", adminOnly: true)]
+    public static void ResetCharacter(ChatCommandContext ctx, string player, string confirm = null)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        if (!string.Equals(confirm, "CONFIRM-RESET", StringComparison.Ordinal))
+        {
+            ctx.Reply("This UNBINDS the character: the player is kicked and creates a fresh character on next login. Their Beelzebub captures/transforms are KEPT (tied to their Steam account). The old body stays in-world but becomes unplayable. To do it, re-run: .beelz admin reset-character <player> CONFIRM-RESET");
+            return;
+        }
+
+        var character = EntityExtensions.FindCharacterByName(player, out ulong steamId, out string fullName);
+        if (character == Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
+        if (!character.TryGetComponent<PlayerCharacter>(out var pc) || !pc.UserEntity.Exists())
+        {
+            ctx.Reply("Couldn't resolve that player's user entity.");
+            return;
+        }
+        Entity userEntity = pc.UserEntity;
+
+        // Kick first (best-effort) while the Steam ID is still bound, then UNBIND by zeroing
+        // PlatformId on the User (mirrors KindredCommands .unbindplayer). On next login V Rising
+        // sees no character bound to the Steam ID and prompts a fresh one. No entity destruction.
+        try { KickUser(userEntity); }
+        catch (Exception ex) { Core.Log.LogWarning($"[Beelz] reset-character: kick failed (will still unbind): {ex.Message}"); }
+
+        try
+        {
+            var user = Core.EntityManager.GetComponentData<User>(userEntity);
+            user.PlatformId = 0;
+            Core.EntityManager.SetComponentData(userEntity, user);
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError($"[Beelz] reset-character unbind failed for {fullName}: {ex}");
+            ctx.Reply($"Reset failed: {ex.Message}");
+            return;
+        }
+
+        Core.Log.LogInfo($"[Beelz] reset-character: unbound {fullName} ({steamId}) — fresh character on next login (Beelzebub collection preserved).");
+        ctx.Reply($"Reset {fullName}: Steam ID unbound + kicked. On their next login they'll create a brand-new character; their Beelzebub collection is preserved. (The old body remains in-world but is unplayable. Use .beelz admin paste-collection if you also backed up a copy.)");
+        Audit(ctx, "reset-character", steamId, fullName, "unbound");
+    }
+
+    /// <summary>Kick a connected user (mirrors KindredCommands Helper.KickPlayer): create a
+    /// KickEvent network event. Best-effort; used by reset-character before unbinding.</summary>
+    static void KickUser(Entity userEntity)
+    {
+        var em = Core.EntityManager;
+        var user = em.GetComponentData<User>(userEntity);
+        if (!user.IsConnected || user.PlatformId == 0) return;
+
+        Entity e = em.CreateEntity(
+            Unity.Entities.ComponentType.ReadOnly(Il2CppInterop.Runtime.Il2CppType.Of<NetworkEventType>()),
+            Unity.Entities.ComponentType.ReadOnly(Il2CppInterop.Runtime.Il2CppType.Of<SendEventToUser>()),
+            Unity.Entities.ComponentType.ReadOnly(Il2CppInterop.Runtime.Il2CppType.Of<KickEvent>()));
+        em.SetComponentData(e, new KickEvent { PlatformId = user.PlatformId });
+        em.SetComponentData(e, new SendEventToUser { UserIndex = user.Index });
+        em.SetComponentData(e, new NetworkEventType
+        {
+            EventId = NetworkEvents.EventId_KickEvent,
+            IsAdminEvent = false,
+            IsDebugEvent = false
+        });
     }
 
     // --- AT2: revoke an ability ---

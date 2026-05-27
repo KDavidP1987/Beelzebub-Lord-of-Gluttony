@@ -79,6 +79,15 @@ internal static class Core
             Persistence.LoadInto(AbilityRegistry);
             BuildPrefabNameMap();
 
+            // v0.43.4: backfill signature summons for units players unlocked before this
+            // build, so the standalone-summon feature applies retroactively. Idempotent.
+            try
+            {
+                int backfilled = Services.SummonRegistry.BackfillAll();
+                if (backfilled > 0) Log.LogInfo($"[Beelz] backfilled {backfilled} signature-summon ability(ies) into existing transform unlocks.");
+            }
+            catch (System.Exception ex) { Log.LogWarning($"[Beelz] signature-summon backfill failed: {ex.Message}"); }
+
             IsReady = true;
             Log.LogInfo($"Beelzebub initialized via {trigger} (attempt #{_initAttempts}). Registry size: {AbilityRegistry.PlayerCount} player(s). Prefab map has {prefabSystem.SpawnableNameToPrefabGuidDictionary.Count} entries. Built reverse name map with {PrefabNames.Count} entries.");
         }

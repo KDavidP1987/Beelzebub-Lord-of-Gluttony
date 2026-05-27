@@ -141,6 +141,35 @@ internal static class BuffSpawnServerPatch
     public static void OnUpdatePrefix(BuffSystem_Spawn_Server __instance)
     {
         if (!Core.IsReady) return;
+
+        // v0.43.1 CRASH FIX / v0.43.2 revert-orphan guard: when a form buff appears in the
+        // spawn query, either ENRICH it (pending async form like Morgana's SnakePhase) or
+        // DESTROY it as an orphan (it spawned just after a revert, from a queued async apply,
+        // and would otherwise strand the player in an untracked form). Runs BEFORE the
+        // summons-ally gate because the form-apply path depends on it regardless of config.
+        // Cheap no-op unless a form is pending or a revert just happened.
+        if (TransformBuffService.HasPendingForms || TransformBuffService.HasRecentReverts)
+        {
+            try
+            {
+                var formEnts = __instance.EntityQueries[0].ToEntityArray(Allocator.Temp);
+                try
+                {
+                    for (int i = 0; i < formEnts.Length; i++)
+                    {
+                        Entity fe = formEnts[i];
+                        if (!fe.Exists()) continue;
+                        if (!fe.TryGetComponent<Buff>(out var fb)) continue;
+                        if (!fb.Target.Exists() || !fb.Target.IsPlayer()) continue;
+                        if (TransformBuffService.TryEnrichSpawnedForm(fe, fb.Target)) continue;
+                        TransformBuffService.TryDestroyOrphanForm(fe, fb.Target);
+                    }
+                }
+                finally { formEnts.Dispose(); }
+            }
+            catch (Exception ex) { Core.Log.LogWarning($"[Beelz] form-enrich/orphan scan failed: {ex.Message}"); }
+        }
+
         if (!Beelzebub.Config.Settings.Transform_SummonsAreAllies.Value) return;
 
         NativeArray<Entity> entities;

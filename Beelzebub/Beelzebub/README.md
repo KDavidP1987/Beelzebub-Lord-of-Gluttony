@@ -36,7 +36,7 @@ A **server-side** V Rising mod that turns the whole bestiary into a collection-a
 
 **Source · issues · roadmap:** [github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony) · **License:** MIT
 
-> **Status:** active early access / **public test build (v0.43.0)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
+> **Status:** active early access / **public test build (v0.43.23)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
 
 ---
 
@@ -65,11 +65,13 @@ A **server-side** V Rising mod that turns the whole bestiary into a collection-a
 - **Become any unit you've unlocked.** Your bar fills with its abilities.
 - **Real boss forms** — Dracula and Morgana transform into their actual in-game forms (model, rig, and the abilities that need them), with **switchable kits** via `.beelz phase`. Animal-type units (wolves, bears, spiders, toads, …) likewise use their real shapeshift form.
 - **Shard bosses are their own tier** — Dracula, Adam the Firstborn, Solarus the Immaculate, The Winged Horror, Megara the Serpent Queen, and Gorecrusher the Behemoth can have their own transform mode/duration/cooldown, separate from ordinary V-Bloods.
-- **Summons fight for you** — abilities that raise minions spawn them as your allies, with caps, leashing, and clean despawn. Hop on a horse and your summons either stash-and-restore or keep following into combat, your choice (`Transform_MountedSummonMode`).
+- **Summons fight for you** — abilities that raise minions spawn them as your allies, with caps, leashing, and clean despawn. They **scale to your level** so they don't fall behind, with an admin power dial. Hop on a horse and your summons either stash-and-restore or keep following into combat, your choice (`Transform_MountedSummonMode`).
+- **Signature add-summons** (`.beelz summon`) — call the adds a boss normally only spawns at low health (the Toad King's frogs, the Werewolf Chieftain's caged wolves, …). Unlock a unit and you also **learn its summon as a standalone ability** you can slot or hotkey and use even when not transformed.
 - **Manual detonation** — fire a boss's signature AoE on demand (`.beelz detonate`).
 
 ### Admin & server control
 - **Live config** — change drop rates, transform rules, pity, shard-boss settings and more at runtime with `.beelz admin set <key> <value>` (persists; no restart).
+- **Power scaling, your way** — transforms and granted abilities already scale with the player's stats (so they track level/gear/prestige); on top of that, admins get global scaling modes and **per-ability damage tuning**, plus summon level-matching and a summon power factor.
 - **Curated rules** in a hot-reloadable JSON: allow/deny lists, per-ability weapon/difficulty/scaling, per-unit transform tiers and stat scales.
 - **Difficulty gating, grant/revoke, force-transform, inspect, audit logging** — full operator toolkit.
 
@@ -88,14 +90,14 @@ Install with [r2modman](https://thunderstore.io/package/ebkr/r2modman/) / Thunde
 ## Command cheat-sheet
 
 **Collect & inspect:** `.beelz list [vblood|shard|regular]` · `.beelz search <term>` · `.beelz info <i>` · `.beelz bestiary` · `.beelz progress` · `.beelz catalog`
-**Use abilities:** `.beelz grant <slot 1-6> <index>` · `.beelz weapon-grant <weapon> <slot> <index>` · `.beelz hotkey set <name> <index>` → `.beelz cast <name>`
-**Transform:** `.beelz transforms [vblood|shard|regular]` · `.beelz transform <name>` · `.beelz phase [n]` · `.beelz revert` · `.beelz refresh` (re-apply your bar if it ever goes blank) · `.beelz detonate` · `.beelz summons <stash|restore|status>`
+**Use abilities:** `.beelz grant <slot 1-6> <index>` · `.beelz weapon-grant <weapon> <slot> <index>` · `.beelz unslot <slot>` · `.beelz resetbar` (clear all bindings → vanilla bar) · `.beelz hotkey set <name> <index>` → `.beelz cast <name>`
+**Transform:** `.beelz transforms [vblood|shard|regular]` · `.beelz transform <name>` · `.beelz phase [n]` · `.beelz revert` · `.beelz refresh` (re-apply your bar if it ever goes blank) · `.beelz detonate` · `.beelz summon [n]` (call your unit's signature add-summon) · `.beelz summons <stash|restore|status>`
 **Admin:** `.beelz admin set <key> <value>` · `.beelz admin transform mode/duration/cooldown …` · `.beelz admin give/revoke …` · `.beelz admin rules` / `deny` / `allow` / `reload` · `.beelz admin difficulty <basic|brutal>`
 **Settings:** `.beelz verbosity <silent|summary|verbose>` · `.beelz help` · `.beelz commands`
 
 ## Configuration
 
-`BepInEx\config\kdpen.Beelzebub.cfg` holds server defaults (drop chances, pity, transform modes/durations/cooldowns per category incl. shard bosses, summon caps, mounted-summon behavior, hotkey limits, difficulty). Most can also be changed live with `.beelz admin set`. `ability_rules.json` holds the curation matrix (auto-created); `state.json` holds per-player data.
+`BepInEx\config\kdpen.Beelzebub.cfg` holds server defaults (drop chances, pity, transform modes/durations/cooldowns per category incl. shard bosses, summon caps + lifetime + level-matching + power factor, mounted-summon behavior, granted-ability power scaling, hotkey limits, difficulty). Most can also be changed live with `.beelz admin set`. `ability_rules.json` holds the curation matrix incl. per-ability damage scaling (auto-created, hot-reload with `.beelz admin reload`); `state.json` holds per-player data.
 
 ---
 
@@ -128,7 +130,10 @@ help confirm or break any of these, that's the most valuable feedback we can get
   transforms in particular benefit from real-world tuning feedback.
 - **Things we'd especially love tested:** the expanded action bar (`.beelz cast`),
   ability-bar persistence across weapon swaps / transforms / dismounting, summon
-  behavior in group combat, and whether shard-boss transforms feel balanced.
+  behavior in group combat, whether shard-boss transforms feel balanced, and
+  **disconnect/reconnect while transformed** — a quick relog should resume your form
+  and summons (within `Transform_ReconnectGraceSeconds`, default 90s), and any login
+  should always land you on a working ability bar.
 
 If something breaks: grab the `[Beelz]`-tagged lines from
 `BepInEx\LogOutput.log` and open an issue with what you were doing.
