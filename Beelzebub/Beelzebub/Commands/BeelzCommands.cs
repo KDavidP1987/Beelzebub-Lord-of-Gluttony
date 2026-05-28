@@ -201,7 +201,7 @@ internal static class BeelzCommands
         var ability = new PrefabGUID(abilityGuid);
         string abilityName = ability.GetPrefabName();
         if (!Core.AbilityRules.IsEnabled(abilityName, abilityGuid)) { ctx.Reply($"'{abilityName}' is currently disabled by the server admin."); return; }
-        if (Core.AbilityRules.IsTransformOnly(abilityName, abilityGuid)) { ctx.Reply($"'{abilityName}' is reserved for .beelz transform."); return; }
+        if (Core.AbilityRules.IsTransformOnlyEnforced(abilityName, abilityGuid)) { ctx.Reply($"'{abilityName}' is reserved for .beelz transform."); return; }
 
         // Per-ability cooldown — the ability's own cooldown (min 1s anti-spam).
         var info = Core.AbilityMetadata?.Resolve(abilityGuid);
@@ -486,7 +486,7 @@ internal static class BeelzCommands
             ctx.Reply($"'{abilityName}' is currently disabled by the server admin.");
             return;
         }
-        if (Core.AbilityRules.IsTransformOnly(abilityName, ability._Value))
+        if (Core.AbilityRules.IsTransformOnlyEnforced(abilityName, ability._Value))
         {
             ctx.Reply($"'{abilityName}' is reserved for .beelz transform — cannot be granted to a slot.");
             return;
@@ -639,7 +639,7 @@ internal static class BeelzCommands
             ctx.Reply($"'{abilityName}' is currently disabled by the server admin.");
             return;
         }
-        if (Core.AbilityRules.IsTransformOnly(abilityName, ability._Value))
+        if (Core.AbilityRules.IsTransformOnlyEnforced(abilityName, ability._Value))
         {
             ctx.Reply($"'{abilityName}' is reserved for .beelz transform — cannot be granted to a slot.");
             return;

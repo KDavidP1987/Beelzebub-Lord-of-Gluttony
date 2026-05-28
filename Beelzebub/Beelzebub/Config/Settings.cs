@@ -7,6 +7,11 @@ internal static class Settings
     // Capture loop
     public static ConfigEntry<bool> CaptureOnKill { get; private set; }
 
+    // v0.50.0: inclusive testing mode (bypass deny lists + difficulty gate) and the
+    // transform-only enforcement switch. See Initialize() for full descriptions.
+    public static ConfigEntry<bool> Capture_InclusiveMode { get; private set; }
+    public static ConfigEntry<bool> Grant_EnforceTransformOnly { get; private set; }
+
     // Shared-kill credit (B2)
     public static ConfigEntry<string> Capture_ShareCreditMode { get; private set; }
     public static ConfigEntry<float> Capture_ShareCreditRadius { get; private set; }
@@ -219,6 +224,23 @@ internal static class Settings
         CaptureOnKill = config.Bind(
             "Capture", nameof(CaptureOnKill), true,
             "Master switch. When false, no abilities are captured from kills.");
+
+        Capture_InclusiveMode = config.Bind(
+            "Capture", nameof(Capture_InclusiveMode), true,
+            "v0.50.0 INCLUSIVE TESTING MODE (default ON). When true, ability capture AND the Devour " +
+            "jackpot ignore the DenyPatterns/DenyGuids lists and the Basic/Brutal difficulty gate, so " +
+            "abilities across ALL V-Bloods and NPCs are broadly capturable/devourable for testing. " +
+            "A small hardcoded junk filter (idle/spawn/death/etc. stubs) and the per-ability Enabled " +
+            "kill-switch (AbilityMap) still apply. Set to false for a curated server — the full " +
+            "deny-list + difficulty pipeline then returns.");
+
+        Grant_EnforceTransformOnly = config.Bind(
+            "Capture", nameof(Grant_EnforceTransformOnly), false,
+            "v0.50.0 (default OFF). When false, the per-ability 'transform-only' reservation " +
+            "(AbilityMap TransformOnly / TransformOnlyPatterns / TransformOnlyGuids) is NOT enforced — " +
+            "every ability can be granted/slotted/hotkeyed/devoured to the normal bar for testing. " +
+            "Set to true to honor those reservations again (abilities so marked become usable only via " +
+            "an actual transform). Per-ability Enabled=false is the separate hard kill-switch.");
 
         Capture_ShareCreditMode = config.Bind(
             "Capture", nameof(Capture_ShareCreditMode), "KillerOnly",

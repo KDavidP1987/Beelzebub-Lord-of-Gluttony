@@ -4,6 +4,29 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.50.0] - 2026-05-27
+
+### Test everything: inclusive capture, no transform-only wall, admin config guide
+
+This build opens the ability system up for broad testing and gives admins a real config file.
+
+- **Inclusive capture (on by default).** New `Capture_InclusiveMode` makes abilities across
+  **all** V-Bloods and NPCs broadly capturable and devourable — the old deny lists and the
+  Basic/Brutal difficulty gate are bypassed, so far fewer abilities are hidden. A small junk
+  filter (idle/spawn/death animation stubs) and the per-ability off-switch still apply. Set it
+  to `false` for a curated server and the old filtering returns.
+- **No more "only available for transformation" wall (by default).** New
+  `Grant_EnforceTransformOnly` (default **off**) lets you grant, slot, hotkey, and devour
+  *every* ability to your normal bar for testing. Turn it on to reserve flagged abilities for
+  transforms again.
+- **Admin config guide + global defaults.** New `docs/ABILITY_CONFIG.md` documents every
+  global and per-ability setting (enable/disable, damage & cooldown scaling, weapon allow-list,
+  cast tuning) and how to live-reload with `.beelz admin reload`. New `Defaults` block in
+  `ability_rules.json` sets a server-wide damage/cooldown baseline in one place.
+
+Note: a few abilities still won't *fire* correctly when cast untransformed (chained / multi-part
+abilities) — that's the next build's focus.
+
 ## [0.49.0] - 2026-05-27
 
 ### Fixes from BCH testing: Morgana crash, Reaper loadouts, "twin hammer"

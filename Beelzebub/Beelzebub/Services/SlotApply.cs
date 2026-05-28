@@ -98,7 +98,7 @@ internal static class SlotApply
         var ability = new PrefabGUID(abilityGuid);
         string name = ability.GetPrefabName();
         if (!Core.AbilityRules.IsEnabled(name, abilityGuid)) return false;
-        if (Core.AbilityRules.IsTransformOnly(name, abilityGuid)) return false;
+        if (Core.AbilityRules.IsTransformOnlyEnforced(name, abilityGuid)) return false;
 
         var families = Core.AbilityRules.ClassifyWeaponFamilies(name);
         // Universal: empty (None) or contains Magic — fires for any weapon, including unarmed.
@@ -121,7 +121,7 @@ internal static class SlotApply
         var ability = new PrefabGUID(abilityGuid);
         string name = ability.GetPrefabName();
         if (!Core.AbilityRules.IsEnabled(name, abilityGuid)) return false;
-        if (Core.AbilityRules.IsTransformOnly(name, abilityGuid)) return false;
+        if (Core.AbilityRules.IsTransformOnlyEnforced(name, abilityGuid)) return false;
         return true;
     }
 

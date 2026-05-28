@@ -1,0 +1,148 @@
+# Beelzebub — Ability configuration guide (for server admins)
+
+This is the one-stop reference for **controlling which abilities exist, how strong they
+are, and how they behave** on your server. Everything here is editable before launch and
+**live-reloadable** while the server runs.
+
+There are **two** config surfaces:
+
+| Surface | File | What it controls | Reload |
+|---|---|---|---|
+| **BepInEx config** | `BepInEx/config/kdpen.Beelzebub.cfg` | Global, server-wide switches & defaults | Restart, or it re-reads on some changes |
+| **Ability rules** | `BepInEx/config/kdpen.Beelzebub/ability_rules.json` | Global deny/allow lists, global scaling defaults, and **per-ability** + **per-unit** overrides | `.beelz admin reload` (no restart) |
+
+> The `ability_rules.json` file is created with sensible defaults the first time the
+> server runs. Edit it, then run **`.beelz admin reload`** in chat to apply — no restart.
+
+---
+
+## 1. Quick recipes
+
+- **"Let my testers try everything."** Default already does this: `Capture_InclusiveMode = true`
+  and `Grant_EnforceTransformOnly = false`. Abilities across all V-Bloods/NPCs are capturable,
+  devourable, and grantable to the normal bar.
+- **"Curate a balanced server."** Set `Capture_InclusiveMode = false` (the deny lists +
+  difficulty gate return) and, if you want some abilities reserved for transforms,
+  `Grant_EnforceTransformOnly = true`.
+- **"Disable one specific ability entirely."** Add an `AbilityMap` entry with `"Enabled": false`.
+- **"Make all granted abilities hit 25% harder."** Set `Defaults.DamageScale = 1.25`.
+- **"Nerf one ability's damage / change its cooldown."** Add an `AbilityMap` entry with
+  `"DamageScale"` / `"CooldownScale"`.
+- **"Restrict an ability to specific weapons."** Add `"Weapons": ["Reaper", "Sword"]` to its entry.
+
+---
+
+## 2. Global switches — `kdpen.Beelzebub.cfg`  (section `[Capture]`)
+
+| Key | Default | Meaning |
+|---|---|---|
+| `CaptureOnKill` | `true` | Master switch for capturing abilities from kills. |
+| `Capture_InclusiveMode` | `true` | **(v0.50)** When on, capture **and Devour** ignore `DenyPatterns`/`DenyGuids` and the Basic/Brutal difficulty gate — abilities across all V-Bloods/NPCs become broadly capturable for testing. A small hardcoded junk filter (idle/spawn/death stubs) and the per-ability `Enabled=false` kill-switch still apply. Turn **off** for a curated server. |
+| `Grant_EnforceTransformOnly` | `false` | **(v0.50)** When off, the per-ability "transform-only" reservation is ignored, so every ability can be granted/slotted/hotkeyed/devoured to the normal bar. Turn **on** to honor the reservation (those abilities become usable only via an actual transform). |
+
+Other relevant global keys: `DropChance_Ability_*`, `DropChance_Transform_*`, `Capture_Pity*`
+(drop rates / bad-luck protection), `Server_DifficultyMode` (`Basic`/`Brutal` — only matters
+when `Capture_InclusiveMode = false`), `Grant_PowerScalingMode` + `Grant_PowerScalingFactor`
+(global granted-ability damage scaling: `PlayerScaled` = vanilla, or `Boosted` × factor),
+`AbilityTuning_Enabled` (enables the per-ability cast tuning in §4).
+
+---
+
+## 3. `ability_rules.json` — global section
+
+```jsonc
+{
+  "Version": 1,
+
+  // Capture filter (only consulted when Capture_InclusiveMode = false).
+  "DenyPatterns": ["_Idle_", "_MeleeAttack_", "_Hard_", "..."],  // name substrings to block
+  "DenyGuids":    [],                                            // specific ability GUIDs to block
+  "AllowPatterns":[],                                            // if non-empty: ONLY these are capturable
+  "AllowGuids":   [],                                            // if non-empty: ONLY these GUIDs are capturable
+
+  // v0.50: server-wide default scaling for any ability with NO AbilityMap entry below.
+  "Defaults": { "DamageScale": 1.0, "CooldownScale": 1.0 },
+
+  // Transform-only reservation (only enforced when Grant_EnforceTransformOnly = true).
+  "TransformOnlyPatterns": [],
+  "TransformOnlyGuids":    [],
+
+  "AbilityMap": { /* per-ability — see §4 */ },
+  "TransformMap": { /* per-unit transform tuning — see §5 */ }
+}
+```
+
+- **Allow-lists win:** if `AllowPatterns` or `AllowGuids` is non-empty it becomes an exclusive
+  whitelist (honored even in inclusive mode — it's a deliberate restriction).
+- **`Defaults`** lets you set one global baseline instead of an entry per ability. A per-ability
+  entry overrides it. `DamageScale` flows through the granted-cast power window; `CooldownScale`
+  flows through `.beelz cast` force-casts (see the cooldown note in §4).
+
+---
+
+## 4. Per-ability config — `AbilityMap`
+
+Key = the ability's exact prefab name (e.g. `AB_Blackfang_Morgana_CrossWindSlash_AbilityGroup`).
+All fields optional; omit any you don't want to change.
+
+```jsonc
+"AbilityMap": {
+  "AB_Vampire_Reaper_SpinSlash_AbilityGroup": {
+    "Enabled": true,              // false = ability cannot be captured OR used (hard kill-switch)
+    "DamageScale": 1.25,          // damage multiplier for granted casts (1.0 = no change)
+    "CooldownScale": 0.8,         // cooldown multiplier (see note below)
+    "Weapons": ["Reaper"],        // allowed weapon families; empty/absent = universal (any weapon)
+    "TransformOnly": false,       // reserve for transforms only (enforced only if Grant_EnforceTransformOnly=true)
+    "Difficulty": "Basic",        // "Basic" | "Brutal" (capture gate when not in inclusive mode)
+    "Phase": 1,                   // multi-phase boss ability phase
+    "AllowDenied": false,         // force past the deny lists (for curated abilities with deny-patterned names)
+
+    // Cast tuning (requires AbilityTuning_Enabled = true). null/absent = leave the game's baked value.
+    "Interruptible": true,        // true = dash/shield can cancel the cast
+    "FreeMoveAfterCast": true,    // true = player can move the instant the cast finishes
+    "CastMovementSpeed": 1.0,     // 0 = rooted during cast, 1 = full speed; null = baked default
+
+    "Notes": "admin annotation, not used at runtime"
+  }
+}
+```
+
+| Field | Type | Default | Effect |
+|---|---|---|---|
+| `Enabled` | bool | `true` | **Hard kill-switch.** `false` blocks both capture and use, always. |
+| `DamageScale` | float | `1.0` | Granted-cast damage multiplier (× the global `Grant_PowerScalingFactor` when `Boosted`). |
+| `CooldownScale` | float | `1.0` | Cooldown multiplier. **Applies to `.beelz cast` force-casts today;** native spell-bar slot cooldowns remain the game's own (a deeper hook is tracked). |
+| `Weapons` | string[] | `[]` | Allowed weapon families. Empty = universal. Valid: Sword, GreatSword, Axe, Mace, Spear, Daggers, Crossbow, Longbow, Pistols, Reaper, Whip, Claws, Pollaxe, Slashers, TwinBlades, Unarmed, FishingPole, Magic. |
+| `TransformOnly` | bool | `false` | Reserve for transforms — **only enforced when `Grant_EnforceTransformOnly = true`**. |
+| `Difficulty` | string | `"Basic"` | Capture gate vs. `Server_DifficultyMode` (ignored in inclusive mode). |
+| `Phase` | int | `1` | Boss multi-phase grouping for transform loadouts. |
+| `AllowDenied` | bool | `false` | Force this ability past the deny lists (still honors `Enabled`). |
+| `Interruptible` / `FreeMoveAfterCast` / `CastMovementSpeed` | bool?/bool/float? | unset | Cast tuning (needs `AbilityTuning_Enabled`). ⚠ edits the ability's **shared** cast data, so the source NPC/boss cast changes too. |
+
+**In-game shortcuts (no file editing):**
+- `.beelz admin deny <pattern>` / `.beelz admin undeny <pattern>` — edit `DenyPatterns`.
+- `.beelz admin allow <pattern>` / `.beelz admin unallow <pattern>` — edit `AllowPatterns`.
+- `.beelz admin tune <ability> <interrupt|freemove|castspeed> <on|off|0..1>` — cast tuning.
+- `.beelz admin reload` — re-read the file and re-apply.
+
+---
+
+## 5. Per-unit transform tuning — `TransformMap`
+
+Key = the unit's `CHAR_*` prefab name. Controls how a transform (Dracula / Morgana) behaves
+for that unit — `Enabled`, `Difficulty`, `Tier`, `DamageScale`, `CooldownScale`, `HealthScale`,
+`MovementSpeedScale`, `FullReplace`, `PowerScalingMode`, `SlotTemplate`. These scale the
+**transformed** state and are independent of the per-ability `AbilityMap` (which governs
+abilities granted to the normal bar). See the inline docs in `Services/AbilityRules.cs`
+(`TransformEntry`) for the full field list.
+
+---
+
+## 6. Precedence summary
+
+1. **Capture eligible?** allow-list → (inclusive mode? junk filter : deny lists + difficulty) → `Enabled`.
+2. **Grantable to the bar?** `Enabled` → (`Grant_EnforceTransformOnly` && `TransformOnly`).
+3. **On which weapon bar?** explicit weapon-bucket placement is honored as-is; the universal
+   bucket is filtered by `Weapons` (`Magic`/empty = any).
+4. **How strong / how long the cooldown?** per-ability `DamageScale`/`CooldownScale`, else
+   `Defaults.*`, then the global `Grant_PowerScaling*`.

@@ -106,11 +106,23 @@ internal sealed class AbilityRules
         DenyGuids = dto.DenyGuids ?? new List<int>(),
         AllowGuids = dto.AllowGuids ?? new List<int>(),
         DropRateOverrides = dto.DropRateOverrides ?? new List<RateOverride>(),
+        Defaults = NormalizeDefaults(dto.Defaults),
         AbilityMap = NormalizeAbilityMap(dto.AbilityMap),
         TransformOnlyPatterns = dto.TransformOnlyPatterns ?? new List<string>(),
         TransformOnlyGuids = dto.TransformOnlyGuids ?? new List<int>(),
         TransformMap = NormalizeTransformMap(dto.TransformMap),
     };
+
+    // v0.50.0: clamp the global default scales (≤0 makes no sense → 1.0 = no change).
+    static DefaultsDto NormalizeDefaults(DefaultsDto raw)
+    {
+        if (raw == null) return new DefaultsDto();
+        return new DefaultsDto
+        {
+            DamageScale = raw.DamageScale > 0f ? raw.DamageScale : 1.0f,
+            CooldownScale = raw.CooldownScale > 0f ? raw.CooldownScale : 1.0f,
+        };
+    }
 
     static Dictionary<string, TransformEntry> NormalizeTransformMap(Dictionary<string, TransformEntry> raw)
     {
@@ -312,7 +324,7 @@ internal sealed class AbilityRules
         if (Current.AbilityMap != null
             && Current.AbilityMap.TryGetValue(abilityName ?? "", out var entry))
             return entry.DamageScale;
-        return 1.0f;
+        return Current.Defaults?.DamageScale ?? 1.0f; // v0.50.0 global fallback
     }
 
     /// <summary>
@@ -326,7 +338,7 @@ internal sealed class AbilityRules
         if (Current.AbilityMap != null
             && Current.AbilityMap.TryGetValue(abilityName ?? "", out var entry))
             return entry.CooldownScale;
-        return 1.0f;
+        return Current.Defaults?.CooldownScale ?? 1.0f; // v0.50.0 global fallback
     }
 
     // --- TX4: difficulty gating helpers ---
@@ -569,6 +581,18 @@ internal sealed class AbilityRules
     }
 
     /// <summary>
+    /// v0.50.0: is the transform-only reservation ENFORCED for this ability right now? Equals
+    /// <see cref="IsTransformOnly"/> AND the global <c>Grant_EnforceTransformOnly</c> switch
+    /// (default OFF for this alpha, so every ability is grantable to the normal bar for testing).
+    /// Grant / slot / hotkey / cast / devour gates call THIS; read-only surfaces (`api info`,
+    /// admin inspection) keep calling the raw <see cref="IsTransformOnly"/> so they still report
+    /// the underlying flag regardless of enforcement.
+    /// </summary>
+    public bool IsTransformOnlyEnforced(string abilityName, int abilityGuid)
+        => Beelzebub.Config.Settings.Grant_EnforceTransformOnly.Value
+           && IsTransformOnly(abilityName, abilityGuid);
+
+    /// <summary>
     /// C2: find a per-ability rate override matching this ability name. Returns
     /// (true, regular, vblood) for the first matching pattern, else (false, 0, 0).
     /// Caller decides which rate to use based on the kill's source.
@@ -600,6 +624,12 @@ internal sealed class AbilityRules
         public List<int> AllowGuids { get; set; } = new();
         public List<RateOverride> DropRateOverrides { get; set; } = new();
 
+        // v0.50.0: server-wide DEFAULTS for granted-ability scaling, applied to any ability
+        // that has NO per-ability AbilityMap entry. A per-ability entry (even with the 1.0
+        // default) overrides these. Lets an admin set one global baseline instead of an entry
+        // per ability. See GetDamageScale / GetCooldownScale.
+        public DefaultsDto Defaults { get; set; } = new();
+
         // W1 + #41: per-ability admin classification matrix.
         // Key = ability prefab name (exact). Value = matrix of (weapon families,
         // forms, transform-only flag, notes). All fields optional; missing or
@@ -619,6 +649,19 @@ internal sealed class AbilityRules
         // kill-switch + difficulty + tier + notes. Hot-reloadable via .beelz admin reload.
         // See `docs/ABILITY_MAP_FORMAT.md` for usage.
         public Dictionary<string, TransformEntry> TransformMap { get; set; } = new();
+    }
+
+    /// <summary>
+    /// v0.50.0: global default scaling for granted abilities with no per-ability AbilityMap
+    /// entry. Both default 1.0 (no change). DamageScale flows through
+    /// <see cref="Services.GrantPowerScalingService"/> (the brief power window around a granted
+    /// cast); CooldownScale flows through <c>.beelz cast</c> force-casts. A per-ability entry
+    /// overrides these.
+    /// </summary>
+    public sealed class DefaultsDto
+    {
+        public float DamageScale { get; set; } = 1.0f;
+        public float CooldownScale { get; set; } = 1.0f;
     }
 
     /// <summary>

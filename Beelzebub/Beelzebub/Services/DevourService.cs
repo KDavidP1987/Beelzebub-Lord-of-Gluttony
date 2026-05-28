@@ -47,7 +47,8 @@ internal static class DevourService
             // v0.44.0: don't Devour transform-only abilities — they can't be slotted or
             // .beelz cast (both refuse IsTransformOnly), and transformation is now
             // Dracula/Morgana-only (curated kits, not captured), so they'd be dead entries.
-            if (Core.AbilityRules.IsTransformOnly(name, ability._Value)) continue;
+            // v0.50.0: only when transform-only enforcement is on (default off → devour them too).
+            if (Core.AbilityRules.IsTransformOnlyEnforced(name, ability._Value)) continue;
             if (!result.Contains(ability._Value)) result.Add(ability._Value);
         }
         return result;

@@ -70,7 +70,7 @@ internal static class HotkeyCommands
             ctx.Reply($"'{abilityName}' is currently disabled by the server admin.");
             return;
         }
-        if (Core.AbilityRules.IsTransformOnly(abilityName, ability._Value))
+        if (Core.AbilityRules.IsTransformOnlyEnforced(abilityName, ability._Value))
         {
             ctx.Reply($"'{abilityName}' is reserved for .beelz transform — cannot be bound to a hotkey.");
             return;

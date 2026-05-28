@@ -75,6 +75,22 @@
 > per-form loadout (parallel to per-weapon buckets, with `api`/grant surface) would follow and get a
 > wire surface then.
 >
+> **v0.50.0 — INCLUSIVITY + transform-only wall down + admin config (no wire-format change, ApiVersion still 6).**
+> Server/behavioral changes; the wire contract (lines/events) is unchanged, but two behaviors BCH
+> should be aware of:
+> - **The "transform only" wall is OFF by default.** New config `Grant_EnforceTransformOnly`
+>   (default false): abilities previously rejected with *"reserved for .beelz transform"* now grant
+>   to the normal bar. `api info`'s `transform_only=` field still reports the underlying flag, but
+>   it is **not enforced** unless an admin turns enforcement on. BCH: an ability with
+>   `transform_only=1` is still grantable/castable by default — don't pre-disable its button.
+> - **Inclusive capture is ON by default.** New config `Capture_InclusiveMode` (default true): the
+>   capturable/devourable pool is much larger (deny lists + difficulty gate bypassed). BCH's
+>   collection list will simply show more abilities; no parsing change.
+> - Both new keys **auto-stream via `api config`** (reflection), so a BCH settings panel can toggle
+>   them through `.beelz admin set` like any other config. Full admin reference:
+>   `docs/ABILITY_CONFIG.md`. A new `Defaults` block in `ability_rules.json` sets server-wide
+>   damage/cooldown baselines (not wire-exposed).
+>
 > **v0.49.0 — BCH-test fixes (no wire change, ApiVersion still 6).** Three fixes; one is
 > BCH-facing (advisory):
 > - **`WeaponFamily` value set narrowed: `DualHammers` removed.** It was unobtainable cut content

@@ -36,7 +36,7 @@ A **server-side** V Rising mod that turns the whole bestiary into a collection-a
 
 **Source · issues · roadmap:** [github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony) · **License:** MIT
 
-> **Status:** active early access / **public test build (v0.49.0)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
+> **Status:** active early access / **public test build (v0.50.0)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
 
 ---
 
@@ -71,7 +71,8 @@ A **server-side** V Rising mod that turns the whole bestiary into a collection-a
 ### Admin & server control
 - **Live config** — change drop rates, transform rules, pity, shard-boss settings and more at runtime with `.beelz admin set <key> <value>` (persists; no restart).
 - **Power scaling, your way** — transforms and granted abilities already scale with the player's stats (so they track level/gear/prestige); on top of that, admins get global scaling modes and **per-ability damage tuning**, plus summon level-matching and a summon power factor.
-- **Curated rules** in a hot-reloadable JSON: allow/deny lists, per-ability weapon/difficulty/scaling, per-unit transform tiers and stat scales.
+- **Curated rules** in a hot-reloadable JSON: allow/deny lists, per-ability weapon/difficulty/scaling, per-unit transform tiers and stat scales. Full admin reference in [`docs/ABILITY_CONFIG.md`](docs/ABILITY_CONFIG.md).
+- **Inclusive testing mode (on by default, v0.50)** — `Capture_InclusiveMode` makes abilities across **all** V-Bloods/NPCs broadly capturable, and `Grant_EnforceTransformOnly` (off by default) drops the "only for transformation" wall so any ability can be slotted on your normal bar. Flip both off for a curated, balanced server.
 - **Cast tuning (opt-in, v0.46)** — make long casts **interruptible** (dash out / raise a shield to cancel) and **free the player to move once the cast finishes** (instead of staying rooted for the whole effect), per-ability via the rules file or `.beelz admin tune`. Off by default (`AbilityTuning_Enabled`); note it edits the ability's shared cast data, so the source NPC/boss cast changes too — enable, tune one ability, and test.
 - **Custom abilities on shapeshift forms (experimental, v0.48)** — `Forms_CustomAbilities_Enabled` (off by default): shift into **Wolf or Bear** (the current test forms) via the in-game wheel and your loadout's abilities are loaded onto the form bar, with the form's "break on cast" removed so the form *holds* while you cast. Feasibility test for a full per-form-loadout system (assign abilities per form, like the per-weapon loadouts).
 - **Difficulty gating, grant/revoke, `devour` (bulk-grant a unit's whole kit), inspect, audit logging** — full operator toolkit.
