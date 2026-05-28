@@ -83,26 +83,30 @@ internal static class ReplaceAbilityOnSlotSystemPatch
             return;
         }
 
-        // W3: resolved slot map = universal bucket + weapon-specific overrides for
-        // the currently-equipped weapon family.
-        var slots = Core.AbilityRegistry.GetSlotsResolved(steamId, weapon);
+        // W3: resolved slot map = universal bucket + weapon-specific overrides for the
+        // currently-equipped weapon family, each tagged with its origin (v0.49.0).
+        var slots = Core.AbilityRegistry.GetSlotsResolvedWithOrigin(steamId, weapon);
         if (slots.Count == 0) return;
 
-        foreach (var (slot, abilityGuid) in slots)
+        foreach (var (slot, entry) in slots)
         {
-            if (!Beelzebub.Services.SlotApply.IsGrantCompatible(abilityGuid, weapon))
-            {
-                continue; // ability isn't allowed on this weapon (or is Enabled=false / TransformOnly)
-            }
+            // v0.49.0: an EXPLICIT weapon-bucket bind (the player put this on, say, the Reaper
+            // bar) is honored regardless of the ability's name-derived family — only the admin
+            // kill-switch / transform-only reservation can block it. Universal binds keep the
+            // family-compatibility filter (a sword spell shouldn't auto-fire on a crossbow).
+            bool ok = entry.weaponSpecific
+                ? Beelzebub.Services.SlotApply.IsGrantUsable(entry.abilityGuid)
+                : Beelzebub.Services.SlotApply.IsGrantCompatible(entry.abilityGuid, weapon);
+            if (!ok) continue;
             buffer.Add(new ReplaceAbilityOnSlotBuff
             {
                 Slot = slot,
-                NewGroupId = new PrefabGUID(abilityGuid),
+                NewGroupId = new PrefabGUID(entry.abilityGuid),
                 CopyCooldown = true,
                 Priority = 0,
             });
             if (Beelzebub.Config.Settings.VerboseLogging.Value)
-                Core.Log.LogInfo($"[Beelz] inject slot={slot} ability={new PrefabGUID(abilityGuid).GetPrefabName()} weapon={weapon} for {steamId}");
+                Core.Log.LogInfo($"[Beelz] inject slot={slot} ability={new PrefabGUID(entry.abilityGuid).GetPrefabName()} weapon={weapon} explicit={entry.weaponSpecific} for {steamId}");
         }
     }
 }

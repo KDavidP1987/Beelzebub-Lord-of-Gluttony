@@ -24,6 +24,12 @@ internal enum WeaponFamily : byte
     GreatSword  = 4,
     Axe         = 5,
     Mace        = 6,
+    // v0.49.0: DualHammers prefab stubs exist in V Rising's data (EquipBuff_Weapon_DualHammers_Base,
+    // AB_Vampire_DualHammers_*) but there is NO obtainable Item_Weapon_DualHammers — it's
+    // unreleased/cut content no player can wield. The enum value is RETAINED (saved grant buckets
+    // are keyed by byte value — do not reorder), but it is no longer detected or offered as a
+    // selectable weapon family, so a captured "DualHammers" ability falls through to Magic
+    // (universal) and stays testable instead of being gated to a weapon nobody can equip.
     DualHammers = 7,
     Spear       = 8,
     Daggers     = 9,

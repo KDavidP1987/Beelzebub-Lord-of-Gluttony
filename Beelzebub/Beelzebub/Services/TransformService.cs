@@ -99,6 +99,16 @@ internal sealed class TransformService
             return (false, "Only Dracula and Morgana can be transformed into in this version. Every other unit's kit is learned as abilities — see .beelz list, then .beelz grant (the rare Devour jackpot grants a whole kit at once). Full unit transformation is a postponed phase-two feature.");
         }
 
+        // v0.49.0 CRASH FIX: refuse a re-activation while this player's async (LifeTime-less)
+        // form buff is still mid-spawn. Morgana's SnakePhase form applies asynchronously; a
+        // second .beelz transform arriving before it enriches would run Revert→ApplyForm against
+        // the not-yet-collected form buff and DestroyUtility.Destroy it twice (deferred DestroyTag),
+        // crashing the server inside Burst. SafeDestroyBuff is the safety net; this is the fix.
+        if (TransformBuffService.HasPendingForm(steamId))
+        {
+            return (false, "Still transforming — give it a moment, then try again.");
+        }
+
         if (!Core.AbilityRegistry.HasTransformUnlock(steamId, unitPrefabGuid))
         {
             return (false, "You haven't unlocked transformation for that unit.");

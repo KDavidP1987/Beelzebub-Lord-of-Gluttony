@@ -1234,7 +1234,7 @@ internal static class AdminCommands
             || weapon == WeaponFamily.None
             || weapon == WeaponFamily.Magic)
         {
-            ctx.Reply($"Unknown weapon family '{weaponStr}'. Valid: Sword, GreatSword, Axe, Mace, DualHammers, Spear, Daggers, Crossbow, Longbow, Pistols, Reaper, Whip, Claws, Pollaxe, Slashers, TwinBlades, Unarmed, FishingPole.");
+            ctx.Reply($"Unknown weapon family '{weaponStr}'. Valid: Sword, GreatSword, Axe, Mace, Spear, Daggers, Crossbow, Longbow, Pistols, Reaper, Whip, Claws, Pollaxe, Slashers, TwinBlades, Unarmed, FishingPole.");
             return;
         }
 
@@ -1253,7 +1253,7 @@ internal static class AdminCommands
         bool appliedNow = false;
         if (character.Exists() && SlotApply.GetCurrentWeapon(character) == weapon)
         {
-            appliedNow = SlotApply.ApplyGrant(character, slot, ability);
+            appliedNow = SlotApply.ApplyGrant(character, slot, ability, explicitWeaponBucket: true);
         }
 
         string warnings = "";

@@ -4,6 +4,28 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.49.0] - 2026-05-27
+
+### Fixes from BCH testing: Morgana crash, Reaper loadouts, "twin hammer"
+
+Three fixes from the latest play-test.
+
+- **Morgana transform no longer crashes the server.** Transforming into Morgana (and any
+  rapid double-trigger of a transform) could hit a hard server crash. Two guards close it:
+  the form buff is never torn down twice, and a second transform is politely refused
+  (*"Still transforming — give it a moment"*) while the first is still applying. Dracula and
+  all other transforms are unaffected.
+- **Reaper (and every) weapon loadout now registers.** Abilities you assign to a specific
+  weapon's bar — e.g. your Reaper set — were being silently dropped when you drew that weapon,
+  because the game re-guessed each ability's "home weapon" from its name and tossed anything
+  that didn't match. Now an ability you *explicitly* place on a weapon's bar stays there (only
+  the admin kill-switch / transform-only reservation can remove it). The universal loadout still
+  filters by weapon so a sword spell won't auto-fire on a crossbow.
+- **Removed the phantom "Dual Hammers" weapon option.** Dual Hammers exists only as unused,
+  unobtainable data in V Rising (no craftable weapon), so it no longer appears as a selectable
+  weapon family, and any ability named for it is now treated as universal (usable on any bar)
+  instead of being locked to a weapon nobody can equip.
+
 ## [0.48.0] - 2026-05-27
 
 ### Experimental: custom abilities on vanilla forms (Wolf/Bear test) — the real mechanism

@@ -350,6 +350,14 @@ internal static class TransformBuffService
     public static bool HasPendingForms => _pendingForms.Count > 0;
 
     /// <summary>
+    /// v0.49.0: true if THIS player has an async form buff still mid-spawn (queued but not yet
+    /// enriched). The transform activation path uses it to refuse a re-activation while a form
+    /// is in flight — otherwise the Revert→ApplyForm sequence destroys the not-yet-collected
+    /// form buff twice (deferred <c>DestroyTag</c>) and crashes the server inside Burst.
+    /// </summary>
+    public static bool HasPendingForm(ulong steamId) => steamId != 0 && _pendingForms.ContainsKey(steamId);
+
+    /// <summary>
     /// Spawn-hook entry: if <paramref name="buffEntity"/> is <paramref name="targetPlayer"/>'s
     /// pending async form buff, enrich it now and clear the pending entry. Idempotent —
     /// the registry removal means only the first matching spawn wins. Returns true if enriched.
@@ -454,7 +462,7 @@ internal static class TransformBuffService
 
         try
         {
-            DestroyUtility.Destroy(Core.EntityManager, buffEntity, DestroyDebugReason.TryRemoveBuff);
+            if (!SafeDestroyBuff(buffEntity)) return false; // already queued for destruction
             Core.Log.LogInfo($"[Beelz] ApplyForm: destroyed orphan form buff {new PrefabGUID(guid).GetPrefabName()} that spawned after revert for player {steamId}.");
             return true;
         }
@@ -523,6 +531,23 @@ internal static class TransformBuffService
         }
     }
 
+    /// <summary>
+    /// v0.49.0 CRASH FIX: <see cref="DestroyUtility.Destroy"/> is DEFERRED — it stamps a
+    /// <c>DestroyTag</c> and the entity is reaped by a later cleanup pass, so TryGetBuff /
+    /// BuffBuffer can still surface a buff that is already queued for destruction. Destroying
+    /// it a SECOND time double-applies the component-record removal and crashes the server
+    /// inside a Burst job (<c>AppendRemovedComponentRecordError</c>) — the Morgana-transform
+    /// crash. This guard skips any entity already tagged, making every teardown path here
+    /// idempotent across the deferred-destroy window. Returns true only if it issued a destroy.
+    /// </summary>
+    static bool SafeDestroyBuff(Entity buffEntity)
+    {
+        if (!buffEntity.Exists()) return false;
+        if (buffEntity.Has<DestroyTag>()) return false; // already queued for destruction — never double-destroy
+        DestroyUtility.Destroy(Core.EntityManager, buffEntity, DestroyDebugReason.TryRemoveBuff);
+        return true;
+    }
+
     static bool RemoveInternal(Entity character)
     {
         bool removed = false;
@@ -534,9 +559,8 @@ internal static class TransformBuffService
 
         // Default ability-only carrier buff.
         if (Core.ServerGameManager.TryGetBuff(character, CarrierBuff.ToIdentifier(), out Entity buffEntity)
-            && buffEntity.Exists())
+            && SafeDestroyBuff(buffEntity))
         {
-            DestroyUtility.Destroy(Core.EntityManager, buffEntity, DestroyDebugReason.TryRemoveBuff);
             removed = true;
             if (Beelzebub.Config.Settings.VerboseLogging.Value)
                 Core.Log.LogInfo($"[Beelz] TransformBuffService.Remove: destroyed carrier buff {buffEntity}.");
@@ -547,9 +571,8 @@ internal static class TransformBuffService
         foreach (int formGuid in Services.BossFormRegistry.FormBuffGuids)
         {
             if (Core.ServerGameManager.TryGetBuff(character, new PrefabGUID(formGuid).ToIdentifier(), out Entity formBuff)
-                && formBuff.Exists())
+                && SafeDestroyBuff(formBuff))
             {
-                DestroyUtility.Destroy(Core.EntityManager, formBuff, DestroyDebugReason.TryRemoveBuff);
                 removed = true;
                 if (Beelzebub.Config.Settings.VerboseLogging.Value)
                     Core.Log.LogInfo($"[Beelz] TransformBuffService.Remove: destroyed form buff {formBuff} ({new PrefabGUID(formGuid).GetPrefabName()}).");
@@ -603,9 +626,11 @@ internal static class TransformBuffService
             if (!be.Exists()) continue;
             try
             {
-                Core.Log.LogInfo($"[Beelz] resetbar: destroying buff {be.GetPrefabGuid().GetPrefabName()} (#{be.GetPrefabGuid()._Value}).");
-                DestroyUtility.Destroy(Core.EntityManager, be, DestroyDebugReason.TryRemoveBuff);
-                destroyed++;
+                if (SafeDestroyBuff(be))
+                {
+                    Core.Log.LogInfo($"[Beelz] resetbar: destroyed buff {be.GetPrefabGuid().GetPrefabName()} (#{be.GetPrefabGuid()._Value}).");
+                    destroyed++;
+                }
             }
             catch (Exception ex)
             {
@@ -658,9 +683,11 @@ internal static class TransformBuffService
                 if (!e.Exists()) continue;
                 try
                 {
-                    Core.Log.LogInfo($"[Beelz] resetbar: destroying owned ability-slot source {e.GetPrefabGuid().GetPrefabName()} (#{e.GetPrefabGuid()._Value}).");
-                    DestroyUtility.Destroy(Core.EntityManager, e, DestroyDebugReason.TryRemoveBuff);
-                    destroyed++;
+                    if (SafeDestroyBuff(e))
+                    {
+                        Core.Log.LogInfo($"[Beelz] resetbar: destroyed owned ability-slot source {e.GetPrefabGuid().GetPrefabName()} (#{e.GetPrefabGuid()._Value}).");
+                        destroyed++;
+                    }
                 }
                 catch (Exception ex) { Core.Log.LogWarning($"[Beelz] orphan-source destroy failed: {ex.Message}"); }
             }

@@ -66,7 +66,7 @@ internal static class SlotApply
         if (equipBuffName.Contains("Unarmed", StringComparison.OrdinalIgnoreCase)) return WeaponFamily.Unarmed;
         if (equipBuffName.Contains("FishingPole", StringComparison.OrdinalIgnoreCase)) return WeaponFamily.FishingPole;
         if (equipBuffName.Contains("GreatSword", StringComparison.OrdinalIgnoreCase)) return WeaponFamily.GreatSword;
-        if (equipBuffName.Contains("DualHammers", StringComparison.OrdinalIgnoreCase)) return WeaponFamily.DualHammers;
+        // v0.49.0: DualHammers intentionally not detected — unobtainable cut content (see WeaponFamily).
         if (equipBuffName.Contains("Crossbow", StringComparison.OrdinalIgnoreCase)) return WeaponFamily.Crossbow;
         if (equipBuffName.Contains("Longbow", StringComparison.OrdinalIgnoreCase)) return WeaponFamily.Longbow;
         if (equipBuffName.Contains("TwinBlades", StringComparison.OrdinalIgnoreCase)) return WeaponFamily.TwinBlades;
@@ -111,24 +111,45 @@ internal static class SlotApply
     }
 
     /// <summary>
+    /// v0.49.0: minimal gate for an EXPLICIT weapon-bucket grant. The player has already chosen
+    /// to place this ability on that weapon's bar, so we honor it regardless of the ability's
+    /// name-derived family (the heuristic that silently dropped Reaper-bucket binds). Still
+    /// respects the admin kill-switch and the transform-only reservation.
+    /// </summary>
+    public static bool IsGrantUsable(int abilityGuid)
+    {
+        var ability = new PrefabGUID(abilityGuid);
+        string name = ability.GetPrefabName();
+        if (!Core.AbilityRules.IsEnabled(name, abilityGuid)) return false;
+        if (Core.AbilityRules.IsTransformOnly(name, abilityGuid)) return false;
+        return true;
+    }
+
+    /// <summary>
     /// Apply a single Beelzebub-saved grant in-place. Returns true if the change was
     /// applied immediately (i.e. compatible with the player's currently-equipped weapon).
     /// Returns false otherwise — the saved assignment will activate on the next weapon
     /// swap if compatibility changes, via the ReplaceAbilityOnSlotSystemPatch.
+    ///
+    /// v0.49.0: <paramref name="explicitWeaponBucket"/> = true when the caller is binding into
+    /// a specific weapon family the player named (e.g. `.beelz weapon-grant Reaper …`). In that
+    /// case the family-compatibility heuristic is skipped (honor the explicit placement); only
+    /// the universal-bucket path still family-filters.
     ///
     /// v0.14.0 Z1: no longer calls ServerGameManager.ModifyAbilityGroupOnSlot — that
     /// registered the EquipBuff entity as a modification source and produced
     /// "Clearing entity X" warnings when the EquipBuff later recycled. We just
     /// mutate the buffer and trigger a system update to apply this frame.
     /// </summary>
-    public static bool ApplyGrant(Entity character, int slot, PrefabGUID ability)
+    public static bool ApplyGrant(Entity character, int slot, PrefabGUID ability, bool explicitWeaponBucket = false)
     {
         // While transformed the transform owns slots 1..6 — don't stomp it.
         if (Core.AbilityRegistry.GetActiveTransform(character.GetSteamId()) is not null) return false;
 
         if (!TryFindEquipBuff(character, out Entity buffEntity, out string equipName)) return false;
         var weapon = DetectFamily(equipName);
-        if (!IsGrantCompatible(ability._Value, weapon)) return false;
+        bool ok = explicitWeaponBucket ? IsGrantUsable(ability._Value) : IsGrantCompatible(ability._Value, weapon);
+        if (!ok) return false;
 
         try
         {
@@ -182,15 +203,17 @@ internal static class SlotApply
         if (!TryFindEquipBuff(character, out Entity buffEntity, out string equipName)) return 0;
 
         var weapon = DetectFamily(equipName);
-        var slots = Core.AbilityRegistry.GetSlotsResolved(steamId, weapon);
+        var slots = Core.AbilityRegistry.GetSlotsResolvedWithOrigin(steamId, weapon);
         try
         {
             var buffer = Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(buffEntity);
             int applied = 0;
-            foreach (var (slot, abilityGuid) in slots)
+            foreach (var (slot, entry) in slots)
             {
-                if (!IsGrantCompatible(abilityGuid, weapon)) continue;
-                ReplaceSlotEntry(buffer, slot, new PrefabGUID(abilityGuid));
+                // Explicit weapon-bucket binds are honored as-is; universal binds stay family-filtered.
+                bool ok = entry.weaponSpecific ? IsGrantUsable(entry.abilityGuid) : IsGrantCompatible(entry.abilityGuid, weapon);
+                if (!ok) continue;
+                ReplaceSlotEntry(buffer, slot, new PrefabGUID(entry.abilityGuid));
                 applied++;
             }
             if (Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();

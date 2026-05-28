@@ -75,6 +75,21 @@
 > per-form loadout (parallel to per-weapon buckets, with `api`/grant surface) would follow and get a
 > wire surface then.
 >
+> **v0.49.0 — BCH-test fixes (no wire change, ApiVersion still 6).** Three fixes; one is
+> BCH-facing (advisory):
+> - **`WeaponFamily` value set narrowed: `DualHammers` removed.** It was unobtainable cut content
+>   (no craftable weapon in V Rising). It will no longer appear in any `weapons=` / `bucket=`
+>   value, and `.beelz weapon-grant`/`weapon-slot` no longer accept it. **Action for BCH:** drop
+>   `DualHammers` from any hardcoded weapon-family picker/list. The current valid set is: Sword,
+>   GreatSword, Axe, Mace, Spear, Daggers, Crossbow, Longbow, Pistols, Reaper, Whip, Claws,
+>   Pollaxe, Slashers, TwinBlades, Unarmed, FishingPole.
+> - **Per-weapon loadouts now register reliably.** An ability explicitly placed in a weapon
+>   bucket (`bucket=<WeaponFamily>` via `weapon-grant`) is now honored on equip regardless of its
+>   name-derived family — previously some were silently dropped. No wire change; existing
+>   `api slots` rendering is unaffected (it already streams per-bucket binds).
+> - **Morgana transform server-crash fixed** (internal; a double form-buff teardown + a
+>   re-activation guard). No BCH impact.
+>
 > **Last full audit:** Beelzebub **v0.44.0** (2026-05-27); **v0.45.0 + v0.46.0 + v0.47.0 + v0.48.0** deltas
 > (summons untransformed, `.beelz loadouts`, `.beelz summons clear`, ability cast-tuning, the
 > experimental native-form test, custom abilities on vanilla Wolf/Bear forms) folded in above —

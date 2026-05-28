@@ -16,8 +16,10 @@ namespace Beelzebub.Services;
 internal static class WeaponFamilyClassifier
 {
     // Order matters — earlier entries are tested first. Always test the more
-    // specific token before the more generic one (e.g. GreatSword before Sword,
-    // DualHammers before Hammer/Mace).
+    // specific token before the more generic one (e.g. GreatSword before Sword).
+    // NOTE (v0.49.0): no DualHammers rows — that weapon is unobtainable cut content
+    // (see WeaponFamily.DualHammers), so its abilities fall through to Magic (universal)
+    // and stay usable on any bar rather than being gated to a weapon nobody can equip.
     static readonly (string Token, WeaponFamily Family)[] _heuristics =
     {
         ("_GreatSword_", WeaponFamily.GreatSword),
@@ -26,8 +28,6 @@ internal static class WeaponFamilyClassifier
         ("Crossbow",     WeaponFamily.Crossbow),
         ("_Longbow_",    WeaponFamily.Longbow),
         ("Longbow",      WeaponFamily.Longbow),
-        ("_DualHammers_",WeaponFamily.DualHammers),
-        ("DualHammers",  WeaponFamily.DualHammers),
         ("_Pistols_",    WeaponFamily.Pistols),
         ("Pistols",      WeaponFamily.Pistols),
         ("_Pistol_",     WeaponFamily.Pistols),

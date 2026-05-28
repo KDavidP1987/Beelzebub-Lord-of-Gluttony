@@ -431,6 +431,31 @@ internal sealed class AbilityRegistry
     }
 
     /// <summary>
+    /// v0.49.0: like <see cref="GetSlotsResolved"/> but tags each resolved slot with whether
+    /// it came from a WEAPON-SPECIFIC bucket (an explicit player placement) or the universal
+    /// bucket. The slot injector uses the tag to HONOR explicit weapon-bucket binds (gate only
+    /// on Enabled / transform-only) while still family-filtering universal binds — the fix for
+    /// "abilities assigned to the Reaper group don't register when I equip a reaper" (the old
+    /// path re-derived family from the ability NAME and silently dropped the bind).
+    /// </summary>
+    public IReadOnlyDictionary<int, (int abilityGuid, bool weaponSpecific)> GetSlotsResolvedWithOrigin(ulong steamId, WeaponFamily currentWeapon)
+    {
+        var result = new Dictionary<int, (int, bool)>();
+        if (_slotAssignments.TryGetValue(steamId, out var uni))
+        {
+            foreach (var (slot, abilityGuid) in uni) result[slot] = (abilityGuid, false);
+        }
+        if (!IsUniversalBucket(currentWeapon)
+            && _weaponSlots.TryGetValue(steamId, out var byWeapon)
+            && byWeapon.TryGetValue(currentWeapon, out var w))
+        {
+            // Weapon-specific binds win on a slot over the universal bind.
+            foreach (var (slot, abilityGuid) in w) result[slot] = (abilityGuid, true);
+        }
+        return result;
+    }
+
+    /// <summary>
     /// W3: return the bindings for one specific weapon family. Empty if none set.
     /// </summary>
     public IReadOnlyDictionary<int, int> GetWeaponSlots(ulong steamId, WeaponFamily weapon)

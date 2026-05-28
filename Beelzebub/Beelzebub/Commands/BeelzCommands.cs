@@ -621,7 +621,7 @@ internal static class BeelzCommands
                  || weapon == Beelzebub.Services.WeaponFamily.None
                  || weapon == Beelzebub.Services.WeaponFamily.Magic)
         {
-            ctx.Reply($"Unknown weapon family '{weaponStr}'. Valid: Sword, GreatSword, Axe, Mace, DualHammers, Spear, Daggers, Crossbow, Longbow, Pistols, Reaper, Whip, Claws, Pollaxe, Slashers, TwinBlades, Unarmed, FishingPole.");
+            ctx.Reply($"Unknown weapon family '{weaponStr}'. Valid: Sword, GreatSword, Axe, Mace, Spear, Daggers, Crossbow, Longbow, Pistols, Reaper, Whip, Claws, Pollaxe, Slashers, TwinBlades, Unarmed, FishingPole.");
             return;
         }
 
@@ -653,7 +653,7 @@ internal static class BeelzCommands
         bool appliedNow = false;
         if (currentWeapon == weapon)
         {
-            appliedNow = Beelzebub.Services.SlotApply.ApplyGrant(character, slot, ability);
+            appliedNow = Beelzebub.Services.SlotApply.ApplyGrant(character, slot, ability, explicitWeaponBucket: true);
         }
 
         string applyHint = appliedNow
