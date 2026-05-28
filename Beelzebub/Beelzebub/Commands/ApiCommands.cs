@@ -39,8 +39,12 @@ internal static class ApiCommands
     //   fires for Dracula/Morgana. `.beelz transform`/`transforms` resolve only those two.
     //   New admin command `.beelz admin devour`. Arbitrary-unit transformation = postponed
     //   phase-two feature. All additive — older parsers ignore the unknown type=devour.
+    // v7 (v0.51.0): ability `cat=` badge broadened — new value `Melee` (9) added and many
+    //   abilities that used to report `cat=Other` now classify into a real bucket. An admin
+    //   `Category` override (ability_rules.json) can also set it. Additive/value-shift only;
+    //   parsers MUST treat any unknown `cat=` value as Other (forward-compatible).
     // All additive — backward-compatible with older parsers (unknown keys/events ignored).
-    const int ApiVersion = 6;
+    const int ApiVersion = 7;
 
     [Command("help", description: "List the Beelzebub API/BCH read commands (machine-readable data streams).")]
     public static void Help(ChatCommandContext ctx)
@@ -74,7 +78,8 @@ internal static class ApiCommands
             // (unit type) so BCH can render badges without parsing the prefab name.
             string abilityName = new PrefabGUID(c.AbilityPrefabGuid).GetPrefabName();
             string unitName = new PrefabGUID(c.UnitPrefabGuid).GetPrefabName();
-            var cat = Categorization.ClassifyAbility(abilityName);
+            // v0.51.0: admin Category override (ability_rules.json) wins over the name heuristic.
+            var cat = Core.AbilityRules.GetAbilityCategoryOverride(abilityName) ?? Categorization.ClassifyAbility(abilityName);
             var type = Categorization.ClassifyTransform(unitName);
             ctx.Reply(
                 $"[BEELZ:list] i={i} s={(c.Source == CaptureSource.VBlood ? "V" : "R")}" +
@@ -419,7 +424,8 @@ internal static class ApiCommands
             string weapons = entry.Weapons is { Count: > 0 } ? string.Join(",", entry.Weapons) : "any";
             string forms = entry.Forms is { Count: > 0 } ? string.Join(",", entry.Forms) : "any";
             // IN2 (v0.15.1): ability `cat` badge derived from prefab name.
-            var cat = Categorization.ClassifyAbility(name);
+            // v0.51.0: admin Category override (ability_rules.json) wins over the name heuristic.
+            var cat = Core.AbilityRules.GetAbilityCategoryOverride(name) ?? Categorization.ClassifyAbility(name);
             ctx.Reply(
                 $"[BEELZ:catalog-ability] an={name}" +
                 $" weapons={weapons}" +

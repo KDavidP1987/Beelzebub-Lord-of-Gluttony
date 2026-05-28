@@ -102,6 +102,7 @@ All fields optional; omit any you don't want to change.
     "FreeMoveAfterCast": true,    // true = player can move the instant the cast finishes
     "CastMovementSpeed": 1.0,     // 0 = rooted during cast, 1 = full speed; null = baked default
 
+    "Category": "Melee",          // override the BCH category badge; omit = auto from name
     "Notes": "admin annotation, not used at runtime"
   }
 }
@@ -118,6 +119,7 @@ All fields optional; omit any you don't want to change.
 | `Phase` | int | `1` | Boss multi-phase grouping for transform loadouts. |
 | `AllowDenied` | bool | `false` | Force this ability past the deny lists (still honors `Enabled`). |
 | `Interruptible` / `FreeMoveAfterCast` / `CastMovementSpeed` | bool?/bool/float? | unset | Cast tuning (needs `AbilityTuning_Enabled`). ⚠ edits the ability's **shared** cast data, so the source NPC/boss cast changes too. |
+| `Category` | string | unset | Override the BCH category badge (`Travel`/`Aoe`/`Projectile`/`Melee`/`Summon`/`Buff`/`WeaponSpell`/`Spell`/`Other`). Omit = auto-classify from the name. |
 
 **In-game shortcuts (no file editing):**
 - `.beelz admin deny <pattern>` / `.beelz admin undeny <pattern>` — edit `DenyPatterns`.

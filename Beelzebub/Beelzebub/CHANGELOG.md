@@ -4,6 +4,24 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.51.0] - 2026-05-27
+
+### Fewer "Other" abilities — smarter categorization
+
+Many abilities were showing up in a vague **"Other"** category. This build classifies them
+properly so BloodCraftHub (and `.beelz list`) can badge them correctly.
+
+- **Broadened auto-categorization.** Abilities named after the move itself (CrossWindSlash,
+  LoomingMists, MountainRumbler, …) now resolve to a real category instead of "Other." Added a
+  new **Melee** category for weapon strikes, widened the Travel/AoE/Projectile/Buff/Spell tells,
+  and added a magic-school fallback so themed boss spells land as spells.
+- **Admin can override any badge.** Set `"Category": "Melee"` (or Travel/Aoe/Projectile/Summon/
+  Buff/WeaponSpell/Spell) on an ability in `ability_rules.json` to force its category — see
+  `docs/ABILITY_CONFIG.md`.
+
+*BloodCraftHub note: ability `cat=` now includes the new `Melee` value and reflects the broader
+classification — treat any unknown `cat=` as "Other" (forward-compatible).*
+
 ## [0.50.0] - 2026-05-27
 
 ### Test everything: inclusive capture, no transform-only wall, admin config guide

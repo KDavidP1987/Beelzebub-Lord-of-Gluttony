@@ -173,6 +173,7 @@ internal sealed class AbilityRules
                 Interruptible = entry.Interruptible,
                 FreeMoveAfterCast = entry.FreeMoveAfterCast,
                 CastMovementSpeed = entry.CastMovementSpeed,
+                Category = string.IsNullOrWhiteSpace(entry.Category) ? null : entry.Category.Trim(),
                 Notes = entry.Notes ?? "",
             };
         }
@@ -325,6 +326,21 @@ internal sealed class AbilityRules
             && Current.AbilityMap.TryGetValue(abilityName ?? "", out var entry))
             return entry.DamageScale;
         return Current.Defaults?.DamageScale ?? 1.0f; // v0.50.0 global fallback
+    }
+
+    /// <summary>
+    /// v0.51.0: admin override for the wire `cat=` ability-category badge. Returns the parsed
+    /// <see cref="AbilityCategory"/> from this ability's AbilityMap <c>Category</c> field, or null
+    /// to fall back to the <see cref="Categorization.ClassifyAbility"/> name heuristic.
+    /// </summary>
+    public AbilityCategory? GetAbilityCategoryOverride(string abilityName)
+    {
+        if (Current.AbilityMap != null
+            && Current.AbilityMap.TryGetValue(abilityName ?? "", out var entry)
+            && !string.IsNullOrWhiteSpace(entry.Category)
+            && Enum.TryParse<AbilityCategory>(entry.Category.Trim(), ignoreCase: true, out var cat))
+            return cat;
+        return null;
     }
 
     /// <summary>
@@ -819,6 +835,10 @@ internal sealed class AbilityRules
         public bool? Interruptible { get; set; }
         public bool FreeMoveAfterCast { get; set; }
         public float? CastMovementSpeed { get; set; }
+        // v0.51.0: admin override for the wire `cat=` badge. One of the AbilityCategory names
+        // (Travel/Aoe/Projectile/Melee/Summon/Buff/WeaponSpell/Spell/Other). Empty/null = use
+        // the name heuristic (Categorization.ClassifyAbility). Highest precedence.
+        public string Category { get; set; }
         public string Notes { get; set; } = "";
     }
 

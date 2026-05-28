@@ -29,6 +29,7 @@ internal enum AbilityCategory : byte
     Buff = 6,           // self-buff / stance toggles
     WeaponSpell = 7,    // Q/E weapon-tied spell (sword, axe, mace school spells)
     Spell = 8,          // catch-all spell that didn't match a narrower bucket
+    Melee = 9,          // v0.51.0: melee/weapon strike (slash/cleave/strike/smash/bite/…)
 }
 
 internal enum TransformType : byte
@@ -100,32 +101,59 @@ internal static class Categorization
     public static AbilityCategory ClassifyAbility(string abilityName)
     {
         if (string.IsNullOrEmpty(abilityName)) return AbilityCategory.Other;
-        // v0.20.1: dropped the `_Ultimate_` check — zero V Rising prefabs use that
-        // token (audit verified). Bosses' signature moves are named after the move
-        // itself (MountainRumbler, ChainBolt, BloodCurse) — not flagged as ultimates
-        // in the prefab system. Most-specific patterns still go first.
-        if (Has(abilityName, "_Travel_") || Has(abilityName, "_Dash_") || Has(abilityName, "_Hop_")
-            || Has(abilityName, "_Teleport_") || Has(abilityName, "_FleshWarp_")) return AbilityCategory.Travel;
-        if (Has(abilityName, "_Summon_")) return AbilityCategory.Summon;
-        if (Has(abilityName, "_GroundSlam_") || Has(abilityName, "_Slam_") || Has(abilityName, "_Stomp_")
-            || Has(abilityName, "_Bomb_") || Has(abilityName, "_Explosion_") || Has(abilityName, "_CorpseParty_")
-            || Has(abilityName, "_Aoe_") || Has(abilityName, "_Nova_")) return AbilityCategory.Aoe;
-        if (Has(abilityName, "_Projectile_") || Has(abilityName, "_Throw_") || Has(abilityName, "_Bolt_")
-            || Has(abilityName, "_Shoot_") || Has(abilityName, "_Volley_") || Has(abilityName, "_ChainBolt_")
-            || Has(abilityName, "_Arrow_") || Has(abilityName, "_Spit_")) return AbilityCategory.Projectile;
-        if (Has(abilityName, "_SelfBuff_") || Has(abilityName, "_Stance_")
-            || (Has(abilityName, "_Buff_") && !Has(abilityName, "Debuff"))) return AbilityCategory.Buff;
-        // WeaponSpell heuristic: ability prefab named after a vampire weapon
-        // school (Chaos/Frost/Blood/Storm/Illusion/Unholy/Sword/Axe/etc.) and
-        // not yet bucketed = the weapon's Q/E ability.
+        // v0.51.0: broadened heuristics + a magic-school fallback to drastically cut the
+        // share of abilities that landed in `Other`. Many V Rising abilities are named after
+        // the MOVE (CrossWindSlash, LoomingMists, MountainRumbler) rather than a tagged token,
+        // and don't use strict `_Token_` boundaries — so we match common substrings (un-anchored
+        // where unambiguous) and, most-specific first, fall back to the school name. An admin
+        // `Category` override (ability_rules.json) takes precedence at the call site.
+
+        // Travel / movement.
+        if (HasAny(abilityName, "Travel", "_Dash", "_Hop", "Teleport", "FleshWarp", "Leap",
+            "Blink", "Waypoint", "Recall", "PhaseShift", "_Roll_", "Vanish")) return AbilityCategory.Travel;
+
+        // Summons / reinforcements.
+        if (HasAny(abilityName, "Summon", "Reinforcement", "RaiseDead", "RaiseHorde",
+            "Conjure", "CallBats")) return AbilityCategory.Summon;
+
+        // Area effects (checked before Melee so a "Slam"/"Stomp" lands as AoE).
+        if (HasAny(abilityName, "GroundSlam", "_Slam", "Stomp", "Bomb", "Explosion", "CorpseParty",
+            "_Aoe", "Nova", "Eruption", "Quake", "Rumble", "Meteor", "_Cone", "_Ring", "Crater",
+            "Detonate", "Implo", "ShockWave", "Shockwave")) return AbilityCategory.Aoe;
+
+        // Projectiles / ranged.
+        if (HasAny(abilityName, "Projectile", "Throw", "Bolt", "Shoot", "Volley", "Arrow", "Spit",
+            "Beam", "Breath", "Barrage", "Snipe", "_Shot", "Javelin", "Missile", "Dart", "_Spear_Lunge",
+            "Spike", "Shard")) return AbilityCategory.Projectile;
+
+        // Melee / weapon strikes (v0.51.0 new bucket — was the biggest source of "Other").
+        if (HasAny(abilityName, "MeleeAttack", "Slash", "Cleave", "Strike", "Swing", "Smash",
+            "Stab", "Thrust", "Whirl", "Slice", "_Chop", "Bash", "Hack", "Rend", "Gore", "_Bite",
+            "Maul", "Sweep", "Spin", "Charge", "Claw", "Pierce", "Impale", "Lunge")) return AbilityCategory.Melee;
+
+        // Self-buffs / defensive / stances.
+        if (HasAny(abilityName, "SelfBuff", "Stance", "Aura", "Shield", "Barrier", "Ward",
+            "Empower", "_Rage", "Heal", "VeilOf", "Cloak", "Bless", "Regen", "Fortify", "Frenzy",
+            "Berserk", "Guard", "Block", "Parry")
+            && !Has(abilityName, "Debuff")) return AbilityCategory.Buff;
+
+        // WeaponSpell heuristic: ability prefab named after a vampire weapon school's Q/E.
         if (HasAny(abilityName,
-            "_ChaosVolley_", "_ChaosBarrier_", "_FrostBarrier_", "_FrostBat_", "_IceNova_",
-            "_BloodRite_", "_BloodRage_", "_StormShield_", "_LightningStrike_",
-            "_Mosquito_", "_MistTrance_", "_VeilOf", "_DeathKnight_",
-            "_SwordSlash_", "_SwordCharge_", "_AxeAttack_", "_MaceStomp_",
-            "_CrossbowSnipe_", "_LongbowAimedShot_", "_SpearLunge_", "_DaggerStab_")) return AbilityCategory.WeaponSpell;
-        // Anything with "_Cast" but no narrower bucket = a spell.
-        if (Has(abilityName, "_Cast") || Has(abilityName, "_Spell")) return AbilityCategory.Spell;
+            "ChaosVolley", "ChaosBarrier", "FrostBarrier", "FrostBat", "IceNova",
+            "BloodRite", "BloodRage", "StormShield", "LightningStrike",
+            "Mosquito", "MistTrance", "DeathKnight",
+            "SwordSlash", "SwordCharge", "AxeAttack", "MaceStomp",
+            "CrossbowSnipe", "LongbowAimedShot", "SpearLunge", "DaggerStab")) return AbilityCategory.WeaponSpell;
+
+        // Anything with "_Cast"/"Spell" but no narrower bucket = a spell.
+        if (Has(abilityName, "_Cast") || Has(abilityName, "Spell")) return AbilityCategory.Spell;
+
+        // Magic-school fallback: most remaining boss/V-Blood signature moves are themed spells.
+        if (HasAny(abilityName, "Frost", "_Fire", "Blood", "Chaos", "Storm", "Unholy", "_Holy",
+            "Illusion", "Shadow", "Curse", "_Hex", "_Ice", "Lightning", "Mist", "_Bone", "Poison",
+            "Plague", "Soul", "Void", "Spectral", "Corrupt", "Wisp", "Bat", "Crystal", "Sun",
+            "Light")) return AbilityCategory.Spell;
+
         return AbilityCategory.Other;
     }
 

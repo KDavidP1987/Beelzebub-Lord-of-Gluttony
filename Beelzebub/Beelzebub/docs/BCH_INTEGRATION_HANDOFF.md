@@ -18,7 +18,7 @@
 > in the BCH workspace.
 >
 > **Canonical source of truth for the wire API:**
-> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 6`). If this doc
+> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 7`). If this doc
 > and that file ever disagree, the file wins — and this doc should be corrected.
 >
 > **⚠️ v0.44.0 — PER-ABILITY BASELINE.** Transformation is now **Dracula & Morgana
@@ -75,6 +75,14 @@
 > per-form loadout (parallel to per-weapon buckets, with `api`/grant surface) would follow and get a
 > wire surface then.
 >
+> **⚠️ v0.51.0 — ABILITY CATEGORY badge broadened (ApiVersion 6 → 7).** The `cat=` field on
+> `[BEELZ:list]` and `[BEELZ:catalog-ability]` now classifies far more abilities into real buckets
+> (much less `Other`) and adds a **new value `Melee` (9)**. Enum is now:
+> `Other=0, Travel=1, Aoe=3, Projectile=4, Summon=5, Buff=6, WeaponSpell=7, Spell=8, Melee=9`
+> (value 2 unused). **Action for BCH:** map `cat=9` → Melee, and **treat any unknown `cat=` value
+> as Other** (forward-compatible). An admin per-ability `Category` override (ability_rules.json)
+> can also set this. No line/event shape changed — only the `cat=` value set.
+>
 > **v0.50.0 — INCLUSIVITY + transform-only wall down + admin config (no wire-format change, ApiVersion still 6).**
 > Server/behavioral changes; the wire contract (lines/events) is unchanged, but two behaviors BCH
 > should be aware of:
@@ -117,6 +125,13 @@
 ---
 
 ## 0.0 — ⚡ SINCE YOUR LAST BUILD (BCH baseline v0.44.0 → now v0.48.0) — READ THIS FIRST
+
+> **Update (v0.49.0–v0.51.0, also 2026-05-27):** the section below describes the v0.44→v0.48
+> delta (all at ApiVersion 6). Three more releases followed — see the dated callouts ABOVE this
+> section. Net for BCH: **ApiVersion is now 7** (bumped at v0.51.0 for the broadened `cat=`
+> category badge, incl. the new `Melee=9` value); the transform-only wall is off by default; the
+> `DualHammers` weapon family is gone. The only parser action is mapping `cat=9`→Melee and
+> treating unknown `cat=` as Other. Everything else stayed line/event-compatible.
 
 **Context (2026-05-27):** BCH began building its Beelzebub UI against the **v0.44.0** handoff
 (commit `306026f`, **ApiVersion 6**). Beelzebub then shipped **v0.45.0 → v0.48.0** the same day.
