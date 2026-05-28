@@ -49,7 +49,11 @@ internal sealed class AbilityRules
         }
     }
 
-    public void Save()
+    /// <summary>
+    /// Persist the current rules to disk. v0.53.0: returns false on failure (was void/silent) so
+    /// admin commands can report a failed write instead of falsely claiming success.
+    /// </summary>
+    public bool Save()
     {
         try
         {
@@ -57,10 +61,12 @@ internal sealed class AbilityRules
             File.WriteAllText(tmp, JsonSerializer.Serialize(Current, _json));
             if (File.Exists(RulesFilePath)) File.Replace(tmp, RulesFilePath, null);
             else File.Move(tmp, RulesFilePath);
+            return true;
         }
         catch (Exception ex)
         {
             Core.Log.LogError($"Failed to save ability rules to {RulesFilePath}: {ex}");
+            return false;
         }
     }
 
@@ -98,6 +104,192 @@ internal sealed class AbilityRules
         return removed > 0;
     }
 
+    // =====================================================================
+    // v0.53.0 — FLUID ADMIN SETTERS. Centralized parse/validate/clamp so the
+    // chat commands stay thin and hand-edited JSON and command edits share the
+    // same rules. Each returns (ok, message); on ok they mutate Current + Save().
+    // =====================================================================
+
+    static bool? ParseOnOff(string v) =>
+        v is "on" or "true" or "1" or "yes" ? true
+        : v is "off" or "false" or "0" or "no" ? false
+        : (bool?)null;
+
+    static bool TryParseFloat(string v, out float f) =>
+        float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out f);
+
+    static string Persisted(bool saved, string ok) => saved ? ok : ok + " (WARNING: failed to write the rules file — change is in memory only)";
+
+    /// <summary>
+    /// v0.53.0: set ANY per-ability AbilityMap field in-game. field is case-insensitive:
+    /// enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, damagescale,
+    /// cooldownscale, category, interruptible, freemove, castspeed, notes.
+    /// </summary>
+    public (bool ok, string message) SetAbilityField(string abilityName, string field, string rawValue)
+    {
+        string name = (abilityName ?? "").Trim();
+        if (name.Length == 0) return (false, "Provide the ability/group prefab name (from .beelz list / api list).");
+        string f = (field ?? "").Trim().ToLowerInvariant();
+        string v = (rawValue ?? "").Trim();
+        string vl = v.ToLowerInvariant();
+
+        if (!Current.AbilityMap.TryGetValue(name, out var e)) { e = new AbilityEntry(); Current.AbilityMap[name] = e; }
+
+        switch (f)
+        {
+            case "enabled":
+                { var b = ParseOnOff(vl); if (b == null) return (false, "enabled expects on|off."); e.Enabled = b.Value; break; }
+            case "transformonly":
+                { var b = ParseOnOff(vl); if (b == null) return (false, "transformonly expects on|off."); e.TransformOnly = b.Value; break; }
+            case "allowdenied":
+                { var b = ParseOnOff(vl); if (b == null) return (false, "allowdenied expects on|off."); e.AllowDenied = b.Value; break; }
+            case "freemove":
+                { var b = ParseOnOff(vl); if (b == null) return (false, "freemove expects on|off."); e.FreeMoveAfterCast = b.Value; break; }
+            case "interruptible": case "interrupt":
+                { if (vl is "clear" or "none" or "null") { e.Interruptible = null; break; }
+                  var b = ParseOnOff(vl); if (b == null) return (false, "interruptible expects on|off|clear."); e.Interruptible = b.Value; break; }
+            case "difficulty":
+                { if (!vl.Equals("basic") && !vl.Equals("brutal")) return (false, "difficulty expects Basic|Brutal.");
+                  e.Difficulty = vl == "brutal" ? "Brutal" : "Basic"; break; }
+            case "phase":
+                { if (!int.TryParse(v, out int p) || p < 1) return (false, "phase expects an integer >= 1."); e.Phase = p; break; }
+            case "damagescale":
+                { if (!TryParseFloat(v, out float d) || d <= 0f) return (false, "damagescale expects a number > 0 (1.0 = no change)."); e.DamageScale = d; break; }
+            case "cooldownscale":
+                { if (!TryParseFloat(v, out float c) || c <= 0f) return (false, "cooldownscale expects a number > 0 (1.0 = no change)."); e.CooldownScale = c; break; }
+            case "castspeed": case "castmovementspeed":
+                { if (vl is "clear" or "none" or "null") { e.CastMovementSpeed = null; break; }
+                  if (!TryParseFloat(v, out float s)) return (false, "castspeed expects 0..1 (0 = rooted, 1 = full speed) or clear.");
+                  e.CastMovementSpeed = Math.Clamp(s, 0f, 1f); break; }
+            case "category":
+                { if (vl is "clear" or "none" or "null" or "auto") { e.Category = null; break; }
+                  if (!Enum.TryParse<AbilityCategory>(v, ignoreCase: true, out var cat)) return (false, "category expects one of: Travel, Aoe, Projectile, Melee, Summon, Buff, WeaponSpell, Spell, Other (or clear).");
+                  e.Category = cat.ToString(); break; }
+            case "weapons":
+                { e.Weapons = ParseWeaponList(vl, out string err); if (err != null) return (false, err); break; }
+            case "forms":
+                { e.Forms = ParseFormList(vl, out string err); if (err != null) return (false, err); break; }
+            case "notes":
+                { e.Notes = v; break; }
+            default:
+                return (false, "Unknown field. Valid: enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, damagescale, cooldownscale, category, interruptible, freemove, castspeed, notes.");
+        }
+        bool saved = Save();
+        return (true, Persisted(saved, $"Set {f}={v} for '{name}'. (.beelz admin reload re-applies cast tuning if changed.)"));
+    }
+
+    static List<string> ParseWeaponList(string csv, out string error)
+    {
+        error = null;
+        var list = new List<string>();
+        if (csv is "" or "none" or "any" or "clear" or "universal") return list; // empty = universal
+        foreach (var tok in csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (!Enum.TryParse<WeaponFamily>(tok, ignoreCase: true, out var fam) || fam == WeaponFamily.None)
+            { error = $"Unknown weapon family '{tok}'. Valid: Sword, GreatSword, Axe, Mace, Spear, Daggers, Crossbow, Longbow, Pistols, Reaper, Whip, Claws, Pollaxe, Slashers, TwinBlades, Unarmed, FishingPole, Magic (or 'any' to clear)."; return list; }
+            list.Add(fam.ToString());
+        }
+        return list;
+    }
+
+    static List<string> ParseFormList(string csv, out string error)
+    {
+        error = null;
+        var list = new List<string>();
+        if (csv is "" or "none" or "any" or "clear") return list;
+        foreach (var tok in csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (!Enum.TryParse<ShapeshiftForm>(tok, ignoreCase: true, out var fm) || fm == ShapeshiftForm.None)
+            { error = $"Unknown form '{tok}'. Valid: Wolf, Bear, Rat, Spider, Toad (or 'any' to clear)."; return list; }
+            list.Add(fm.ToString());
+        }
+        return list;
+    }
+
+    /// <summary>
+    /// v0.53.0: set ANY per-unit TransformMap scalar field in-game. field is case-insensitive:
+    /// enabled, difficulty, tier, damagescale, cooldownscale, healthscale, speedscale,
+    /// fullreplace, powerscalingmode, notes. (SlotTemplate is edited in the JSON file.)
+    /// </summary>
+    public (bool ok, string message) SetTransformField(string unitName, string field, string rawValue)
+    {
+        string name = (unitName ?? "").Trim();
+        if (name.Length == 0) return (false, "Provide the CHAR_* unit prefab name.");
+        string f = (field ?? "").Trim().ToLowerInvariant();
+        string v = (rawValue ?? "").Trim();
+        string vl = v.ToLowerInvariant();
+
+        if (!Current.TransformMap.TryGetValue(name, out var e)) { e = new TransformEntry(); Current.TransformMap[name] = e; }
+
+        switch (f)
+        {
+            case "enabled":
+                { var b = ParseOnOff(vl); if (b == null) return (false, "enabled expects on|off."); e.Enabled = b.Value; break; }
+            case "fullreplace":
+                { var b = ParseOnOff(vl); if (b == null) return (false, "fullreplace expects on|off."); e.FullReplace = b.Value; break; }
+            case "difficulty":
+                { if (!vl.Equals("basic") && !vl.Equals("brutal")) return (false, "difficulty expects Basic|Brutal.");
+                  e.Difficulty = vl == "brutal" ? "Brutal" : "Basic"; break; }
+            case "tier":
+                { if (!int.TryParse(v, out int t) || t < 1) return (false, "tier expects an integer >= 1."); e.Tier = t; break; }
+            case "damagescale":
+                { if (!TryParseFloat(v, out float d) || d <= 0f) return (false, "damagescale expects a number > 0."); e.DamageScale = d; break; }
+            case "cooldownscale":
+                { if (!TryParseFloat(v, out float c) || c <= 0f) return (false, "cooldownscale expects a number > 0."); e.CooldownScale = c; break; }
+            case "healthscale":
+                { if (!TryParseFloat(v, out float h) || h <= 0f) return (false, "healthscale expects a number > 0."); e.HealthScale = h; break; }
+            case "speedscale": case "movementspeedscale":
+                { if (!TryParseFloat(v, out float s) || s <= 0f) return (false, "speedscale expects a number > 0."); e.MovementSpeedScale = s; break; }
+            case "powerscalingmode": case "scalingmode":
+                { if (vl is "inherit" or "clear" or "none" or "null") { e.PowerScalingMode = null; break; }
+                  if (!Enum.TryParse<PowerScalingMode>(v, ignoreCase: true, out var m)) return (false, "powerscalingmode expects CuratedScales|PrefabAbsolute|PlayerScaled|PlayerLeveled (or inherit).");
+                  e.PowerScalingMode = m.ToString(); break; }
+            case "notes":
+                { e.Notes = v; break; }
+            default:
+                return (false, "Unknown field. Valid: enabled, difficulty, tier, damagescale, cooldownscale, healthscale, speedscale, fullreplace, powerscalingmode, notes.");
+        }
+        bool saved = Save();
+        return (true, Persisted(saved, $"Set transform {f}={v} for '{name}'."));
+    }
+
+    /// <summary>v0.53.0: set a global Defaults scaling baseline (damagescale | cooldownscale).</summary>
+    public (bool ok, string message) SetDefault(string field, string rawValue)
+    {
+        string f = (field ?? "").Trim().ToLowerInvariant();
+        string v = (rawValue ?? "").Trim();
+        Current.Defaults ??= new DefaultsDto();
+        switch (f)
+        {
+            case "damagescale":
+                { if (!TryParseFloat(v, out float d) || d <= 0f) return (false, "damagescale expects a number > 0 (1.0 = no change)."); Current.Defaults.DamageScale = d; break; }
+            case "cooldownscale":
+                { if (!TryParseFloat(v, out float c) || c <= 0f) return (false, "cooldownscale expects a number > 0 (1.0 = no change)."); Current.Defaults.CooldownScale = c; break; }
+            default:
+                return (false, "Unknown default. Valid: damagescale, cooldownscale.");
+        }
+        bool saved = Save();
+        return (true, Persisted(saved, $"Set global default {f}={v} (applies to abilities with no per-ability override)."));
+    }
+
+    // GUID-based filter lists (the pattern lists already have deny/allow/undeny/unallow commands).
+    public bool AddDenyGuid(int guid) { if (Current.DenyGuids.Contains(guid)) return false; Current.DenyGuids.Add(guid); Save(); return true; }
+    public bool RemoveDenyGuid(int guid) { bool r = Current.DenyGuids.Remove(guid); if (r) Save(); return r; }
+    public bool AddAllowGuid(int guid) { if (Current.AllowGuids.Contains(guid)) return false; Current.AllowGuids.Add(guid); Save(); return true; }
+    public bool RemoveAllowGuid(int guid) { bool r = Current.AllowGuids.Remove(guid); if (r) Save(); return r; }
+
+    // Transform-only reservation lists (bulk; per-ability TransformOnly is via SetAbilityField).
+    public bool AddTransformOnlyPattern(string p)
+    {
+        p = (p ?? "").Trim(); if (p.Length == 0) return false;
+        if (Current.TransformOnlyPatterns.Any(x => string.Equals(x, p, StringComparison.OrdinalIgnoreCase))) return false;
+        Current.TransformOnlyPatterns.Add(p); Save(); return true;
+    }
+    public bool RemoveTransformOnlyPattern(string p)
+    { int r = Current.TransformOnlyPatterns.RemoveAll(x => string.Equals(x, p, StringComparison.OrdinalIgnoreCase)); if (r > 0) Save(); return r > 0; }
+    public bool AddTransformOnlyGuid(int guid) { if (Current.TransformOnlyGuids.Contains(guid)) return false; Current.TransformOnlyGuids.Add(guid); Save(); return true; }
+    public bool RemoveTransformOnlyGuid(int guid) { bool r = Current.TransformOnlyGuids.Remove(guid); if (r) Save(); return r; }
+
     static RulesDto NormalizeNulls(RulesDto dto) => new()
     {
         Version = dto.Version,
@@ -105,13 +297,31 @@ internal sealed class AbilityRules
         AllowPatterns = dto.AllowPatterns ?? new List<string>(),
         DenyGuids = dto.DenyGuids ?? new List<int>(),
         AllowGuids = dto.AllowGuids ?? new List<int>(),
-        DropRateOverrides = dto.DropRateOverrides ?? new List<RateOverride>(),
+        DropRateOverrides = NormalizeDropRateOverrides(dto.DropRateOverrides),
         Defaults = NormalizeDefaults(dto.Defaults),
         AbilityMap = NormalizeAbilityMap(dto.AbilityMap),
         TransformOnlyPatterns = dto.TransformOnlyPatterns ?? new List<string>(),
         TransformOnlyGuids = dto.TransformOnlyGuids ?? new List<int>(),
         TransformMap = NormalizeTransformMap(dto.TransformMap),
     };
+
+    // v0.53.0: drop invalid/empty-pattern overrides and clamp rates to [0,1] (they're probabilities).
+    static List<RateOverride> NormalizeDropRateOverrides(List<RateOverride> raw)
+    {
+        var result = new List<RateOverride>();
+        if (raw == null) return result;
+        foreach (var o in raw)
+        {
+            if (o == null || string.IsNullOrWhiteSpace(o.Pattern)) continue;
+            result.Add(new RateOverride
+            {
+                Pattern = o.Pattern.Trim(),
+                RateRegular = Math.Clamp(o.RateRegular, 0f, 1f),
+                RateVBlood = Math.Clamp(o.RateVBlood, 0f, 1f),
+            });
+        }
+        return result;
+    }
 
     // v0.50.0: clamp the global default scales (≤0 makes no sense → 1.0 = no change).
     static DefaultsDto NormalizeDefaults(DefaultsDto raw)
@@ -124,6 +334,38 @@ internal sealed class AbilityRules
         };
     }
 
+    // v0.53.0: validate the constrained string/range fields so hand-edited JSON can't inject
+    // invalid values that silently degrade (a typo'd "Bruttal" → treated as Basic with a warning,
+    // an unknown Category → ignored, an out-of-range CastMovementSpeed → clamped).
+    static string NormalizeDifficulty(string raw)
+    {
+        string d = (raw ?? "").Trim();
+        if (d.Equals("Brutal", StringComparison.OrdinalIgnoreCase)) return "Brutal";
+        if (!string.IsNullOrEmpty(d) && !d.Equals("Basic", StringComparison.OrdinalIgnoreCase))
+            Core.Log?.LogWarning($"[Beelz] ability_rules.json: unknown Difficulty '{d}' → treating as Basic.");
+        return "Basic";
+    }
+
+    static string NormalizeCategoryName(string raw)
+    {
+        string c = (raw ?? "").Trim();
+        if (c.Length == 0) return null;
+        if (Enum.TryParse<AbilityCategory>(c, ignoreCase: true, out var cat)) return cat.ToString();
+        Core.Log?.LogWarning($"[Beelz] ability_rules.json: unknown Category '{c}' → ignoring (will auto-classify).");
+        return null;
+    }
+
+    static string NormalizePowerScalingMode(string raw)
+    {
+        string m = (raw ?? "").Trim();
+        if (m.Length == 0) return null;
+        if (Enum.TryParse<PowerScalingMode>(m, ignoreCase: true, out var mode)) return mode.ToString();
+        Core.Log?.LogWarning($"[Beelz] ability_rules.json: unknown PowerScalingMode '{m}' → inherit (global).");
+        return null;
+    }
+
+    static float? ClampCastSpeed(float? v) => v.HasValue ? Math.Clamp(v.Value, 0f, 1f) : (float?)null;
+
     static Dictionary<string, TransformEntry> NormalizeTransformMap(Dictionary<string, TransformEntry> raw)
     {
         var result = new Dictionary<string, TransformEntry>(StringComparer.OrdinalIgnoreCase);
@@ -134,7 +376,7 @@ internal sealed class AbilityRules
             result[name.Trim()] = new TransformEntry
             {
                 Enabled = entry.Enabled,
-                Difficulty = string.IsNullOrWhiteSpace(entry.Difficulty) ? "Basic" : entry.Difficulty.Trim(),
+                Difficulty = NormalizeDifficulty(entry.Difficulty),
                 Tier = entry.Tier <= 0 ? 1 : entry.Tier,
                 // TX6: scale defaults to 1.0 when absent or non-positive. Negative or
                 // zero scales make no semantic sense, so we clamp to 1.0 (no change)
@@ -144,7 +386,7 @@ internal sealed class AbilityRules
                 HealthScale = entry.HealthScale > 0f ? entry.HealthScale : 1.0f,
                 MovementSpeedScale = entry.MovementSpeedScale > 0f ? entry.MovementSpeedScale : 1.0f,
                 FullReplace = entry.FullReplace,
-                PowerScalingMode = string.IsNullOrWhiteSpace(entry.PowerScalingMode) ? null : entry.PowerScalingMode.Trim(),
+                PowerScalingMode = NormalizePowerScalingMode(entry.PowerScalingMode),
                 Notes = entry.Notes ?? "",
             };
         }
@@ -164,7 +406,7 @@ internal sealed class AbilityRules
                 Forms = entry.Forms ?? new List<string>(),
                 TransformOnly = entry.TransformOnly,
                 Enabled = entry.Enabled,            // absent JSON field keeps the C# auto-property default (true)
-                Difficulty = string.IsNullOrWhiteSpace(entry.Difficulty) ? "Basic" : entry.Difficulty.Trim(),
+                Difficulty = NormalizeDifficulty(entry.Difficulty),
                 Phase = entry.Phase <= 0 ? 1 : entry.Phase,
                 AllowDenied = entry.AllowDenied,
                 DamageScale = entry.DamageScale > 0f ? entry.DamageScale : 1.0f,
@@ -172,8 +414,8 @@ internal sealed class AbilityRules
                 // v0.46.0 ability tuning (null/false/unset = leave the prefab's baked value).
                 Interruptible = entry.Interruptible,
                 FreeMoveAfterCast = entry.FreeMoveAfterCast,
-                CastMovementSpeed = entry.CastMovementSpeed,
-                Category = string.IsNullOrWhiteSpace(entry.Category) ? null : entry.Category.Trim(),
+                CastMovementSpeed = ClampCastSpeed(entry.CastMovementSpeed),
+                Category = NormalizeCategoryName(entry.Category),
                 Notes = entry.Notes ?? "",
             };
         }

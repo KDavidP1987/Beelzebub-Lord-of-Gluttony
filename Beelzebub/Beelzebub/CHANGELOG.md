@@ -4,6 +4,28 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.53.0] - 2026-05-27
+
+### Admins can configure any ability live — no JSON editing
+
+From the configuration audit: nearly every per-ability and per-unit setting used to require
+hand-editing `ability_rules.json`. Now an admin can set all of them in-game, and they persist
+instantly.
+
+- **`.beelz admin ability <name> <field> <value>`** — set *any* per-ability rule live: enable/
+  disable, allowed weapons, forms, transform-only, difficulty, phase, damage & cooldown scaling,
+  category badge, cast tuning, notes.
+- **`.beelz admin transform-set <CHAR_unit> <field> <value>`** — set per-unit transform tuning
+  (enabled, difficulty, tier, the four stat scales, full-replace, power-scaling mode, notes).
+- **`.beelz admin default <damagescale|cooldownscale> <value>`** — server-wide scaling baseline.
+- **`.beelz admin denyguid|allowguid <add|remove> <guid>`** and **`.beelz admin transformonly
+  <add|remove> <pattern|guid>`** — the GUID-based capture filters and bulk transform-only lists
+  (previously file-only).
+- **Sturdier config:** invalid values in the rules file are now caught and corrected with a
+  warning (bad difficulty → Basic, unknown category ignored, cast-speed clamped to 0–1, drop
+  rates clamped to 0–1), and a failed file-write is reported instead of silently claiming success.
+- Full reference refreshed in `docs/ABILITY_CONFIG.md`.
+
 ## [0.52.0] - 2026-05-27
 
 ### Chained abilities fire untransformed

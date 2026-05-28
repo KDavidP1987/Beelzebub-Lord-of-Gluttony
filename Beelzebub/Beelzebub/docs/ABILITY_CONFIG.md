@@ -64,8 +64,13 @@ when `Capture_InclusiveMode = false`), `Grant_PowerScalingMode` + `Grant_PowerSc
   "Defaults": { "DamageScale": 1.0, "CooldownScale": 1.0 },
 
   // Transform-only reservation (only enforced when Grant_EnforceTransformOnly = true).
-  "TransformOnlyPatterns": [],
-  "TransformOnlyGuids":    [],
+  "TransformOnlyPatterns": [],   // name substrings → ability is transform-only
+  "TransformOnlyGuids":    [],   // specific ability GUIDs → transform-only
+
+  // Per-ability capture-rate overrides (replaces the global DropChance_* for matching names).
+  "DropRateOverrides": [
+    { "Pattern": "_Dracula_", "RateRegular": 0.01, "RateVBlood": 0.02 }
+  ],
 
   "AbilityMap": { /* per-ability — see §4 */ },
   "TransformMap": { /* per-unit transform tuning — see §5 */ }
@@ -77,6 +82,15 @@ when `Capture_InclusiveMode = false`), `Grant_PowerScalingMode` + `Grant_PowerSc
 - **`Defaults`** lets you set one global baseline instead of an entry per ability. A per-ability
   entry overrides it. `DamageScale` flows through the granted-cast power window; `CooldownScale`
   flows through `.beelz cast` force-casts (see the cooldown note in §4).
+- **Transform-only lists** mark abilities reservable for transforms. Resolution is
+  per-ability `AbilityMap[...].TransformOnly` → `TransformOnlyGuids` → `TransformOnlyPatterns`
+  (substring). All three are **only enforced** when `Grant_EnforceTransformOnly = true`.
+- **`DropRateOverrides`** sets a per-ability capture chance (0–1) by name substring, overriding the
+  global `DropChance_Ability_*` for matching abilities. First match wins; rates are clamped to 0–1.
+- **Set these live:** `.beelz admin default <damagescale|cooldownscale> <value>`,
+  `.beelz admin denyguid|allowguid <add|remove> <guid>`,
+  `.beelz admin transformonly <add|remove> <pattern|guid>`. (`DropRateOverrides` is a JSON edit
+  + `.beelz admin reload`.)
 
 ---
 
@@ -121,22 +135,55 @@ All fields optional; omit any you don't want to change.
 | `Interruptible` / `FreeMoveAfterCast` / `CastMovementSpeed` | bool?/bool/float? | unset | Cast tuning (needs `AbilityTuning_Enabled`). ⚠ edits the ability's **shared** cast data, so the source NPC/boss cast changes too. |
 | `Category` | string | unset | Override the BCH category badge (`Travel`/`Aoe`/`Projectile`/`Melee`/`Summon`/`Buff`/`WeaponSpell`/`Spell`/`Other`). Omit = auto-classify from the name. |
 
-**In-game shortcuts (no file editing):**
-- `.beelz admin deny <pattern>` / `.beelz admin undeny <pattern>` — edit `DenyPatterns`.
-- `.beelz admin allow <pattern>` / `.beelz admin unallow <pattern>` — edit `AllowPatterns`.
-- `.beelz admin tune <ability> <interrupt|freemove|castspeed> <on|off|0..1>` — cast tuning.
-- `.beelz admin reload` — re-read the file and re-apply.
+**Set any of these live, no file editing (v0.53.0):**
+```
+.beelz admin ability <name> <field> <value>
+```
+`field` is any column above: `enabled`, `weapons`, `forms`, `transformonly`, `difficulty`,
+`phase`, `allowdenied`, `damagescale`, `cooldownscale`, `category`, `interruptible`, `freemove`,
+`castspeed`, `notes`. Lists take a comma value or `any` to clear (e.g. `weapons Reaper,Sword`);
+toggles take `on|off`; `interruptible`/`castspeed`/`category` take `clear` to unset. Examples:
+```
+.beelz admin ability AB_Vampire_Reaper_SpinSlash_AbilityGroup enabled off
+.beelz admin ability AB_Blackfang_Morgana_CrossWindSlash_AbilityGroup category Melee
+.beelz admin ability AB_Some_Spell_AbilityGroup weapons Reaper,Sword
+.beelz admin ability AB_Some_Spell_AbilityGroup damagescale 1.25
+```
+Other in-game shortcuts:
+- `.beelz admin deny|undeny|allow|unallow <pattern>` — name-pattern capture filters.
+- `.beelz admin denyguid|allowguid <add|remove> <guid>` — GUID capture filters.
+- `.beelz admin transformonly <add|remove> <pattern|guid>` — bulk transform-only reservation.
+- `.beelz admin default <damagescale|cooldownscale> <value>` — the global `Defaults` block (§3).
+- `.beelz admin tune <ability> <interrupt|freemove|castspeed> <on|off|0..1>` — cast-tuning shortcut.
+- `.beelz admin reload` — re-read the file (for hand-edits) and re-apply cast tuning.
+
+All command edits persist to `ability_rules.json` immediately (no reload needed); `reload` is only
+for picking up hand-edits or re-applying cast tuning after toggling `AbilityTuning_Enabled`.
 
 ---
 
 ## 5. Per-unit transform tuning — `TransformMap`
 
-Key = the unit's `CHAR_*` prefab name. Controls how a transform (Dracula / Morgana) behaves
-for that unit — `Enabled`, `Difficulty`, `Tier`, `DamageScale`, `CooldownScale`, `HealthScale`,
-`MovementSpeedScale`, `FullReplace`, `PowerScalingMode`, `SlotTemplate`. These scale the
-**transformed** state and are independent of the per-ability `AbilityMap` (which governs
-abilities granted to the normal bar). See the inline docs in `Services/AbilityRules.cs`
-(`TransformEntry`) for the full field list.
+Key = the unit's `CHAR_*` prefab name. Governs how a transform (Dracula / Morgana) behaves —
+independent of the per-ability `AbilityMap` (which governs abilities on the normal bar).
+
+| Field | Type | Default | Effect |
+|---|---|---|---|
+| `Enabled` | bool | `true` | Kill-switch for unlocking/activating this transform. |
+| `Difficulty` | string | `"Basic"` | `Basic`/`Brutal` gate vs. `Server_DifficultyMode`. |
+| `Tier` | int | `1` | Display/curation tier. |
+| `DamageScale` / `CooldownScale` / `HealthScale` / `MovementSpeedScale` | float | `1.0` | Stat multipliers while transformed (used when `PowerScalingMode = CuratedScales`). |
+| `FullReplace` | bool | `false` | Force the native shapeshift visual + lock weapon swap. |
+| `PowerScalingMode` | string | unset | Per-unit override: `CuratedScales`/`PrefabAbsolute`/`PlayerScaled`/`PlayerLeveled`. Unset = inherit the global `Transform_PowerScalingMode`. |
+| `SlotTemplate` | object | unset | Per-slot ability override for the transformed bar: `{ "1": "AB_...", "5": "AB_..." }` (keys = slots 1–6, values = ability-group prefab names). Edited in the JSON file (the slot-by-slot editor isn't a chat command). |
+
+**Set the scalar fields live:**
+```
+.beelz admin transform-set <CHAR_unit> <field> <value>
+```
+`field` = `enabled`, `difficulty`, `tier`, `damagescale`, `cooldownscale`, `healthscale`,
+`speedscale`, `fullreplace`, `powerscalingmode` (or `inherit` to clear), `notes`. `SlotTemplate`
+remains a JSON edit (then `.beelz admin reload`).
 
 ---
 

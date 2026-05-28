@@ -75,6 +75,22 @@
 > per-form loadout (parallel to per-weapon buckets, with `api`/grant surface) would follow and get a
 > wire surface then.
 >
+> **v0.53.0 — FLUID ADMIN CONFIG COMMANDS (no wire-format change, ApiVersion still 7).** New
+> chat commands let an admin set ANY per-ability / per-unit / global-default rule live (previously
+> hand-edit-JSON-only). **For a BCH admin panel:** you can now *write* ability config by relaying
+> these to chat (same pattern as `.beelz admin set` for BepInEx config):
+> - `.beelz admin ability <name> <field> <value>` — enabled, weapons, forms, transformonly,
+>   difficulty, phase, allowdenied, damagescale, cooldownscale, category, interruptible, freemove,
+>   castspeed, notes.
+> - `.beelz admin transform-set <CHAR_unit> <field> <value>` — enabled, difficulty, tier,
+>   damagescale, cooldownscale, healthscale, speedscale, fullreplace, powerscalingmode, notes.
+> - `.beelz admin default <damagescale|cooldownscale> <value>`,
+>   `.beelz admin denyguid|allowguid <add|remove> <guid>`,
+>   `.beelz admin transformonly <add|remove> <pattern|guid>`.
+> Read-back is via the existing `api info` / `api catalog-abilities` / `api catalog-units` lines
+> (v0.54.0 will widen those to surface the few still-unexposed fields). No `[BEELZ:*]` line/event
+> change. Full reference: `docs/ABILITY_CONFIG.md`.
+>
 > **v0.52.0 — UNTRANSFORMED chain casting (behavioral; no wire change, ApiVersion still 7).**
 > Captured chain abilities (projectiles / AoEs / teleport-detonates) now team-fixup and fire vs.
 > enemies when cast in normal form, not just while transformed — the chain-entity fixup gate was

@@ -40,8 +40,11 @@ internal static class AdminCommands
         ctx.Reply("=== Beelzebub ADMIN commands === (player commands: .beelz commands)");
         ctx.Reply("-- RULES / CAPTURE FILTERS --");
         ctx.Reply(".beelz admin rules / reload — show / re-read the ability rules");
-        ctx.Reply(".beelz admin tune <ability> <interrupt|freemove|castspeed> <on|off|0..1> / tune-list — cast tuning (needs AbilityTuning_Enabled)");
-        ctx.Reply(".beelz admin deny|undeny|allow|unallow <pattern> — capture-filter substring patterns");
+        ctx.Reply(".beelz admin ability <name> <field> <value> — set ANY per-ability rule live (enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, damagescale, cooldownscale, category, interrupt/freemove/castspeed, notes)");
+        ctx.Reply(".beelz admin transform-set <CHAR_unit> <field> <value> — set a per-unit transform rule (enabled, difficulty, tier, damagescale, cooldownscale, healthscale, speedscale, fullreplace, powerscalingmode, notes)");
+        ctx.Reply(".beelz admin default <damagescale|cooldownscale> <value> — server-wide scaling baseline");
+        ctx.Reply(".beelz admin tune <ability> <interrupt|freemove|castspeed> <on|off|0..1> / tune-list — cast-tuning shortcut (needs AbilityTuning_Enabled)");
+        ctx.Reply(".beelz admin deny|undeny|allow|unallow <pattern> · denyguid|allowguid <add|remove> <guid> · transformonly <add|remove> <pattern|guid> — capture/reservation filters");
         ctx.Reply(".beelz admin freeze-captures <on|off|status> — master CaptureOnKill toggle");
         ctx.Reply("-- TRANSFORM CONFIG --");
         ctx.Reply(".beelz admin transform mode|duration|cooldown <regular|vblood> <...> — transform tuning");
@@ -202,6 +205,78 @@ internal static class AdminCommands
         }
         if (n == 0) ctx.Reply("  (none — e.g. .beelz admin tune AB_Vampire_VeilOfChaos_Group interrupt on)");
         else ctx.Reply($"{n} tuned ability(ies).{(enabled ? "" : " Set AbilityTuning_Enabled to apply them.")}");
+    }
+
+    // ---------------------------------------------------------------------
+    // v0.53.0 — FLUID ABILITY/TRANSFORM CONFIG. One command per config object;
+    // each delegates parse/validate/persist to AbilityRules and reports the result.
+    // Closes the gap where per-ability/per-unit/global-default fields were hand-edit-only.
+    // ---------------------------------------------------------------------
+
+    [Command("ability", description: "Set ANY per-ability rule live. Usage: .beelz admin ability <name> <field> <value>. Fields: enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, damagescale, cooldownscale, category, interruptible, freemove, castspeed, notes. (weapons/forms take a comma list or 'any' to clear.)", adminOnly: true)]
+    public static void AbilitySet(ChatCommandContext ctx, string ability, string field, string value)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        var (ok, msg) = Core.AbilityRules.SetAbilityField(ability, field, value);
+        ctx.Reply(msg);
+        if (!ok) return;
+        // Re-apply cast tuning live if a tuning field may have changed and tuning is on.
+        if (Beelzebub.Config.Settings.AbilityTuning_Enabled.Value) AbilityTuningService.ApplyAll();
+        Audit(ctx, "ability-set", 0, ability ?? "", $"{field}={value}");
+    }
+
+    [Command("transform-set", description: "Set a per-unit transform rule live. Usage: .beelz admin transform-set <CHAR_unit> <field> <value>. Fields: enabled, difficulty, tier, damagescale, cooldownscale, healthscale, speedscale, fullreplace, powerscalingmode, notes. (SlotTemplate is edited in ability_rules.json.)", adminOnly: true)]
+    public static void TransformSet(ChatCommandContext ctx, string unit, string field, string value)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        var (ok, msg) = Core.AbilityRules.SetTransformField(unit, field, value);
+        ctx.Reply(msg);
+        if (ok) Audit(ctx, "transform-set", 0, unit ?? "", $"{field}={value}");
+    }
+
+    [Command("default", description: "Set a server-wide scaling default for abilities with no per-ability override. Usage: .beelz admin default <damagescale|cooldownscale> <value>.", adminOnly: true)]
+    public static void DefaultSet(ChatCommandContext ctx, string field, string value)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        var (ok, msg) = Core.AbilityRules.SetDefault(field, value);
+        ctx.Reply(msg);
+        if (ok) Audit(ctx, "default-set", 0, field ?? "", value ?? "");
+    }
+
+    [Command("denyguid", description: "Add/remove an ability GUID on the capture DENY list. Usage: .beelz admin denyguid <add|remove> <guid>.", adminOnly: true)]
+    public static void DenyGuid(ChatCommandContext ctx, string action, int guid)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        string a = (action ?? "").Trim().ToLowerInvariant();
+        if (a is "add" or "+") ctx.Reply(Core.AbilityRules.AddDenyGuid(guid) ? $"Added deny-guid {guid}." : $"GUID {guid} already on the deny list.");
+        else if (a is "remove" or "rm" or "-") ctx.Reply(Core.AbilityRules.RemoveDenyGuid(guid) ? $"Removed deny-guid {guid}." : $"GUID {guid} not on the deny list.");
+        else ctx.Reply("Usage: .beelz admin denyguid <add|remove> <guid>.");
+    }
+
+    [Command("allowguid", description: "Add/remove an ability GUID on the capture ALLOW list (non-empty = exclusive whitelist). Usage: .beelz admin allowguid <add|remove> <guid>.", adminOnly: true)]
+    public static void AllowGuid(ChatCommandContext ctx, string action, int guid)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        string a = (action ?? "").Trim().ToLowerInvariant();
+        if (a is "add" or "+") ctx.Reply(Core.AbilityRules.AddAllowGuid(guid) ? $"Added allow-guid {guid}. (Allow list is now an exclusive whitelist.)" : $"GUID {guid} already on the allow list.");
+        else if (a is "remove" or "rm" or "-") ctx.Reply(Core.AbilityRules.RemoveAllowGuid(guid) ? $"Removed allow-guid {guid}." : $"GUID {guid} not on the allow list.");
+        else ctx.Reply("Usage: .beelz admin allowguid <add|remove> <guid>.");
+    }
+
+    [Command("transformonly", description: "Manage the bulk transform-only reservation lists (enforced only when Grant_EnforceTransformOnly is on). A numeric value targets the GUID list, text targets the name-pattern list. Usage: .beelz admin transformonly <add|remove> <pattern|guid>.", adminOnly: true)]
+    public static void TransformOnlyRule(ChatCommandContext ctx, string action, string value)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        string a = (action ?? "").Trim().ToLowerInvariant();
+        bool add = a is "add" or "+";
+        bool rem = a is "remove" or "rm" or "-";
+        if (!add && !rem) { ctx.Reply("Usage: .beelz admin transformonly <add|remove> <pattern|guid>."); return; }
+        bool isGuid = int.TryParse((value ?? "").Trim(), out int g);
+        bool changed = isGuid
+            ? (add ? Core.AbilityRules.AddTransformOnlyGuid(g) : Core.AbilityRules.RemoveTransformOnlyGuid(g))
+            : (add ? Core.AbilityRules.AddTransformOnlyPattern(value) : Core.AbilityRules.RemoveTransformOnlyPattern(value));
+        string what = isGuid ? $"guid {g}" : $"pattern '{value}'";
+        ctx.Reply(changed ? $"{(add ? "Added" : "Removed")} transform-only {what}." : $"No change ({what} {(add ? "already present" : "not found")}).");
     }
 
     [Command("testform", description: "Phase-1 native-form test: drop YOU into wolf/bear form (persistent ExoForm recipe) carrying your current loadout's abilities, to test whether the form HOLDS through casting custom abilities. Usage: .beelz admin testform <wolf|bear|off>", adminOnly: true)]
