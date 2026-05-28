@@ -166,7 +166,7 @@
 
 ---
 
-## 0.0 — ⚡ SINCE YOUR LAST BUILD (BCH baseline v0.44.0 → now v0.48.0) — READ THIS FIRST
+## 0.0 — ⚡ SINCE YOUR LAST BUILD (BCH baseline v0.44.0 → now v0.54.0) — READ THIS FIRST
 
 > **Update (v0.49.0–v0.54.0, also 2026-05-27):** the section below describes the v0.44→v0.48
 > delta (all at ApiVersion 6). Six more releases followed — see the dated callouts ABOVE this
@@ -339,17 +339,17 @@ All under the `.beelz api` group. Verified against `ApiCommands.cs`.
 | Command | Marker(s) | Returns |
 |---|---|---|
 | `.beelz api version` | `[BEELZ:version]` | `api=<int> plugin=<ver> ready=0\|1` |
-| `.beelz api list` | `[BEELZ:list]` … `[BEELZ:end]` | Caller's captured abilities: `i= s=R\|V u=<unitGuid> un=<unitName> a=<abilityGuid> an=<abilityName>` (+ category/type fields) |
+| `.beelz api list` | `[BEELZ:list]` … `[BEELZ:end]` | Caller's captured abilities: `i= s=R\|V u=<unitGuid> un=<unitName> a=<abilityGuid> an=<abilityName> cat=<category-NAME> type=<unitType>`. **`cat=` is the category NAME** (`Other\|Travel\|Aoe\|Projectile\|Summon\|Buff\|WeaponSpell\|Spell\|Melee`), not a number — treat unknown names as `Other`. |
 | `.beelz api slots` | `[BEELZ:slot]`, `[BEELZ:slot-current]`, `[BEELZ:end]` | Slot assignments per bucket: `bucket=any\|<WeaponFamily> slot=1-6 a= an=`; footer `weapon=<current>` |
 | `.beelz api transforms` | `[BEELZ:tx]` … `[BEELZ:end]` | Transform unlocks + matrix attrs: `i= s= u= un= enabled= difficulty= tier= damage_scale= cooldown_scale= health_scale= speed_scale= type= full_replace= scaling_mode=`. **(v6) Now 0–2 entries — Dracula/Morgana only.** |
 | `.beelz api active` | `[BEELZ:active]` | Active transform: `u= un= s= ttl=<sec>\|toggle` + phase info; or `none=1` |
-| `.beelz api info <index>` | `[BEELZ:info]` | One ability's full tooltip data: `desc=` (real ability description, %params% substituted), `weapons=`, `weapon_anim=<family\|None>` (animation weapon, v2), `school=` (v2), `cooldown_seconds=` (v2), `forms=`, `transform_only=`, `enabled=`, `difficulty=`, `damage_scale=`, `cooldown_scale=` |
+| `.beelz api info <index>` | `[BEELZ:info]` | One ability's COMPLETE tooltip + rule data (a tooltip can be built from this line alone). Fields: `i= s= u= un= a= an= label= desc=` (real description, %params% substituted) `cat=<NAME> category_override=<NAME\|->` (`-` = auto-classified, else admin override) `weapons= weapon_anim=<family\|None> school= cooldown_seconds= cast_time_seconds= range= behavior= forms= transform_only= enabled= difficulty= phase= allow_denied= interruptible=<on\|off\|auto> free_move=<0\|1> cast_speed=<0..1\|auto> damage_scale= cooldown_scale=`. **(v8 added cat, category_override, cast_time_seconds, range, behavior, phase, allow_denied, interruptible, free_move, cast_speed.)** |
 | `.beelz api progress` | `[BEELZ:progress]` | Collection %: `abilities_captured= abilities_total= abilities_pct= transforms_unlocked= transforms_total= transforms_pct=` + V-Blood breakdowns |
-| `.beelz api rules` | `[BEELZ:rules]` | Loaded filter rules: `version= deny_patterns= allow_patterns= deny_guids= allow_guids=` |
+| `.beelz api rules` | `[BEELZ:rules]` | Loaded filter rules + global scaling baseline: `version= deny_patterns= allow_patterns= deny_guids=<count> allow_guids=<count> default_damage_scale= default_cooldown_scale= transform_only_patterns= transform_only_guids=<count>` **(v8 added the `default_*` and `transform_only_*` fields)** |
 | `.beelz api transform-config` | `[BEELZ:tx-config]` … `[BEELZ:end]` | One line per category `R`/`V`/`S` (shard boss): `src= mode=Toggle\|Timed\|Disabled duration= cooldown=` (count=3, **`src=S` added v0.43.0**). Live cooldown remaining (incl. shard) is in `api cooldowns`. |
 | `.beelz api catalog` | `[BEELZ:catalog-summary]` | `abilities= units= server_mode=Basic\|Brutal` |
-| `.beelz api catalog units [page]` | `[BEELZ:catalog-unit]` … `[BEELZ:end]` | Curated boss-KIT reference, 40/page, with matrix attrs. **(v6) Read as Devour/collection targets, NOT transform targets** — only Dracula/Morgana transform. |
-| `.beelz api catalog abilities [page]` | `[BEELZ:catalog-ability]` … `[BEELZ:end]` | Full curated ability list, 40/page, with matrix attrs |
+| `.beelz api catalog units [page]` | `[BEELZ:catalog-unit]` … `[BEELZ:end]` | Curated per-unit TransformMap, 40/page: `un= enabled= difficulty= tier= type= full_replace= shard= scaling_mode=<mode\|inherit> damage_scale= cooldown_scale= health_scale= speed_scale= slot_template=<slot:ability;…\|-> notes=` **(v8 added `slot_template`)**. Read as Devour/collection targets, NOT transform targets — only Dracula/Morgana transform. |
+| `.beelz api catalog abilities [page]` | `[BEELZ:catalog-ability]` … `[BEELZ:end]` | Curated per-ability AbilityMap, 40/page: `an= weapons= forms= transform_only= enabled= difficulty= cat=<NAME> category_override=<NAME\|-> phase= allow_denied= interruptible=<on\|off\|auto> free_move= cast_speed=<0..1\|auto> damage_scale= cooldown_scale= notes=` **(v8 added category_override, phase, allow_denied, interruptible, free_move, cast_speed)** |
 | `.beelz api hotkeys` | `[BEELZ:hotkeys-config]`, `[BEELZ:hotkey]`, `[BEELZ:end]` | Config footer (`enabled= max=`) + named hotkey bindings |
 | `.beelz api verbosity` | `[BEELZ:verbosity]` | `level=Silent\|Summary\|Verbose default=<server default>` |
 | `.beelz api bestiary [page]` | `[BEELZ:bestiary]` … `[BEELZ:end]` | Collection book — one line per collected unit: `u= un= s=R\|V captured=X total=Y transform=0\|1` (v2). Cross-ref `api list` (per-ability) for which abilities. Page size 40. |
@@ -382,7 +382,7 @@ All under the `.beelz api` group. Verified against `ApiCommands.cs`.
   | `forget` / `forget-transform` | `a= u=` / `u=` | Capture / unlock deleted (v2) |
   | `cleared` | — | Player wiped all captures + slots (v2) |
   | `detonate` | `u=` | Player manually fired a transform's detonation AoE via `.beelz detonate` (v2) |
-  | `config-changed` | `key= value=` | An admin changed a setting via `.beelz admin set` (v3). Re-fetch `api config`. (Currently sent to the acting admin; broadcast-to-all-subscribers is a follow-up.) |
+  | `config-changed` | `key= value=` | An admin changed a setting via `.beelz admin set` (v3). Re-fetch `api config`. **(v8) Now BROADCAST to every subscribed client** — any open BCH panel refreshes, not just the acting admin. |
   | `cast` | `a= an=` | Player force-cast an ability via `.beelz cast` (v4 — expanded action bar). |
   | `summon` | `u= ability=` | Player force-cast a transform's signature add-summon via `.beelz summon` (v5). Spawns become allies. |
 
@@ -449,10 +449,12 @@ button must send `.beelz clear CONFIRM`. Still emits `[BEELZ:event] type=cleared
 > machine reads BCH should use the `api` equivalents (`api list`, `api info <index>`,
 > `api active`, `api catalog …`) — these human-text ones are for players typing in chat.
 
-**Admin** (BCH admin panel; full list in §6): grant/revoke (ability +
-transform), force/clear-transform, set/clear slot (universal + weapon),
-deny/allow patterns, transform mode/duration/cooldown, difficulty, freeze-
-captures, revert-all, snapshot, inspect/progress, wipe-all.
+**Admin** (BCH admin panel; full list in §6): live per-ability config
+(`admin ability …`), per-unit transform config (`admin transform-set …`), global
+defaults (`admin default …`), grant/revoke (ability + transform), force/clear-transform,
+set/clear slot (universal + weapon), deny/allow patterns + GUIDs, transform-only lists,
+transform mode/duration/cooldown, difficulty, freeze-captures, revert-all, snapshot,
+inspect/progress, wipe-all.
 
 ---
 
@@ -477,13 +479,27 @@ captures, revert-all, snapshot, inspect/progress, wipe-all.
 ## 6. Admin surface BCH should expose
 
 Curation lives in `ability_rules.json` (`AbilityMap` per-ability matrix,
-`TransformMap` per-unit matrix, deny/allow patterns) — see
-`docs/ABILITY_MAP_FORMAT.md`. Read it via `api rules` / `api catalog`. Mutate
-via these admin chat commands (all audited to `LogOutput.log` as
-`[Beelz AUDIT] admin=… action=… target=…`):
+`TransformMap` per-unit matrix, `Defaults`, deny/allow patterns + GUIDs,
+transform-only lists) — see **`docs/ABILITY_CONFIG.md`** (the full admin field
+reference). Read it via `api rules` / `api catalog units|abilities` / `api info`.
+**(v0.53.0) Every per-ability and per-unit field is now settable live in-game** (no
+file editing) via the commands below — all audited to `LogOutput.log` as
+`[Beelz AUDIT] admin=… action=… target=…`:
 
 - **Filter rules:** `admin rules` · `admin deny/undeny <pattern>` ·
-  `admin allow/unallow <pattern>` · `admin reload`.
+  `admin allow/unallow <pattern>` · `admin denyguid/allowguid <add\|remove> <guid>` ·
+  `admin transformonly <add\|remove> <pattern\|guid>` · `admin reload`.
+- **Per-ability config (v0.53.0):** `admin ability <name> <field> <value>` — sets ANY
+  AbilityMap field live (`enabled`, `weapons`, `forms`, `transformonly`, `difficulty`,
+  `phase`, `allowdenied`, `damagescale`, `cooldownscale`, `category`, `interruptible`,
+  `freemove`, `castspeed`, `notes`). `admin tune …` is the cast-tuning shortcut; `admin tune-list`
+  lists tuned abilities. Read current values back from `api info` / `api catalog abilities`.
+- **Per-unit transform config (v0.53.0):** `admin transform-set <CHAR_unit> <field> <value>` —
+  sets any TransformMap scalar (`enabled`, `difficulty`, `tier`, `damagescale`, `cooldownscale`,
+  `healthscale`, `speedscale`, `fullreplace`, `powerscalingmode`, `notes`). Read back via
+  `api catalog units`. (`SlotTemplate` is a JSON edit + `admin reload`.)
+- **Global defaults (v0.53.0):** `admin default <damagescale\|cooldownscale> <value>` — the
+  server-wide baseline for abilities with no per-ability override. Read back via `api rules`.
 - **Runtime config (v3):** `admin set <key> <value>` — set ANY setting live (persists
   to the `.cfg`); emits `config-changed`. Pair with `api config` (read all keys) for a
   full BCH settings panel. Covers the shard-boss settings (`Transform_*_ShardBoss`,
@@ -506,7 +522,10 @@ matched fuzzily; `<unitGuid>`/`<abilityGuid>` = integer PrefabGUIDs from `api li
 
 | Command | Signature |
 |---|---|
-| Filter rules | `admin rules` · `admin deny <pattern>` · `admin undeny <pattern>` · `admin allow <pattern>` · `admin unallow <pattern>` · `admin reload` |
+| Filter rules | `admin rules` · `admin deny <pattern>` · `admin undeny <pattern>` · `admin allow <pattern>` · `admin unallow <pattern>` · `admin denyguid <add\|remove> <guid>` · `admin allowguid <add\|remove> <guid>` · `admin transformonly <add\|remove> <pattern\|guid>` · `admin reload` |
+| **Per-ability config (v0.53.0)** | `admin ability <name> <field> <value>` — field ∈ enabled, weapons (csv\|any), forms (csv\|any), transformonly, difficulty, phase, allowdenied, damagescale, cooldownscale, category, interruptible (on\|off\|clear), freemove, castspeed (0..1\|clear), notes. Toggles take on\|off. · `admin tune <ability> <interrupt\|freemove\|castspeed> <on\|off\|0..1>` · `admin tune-list` |
+| **Per-unit transform config (v0.53.0)** | `admin transform-set <CHAR_unit> <field> <value>` — field ∈ enabled, difficulty, tier, damagescale, cooldownscale, healthscale, speedscale, fullreplace, powerscalingmode (or `inherit`), notes |
+| **Global defaults (v0.53.0)** | `admin default <damagescale\|cooldownscale> <value>` |
 | Runtime config | `admin set <key> <value>` (any `api config` key; live + persists; emits `config-changed`) |
 | Transform settings | `admin transform mode <regular\|vblood> <toggle\|timed\|disabled>` · `admin transform duration <regular\|vblood> <seconds>` · `admin transform cooldown <regular\|vblood> <seconds>` · `admin transform show` |
 | Difficulty | `admin difficulty [basic\|brutal]` (no arg = show) |
@@ -642,16 +661,154 @@ per tick) for on-screen ability rings — Beelzebub exposes static cooldown valu
 
 ## 9. Related docs
 
-- `docs/ABILITY_MAP_FORMAT.md` — full `ability_rules.json` schema (the admin
-  curation surface BCH wraps).
-- `docs/SUMMON_AS_ALLY.md` — summon system internals (the summon panel's backing
-  behavior).
-- `docs/INTEROP_BLOODCRAFT.md` — coexistence with Bloodcraft (shared patch
-  surfaces; relevant if BCH talks to both).
-- `docs/SETUP_GUIDE.md` — install / first-run.
-- `Commands/ApiCommands.cs` — **canonical** wire API (`ApiVersion = 6`).
+- **`Beelzebub/Beelzebub/docs/ABILITY_CONFIG.md`** — the **current, complete** admin config
+  reference (all files, every global/per-ability/per-unit field, and the in-game setter commands).
+  Supersedes the older `Beelzebub/docs/ABILITY_MAP_FORMAT.md`. **This is the source for §10's
+  config guide.**
+- `Beelzebub/Beelzebub/docs/ABILITY_AUDIT.md` — ability metadata audit (counts, category coverage,
+  the description-coverage gap + path).
+- `Beelzebub/docs/SUMMON_AS_ALLY.md` — summon system internals (the summon panel's backing behavior).
+- `Beelzebub/docs/INTEROP_BLOODCRAFT.md` — coexistence with Bloodcraft (relevant if BCH talks to both).
+- `Beelzebub/docs/SETUP_GUIDE.md` — install / first-run.
+- `Commands/ApiCommands.cs` — **canonical** wire API (`ApiVersion = 8`).
 - `Services/SummonRegistry.cs` — curated unit→signature-summon map for `.beelz summon` (v5).
 - `Services/DevourService.cs` — reads a unit's prefab kit + grants it all at once (the v6 Devour jackpot, migration, and `admin devour`).
+
+---
+
+## 10. IN-APP GUIDE SOURCE (v0.54.0) — overview · command reference · config
+
+> **Purpose:** a single, self-contained reference BCH can adapt into an **in-app help/guide**
+> screen — "how Beelzebub works", the full command structure split **player vs admin**, and the
+> configuration surface. Everything here is current as of v0.54.0 / ApiVersion 8. (For wire details
+> BCH parses, see §1–§4; this section is the human-readable companion.)
+
+### 10.1 What the mod is (player-facing overview)
+
+**Beelzebub, Lord of Gluttony** is a server-side V Rising mod about **devouring your enemies'
+powers**. Defeat a unit — any V-Blood or NPC — and you have a chance to **capture one of its
+abilities** into your personal collection. Slot captured abilities onto your six-slot action bar,
+bind extras to named hotkeys, and complete the bestiary. Two bosses — **Dracula** and **Morgana** —
+can also be fully **transformed into**. Abilities that summon minions make those minions **fight
+for you**, transformed or not.
+
+**The loop:** kill → (chance to) capture an ability → slot it / bind it / cast it → collect more.
+Rarely, a kill hits the **Devour jackpot** and grants a unit's *entire* ability kit at once.
+
+### 10.2 Core concepts (each is a good guide subsection)
+
+- **Capture** — a per-ability roll on each kill (rates configurable). Captured abilities live in
+  your collection (`api list` / `api bestiary`).
+- **Devour** — the rare jackpot: a unit's whole eligible kit granted at once (`type=devour` event).
+- **Slots & loadouts** — bind a captured ability to one of 6 action-bar slots. Two bucket types:
+  the **universal** loadout (fires on any weapon) and **per-weapon** loadouts (fire only when that
+  weapon is drawn; they override the universal bind on their slots). Auto-switches on weapon swap.
+- **Hotkeys** — named bindings beyond the 6 slots; cast via `.beelz cast <name>` (the BCH-button
+  mechanism). Capped by `Hotkeys_MaxPerPlayer`.
+- **Transform** — become **Dracula or Morgana** (the only two renderable forms). Multi-phase kits,
+  signature summons, and detonation AoEs. Arbitrary-unit transformation is a future client feature
+  (§7.1).
+- **Summons** — summon abilities spawn player-allied minions (with caps, leashing, stash-on-waygate,
+  clean despawn) — whether you're transformed or just cast a captured summon ability.
+- **Untransformed casting** — captured chain abilities (projectiles/AoEs/teleport-detonates) fire
+  correctly off the normal bar, not only while transformed.
+
+### 10.3 PLAYER command reference (`.beelz …`)
+
+All player-runnable; no special role required. (Human-text replies unless noted; for machine data
+use the `api` equivalents.)
+
+**Discover**
+- `.beelz` / `.beelz help` — overview. `.beelz commands` — full sectioned command list.
+
+**Collection**
+- `.beelz list [vblood|shard|regular] [page]` — your captured abilities (machine: `api list`).
+- `.beelz search <term>` — find a captured ability by name.
+- `.beelz info <index|name>` — one ability's details (machine: `api info <index>`).
+- `.beelz bestiary [page]` · `.beelz bestiary unit <name>` — collection book, per-unit X/Y.
+- `.beelz progress` — completion % (machine: `api progress`).
+- `.beelz catalog [page]` — curated ability/unit reference. `.beelz current` — your active bar.
+
+**Loadouts (action bar)**
+- `.beelz grant <slot 1-6> <index>` — bind a captured ability to a universal slot.
+- `.beelz unslot <slot>` — clear a universal slot.
+- `.beelz weapon-grant <weapon|auto> <slot 1-6> <index>` — bind to a per-weapon loadout (`auto` = your current weapon).
+- `.beelz weapon-unslot <weapon|auto> <slot>` — clear a per-weapon bind.
+- `.beelz loadouts` — summary of universal + per-weapon sets + active weapon (machine: `api slots`).
+- `.beelz resetbar` — clear ALL binds → vanilla bar (keeps captures). `.beelz refresh` — re-apply your bar if it looks wrong.
+- `.beelz preset save|load|list|delete <name>` — save/restore loadout presets.
+
+**Extra hotkeys & casting**
+- `.beelz hotkey set <name> <index>` · `clear <name>` · `list` — named bindings (machine: `api hotkeys`).
+- `.beelz cast <hotkey name|index>` — force-cast any captured ability on demand (respects cooldown).
+
+**Transform (Dracula / Morgana only)**
+- `.beelz transforms [filter]` — your unlocked transforms (machine: `api transforms`).
+- `.beelz transform <index|name>` — transform. `.beelz revert` — end it.
+- `.beelz preview <index|name>` — what you'd get per phase. `.beelz phase [n]` — switch phase.
+- `.beelz active` — your active transform (machine: `api active`). `.beelz detonate` — fire its AoE.
+- `.beelz summon [n]` — cast a transformed unit's signature add-summon.
+
+**Summons**
+- `.beelz summons <stash|restore|clear|status>` — manage your minions (works untransformed too).
+- `.beelz tp` — recall summons to you.
+
+**Manage / settings**
+- `.beelz forget <i>` · `.beelz forget-transform <i>` — delete a capture/unlock.
+- `.beelz clear CONFIRM` — wipe all your captures + slots (literal `CONFIRM` required).
+- `.beelz verbosity <silent|summary|verbose>` — chat-notification level.
+
+**Machine API (player-runnable; what BCH calls)** — `.beelz api <version|list|slots|transforms|active|info|progress|rules|catalog|catalog units|catalog abilities|hotkeys|transform-config|bestiary|config|cooldowns|verbosity|bch>` (full field specs in §2). `.beelz api bch on` subscribes to the live event stream.
+
+### 10.4 ADMIN command reference (`.beelz admin …`)
+
+All `adminOnly` (VCF gates on V Rising admin status). Reply in human text; audited to the server log.
+
+**Inspect** — `admin help` · `admin rules` · `admin inspect <player>` · `admin progress <player>` · `admin snapshot` · `admin buffs [player]` · `admin tune-list` · `admin transform show`.
+
+**Capture filters** — `admin deny/undeny <pattern>` · `admin allow/unallow <pattern>` · `admin denyguid/allowguid <add|remove> <guid>` · `admin transformonly <add|remove> <pattern|guid>` · `admin reload`.
+
+**Per-ability config (live)** — `admin ability <name> <field> <value>` (enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, damagescale, cooldownscale, category, interruptible, freemove, castspeed, notes) · `admin tune <ability> <interrupt|freemove|castspeed> <…>`.
+
+**Per-unit transform config (live)** — `admin transform-set <CHAR_unit> <field> <value>` (enabled, difficulty, tier, damagescale, cooldownscale, healthscale, speedscale, fullreplace, powerscalingmode, notes).
+
+**Global config** — `admin default <damagescale|cooldownscale> <value>` · `admin set <key> <value>` (any `.cfg` key) · `admin difficulty [basic|brutal]` · `admin freeze-captures <on|off|status>` · `admin transform mode|duration|cooldown <regular|vblood> <…>`.
+
+**Player grants** — `admin give|revoke <player> <unitGuid> <abilityGuid>` · `admin devour <player> <unitGuid>` · `admin give-transform|revoke-transform <player> <unitGuid>` · `admin set-slot|clear-slot <player> <slot> [abilityGuid]` · `admin set-weapon-slot|clear-weapon-slot <player> <weapon> <slot> [abilityGuid]`.
+
+**Transform control** — `admin force-transform <player> <unitGuid>` · `admin clear-transform <player>` · `admin revert-all`.
+
+**Summons / recovery** — `admin desummon <player>` · `admin desummon-all` · `admin respawn|rebuildbar|rebuildslots|clearslotmods [player]` · `admin copy-collection|paste-collection <player>` · `admin reset-character <player> CONFIRM-RESET`.
+
+**Test / destructive** — `admin testform <wolf|bear|off>` · `admin scan-abilities` · `admin wipe-all CONFIRM-WIPE`.
+
+### 10.5 Configuration (what an admin can change, and how)
+
+Three files under the server's `BepInEx/config/` (all auto-created on first run; the mod runs on
+defaults with zero setup):
+
+| File | Controls | Live in-game? |
+|---|---|---|
+| `kdpen.Beelzebub.cfg` | Global switches: capture on/off + drop rates, `Capture_InclusiveMode`, `Grant_EnforceTransformOnly`, transform modes/durations/cooldowns, summon behavior, power-scaling modes, server difficulty, hotkey limits, logging. | `admin set <key> <value>` (+ `difficulty`, `freeze-captures`, `transform …`). Hand-edits need a **server restart**. |
+| `kdpen.Beelzebub/ability_rules.json` | Capture deny/allow lists + GUIDs, transform-only lists, `Defaults` scaling, per-ability `AbilityMap`, per-unit `TransformMap`, drop-rate overrides. | `admin ability` / `transform-set` / `default` / `deny*` / `allow*` / `transformonly`. Hand-edits need **`admin reload`** (no restart). |
+| `kdpen.Beelzebub/ability_metadata_overrides.json` | Optional: override an ability's display name/description/school/type/category. | Hand-edit + `admin reload`. |
+
+Full field-by-field reference: **`docs/ABILITY_CONFIG.md`**. BCH can build a settings panel
+generically from `api config` (reflection-streamed keys) + `api rules` / `api catalog units|abilities`,
+and write via the admin commands above.
+
+### 10.6 User vs admin — how BCH should gate the UI
+
+- **Players** see/operate their **own** collection, loadouts, hotkeys, transforms, summons, presets,
+  and verbosity. Every player command targets the caller; none take a `<player>` argument.
+- **Admins** operate on **other players** (commands take a `<player>` name) and on **server-wide
+  rules/config** (capture filters, per-ability/per-unit tuning, drop rates, wipes). Admin commands
+  reply in human text + audit to the log.
+- **Gating signal:** there is no "am I admin?" wire query — BCH should mirror V Rising's own admin
+  status (the same gate VCF uses) to decide whether to render the admin panel. A non-admin who
+  sends an admin command just gets a rejection reply.
+- **Read vs write:** all `api …` reads are player-safe (BCH uses them freely). All *writes* go
+  through normal chat commands — player writes for the caller, `admin …` writes for everything else.
 
 ---
 
