@@ -1541,8 +1541,9 @@ internal static class AdminCommands
 
         ctx.Reply($"Set {entry.Definition.Key} = {parsed} (was {old}). Applies live.");
         Audit(ctx, "config-set", 0, "-", $"key={entry.Definition.Key} old={old} new={parsed}");
-        // BCH refresh hint (sent to the admin who changed it; broadcast-to-all-subscribers is a follow-up).
-        Core.Chat.SendEvent(ctx.Event.SenderCharacterEntity,
+        // v0.54.0: BCH refresh hint — broadcast to ALL subscribed clients (was sender-only) so a
+        // BCH admin panel on any client picks up the change, not just the admin who made it.
+        Core.Chat.BroadcastEvent(
             $"[BEELZ:event] type=config-changed key={entry.Definition.Key} value={parsed}");
     }
 

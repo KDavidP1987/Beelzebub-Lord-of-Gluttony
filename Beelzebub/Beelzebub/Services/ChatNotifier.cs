@@ -45,6 +45,21 @@ internal sealed class ChatNotifier
         SendRaw(user, eventLine);
     }
 
+    /// <summary>
+    /// v0.54.0: emit a [BEELZ:event] to EVERY subscribed online player (EmitApiEvents=true), not
+    /// just one. Used for server-wide changes (e.g. config-changed) so a BCH admin panel on any
+    /// client refreshes — previously only the admin who made the change was notified.
+    /// </summary>
+    public void BroadcastEvent(string eventLine)
+    {
+        foreach (var (steamId, on) in Core.AbilityRegistry.AllEmitApiEvents())
+        {
+            if (!on) continue;
+            Entity ch = EntityExtensions.FindCharacterBySteamId(steamId);
+            if (ch.Exists()) SendEvent(ch, eventLine);
+        }
+    }
+
     void SendRaw(User user, string message)
     {
         try

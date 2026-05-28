@@ -4,6 +4,26 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.54.0] - 2026-05-27
+
+### BloodCraftHub can now read every ability detail
+
+Completes the audit by closing the wire-API holes — the companion app can build full tooltips and
+admin panels without hand-parsing the rules file.
+
+- **`api info`** now also reports the category badge, the description's cast time / range /
+  behavior, the multi-phase grouping, allow-denied, the cast-tuning state (interruptible / free-
+  move / cast-speed), and whether the category is an admin override.
+- **`catalog-abilities`** adds the same per-ability rule fields (phase, allow-denied, tuning,
+  category-override) so an admin panel reflects the full rules matrix.
+- **`api rules`** now surfaces the global `Defaults` scaling baseline and the transform-only lists;
+  **`catalog-units`** surfaces each unit's `SlotTemplate`.
+- **Config-change notifications broadcast to all connected clients** (were sent only to the admin
+  who made the change), so every open panel refreshes.
+
+*BloodCraftHub note: ApiVersion → 8 (all additive). The `cat=` field is the category **name**
+(e.g. `Melee`), not a number — treat any unknown name as `Other`.*
+
 ## [0.53.0] - 2026-05-27
 
 ### Admins can configure any ability live — no JSON editing

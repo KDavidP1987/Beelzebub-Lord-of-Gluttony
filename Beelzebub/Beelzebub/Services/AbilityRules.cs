@@ -585,6 +585,17 @@ internal sealed class AbilityRules
         return null;
     }
 
+    // v0.54.0: read-back accessors so the wire API (api info / catalog-abilities) can surface the
+    // cast-tuning state and the raw category-override string for BCH admin panels.
+    public bool? GetInterruptible(string abilityName)
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.Interruptible : null;
+    public bool GetFreeMoveAfterCast(string abilityName)
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) && e.FreeMoveAfterCast;
+    public float? GetCastMovementSpeed(string abilityName)
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.CastMovementSpeed : null;
+    public string GetCategoryOverrideRaw(string abilityName)
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.Category : null;
+
     /// <summary>
     /// Per-ability cooldown multiplier (1.0 = no change). v0.44.0: LIVE for FORCE-CASTS —
     /// <c>.beelz cast &lt;hotkey|index&gt;</c> multiplies the ability's own cooldown by this

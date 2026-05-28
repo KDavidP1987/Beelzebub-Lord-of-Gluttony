@@ -39,12 +39,19 @@ internal static class ApiCommands
     //   fires for Dracula/Morgana. `.beelz transform`/`transforms` resolve only those two.
     //   New admin command `.beelz admin devour`. Arbitrary-unit transformation = postponed
     //   phase-two feature. All additive — older parsers ignore the unknown type=devour.
-    // v7 (v0.51.0): ability `cat=` badge broadened — new value `Melee` (9) added and many
-    //   abilities that used to report `cat=Other` now classify into a real bucket. An admin
-    //   `Category` override (ability_rules.json) can also set it. Additive/value-shift only;
-    //   parsers MUST treat any unknown `cat=` value as Other (forward-compatible).
+    // v7 (v0.51.0): ability `cat=` badge broadened — new category `Melee` and many abilities that
+    //   used to report `cat=Other` now classify into a real bucket. `cat=` is the enum NAME
+    //   (Other/Travel/Aoe/Projectile/Summon/Buff/WeaponSpell/Spell/Melee), NOT a number. An admin
+    //   `Category` override (ability_rules.json) can set it. Parsers MUST treat any unknown `cat=`
+    //   value as Other (forward-compatible).
+    // v8 (v0.54.0): wire-extraction completeness (additive fields only). `api info` now also emits
+    //   cat, category_override, cast_time_seconds, range, behavior, phase, allow_denied,
+    //   interruptible, free_move, cast_speed. `catalog-ability` adds category_override, phase,
+    //   allow_denied, interruptible, free_move, cast_speed. `api rules` adds default_damage_scale,
+    //   default_cooldown_scale, transform_only_patterns, deny_guids/allow_guids lists. `catalog-unit`
+    //   adds slot_template. type=config-changed is now BROADCAST to all subscribed clients.
     // All additive — backward-compatible with older parsers (unknown keys/events ignored).
-    const int ApiVersion = 7;
+    const int ApiVersion = 8;
 
     [Command("help", description: "List the Beelzebub API/BCH read commands (machine-readable data streams).")]
     public static void Help(ChatCommandContext ctx)
@@ -234,20 +241,45 @@ internal static class ApiCommands
         string school = string.IsNullOrEmpty(meta?.School) ? "none" : meta.School;
         string cdSecs = meta?.CooldownSeconds.HasValue == true ? meta.CooldownSeconds.Value.ToString("F1") : "0";
 
+        // v0.54.0: surface the fields the audit found were resolved server-side but never wired —
+        // the category badge (so a tooltip from `api info` matches `api list`), the runtime
+        // metadata (cast time / range / behavior), the multi-phase grouping + allow-denied flag,
+        // the cast-tuning state, and whether the category is an admin override vs auto-classified.
+        var catVal = Core.AbilityRules.GetAbilityCategoryOverride(abilityName) ?? Categorization.ClassifyAbility(abilityName);
+        string catOverride = Core.AbilityRules.GetCategoryOverrideRaw(abilityName);
+        int phase = Core.AbilityRules.GetAbilityPhase(abilityName);
+        bool allowDenied = Core.AbilityRules.IsAllowDenied(abilityName, c.AbilityPrefabGuid);
+        bool? interruptible = Core.AbilityRules.GetInterruptible(abilityName);
+        bool freeMove = Core.AbilityRules.GetFreeMoveAfterCast(abilityName);
+        float? castSpeed = Core.AbilityRules.GetCastMovementSpeed(abilityName);
+        string castTime = meta?.CastTimeSeconds.HasValue == true ? meta.CastTimeSeconds.Value.ToString("F2") : "0";
+        string range = meta?.MaxRange.HasValue == true ? meta.MaxRange.Value.ToString("F1") : "0";
+        string behavior = string.IsNullOrEmpty(meta?.BehaviorType) ? "none" : meta.BehaviorType;
+
         ctx.Reply(
             $"[BEELZ:info] i={index} s={(c.Source == CaptureSource.VBlood ? "V" : "R")}" +
             $" u={c.UnitPrefabGuid} un={unitName}" +
             $" a={c.AbilityPrefabGuid} an={abilityName}" +
             $" label={SafeToken(label)}" +
             $" desc={SafeToken(desc)}" +
+            $" cat={catVal}" +
+            $" category_override={(string.IsNullOrEmpty(catOverride) ? "-" : SafeToken(catOverride))}" +
             $" weapons={string.Join(",", families)}" +
             $" weapon_anim={animWeapon}" +
             $" school={SafeToken(school)}" +
             $" cooldown_seconds={cdSecs}" +
+            $" cast_time_seconds={castTime}" +
+            $" range={range}" +
+            $" behavior={SafeToken(behavior)}" +
             $" forms={(forms.Count == 0 ? "any" : string.Join(",", forms))}" +
             $" transform_only={(transformOnly ? 1 : 0)}" +
             $" enabled={(enabled ? 1 : 0)}" +
             $" difficulty={difficulty}" +
+            $" phase={phase}" +
+            $" allow_denied={(allowDenied ? 1 : 0)}" +
+            $" interruptible={(interruptible.HasValue ? (interruptible.Value ? "on" : "off") : "auto")}" +
+            $" free_move={(freeMove ? 1 : 0)}" +
+            $" cast_speed={(castSpeed.HasValue ? castSpeed.Value.ToString("F2") : "auto")}" +
             $" damage_scale={damageScale:F2}" +
             $" cooldown_scale={cooldownScale:F2}");
     }
@@ -321,6 +353,12 @@ internal static class ApiCommands
         sb.Append(" allow_patterns=").Append(string.Join(",", r.AllowPatterns));
         sb.Append(" deny_guids=").Append(r.DenyGuids.Count);
         sb.Append(" allow_guids=").Append(r.AllowGuids.Count);
+        // v0.54.0: surface the global Defaults block + transform-only reservation lists so a BCH
+        // admin panel can read the server-wide baselines (not just per-ability/per-unit entries).
+        sb.Append(" default_damage_scale=").Append((r.Defaults?.DamageScale ?? 1.0f).ToString("F2"));
+        sb.Append(" default_cooldown_scale=").Append((r.Defaults?.CooldownScale ?? 1.0f).ToString("F2"));
+        sb.Append(" transform_only_patterns=").Append(string.Join(",", r.TransformOnlyPatterns));
+        sb.Append(" transform_only_guids=").Append(r.TransformOnlyGuids.Count);
         ctx.Reply(sb.ToString());
     }
 
@@ -385,6 +423,10 @@ internal static class ApiCommands
             // set so admins can see the override, blank when inheriting global.
             var type = Categorization.ClassifyTransform(name);
             string scalingMode = string.IsNullOrEmpty(entry.PowerScalingMode) ? "inherit" : entry.PowerScalingMode;
+            // v0.54.0: encode the per-slot ability override map as slot:ability;slot:ability (or "-").
+            string slotTemplate = entry.SlotTemplate is { Count: > 0 }
+                ? string.Join(";", entry.SlotTemplate.Select(kv => $"{kv.Key}:{kv.Value}"))
+                : "-";
             ctx.Reply(
                 $"[BEELZ:catalog-unit] un={name}" +
                 $" enabled={(entry.Enabled ? 1 : 0)}" +
@@ -398,6 +440,7 @@ internal static class ApiCommands
                 $" cooldown_scale={entry.CooldownScale:F2}" +
                 $" health_scale={entry.HealthScale:F2}" +
                 $" speed_scale={entry.MovementSpeedScale:F2}" +
+                $" slot_template={SafeToken(slotTemplate)}" +
                 $" notes={SafeToken(entry.Notes ?? "")}");
         }
         ctx.Reply($"[BEELZ:end] cmd=catalog-units count={ordered.Count} total={total} page={page} pages={pages}");
@@ -434,6 +477,12 @@ internal static class ApiCommands
                 $" enabled={(entry.Enabled ? 1 : 0)}" +
                 $" difficulty={entry.Difficulty}" +
                 $" cat={cat}" +
+                $" category_override={(string.IsNullOrEmpty(entry.Category) ? "-" : SafeToken(entry.Category))}" +
+                $" phase={entry.Phase}" +
+                $" allow_denied={(entry.AllowDenied ? 1 : 0)}" +
+                $" interruptible={(entry.Interruptible.HasValue ? (entry.Interruptible.Value ? "on" : "off") : "auto")}" +
+                $" free_move={(entry.FreeMoveAfterCast ? 1 : 0)}" +
+                $" cast_speed={(entry.CastMovementSpeed.HasValue ? entry.CastMovementSpeed.Value.ToString("F2") : "auto")}" +
                 $" damage_scale={entry.DamageScale:F2}" +
                 $" cooldown_scale={entry.CooldownScale:F2}" +
                 $" notes={SafeToken(entry.Notes ?? "")}");
