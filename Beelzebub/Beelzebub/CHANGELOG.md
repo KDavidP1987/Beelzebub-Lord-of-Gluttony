@@ -4,6 +4,22 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.55.0] - 2026-05-27
+
+### Public test-launch prep — front page & docs
+
+Documentation/front-page pass ahead of the first public Thunderstore test release. **No gameplay
+changes** — the mod build is identical to v0.54.0.
+
+- Rewrote the front page with a clear **early-access (pre-1.0, server-side)** header up top, and
+  spelled out the important caveats: not every captured ability is guaranteed to work (evaluating
+  **ability viability** is a core part of testing, so we can trim the catalog to what's actually
+  fun and usable), a **strong recommendation to run the BloodCraftHub companion app**, and explicit
+  **mod-compatibility** notes (we aim to integrate with Bloodcraft and KindredCommands but that
+  isn't finalized — other mods are use-at-your-own-risk).
+- Added/clarified installation steps, the roadmap, **tester acknowledgements**, a screenshots
+  placeholder, and credit to Bloodcraft's familiar system as an inspiration.
+
 ## [0.54.0] - 2026-05-27
 
 ### BloodCraftHub can now read every ability detail

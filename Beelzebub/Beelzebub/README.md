@@ -8,27 +8,39 @@
 
 ---
 
-## ⚠️ EARLY TEST RELEASE — please read first
+## ⚠️ EARLY ACCESS (pre-1.0) — read this first
 
-**This mod is brand new and is being launched for testing.** It is effectively in
-**alpha/beta**. It works end-to-end and has been tested on the developer's own
-server, but it has **not** had wide testing yet. Before you install it on anything
-you care about, know that:
+**Beelzebub is an early-access, pre-1.0, _server-side_ V Rising mod.** It works
+end-to-end and runs on the developer's server, but it is being launched for **wide
+testing** — expect rough edges, and treat it as experimental, not production-ready.
+**By installing, you're helping test it.** 🦇
 
-1. **This is a testing release, just getting launched.** Expect rough edges and
-   please treat it as experimental, not production-ready.
-2. **We are not yet aware of incompatibilities with other mods.** It has not been
-   tested alongside most of the modding ecosystem — if you run other server mods,
-   there may be conflicts we don't know about yet.
-3. **We don't yet know how it behaves across different servers / configurations.**
-   Different server settings, presets, population sizes, and hardware are untested.
-   Something that works on one server may misbehave on another.
-4. **Feedback is genuinely wanted — it's still being actively developed.** If you
-   hit a bug, a conflict, or just something that feels off, please tell us (see
-   [Feedback](#feedback)). Reports with `[Beelz]` log lines are gold.
+Before you install, please understand:
 
-**By installing, you're helping test it. Thank you — that's exactly what this
-release is for.** 🦇
+- **Not every ability is guaranteed to work.** V Rising has an *enormous* roster of
+  unit abilities, and a captured ability is essentially an NPC/boss power dropped onto
+  a player — some won't behave, animate, or fire correctly out of their original
+  context. **A core goal of this test is to evaluate ability viability** so we can trim
+  the bestiary and ability catalog down to what's genuinely valuable and usable for a
+  player. Finding the ones that *don't* work is useful feedback, not a failure.
+- **🔌 Strongly recommended: install BloodCraftHub.** Beelzebub is built to pair with
+  the client-side **BloodCraftHub** companion app — on-screen ability buttons, cooldown
+  display, your collection book, and more. Without it you're limited to chat commands
+  and the vanilla six slots, so **to get the most out of Beelzebub you'll really want
+  BloodCraftHub.** *(BCH ↔ Beelzebub integration is actively being built out; features
+  land as testing progresses. Thunderstore link: **coming soon**.)*
+- **Mod compatibility is not guaranteed — use at your own risk.** We *aim* to integrate
+  cleanly with **Bloodcraft** and **KindredCommands** (Beelzebub is designed to coexist
+  with both), but that integration is **not yet finalized or fully tested**. We can't
+  guarantee compatibility with other mods — run it alongside anything else at your own
+  risk, and please report conflicts.
+- **Your progress is not safe yet.** On test servers, characters, collections, and even
+  the **entire server may be wiped without notice** as we patch and rebuild. Don't get
+  attached.
+
+**Feedback is the whole point** — bug reports, mod-conflict reports, ability-viability
+notes, and balance feedback are all hugely appreciated (see [Feedback](#feedback)).
+Reports with `[Beelz]` log lines are gold.
 
 ---
 
@@ -36,7 +48,13 @@ A **server-side** V Rising mod that turns the whole bestiary into a collection-a
 
 **Source · issues · roadmap:** [github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony) · **License:** MIT
 
-> **Status:** active early access / **public test build (v0.54.0)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
+> **Status:** active early access / **public test build (v0.55.0)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
+
+---
+
+## 📸 Screenshots
+
+*Coming soon — screenshots and short clips from the development test server will be added here as we capture them. (Placeholder for an upcoming release.)*
 
 ---
 
@@ -77,13 +95,20 @@ A **server-side** V Rising mod that turns the whole bestiary into a collection-a
 - **Custom abilities on shapeshift forms (experimental, v0.48)** — `Forms_CustomAbilities_Enabled` (off by default): shift into **Wolf or Bear** (the current test forms) via the in-game wheel and your loadout's abilities are loaded onto the form bar, with the form's "break on cast" removed so the form *holds* while you cast. Feasibility test for a full per-form-loadout system (assign abilities per form, like the per-weapon loadouts).
 - **Difficulty gating, grant/revoke, `devour` (bulk-grant a unit's whole kit), inspect, audit logging** — full operator toolkit.
 
-### Companion-app ready (BloodCraftHub)
-A structured `[BEELZ:*]` chat API lets the client-side **BloodCraftHub** mod read your collection, slots, transforms, cooldowns, and settings — and render on-screen buttons (including the expanded action bar) and admin panels. *(BloodCraftHub integration is in development.)*
+### 🔌 BloodCraftHub companion app — strongly recommended
+Beelzebub is built to pair with the **client-side BloodCraftHub (BCH)** mod. A structured
+`[BEELZ:*]` chat API lets BCH read your collection, slots, transforms, cooldowns, and settings,
+and render **on-screen ability buttons** (including the expanded action bar beyond six slots),
+**live cooldowns**, your **collection book**, and **admin panels**. Without BCH you're limited to
+chat commands and the vanilla six slots — so for the intended experience, **install BloodCraftHub**.
+*(Thunderstore link coming soon. The BCH ↔ Beelzebub integration is actively being built out;
+features land as testing progresses.)*
 
 ## Requirements
 
 - A V Rising **Dedicated Server** (Steam Tool AppID 1829350). Beelzebub is server-side — it does **not** run on a "Host & Play" private game.
 - [BepInExPack_V_Rising](https://thunderstore.io/c/v-rising/p/BepInEx/BepInExPack_V_Rising/) and [VampireCommandFramework](https://thunderstore.io/c/v-rising/p/deca/VampireCommandFramework/).
+- **Strongly recommended (client-side):** the **BloodCraftHub** companion mod, installed by each player who wants the full experience (on-screen ability buttons, cooldowns, collection UI). Beelzebub works without it via chat commands, but BCH is how it's meant to be played. *(Thunderstore link coming soon.)*
 
 ## Installation
 
@@ -168,12 +193,12 @@ Want to influence priorities? Open an issue — early feedback shapes the order.
 Beelzebub stands on the shoulders of the V Rising server-modding community:
 
 - **[Bloodcraft](https://thunderstore.io/c/v-rising/p/zfolmt/Bloodcraft/) by zfolmt** —
-  a major inspiration and reference for this build. Beelzebub's death-event capture
-  hook, its player-allied summon/familiar handling, and the **ExoForm** real-form
-  transform technique (applying a unit's actual form buff so its abilities work) were
-  all informed by studying Bloodcraft's approach. Beelzebub is designed to **coexist**
-  with Bloodcraft, and can optionally scale transform power using a player's Bloodcraft
-  progression. Huge thanks to zfolmt.
+  a major inspiration and reference for this build. In particular, Bloodcraft's
+  **familiar system** directly inspired Beelzebub's player-allied summons, and its
+  approach informed our death-event capture hook and the **ExoForm** real-form transform
+  technique (applying a unit's actual form buff so its abilities work). Beelzebub is
+  designed to **coexist** with Bloodcraft and can optionally scale transform power using a
+  player's Bloodcraft progression. Huge thanks to zfolmt.
 - **[KindredCommands](https://thunderstore.io/c/v-rising/p/odjit/KindredCommands/) by odjit** —
   reference for the command + plugin scaffold patterns.
 - **[VampireCommandFramework](https://thunderstore.io/c/v-rising/p/deca/VampireCommandFramework/) by deca** —
@@ -183,6 +208,17 @@ Beelzebub stands on the shoulders of the V Rising server-modding community:
 
 These are independent projects by their respective authors; Beelzebub is not
 affiliated with or endorsed by them. All credit for their work is theirs.
+
+### 🧪 Testers
+Heartfelt thanks to everyone helping shake this out on the development test server — your
+bug reports, ability-viability notes, and balance feedback directly shape what makes the
+final cut:
+
+- *<tester names / Discord handles to be added here>*
+
+**Want to help test?** We're spinning up a development test server now — jump in via our
+community (see [Feedback](#feedback)) and you'll be credited here. Just remember it's early
+access: expect bugs, and progress (or the whole server) may be wiped as we iterate.
 
 ## Feedback
 
