@@ -75,6 +75,13 @@
 > per-form loadout (parallel to per-weapon buckets, with `api`/grant surface) would follow and get a
 > wire surface then.
 >
+> **v0.52.0 — UNTRANSFORMED chain casting (behavioral; no wire change, ApiVersion still 7).**
+> Captured chain abilities (projectiles / AoEs / teleport-detonates) now team-fixup and fire vs.
+> enemies when cast in normal form, not just while transformed — the chain-entity fixup gate was
+> widened from "is transformed" to "transformed OR just cast a captured ability." Summons already
+> worked untransformed (v0.45). **No BCH impact** — no `[BEELZ:*]` line/event change; players just
+> get more working abilities off the normal bar.
+>
 > **⚠️ v0.51.0 — ABILITY CATEGORY badge broadened (ApiVersion 6 → 7).** The `cat=` field on
 > `[BEELZ:list]` and `[BEELZ:catalog-ability]` now classifies far more abilities into real buckets
 > (much less `Other`) and adds a **new value `Melee` (9)**. Enum is now:

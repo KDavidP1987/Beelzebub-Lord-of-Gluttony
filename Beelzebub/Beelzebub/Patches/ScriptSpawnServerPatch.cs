@@ -239,7 +239,9 @@ internal static class ScriptSpawnServerPatch
 
                 ulong steamId = playerCharacter.GetSteamId();
                 if (steamId == 0) continue;
-                if (Core.AbilityRegistry?.GetActiveTransform(steamId) is null) continue;
+                // v0.52.0: fix up chain entities for a transformed player OR one who just cast a
+                // captured ability untransformed (so captured chain abilities fire vs. enemies).
+                if (!AbilityCastStartedSystemPatch.ShouldFixupChainFor(steamId)) continue;
 
                 ownerResolved++;
 
@@ -375,8 +377,8 @@ internal static class ScriptSpawnServerPatch
         ulong steamId = playerCharacter.GetSteamId();
         if (steamId == 0) return;
 
-        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
-        if (active is null) return;
+        // v0.52.0: transformed OR recently cast a captured ability untransformed (chain fixup).
+        if (!AbilityCastStartedSystemPatch.ShouldFixupChainFor(steamId)) return;
 
         // Skip entities we already track via the summon-ally path — that
         // pipeline already sets faction + follower correctly. Detect by

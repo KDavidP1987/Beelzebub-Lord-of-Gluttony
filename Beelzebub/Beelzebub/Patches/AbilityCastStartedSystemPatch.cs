@@ -106,6 +106,36 @@ internal static class AbilityCastStartedSystemPatch
     static readonly Dictionary<(ulong, int), DateTime> _recentCasts = new();
     static readonly TimeSpan DedupeWindow = TimeSpan.FromMilliseconds(250);
 
+    // v0.52.0 — UNTRANSFORMED chain-cast attribution. When an untransformed player casts a
+    // CAPTURED (Beelzebub-granted) ability, we stamp the time here. The spawn patches
+    // (ScriptSpawnServerPatch / BuffSpawnServerPatch) team/faction-fixup chain entities owned
+    // by a player only when ShouldFixupChainFor is true — previously that was "is transformed",
+    // which left untransformed captured chain abilities (projectiles/AoEs / teleport-detonates)
+    // on the NPC team so they never hit enemies. Scoping to the attribution window + to captured
+    // abilities keeps vanilla player abilities and other mods' entities untouched.
+    public static readonly Dictionary<ulong, DateTime> RecentGrantCast = new();
+
+    /// <summary>Stamp that this player just cast a captured ability (untransformed).</summary>
+    public static void RecordGrantCast(ulong steamId)
+    {
+        if (steamId != 0) RecentGrantCast[steamId] = DateTime.UtcNow;
+    }
+
+    /// <summary>True if the player cast a captured ability within the attribution window.</summary>
+    public static bool HasRecentGrantCast(ulong steamId)
+        => steamId != 0 && RecentGrantCast.TryGetValue(steamId, out var when)
+           && (DateTime.UtcNow - when) < AttributionWindow;
+
+    /// <summary>
+    /// v0.52.0: should the spawn patches rewrite team/faction on chain entities owned by this
+    /// player? True while TRANSFORMED (boss-kit chains) OR briefly after a captured-ability cast
+    /// in normal form (so untransformed captured chain abilities fire against enemies). Replaces
+    /// the old transform-only gate at the chain-fixup sites.
+    /// </summary>
+    public static bool ShouldFixupChainFor(ulong steamId)
+        => steamId != 0
+           && (Core.AbilityRegistry?.GetActiveTransform(steamId) is not null || HasRecentGrantCast(steamId));
+
     [HarmonyPrefix]
     public static void OnUpdatePrefix(AbilityCastStarted_SetupAbilityTargetSystem_Shared __instance)
     {
@@ -133,6 +163,11 @@ internal static class AbilityCastStartedSystemPatch
                 try { Services.GrantPowerScalingService.OnGrantedCast(evt.Character, evt.AbilityGroup.GetPrefabGuid()); }
                 catch (Exception ex) { Core.Log.LogWarning($"[Beelz] grant power-scale failed: {ex.Message}"); }
 
+                // v0.52.0: attribute an untransformed CAPTURED-ability cast so the spawn patches
+                // can team-fixup its chain entities (untransformed chain casting).
+                try { RecordGrantCastIfCaptured(evt); }
+                catch (Exception ex) { Core.Log.LogWarning($"[Beelz] grant-cast attribution failed: {ex.Message}"); }
+
                 // Summon-ally cast handling (transform-only) stays gated by its config.
                 if (summonsAllies)
                 {
@@ -142,6 +177,21 @@ internal static class AbilityCastStartedSystemPatch
             }
         }
         finally { events.Dispose(); }
+    }
+
+    /// <summary>
+    /// v0.52.0: record attribution if an UNTRANSFORMED player cast a CAPTURED ability. Transformed
+    /// players already satisfy the chain-fixup gate, so we only need the stamp in normal form.
+    /// </summary>
+    static void RecordGrantCastIfCaptured(AbilityCastStartedEvent evt)
+    {
+        Entity caster = evt.Character;
+        if (!caster.Exists() || !caster.IsPlayer()) return;
+        ulong steamId = caster.GetSteamId();
+        if (steamId == 0) return;
+        if (Core.AbilityRegistry.GetActiveTransform(steamId) is not null) return; // transform path already fixes up
+        if (Core.AbilityRegistry.HasCaptured(steamId, evt.AbilityGroup.GetPrefabGuid()._Value))
+            RecordGrantCast(steamId);
     }
 
     static void ProcessCast(AbilityCastStartedEvent evt)

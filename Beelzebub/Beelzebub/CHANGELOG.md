@@ -4,6 +4,26 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.52.0] - 2026-05-27
+
+### Chained abilities fire untransformed
+
+Some captured abilities would slot onto your bar but "do nothing" when cast in normal form —
+their projectiles/AoEs spawned on the enemy team and passed right through your targets, because
+the team-fixup that makes chain effects player-friendly only ran while you were *transformed*.
+
+- **Captured chain abilities now hit while untransformed.** When you cast a captured ability in
+  normal form, the effects it spawns (projectiles, ground AoEs, and teleport-and-detonate blasts
+  like the Undead Priest's Mist Walk) are now retargeted to *your* team for a few seconds after
+  the cast — so they damage enemies instead of fizzling. Summons already worked untransformed
+  (v0.45); this closes the gap for the rest.
+- Tightly scoped: only effects owned by a player who *just cast a captured Beelzebub ability* are
+  touched, so your normal weapon/spell abilities and other mods are unaffected.
+
+Known limit: a few abilities are animation/rig-bound to their original creature and still won't
+look or fire perfectly without that form — that's the model-swap ceiling, not something a
+server-side mod can fully close.
+
 ## [0.51.0] - 2026-05-27
 
 ### Fewer "Other" abilities — smarter categorization

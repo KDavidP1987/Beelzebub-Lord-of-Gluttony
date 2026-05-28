@@ -213,7 +213,7 @@ internal static class BuffSpawnServerPatch
                         if (playerOwner.Exists()
                             && playerOwner.IsPlayer()
                             && Core.AbilityRegistry is not null
-                            && Core.AbilityRegistry.GetActiveTransform(playerOwner.GetSteamId()) is not null)
+                            && AbilityCastStartedSystemPatch.ShouldFixupChainFor(playerOwner.GetSteamId()))
                         {
                             // v0.25.0: trace EVERY owned buff (incl. trigger /
                             // channel buffs) so the runtime audit sees the chain.
@@ -361,9 +361,10 @@ internal static class BuffSpawnServerPatch
         ulong steamId = playerCharacter.GetSteamId();
         if (steamId == 0) return;
 
-        // Only transformed players get boss kits — guard so a vanilla player
-        // who somehow carries this buff doesn't trigger a spawn.
-        if (Core.AbilityRegistry?.GetActiveTransform(steamId) is null) return;
+        // v0.52.0: fire for a transformed player OR one who just cast a captured ability
+        // untransformed (so a captured teleport-and-detonate ability detonates off the normal
+        // bar). Guards against a vanilla player who merely carries the arrival buff.
+        if (!AbilityCastStartedSystemPatch.ShouldFixupChainFor(steamId)) return;
 
         SpawnDetonationOwnedByPlayer(playerCharacter, detonateGuid,
             $"arrival:{new PrefabGUID(arrivalBuffGuid).GetPrefabName()}");
