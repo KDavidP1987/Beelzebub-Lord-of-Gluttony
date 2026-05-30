@@ -520,11 +520,19 @@
 
 ---
 
-## 0.0 — ⚡ SINCE YOUR LAST BUILD (BCH baseline v0.44.0 → now v0.88.0) — READ THIS FIRST
+## 0.0 — ⚡ SINCE YOUR LAST BUILD (BCH baseline v0.44.0 → now v0.94.0) — READ THIS FIRST
 
 **Context (updated 2026-05-30):** BCH began building against **v0.44.0** (ApiVersion 6). Beelzebub
-is now at **v0.88.0 / ApiVersion 20**. This is the *consolidated* delta so you can fold everything
+is now at **v0.94.0 / ApiVersion 20**. This is the *consolidated* delta so you can fold everything
 into the UI in one pass — every per-version detail is in the dated callouts ABOVE this section.
+
+> **🔧 v0.89–v0.94 (all ApiVersion 20, mostly behavior; the items below are the BCH-relevant ones):**
+> **clear-bar button must move to `.beelz clearbar`** (bare `resetbar` no-ops since v0.76 — see §A/§4);
+> **grant/weapon-grant/form-grant slot arg is now a token** that also accepts **`primary`** (left-click,
+> slot 0) and **`ultimate`** (the **T** key, slot 7) — loadout UIs should expect slots 0 and 7 too;
+> shapeshift **forms now fully work in-game** (render on the form bar, hold while you cast your form
+> abilities, exit when you cast a non-form ability, every skin recognized); `freelymove` now also frees
+> channeled/sustained-fire abilities. None of these change the wire format.
 
 > **⚠️ THE ONE BREAKING CHANGE (v0.76.0, ApiVersion 15): `api info` + `catalog-ability` are now
 > CHUNKED.** Those two lines outgrew VCF's 512-byte reply cap, so each is emitted across multiple
@@ -543,6 +551,12 @@ into the UI in one pass — every per-version detail is in the dated callouts AB
   wheel form (Wolf/Bear/Rat/Spider/Toad/Werewolf/Gargoyle). `api slots` streams these buckets too.
 - **`.beelz grant`/`weapon-grant`/`form-grant` accept the ability GUID** (not just the list index) —
   v0.83. So a BCH "assign this ability" button can pass the GUID it already holds.
+- **Clear-bar (v0.94): `.beelz clearbar [all|universal|<weapon>|<form>]`** — the clear-bar button MUST
+  call this (bare `.beelz resetbar` no-ops since v0.76's CONFIRM requirement). Lets BCH offer per-loadout
+  clear buttons (all / universal / a specific weapon / a specific form). Emits `slot-cleared`.
+- **Primary + ultimate slots (v0.91/0.94): the slot arg of grant/weapon-grant/form-grant is a token** —
+  `1`–`6`, or `primary` (left-click, engine slot 0) / `ultimate` (T key, engine slot 7). `api slots` can
+  now stream binds on slots 0 and 7, so a loadout UI should render those too.
 - **Tooltip-by-GUID (v0.84): `.beelz api info-guid <abilityGuid>`** — returns the same rich `info`
   body keyed by `a=<guid>` instead of `i=<index>`. **This is the fix for "No name" on active-bar
   abilities** that aren't in the player's capture list — call it for any ability GUID you need a
@@ -559,7 +573,7 @@ into the UI in one pass — every per-version detail is in the dated callouts AB
 ### C) NEW FIELDS on `api info` / `info-guid` / `catalog-ability` (per-ability shaping — for an ADMIN ability-config panel)
 All additive `key=value` tokens (reassemble the chunks first). Each is the server-wide override or
 `-`/`auto` when unset. A BCH ability-config panel reads these and writes them via `.beelz admin
-ability …` (section D). Full set as of v0.88:
+ability …` (section D). Full set (current at v0.94 — no new wire fields since v0.87):
 `cooldown_override` · `range_override` · `charges_override` · `chargetime_override` · `aoe_override` ·
 `projspeed_override` · `duration_override` · `heal_mult` · `force_timeout_override` ·
 `summon_cap_override` · `summon_timeout_override` · `summon_units_override` · `free_move_secs` ·
@@ -1127,14 +1141,15 @@ use the `api` equivalents.)
 - `.beelz odds` — your live drop / Devour / pity chances.
 - `.beelz catalog [page]` — curated ability/unit reference. `.beelz current` — your active bar.
 
-**Loadouts (action bar)**
-- `.beelz grant <slot 1-6> <index|abilityID>` — bind a captured ability to a universal slot (accepts the list index OR the ability GUID).
+**Loadouts (action bar)** — the **slot** argument is a token: `1`–`6`, or **`primary`** (left-click attack, engine slot 0) / **`ultimate`** (the **T** key, engine slot 7). Numeric still works.
+- `.beelz grant <slot|primary|ultimate> <index|abilityID>` — bind a captured ability to a universal slot (accepts the list index OR the ability GUID).
 - `.beelz unslot <slot>` — clear a universal slot.
-- `.beelz weapon-grant <weapon|auto> <slot 1-6> <index|abilityID>` — bind to a per-weapon loadout (`auto` = your current weapon).
+- `.beelz weapon-grant <weapon|auto> <slot|primary|ultimate> <index|abilityID>` — bind to a per-weapon loadout (`auto` = your current weapon).
 - `.beelz weapon-unslot <weapon|auto> <slot>` — clear a per-weapon bind.
-- `.beelz form-grant <form> <slot 1-6> <index|abilityID>` · `.beelz form-unslot <form> <slot>` — per-form loadouts (Wolf/Bear/Rat/Spider/Toad/Werewolf/Gargoyle); abilities map onto the slots the form actually renders.
+- `.beelz form-grant <form> <slot|primary|ultimate> <index|abilityID>` · `.beelz form-unslot <form> <slot>` — per-form loadouts (Wolf/Bear/Rat/Spider/Toad/Werewolf/Gargoyle + all skins); abilities map onto the slots the form actually renders.
 - `.beelz loadouts` — summary of universal + per-weapon + per-form sets + active bucket (machine: `api slots`).
-- `.beelz resetbar` — clear ALL binds → vanilla bar (keeps captures). `.beelz refresh` — re-apply your bar if it looks wrong.
+- **`.beelz clearbar [all|universal|<weapon>|<form>]`** — clear a chosen loadout (no confirmation; captures kept). No arg/`all` = everything; `universal` = any-weapon set; a weapon = that weapon's set; a form = that form's set. **This is the clear-bar BCH should call** (see §4). Emits `slot-cleared`.
+- `.beelz resetbar CONFIRM` — clear ALL binds → vanilla bar (keeps captures). **⚠️ requires the literal `CONFIRM` token (v0.76)** — bare `resetbar` no-ops; prefer `clearbar`. `.beelz refresh` — re-apply your bar if it looks wrong ("fix bar").
 - `.beelz preset save|load|list|delete <name>` — save/restore loadout presets.
 
 **Extra hotkeys & casting**
@@ -1163,7 +1178,7 @@ use the `api` equivalents.)
 
 All `adminOnly` (VCF gates on V Rising admin status). Reply in human text; audited to the server log.
 
-**Inspect** — `admin help` · `admin rules` · `admin inspect <player>` · `admin progress <player>` · `admin snapshot` · `admin buffs [player]` · `admin tune-list` · `admin transform show`.
+**Inspect** — `admin help` · `admin rules` · `admin inspect <player>` · `admin progress <player>` · `admin snapshot` · `admin buffs [player]` · `admin tune-list` · `admin transform show` · `admin dump <abilityGuid|form|forms>` (v0.92/0.94 DIAGNOSTIC — logs an ability's full component chain + key field values, your active form buff's components, or `forms` = every shapeshift form-buff prefab + which form it maps to; output goes to `LogOutput.log`).
 
 **Capture filters** — `admin deny/undeny <pattern>` · `admin allow/unallow <pattern>` · `admin denyguid/allowguid <add|remove> <guid>` · `admin transformonly <add|remove> <pattern|guid>` · `admin reload`.
 
