@@ -125,10 +125,141 @@ internal sealed class AbilityRules
     /// enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, damagescale,
     /// cooldownscale, category, interruptible, freemove, castspeed, notes.
     /// </summary>
+    /// <summary>
+    /// v0.69.0: normalize an admin-supplied ability identifier to the canonical prefab-NAME key the
+    /// AbilityMap + the tuning matcher use. Accepts the prefab name as-is, OR a numeric PrefabGUID
+    /// (what `.beelz list` / BloodCraftHub show — admins/BCH naturally use the ID) resolved to its
+    /// prefab name. Returns null if a numeric ID can't be resolved to a known prefab. Without this,
+    /// `.beelz admin ability &lt;guid&gt; cooldown 10` created a dead GUID-keyed entry the tuner never
+    /// matched (it scans prefabs by NAME), so the edit silently did nothing.
+    /// </summary>
+    public static string ResolveAbilityKey(string nameOrGuid)
+    {
+        string s = (nameOrGuid ?? "").Trim();
+        if (s.Length == 0 || !int.TryParse(s, out int guid)) return s;
+        if (Core.PrefabNames != null && Core.PrefabNames.TryGetValue(guid, out var n) && !string.IsNullOrEmpty(n)) return n;
+        string gn = new Stunlock.Core.PrefabGUID(guid).GetPrefabName();
+        if (!string.IsNullOrEmpty(gn) && gn.IndexOf("Not Found", StringComparison.OrdinalIgnoreCase) < 0) return gn;
+        return null;
+    }
+
+    /// <summary>
+    /// v0.69.0: heal AbilityMap entries that an earlier command keyed by GUID instead of prefab name
+    /// (pre-fix `.beelz admin ability &lt;guid&gt; ...`). Re-keys each numeric key to its prefab name so
+    /// the tuner can match it. Runs once at apply-time (prefab map is ready then); cheap no-op after.
+    /// Returns the number migrated.
+    /// </summary>
+    public int NormalizeNumericKeys()
+    {
+        var map = Current?.AbilityMap;
+        if (map == null) return 0;
+        List<string> numeric = null;
+        foreach (var k in map.Keys) if (int.TryParse(k, out _)) (numeric ??= new List<string>()).Add(k);
+        if (numeric == null) return 0;
+        int migrated = 0;
+        foreach (var k in numeric)
+        {
+            string name = ResolveAbilityKey(k);
+            if (string.IsNullOrEmpty(name) || name == k) continue;
+            var e = map[k];
+            if (map.TryGetValue(name, out var existing))
+            {
+                // v0.70.0: a curated name-keyed entry already exists — MERGE the admin-set override
+                // fields from the GUID entry into it (don't drop them, the v0.69 bug that lost a
+                // cooldown set by GUID onto an already-curated ability).
+                if (e.CooldownSeconds.HasValue) existing.CooldownSeconds = e.CooldownSeconds;
+                if (e.MaxRangeOverride.HasValue) existing.MaxRangeOverride = e.MaxRangeOverride;
+                if (e.ChargesMax.HasValue) existing.ChargesMax = e.ChargesMax;
+                if (e.ChargeTimeSeconds.HasValue) existing.ChargeTimeSeconds = e.ChargeTimeSeconds;
+                if (e.AoeRadius.HasValue) existing.AoeRadius = e.AoeRadius;
+                if (e.ProjectileSpeed.HasValue) existing.ProjectileSpeed = e.ProjectileSpeed;
+                if (e.EffectDurationSeconds.HasValue) existing.EffectDurationSeconds = e.EffectDurationSeconds;
+                if (e.HealingMultiplier.HasValue) existing.HealingMultiplier = e.HealingMultiplier;
+                if (e.SummonCap.HasValue) existing.SummonCap = e.SummonCap;
+                if (e.SummonTimeoutSeconds.HasValue) existing.SummonTimeoutSeconds = e.SummonTimeoutSeconds;
+                if (e.SummonUnitsPerCast.HasValue) existing.SummonUnitsPerCast = e.SummonUnitsPerCast;
+                if (e.ForceTimeoutSeconds.HasValue) existing.ForceTimeoutSeconds = e.ForceTimeoutSeconds;
+                if (e.Interruptible.HasValue) existing.Interruptible = e.Interruptible;
+                if (e.CastMovementSpeed.HasValue) existing.CastMovementSpeed = e.CastMovementSpeed;
+                if (e.FreeMoveAfterCast) existing.FreeMoveAfterCast = true;
+                if (e.FreeMoveAfterSeconds.HasValue) existing.FreeMoveAfterSeconds = e.FreeMoveAfterSeconds;   // v0.87.0
+                if (e.InterruptOnHit.HasValue) existing.InterruptOnHit = e.InterruptOnHit;                      // v0.87.0
+            }
+            else map[name] = e;
+            map.Remove(k);
+            migrated++;
+            Core.Log.LogInfo($"[Beelz] migrated GUID-keyed ability rule {k} -> {name}.");
+        }
+        if (migrated > 0) Save();
+        return migrated;
+    }
+
+    /// <summary>
+    /// v0.72.0: clear an entry's SHAPING fields back to "leave baked / baseline" — the ability-function
+    /// tuning an admin sets (cooldown/range/charges/aoe/projspeed/duration/healing/interrupt/freemove/
+    /// castspeed + damage/cooldown scale). Leaves identity/availability (Enabled, Weapons, Forms,
+    /// Difficulty, Phase, AllowDenied, TransformOnly, Category, Notes) untouched.
+    /// </summary>
+    static void ClearShapingFields(AbilityEntry e)
+    {
+        e.CooldownSeconds = null;
+        e.MaxRangeOverride = null;
+        e.ChargesMax = null;
+        e.ChargeTimeSeconds = null;
+        e.AoeRadius = null;
+        e.ProjectileSpeed = null;
+        e.EffectDurationSeconds = null;
+        e.HealingMultiplier = null;
+        e.SummonCap = null;
+        e.SummonTimeoutSeconds = null;
+        e.SummonUnitsPerCast = null;
+        e.ForceTimeoutSeconds = null;
+        e.Interruptible = null;
+        e.FreeMoveAfterCast = false;
+        e.CastMovementSpeed = null;
+        e.FreeMoveAfterSeconds = null;   // v0.87.0
+        e.InterruptOnHit = null;         // v0.87.0
+        e.DamageScale = 1.0f;
+        e.CooldownScale = 1.0f;
+    }
+
+    /// <summary>v0.72.0: reset ONE ability's shaping config to shipped defaults. Clears the rule fields;
+    /// the caller live-restores the baked prefab values via AbilityTuningService.RestoreAbility.</summary>
+    public (bool ok, string message) ResetAbilityDefaults(string nameOrGuid)
+    {
+        var map = Current?.AbilityMap;
+        if (map == null) return (false, "Ability rules not loaded.");
+        string key = ResolveAbilityKey(nameOrGuid);
+        if (string.IsNullOrEmpty(key)) return (false, $"No ability prefab found for '{nameOrGuid}'. Use the name or a valid ID from .beelz list.");
+        if (!map.TryGetValue(key, out var e) || e == null)
+            return (true, $"'{key}' had no shaping config — already at shipped defaults.");
+        ClearShapingFields(e);
+        Save();
+        return (true, $"Reset '{key}' shaping config to shipped defaults (cooldown/range/charges/aoe/projspeed/duration/healing/interrupt/freemove/castspeed/damagescale/cooldownscale cleared).");
+    }
+
+    /// <summary>v0.72.0: reset EVERY ability's shaping config to shipped defaults. Returns the count cleared.</summary>
+    public int ResetAllAbilityDefaults()
+    {
+        var map = Current?.AbilityMap;
+        if (map == null) return 0;
+        int n = 0;
+        foreach (var e in map.Values) { if (e == null) continue; ClearShapingFields(e); n++; }
+        if (n > 0) Save();
+        return n;
+    }
+
     public (bool ok, string message) SetAbilityField(string abilityName, string field, string rawValue)
     {
         string name = (abilityName ?? "").Trim();
-        if (name.Length == 0) return (false, "Provide the ability/group prefab name (from .beelz list / api list).");
+        if (name.Length == 0) return (false, "Provide the ability/group prefab name or ID (from .beelz list / api list).");
+        // v0.69.0: accept a numeric PrefabGUID and resolve to the prefab-NAME key.
+        if (int.TryParse(name, out _))
+        {
+            string resolved = ResolveAbilityKey(name);
+            if (resolved == null) return (false, $"No ability prefab found for ID {name}. Use the name or a valid ID from .beelz list / api list.");
+            name = resolved;
+        }
         string f = (field ?? "").Trim().ToLowerInvariant();
         string v = (rawValue ?? "").Trim();
         string vl = v.ToLowerInvariant();
@@ -148,6 +279,13 @@ internal sealed class AbilityRules
             case "interruptible": case "interrupt":
                 { if (vl is "clear" or "none" or "null") { e.Interruptible = null; break; }
                   var b = ParseOnOff(vl); if (b == null) return (false, "interruptible expects on|off|clear."); e.Interruptible = b.Value; break; }
+            case "interruptonhit": case "interruptattack": case "breakonhit":   // v0.87.0: cancel the cast when the caster is hit
+                { if (vl is "clear" or "none" or "null") { e.InterruptOnHit = null; break; }
+                  var b = ParseOnOff(vl); if (b == null) return (false, "interruptonhit expects on|off|clear."); e.InterruptOnHit = b.Value; break; }
+            case "freelymove": case "freemovesecs": case "freemoveafter":         // v0.87.0: free movement N seconds INTO the cast
+                { if (vl is "clear" or "none" or "null") { e.FreeMoveAfterSeconds = null; break; }
+                  if (!TryParseFloat(v, out float fm) || fm < 0f) return (false, "freelymove expects seconds >= 0 (free to move that many seconds into the cast), or clear.");
+                  e.FreeMoveAfterSeconds = fm; break; }
             case "difficulty":
                 { if (!vl.Equals("basic") && !vl.Equals("brutal")) return (false, "difficulty expects Basic|Brutal.");
                   e.Difficulty = vl == "brutal" ? "Brutal" : "Basic"; break; }
@@ -161,6 +299,54 @@ internal sealed class AbilityRules
                 { if (vl is "clear" or "none" or "null") { e.CastMovementSpeed = null; break; }
                   if (!TryParseFloat(v, out float s)) return (false, "castspeed expects 0..1 (0 = rooted, 1 = full speed) or clear.");
                   e.CastMovementSpeed = Math.Clamp(s, 0f, 1f); break; }
+            case "cooldownseconds": case "cooldown": case "cd":
+                { if (vl is "clear" or "none" or "null") { e.CooldownSeconds = null; break; }
+                  if (!TryParseFloat(v, out float cs) || cs < 0f) return (false, "cooldown expects an absolute time in seconds >= 0, or clear. (Needs Abilities_ApplyConfig; the edit is GLOBAL.)");
+                  e.CooldownSeconds = cs; break; }
+            case "maxrange": case "range":
+                { if (vl is "clear" or "none" or "null") { e.MaxRangeOverride = null; break; }
+                  if (!TryParseFloat(v, out float r) || r < 0f) return (false, "range expects a max cast distance >= 0, or clear. (Needs Abilities_ApplyConfig; the edit is GLOBAL.)");
+                  e.MaxRangeOverride = r; break; }
+            case "charges": case "maxcharges":
+                { if (vl is "clear" or "none" or "null") { e.ChargesMax = null; break; }
+                  if (!int.TryParse(v, out int mc) || mc < 0) return (false, "charges expects an integer >= 0, or clear. (Needs Abilities_ApplyConfig; the edit is GLOBAL.)");
+                  e.ChargesMax = mc; break; }
+            case "chargetime": case "chargeuptime":
+                { if (vl is "clear" or "none" or "null") { e.ChargeTimeSeconds = null; break; }
+                  if (!TryParseFloat(v, out float ctv) || ctv < 0f) return (false, "chargetime expects seconds >= 0 (recharge time per charge), or clear.");
+                  e.ChargeTimeSeconds = ctv; break; }
+            case "aoe": case "aoeradius": case "radius":
+                { if (vl is "clear" or "none" or "null") { e.AoeRadius = null; break; }
+                  if (!TryParseFloat(v, out float ar) || ar < 0f) return (false, "aoe expects an area radius >= 0, or clear. (Needs Abilities_ApplyConfig; the edit is GLOBAL.)");
+                  e.AoeRadius = ar; break; }
+            case "projspeed": case "projectilespeed":
+                { if (vl is "clear" or "none" or "null") { e.ProjectileSpeed = null; break; }
+                  if (!TryParseFloat(v, out float ps) || ps < 0f) return (false, "projspeed expects a projectile speed >= 0, or clear. (Needs Abilities_ApplyConfig; the edit is GLOBAL.)");
+                  e.ProjectileSpeed = ps; break; }
+            case "duration": case "effectduration":
+                { if (vl is "clear" or "none" or "null") { e.EffectDurationSeconds = null; break; }
+                  if (!TryParseFloat(v, out float ed) || ed < 0f) return (false, "duration expects the buff/debuff duration in seconds >= 0, or clear. (Needs Abilities_ApplyConfig; the edit is GLOBAL.)");
+                  e.EffectDurationSeconds = ed; break; }
+            case "healing": case "healmult": case "healingmultiplier":
+                { if (vl is "clear" or "none" or "null") { e.HealingMultiplier = null; break; }
+                  if (!TryParseFloat(v, out float hm) || hm < 0f) return (false, "healing expects a multiplier >= 0 (1.0 = no change), or clear. (Needs Abilities_ApplyConfig; the edit is GLOBAL.)");
+                  e.HealingMultiplier = hm; break; }
+            case "summoncap": case "summonlimit": case "maxsummons":
+                { if (vl is "clear" or "none" or "null") { e.SummonCap = null; break; }
+                  if (!int.TryParse(v, out int sc) || sc < 0) return (false, "summoncap expects an integer >= 0 (max simultaneous 'uses' of this summon ability; 0 = unlimited), or clear. Overrides the global Transform_MaxStacksPerSummonAbility for this ability.");
+                  e.SummonCap = sc; break; }
+            case "summontimeout": case "summonlifetime": case "summonduration":
+                { if (vl is "clear" or "none" or "null") { e.SummonTimeoutSeconds = null; break; }
+                  if (!TryParseFloat(v, out float st) || st < 0f) return (false, "summontimeout expects seconds >= 0 (this ability's summons auto-despawn after this long; 0 = never), or clear. Overrides the global Transform_SummonLifetimeSeconds for this ability.");
+                  e.SummonTimeoutSeconds = st; break; }
+            case "summonunits": case "summonunitspercast": case "unitspercast":
+                { if (vl is "clear" or "none" or "null") { e.SummonUnitsPerCast = null; break; }
+                  if (!int.TryParse(v, out int su) || su < 0) return (false, "summonunits expects an integer >= 0 (max UNITS one cast of this ability summons; 0 = the ability's natural count), or clear. Separate from summoncap (which limits concurrent USES).");
+                  e.SummonUnitsPerCast = su; break; }
+            case "forcetimeout": case "effecttimeout": case "bufftimeout":
+                { if (vl is "clear" or "none" or "null") { e.ForceTimeoutSeconds = null; break; }
+                  if (!TryParseFloat(v, out float fto) || fto < 0f) return (false, "forcetimeout expects seconds >= 0 (force this ability's otherwise-INDEFINITE spawned effects/buffs to expire after this long — adds a lifetime where there is none), or clear. (Needs Abilities_ApplyConfig; GLOBAL baked edit.)");
+                  e.ForceTimeoutSeconds = fto; break; }
             case "category":
                 { if (vl is "clear" or "none" or "null" or "auto") { e.Category = null; break; }
                   if (!Enum.TryParse<AbilityCategory>(v, ignoreCase: true, out var cat)) return (false, "category expects one of: Travel, Aoe, Projectile, Melee, Summon, Buff, WeaponSpell, Spell, Other (or clear).");
@@ -172,7 +358,7 @@ internal sealed class AbilityRules
             case "notes":
                 { e.Notes = v; break; }
             default:
-                return (false, "Unknown field. Valid: enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, damagescale, cooldownscale, category, interruptible, freemove, castspeed, notes.");
+                return (false, "Unknown field. Valid: enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, damagescale, cooldownscale, cooldown, range, charges, chargetime, aoe, projspeed, duration, healing, category, interruptible, interruptonhit, freemove, freelymove, castspeed, notes.");
         }
         bool saved = Save();
         return (true, Persisted(saved, $"Set {f}={v} for '{name}'. (.beelz admin reload re-applies cast tuning if changed.)"));
@@ -415,6 +601,23 @@ internal sealed class AbilityRules
                 Interruptible = entry.Interruptible,
                 FreeMoveAfterCast = entry.FreeMoveAfterCast,
                 CastMovementSpeed = ClampCastSpeed(entry.CastMovementSpeed),
+                FreeMoveAfterSeconds = entry.FreeMoveAfterSeconds,   // v0.87.0 — preserve across reload
+                InterruptOnHit = entry.InterruptOnHit,               // v0.87.0 — preserve across reload
+                // v0.65.0–0.68.0 ability shaping — MUST be copied here or a reload/restart silently
+                // drops them (this was the cooldown-never-applies bug: the value lived in the file but
+                // Load → NormalizeAbilityMap rebuilt the entry without these, wiping them from memory).
+                CooldownSeconds = entry.CooldownSeconds,
+                MaxRangeOverride = entry.MaxRangeOverride,
+                ChargesMax = entry.ChargesMax,
+                ChargeTimeSeconds = entry.ChargeTimeSeconds,
+                AoeRadius = entry.AoeRadius,
+                ProjectileSpeed = entry.ProjectileSpeed,
+                EffectDurationSeconds = entry.EffectDurationSeconds,
+                HealingMultiplier = entry.HealingMultiplier,
+                SummonCap = entry.SummonCap,                          // v0.79.0 — preserve across reload
+                SummonTimeoutSeconds = entry.SummonTimeoutSeconds,    // v0.79.0
+                SummonUnitsPerCast = entry.SummonUnitsPerCast,        // v0.80.0
+                ForceTimeoutSeconds = entry.ForceTimeoutSeconds,      // v0.85.0
                 Category = NormalizeCategoryName(entry.Category),
                 Notes = entry.Notes ?? "",
             };
@@ -593,6 +796,57 @@ internal sealed class AbilityRules
         => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) && e.FreeMoveAfterCast;
     public float? GetCastMovementSpeed(string abilityName)
         => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.CastMovementSpeed : null;
+    public float? GetFreeMoveAfterSeconds(string abilityName)   // v0.87.0
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.FreeMoveAfterSeconds : null;
+    public bool? GetInterruptOnHit(string abilityName)          // v0.87.0
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.InterruptOnHit : null;
+    // v0.65.0 (J1): per-ability absolute cooldown / max-range overrides (null = leave baked).
+    public float? GetCooldownOverride(string abilityName)
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.CooldownSeconds : null;
+    public float? GetMaxRangeOverride(string abilityName)
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.MaxRangeOverride : null;
+    // v0.67.0 (Stage 2): charges / AoE-radius / projectile-speed overrides (null = leave baked).
+    public int? GetChargesMax(string abilityName)
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.ChargesMax : null;
+    public float? GetChargeTimeSeconds(string abilityName)
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.ChargeTimeSeconds : null;
+    public float? GetAoeRadius(string abilityName)
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.AoeRadius : null;
+    public float? GetProjectileSpeed(string abilityName)
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.ProjectileSpeed : null;
+    // v0.68.0 (Stage 2b): effect-duration / healing-multiplier overrides (null = leave baked).
+    public float? GetEffectDurationSeconds(string abilityName)
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.EffectDurationSeconds : null;
+    public float? GetHealingMultiplier(string abilityName)
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.HealingMultiplier : null;
+    // v0.79.0: per-ability summon governance overrides.
+    public int? GetSummonCap(string abilityName)
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.SummonCap : null;
+    public float? GetSummonTimeout(string abilityName)
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.SummonTimeoutSeconds : null;
+    public int? GetSummonUnitsPerCast(string abilityName)
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.SummonUnitsPerCast : null;
+    public float? GetForceTimeoutSeconds(string abilityName)
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.ForceTimeoutSeconds : null;
+    /// <summary>v0.80.0: per-ability max units per cast (0/none = the ability's natural count).</summary>
+    public int ResolveSummonUnitsPerCast(string abilityName, int fallback)
+        => GetSummonUnitsPerCast(abilityName) ?? fallback;
+    /// <summary>v0.79.0: effective summon cap for an ability — the per-ability override if set, else the
+    /// server-wide default. Precedence: per-ability &gt; global. (0 = unlimited at either layer.)</summary>
+    public int ResolveSummonCap(string abilityName, int globalCap)
+        => GetSummonCap(abilityName) ?? globalCap;
+    /// <summary>v0.79.0: effective summon timeout (seconds) for an ability — per-ability override if set,
+    /// else the server-wide default. (0 = never expires.)</summary>
+    public float ResolveSummonTimeout(string abilityName, float globalTimeout)
+        => GetSummonTimeout(abilityName) ?? globalTimeout;
+    /// <summary>v0.79.0: true if ANY ability carries a per-ability summon-timeout override (so the lifespan
+    /// sweep must run even when the global timeout is 0).</summary>
+    public bool HasAnySummonTimeoutOverride()
+    {
+        if (Current?.AbilityMap == null) return false;
+        foreach (var e in Current.AbilityMap.Values) if (e?.SummonTimeoutSeconds is > 0f) return true;
+        return false;
+    }
     public string GetCategoryOverrideRaw(string abilityName)
         => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.Category : null;
 
@@ -1078,7 +1332,7 @@ internal sealed class AbilityRules
         public bool AllowDenied { get; set; } = false;
         public float DamageScale { get; set; } = 1.0f;
         public float CooldownScale { get; set; } = 1.0f;
-        // v0.46.0 ability tuning (applied at init when AbilityTuning_Enabled; GLOBAL prefab edit):
+        // v0.46.0 ability tuning (applied at init when Abilities_ApplyConfig; GLOBAL prefab edit):
         // - Interruptible: null = leave baked; true = cast can be cancelled by player action
         //   (dash / raise shield → AbilityInterruptData.ManualInterrupt); false = uninterruptible.
         // - FreeMoveAfterCast: true = the player is freed to move when the CAST finishes
@@ -1088,6 +1342,58 @@ internal sealed class AbilityRules
         public bool? Interruptible { get; set; }
         public bool FreeMoveAfterCast { get; set; }
         public float? CastMovementSpeed { get; set; }
+        // v0.87.0 (test feedback): two more cast modifiers, baked like the fields above.
+        // - FreeMoveAfterSeconds: free the player to move N seconds INTO the cast (the cast keeps going).
+        //   Sets ModifyMovementDuringCastData.Duration = N directly — so a spell that roots you for its
+        //   whole 5s cast can be made to release you after, say, 2s. null = leave baked. (Distinct from
+        //   FreeMoveAfterCast, which clamps the lock to the full cast window.)
+        // - InterruptOnHit: true = the ability is cancelled when the caster TAKES DAMAGE
+        //   (adds InterruptTypes.OnDamageTaken); false = remove that flag. null = leave baked.
+        //   (Distinct from Interruptible, which is the player self-cancel / ManualInterrupt flag.)
+        public float? FreeMoveAfterSeconds { get; set; }
+        public bool? InterruptOnHit { get; set; }
+        // v0.65.0 (J1): per-ability ABSOLUTE overrides, baked onto the prefab when
+        // Abilities_ApplyConfig (GLOBAL edit, like the cast-tuning fields above):
+        // - CooldownSeconds: set the ability's cooldown to this many seconds (null = leave baked).
+        //   Also floored by the global Grant_MinimumCooldownSeconds.
+        // - MaxRangeOverride: set the ability group's max cast range (null = leave baked).
+        // (Effect/buff duration and healing scale are NOT here — they're baked into spawned
+        // entities with no single override point; see docs/ABILITY_CONFIG.md.)
+        public float? CooldownSeconds { get; set; }
+        public float? MaxRangeOverride { get; set; }
+        // v0.67.0 (Stage 2): more server-wide shaping, baked onto the prefab chain when
+        // Abilities_ApplyConfig (GLOBAL, like the fields above).
+        // - ChargesMax / ChargeTimeSeconds: charge-based abilities (AbilityChargesData on the GROUP).
+        // - AoeRadius: the ability's area-of-effect max radius (TargetAoE.MaxRange on its spawned
+        //   AoE/throw prefab — reached by walking Group→Cast→SpawnPrefab).
+        // - ProjectileSpeed: travel speed of the ability's projectile (Projectile.Speed, same walk).
+        public int? ChargesMax { get; set; }
+        public float? ChargeTimeSeconds { get; set; }
+        public float? AoeRadius { get; set; }
+        public float? ProjectileSpeed { get; set; }
+        // v0.68.0 (Stage 2b): downstream effect shaping (walked from Group→Cast→SpawnPrefab).
+        // - EffectDurationSeconds: ABSOLUTE override of the duration of buffs/debuffs this ability
+        //   applies (ApplyBuffOnGameplayEvent.OverrideDuration). Idempotent (set, not multiplied).
+        // - HealingMultiplier: scales the ability's healing (HealOnGameplayEvent). Applied from the
+        //   ORIGINAL baked values (cached) so repeated reloads don't compound. 1.0 = no change.
+        public float? EffectDurationSeconds { get; set; }
+        public float? HealingMultiplier { get; set; }
+        // v0.79.0 (summon governance): per-ability overrides of the server-wide summon CAP
+        // (Transform_MaxStacksPerSummonAbility, default 3) and summon TIMEOUT
+        // (Transform_SummonLifetimeSeconds, default 30s). Precedence: per-ability override > global
+        // default > engine (no limit). null = use the global default. SummonCap 0 = unlimited;
+        // SummonTimeoutSeconds 0 = never expires.
+        public int? SummonCap { get; set; }
+        public float? SummonTimeoutSeconds { get; set; }
+        // v0.80.0: per-ability max UNITS produced by a single cast of this summon ability (separate from
+        // SummonCap, which limits concurrent USES). e.g. a horde that spawns 10 can be clamped to 3 per
+        // cast. null/0 = the ability's natural count. Whichever of summoncap (uses) / summonunits
+        // (units-per-cast) is hit first rules.
+        public int? SummonUnitsPerCast { get; set; }
+        // v0.85.0: FORCE-TIMEOUT — make this ability's otherwise-INDEFINITE spawned buffs expire after this
+        // many seconds (adds a LifeTime+Destroy where the buff has none; the case EffectDurationSeconds
+        // can't reach). null/0 = leave indefinite. Baked, applied when Abilities_ApplyConfig.
+        public float? ForceTimeoutSeconds { get; set; }
         // v0.51.0: admin override for the wire `cat=` badge. One of the AbilityCategory names
         // (Travel/Aoe/Projectile/Melee/Summon/Buff/WeaponSpell/Spell/Other). Empty/null = use
         // the name heuristic (Categorization.ClassifyAbility). Highest precedence.

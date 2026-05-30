@@ -1177,6 +1177,18 @@ internal static class SummonAllyService
     public static int LivePopulatedCastCount(SummonOwnerState active, int abilityGuid)
         => CountAliveGroups(active, abilityGuid, includeEmptyWithinWindow: false);
 
+    /// <summary>v0.80.0: number of ALIVE units in the CURRENT (most-recent) cast group for an ability —
+    /// used by the per-cast unit limit (summonunits) to drop units beyond N within a single cast.</summary>
+    public static int CurrentGroupUnitCount(SummonOwnerState active, int abilityGuid)
+    {
+        if (active?.SummonStacks == null) return 0;
+        if (!active.SummonStacks.TryGetValue(abilityGuid, out var groups) || groups.Count == 0) return 0;
+        var grp = groups[groups.Count - 1];
+        int n = 0;
+        for (int j = 0; j < grp.Count; j++) if (grp[j].Exists()) n++;
+        return n;
+    }
+
     static int CountAliveGroups(SummonOwnerState active, int abilityGuid, bool includeEmptyWithinWindow)
     {
         if (active.SummonStacks == null) return 0;
@@ -1309,18 +1321,24 @@ internal static class SummonAllyService
     /// and are removed from the tracking dictionaries + <c>SummonedMinions</c>.
     /// Returns the number of entities queued. No-op when lifetime &lt;= 0.
     /// </summary>
-    public static int DespawnExpiredGroups(SummonOwnerState active, float lifetimeSeconds)
+    public static int DespawnExpiredGroups(SummonOwnerState active, float globalLifetimeSeconds)
     {
-        if (lifetimeSeconds <= 0f) return 0;
         if (active?.SummonStacks == null || active.SummonStacks.Count == 0) return 0;
 
         DateTime now = DateTime.UtcNow;
-        var maxAge = TimeSpan.FromSeconds(lifetimeSeconds);
         int queued = 0;
 
         // Snapshot the ability keys — we mutate the inner group lists below.
         foreach (var abilityGuid in new List<int>(active.SummonStacks.Keys))
         {
+            // v0.79.0/v0.80.0: per-ability timeout overrides the global default (precedence per-ability >
+            // global). Resolve the canonical AbilityMap key (Core.PrefabNames, same as the admin command)
+            // so a per-ability summontimeout actually matches — GetPrefabName() can differ from the key.
+            string abName = AbilityRules.ResolveAbilityKey(abilityGuid.ToString()) ?? new PrefabGUID(abilityGuid).GetPrefabName();
+            float lifetimeSeconds = Core.AbilityRules?.ResolveSummonTimeout(abName, globalLifetimeSeconds) ?? globalLifetimeSeconds;
+            if (lifetimeSeconds <= 0f) continue;   // this ability never expires
+            var maxAge = TimeSpan.FromSeconds(lifetimeSeconds);
+
             var groups = active.SummonStacks[abilityGuid];
             active.SummonStackTimes.TryGetValue(abilityGuid, out var times);
 
@@ -1329,6 +1347,8 @@ internal static class SummonAllyService
                 // Need a timestamp to judge age; without one we can't tell, so skip.
                 if (times == null || i >= times.Count) continue;
                 if (now - times[i] < maxAge) continue;
+                if (Beelzebub.Config.Settings.VerboseLogging.Value)
+                    Core.Log.LogInfo($"[Beelz SUMMON][lifespan] expiring {abName} group (age {(now - times[i]).TotalSeconds:F0}s >= timeout {lifetimeSeconds:F0}s).");
 
                 var grp = groups[i];
                 for (int j = 0; j < grp.Count; j++)
@@ -1343,7 +1363,7 @@ internal static class SummonAllyService
         }
 
         if (queued > 0)
-            Core.Log.LogInfo($"[Beelz SUMMON] lifespan: queued {queued} summon(s) for staged despawn (lifetime {lifetimeSeconds:0}s).");
+            Core.Log.LogInfo($"[Beelz SUMMON] lifespan: queued {queued} summon(s) for staged despawn (per-ability/global timeout).");
         return queued;
     }
 

@@ -116,20 +116,40 @@ internal static class Categorization
         if (HasAny(abilityName, "Summon", "Reinforcement", "RaiseDead", "RaiseHorde",
             "Conjure", "CallBats")) return AbilityCategory.Summon;
 
+        // v0.57.0: primary / basic / heavy attacks — route by weapon CLASS so a ranged-weapon
+        // primary (crossbow / longbow / pistols / a ranger's bow) reads as a Projectile while a
+        // melee-weapon or creature primary reads as Melee. This rescues a big chunk of the old
+        // `Other` bucket (bare "Attack"/"Primary" names) without the weapon-blind mis-bucketing
+        // of dumping every "Attack" into Melee. Checked before the Aoe/Projectile/Melee token
+        // sweeps; more-specific names like "_SlamAttack" still hit "_Slam" → Aoe first only if
+        // they carry that token (they don't match the primary tokens here).
+        if (HasAny(abilityName, "Primary", "_Attack", "AutoAttack", "BasicAttack", "HeavyAttack"))
+        {
+            return HasAny(abilityName, "Crossbow", "Longbow", "Pistol", "_Bow", "Rifle",
+                "Railgun", "Blowpipe", "Ranger", "Archer", "Gunner")
+                ? AbilityCategory.Projectile
+                : AbilityCategory.Melee;
+        }
+
         // Area effects (checked before Melee so a "Slam"/"Stomp" lands as AoE).
+        // v0.57.0: "_Field" catches ground fields (FieldOfSpears, ElectricField, ShockField).
         if (HasAny(abilityName, "GroundSlam", "_Slam", "Stomp", "Bomb", "Explosion", "CorpseParty",
             "_Aoe", "Nova", "Eruption", "Quake", "Rumble", "Meteor", "_Cone", "_Ring", "Crater",
-            "Detonate", "Implo", "ShockWave", "Shockwave")) return AbilityCategory.Aoe;
+            "Detonate", "Implo", "ShockWave", "Shockwave", "_Field")) return AbilityCategory.Aoe;
 
         // Projectiles / ranged.
+        // v0.57.0: "Pistol"/"Fireball"/"Discharge" added — "Discharge" also pulls electric-discharge
+        // moves OUT of Melee (the existing "Charge" token used to swallow "Discharge").
         if (HasAny(abilityName, "Projectile", "Throw", "Bolt", "Shoot", "Volley", "Arrow", "Spit",
             "Beam", "Breath", "Barrage", "Snipe", "_Shot", "Javelin", "Missile", "Dart", "_Spear_Lunge",
-            "Spike", "Shard")) return AbilityCategory.Projectile;
+            "Spike", "Shard", "Pistol", "Fireball", "Discharge")) return AbilityCategory.Projectile;
 
         // Melee / weapon strikes (v0.51.0 new bucket — was the biggest source of "Other").
-        if (HasAny(abilityName, "MeleeAttack", "Slash", "Cleave", "Strike", "Swing", "Smash",
+        // v0.57.0: bare "Melee" + unarmed strikes (Kick/Punch/Headbutt) added.
+        if (HasAny(abilityName, "MeleeAttack", "Melee", "Slash", "Cleave", "Strike", "Swing", "Smash",
             "Stab", "Thrust", "Whirl", "Slice", "_Chop", "Bash", "Hack", "Rend", "Gore", "_Bite",
-            "Maul", "Sweep", "Spin", "Charge", "Claw", "Pierce", "Impale", "Lunge")) return AbilityCategory.Melee;
+            "Maul", "Sweep", "Spin", "Charge", "Claw", "Pierce", "Impale", "Lunge",
+            "Kick", "Punch", "Headbutt")) return AbilityCategory.Melee;
 
         // Self-buffs / defensive / stances.
         if (HasAny(abilityName, "SelfBuff", "Stance", "Aura", "Shield", "Barrier", "Ward",

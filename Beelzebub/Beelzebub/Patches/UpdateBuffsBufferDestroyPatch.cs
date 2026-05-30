@@ -69,7 +69,18 @@ internal static class UpdateBuffsBufferDestroyPatch
                 // v0.41.1: a native shapeshift form (wolf/bear/etc.) was destroyed = the
                 // player EXITED that form. If they're still transformed, re-apply the
                 // transform bar (travel/bat forms are handled separately on arrival).
-                if (Services.BossFormRegistry.IsNativeShapeshiftBuff(prefab._Value))
+                if (Services.ShapeshiftAbilityService.IsSupportedForm(prefab._Value, prefab.GetPrefabName()))
+                {
+                    // v0.78.0: a vanilla wheel-form we inject custom abilities into (Wolf/Bear/Rat/…)
+                    // was exited. Forms-as-group: revert the bar to the active WEAPON group's loadout
+                    // (the form's overrides died with its buff). Handles the transform case too.
+                    try { HandleCustomFormExit(target); }
+                    catch (Exception ex)
+                    {
+                        Core.Log.LogError($"[Beelz FORM] custom-form-exit revert failed: {ex}");
+                    }
+                }
+                else if (Services.BossFormRegistry.IsNativeShapeshiftBuff(prefab._Value))
                 {
                     try { HandleShapeshiftExit(target); }
                     catch (Exception ex)
@@ -155,6 +166,41 @@ internal static class UpdateBuffsBufferDestroyPatch
         {
             Core.Log.LogInfo($"[Beelz] re-applied transform bar after native shapeshift exit for {steamId}.");
         }
+    }
+
+    /// <summary>
+    /// v0.78.0 (forms-as-group): a vanilla wheel-form into which we injected a custom loadout was
+    /// exited. The form's ability overrides lived on the form buff (now destroyed), so re-resolve the
+    /// player's bar: if they're in a Beelz transform restore THAT bar; otherwise re-inject the active
+    /// WEAPON group's loadout so the bar reverts to whatever weapon they're holding — the form behaving
+    /// like a weapon family (enter → form loadout, exit → weapon loadout). Debounced against re-fires.
+    /// </summary>
+    static void HandleCustomFormExit(Entity playerCharacter)
+    {
+        ulong steamId = playerCharacter.GetSteamId();
+        if (steamId == 0) return;
+        // If the custom-form feature is off, fall back to the transform-only re-apply behavior.
+        if (!Beelzebub.Config.Settings.Forms_CustomAbilities_Enabled.Value) { HandleShapeshiftExit(playerCharacter); return; }
+
+        var now = DateTime.UtcNow;
+        if (_lastFormExitReapply.TryGetValue(steamId, out var last) && (now - last).TotalSeconds < 1.5) return;
+        _lastFormExitReapply[steamId] = now;
+
+        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
+        if (active != null)
+        {
+            try { Core.Transforms.ReapplyActiveTransform(steamId, active, playerCharacter); }
+            catch (Exception ex) { Core.Log.LogError($"[Beelz FORM] transform re-apply on form exit failed: {ex}"); }
+            return;
+        }
+
+        try
+        {
+            int n = Services.SlotApply.RestoreResolvedGrants(playerCharacter);
+            if (Beelzebub.Config.Settings.VerboseLogging.Value)
+                Core.Log.LogInfo($"[Beelz FORM] custom-form exit for {steamId} → reverted to the active weapon-group bar (re-applied {n} grant(s)).");
+        }
+        catch (Exception ex) { Core.Log.LogError($"[Beelz FORM] weapon-bar revert on form exit failed: {ex}"); }
     }
 
     // v0.42.0: a transformed player dismounted a horse. The mount buff had overridden the

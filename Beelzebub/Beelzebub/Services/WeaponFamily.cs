@@ -50,14 +50,18 @@ internal enum WeaponFamily : byte
 /// Native shapeshift forms Beelzebub can apply to the player on .beelz transform.
 /// Matches the heuristic in ShapeshiftService (Wolf, Bear, Rat, Spider, Toad).
 /// Used in `AbilityMap[*].Forms` to gate which abilities fire while transformed
-/// into a given form.
+/// into a given form, AND (v0.59.0) as the bucket key for per-form ability loadouts
+/// (parallel to <see cref="WeaponFamily"/> for weapons). Werewolf/Gargoyle appended
+/// (v0.59.0) for the per-form loadout roster — append-only; persistence keys by NAME.
 /// </summary>
 internal enum ShapeshiftForm : byte
 {
-    None   = 0,
-    Wolf   = 1,
-    Bear   = 2,
-    Rat    = 3,
-    Spider = 4,
-    Toad   = 5,
+    None     = 0,
+    Wolf     = 1,
+    Bear     = 2,
+    Rat      = 3,
+    Spider   = 4,
+    Toad     = 5,
+    Werewolf = 6,   // v0.59.0: AB_Shapeshift_Wolf_Skin01_Buff
+    Gargoyle = 7,   // v0.59.0: AB_Tailor_Shapeshift_Gargoyle_Buff
 }

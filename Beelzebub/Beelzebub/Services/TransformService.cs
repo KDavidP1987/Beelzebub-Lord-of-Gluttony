@@ -490,8 +490,12 @@ internal sealed class TransformService
         // v0.26.0: summon lifespan — auto-despawn cast-groups older than the
         // configured lifetime, regardless of whether the transform itself is
         // timed. Throttled. 0 = infinite (skip entirely).
+        // v0.79.0: run the lifespan sweep when the global timeout is set OR any ability carries a
+        // per-ability summon-timeout override (DespawnExpiredGroups resolves per-ability, skipping any
+        // whose effective timeout is 0). Global default is 30s as of v0.79.
         float summonLifetime = Beelzebub.Config.Settings.Transform_SummonLifetimeSeconds.Value;
-        if (summonLifetime > 0f && (now - _lastLifespanCheck) >= LifespanCheckInterval)
+        bool anyTimeout = summonLifetime > 0f || (Core.AbilityRules?.HasAnySummonTimeoutOverride() ?? false);
+        if (anyTimeout && (now - _lastLifespanCheck) >= LifespanCheckInterval)
         {
             _lastLifespanCheck = now;
             try
@@ -805,10 +809,24 @@ internal sealed class TransformService
     {
         if (Core.AbilityRegistry.GetActiveTransform(steamId) is not null) return;
         bool removed = TransformBuffService.Remove(character); // carrier + every boss/native form buff
-        if (!removed) return;
 
-        SlotApply.RestoreResolvedGrants(character);
-        Core.Log.LogInfo($"[Beelz] reconnect: cleared orphaned transform buff(s) for {steamId} and restored the base ability bar.");
+        // v0.62.0 (G — universal-grant reliability): ALWAYS re-apply the saved grant loadout on a
+        // non-transformed login, not only when an orphan buff was cleared. A normal relog rebuilds
+        // the player's bar to vanilla, and we can't rely solely on ReplaceAbilityOnSlotSystemPatch
+        // firing during the one-shot login bar-build (timing race / no re-dirty afterward) — so a
+        // player could log in with their universal binds missing until a weapon swap or `.beelz
+        // refresh`. Re-injecting explicitly here makes universal (and current-weapon) grants apply
+        // reliably on every login. Cheap no-op when the player has no saved grants.
+        int reapplied = SlotApply.RestoreResolvedGrants(character);
+
+        if (!removed)
+        {
+            if (reapplied > 0)
+                Core.Log.LogInfo($"[Beelz] reconnect: re-applied {reapplied} saved grant(s) for {steamId} on login.");
+            return;
+        }
+
+        Core.Log.LogInfo($"[Beelz] reconnect: cleared orphaned transform buff(s) for {steamId} and restored the base ability bar ({reapplied} grant(s) re-applied).");
         try
         {
             Core.Chat.Send(character, Verbosity.Summary,

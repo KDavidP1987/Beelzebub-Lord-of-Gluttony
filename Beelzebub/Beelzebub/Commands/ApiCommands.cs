@@ -50,8 +50,90 @@ internal static class ApiCommands
     //   allow_denied, interruptible, free_move, cast_speed. `api rules` adds default_damage_scale,
     //   default_cooldown_scale, transform_only_patterns, deny_guids/allow_guids lists. `catalog-unit`
     //   adds slot_template. type=config-changed is now BROADCAST to all subscribed clients.
-    // All additive — backward-compatible with older parsers (unknown keys/events ignored).
-    const int ApiVersion = 8;
+    // v9 (v0.57.0): `api catalog abilities` now streams the FULL capturable universe — the union of
+    //   the curated AbilityMap AND every discovered AB_*_AbilityGroup/_Group that passes the capture
+    //   filter (AbilityFilter.ShouldCapture) — instead of only the curated map. New additive field
+    //   `curated={0|1}` per row distinguishes a hand-curated entry from a discovered-only one (whose
+    //   tuning fields are defaults: category_override=-, phase=1, interruptible=auto, free_move=0,
+    //   cast_speed=auto, notes empty; weapons/cat/enabled/difficulty/transform_only are still derived
+    //   from the name heuristics + rules). The `total=`/`pages=` count is now the full catalog (can be
+    //   35+ pages under the default Capture_InclusiveMode), so a "Missing" list built from it is
+    //   complete. Field set is otherwise unchanged; older parsers ignore `curated=`.
+    // v10 (v0.58.0): friendly names + catalog descriptions (additive fields only).
+    //   `api list` now also emits `label=` (friendly ability name) and `ulabel=` (friendly unit
+    //   name) alongside the raw `an=`/`un=` — both SafeToken-encoded (spaces→_), so BCH can show
+    //   localized names without client-side humanizing (raw names kept for wire stability).
+    //   `catalog-ability` now also emits `desc=` (curated description, %param%-substituted, or `-`)
+    //   and `school=` (Blood/Chaos/Frost/… or `none`) so the Bestiary's MISSING rows can carry
+    //   description/school text. Note: only the curated subset has these (~13% desc / ~4% school) —
+    //   the rest are `-`/`none` until the localization data-pass fills more in.
+    // v11 (v0.59.0): PER-FORM ability loadouts (additive). `api slots` now also streams
+    //   `[BEELZ:form-slot] form=<Form> slot= a= an=` lines for each per-form bucket (a NEW line type
+    //   — older parsers that read `bucket=` as a WeaponFamily ignore it), and the `[BEELZ:slot-current]`
+    //   footer gains `form=<Form|None>` (active shapeshift form). New player commands `.beelz
+    //   form-grant <form|auto> <slot> <index>` / `form-unslot <form> <slot>` (forms: Wolf/Bear/Rat/
+    //   Spider/Toad/Werewolf/Gargoyle); new events type=form-slot-granted / type=form-slot-cleared
+    //   (form= slot= a= an=). The loadout applies in-form only when Forms_CustomAbilities_Enabled is on.
+    // v12 (v0.65.0): per-ability ABSOLUTE cooldown / max-range overrides (additive). `api info` and
+    //   `catalog-ability` now also emit `cooldown_override=` (seconds, or `-` if unset) and
+    //   `range_override=` (max cast distance, or `-`). These are admin-curated baked-prefab edits
+    //   (`.beelz admin ability <name> cooldown|range <v>` / `.beelz admin tune`), applied only when
+    //   Abilities_ApplyConfig; the GLOBAL minimum-cooldown floor is the new config
+    //   `Grant_MinimumCooldownSeconds` (streamed via `api config`). The live baked values are still
+    //   `cooldown_seconds=`/`range=` on `api info`; the `_override=` fields show what the admin SET.
+    // v13 (v0.67.0): more server-wide ability shaping (additive). `api info` and `catalog-ability`
+    //   now also emit `charges_override=` (max charges), `chargetime_override=` (recharge seconds),
+    //   `aoe_override=` (area radius), `projspeed_override=` (projectile speed) — `-` when unset.
+    //   Set via `.beelz admin ability <name> <charges|chargetime|aoe|projspeed> <v>` / `.beelz admin
+    //   tune`. Applied (server-wide, baked) when Abilities_ApplyConfig is on (now DEFAULT ON — the old
+    //   AbilityTuning_Enabled opt-in, renamed in v0.66.0).
+    // v14 (v0.68.0): effect-duration + healing shaping (additive). `api info` and `catalog-ability`
+    //   now also emit `duration_override=` (applied buff/debuff duration seconds) and `heal_mult=`
+    //   (healing multiplier) — `-` when unset. Set via `.beelz admin ability <name> <duration|healing>
+    //   <v>` / `.beelz admin tune`. Server-wide baked edits (Abilities_ApplyConfig).
+    // v15 (v0.76.0): **WIRE-BREAKING for `api info` + `catalog-ability` — BCH MUST UPDATE ITS PARSER.**
+    //   These two lines had grown past ~30 fields + description and EXCEEDED VCF's 512-byte FixedString
+    //   reply cap, throwing "Truncation while copying" and FAILING the command (api info was fully
+    //   broken; one long catalog row aborted the whole stream). They are now emitted CHUNKED: each line
+    //   carries a NEW `part=k/n` field and repeats its id (`i=<index>` for info, `an=<name>` for
+    //   catalog-ability). Reassemble by concatenating the `key=value` tokens of parts 1..n for the same
+    //   id; a short ability is simply `part=1/1`. No fields changed names; `desc`/`notes` are clamped to
+    //   256 chars. Other lines (list/slots/catalog-unit/rules/config/events) are unchanged.
+    // All additive EXCEPT v15's chunking of info/catalog-ability — older parsers that ignore `part=` will
+    //   read only the first chunk of a long ability (degraded, not crashed).
+    // v16 (v0.79.0): summon governance (additive). `api info` and `catalog-ability` now also emit
+    //   `summon_cap_override=` (per-ability max simultaneous summon uses; `-` = use the global
+    //   Transform_MaxStacksPerSummonAbility, default 3) and `summon_timeout_override=` (per-ability summon
+    //   auto-despawn seconds; `-` = use the global Transform_SummonLifetimeSeconds, default CHANGED 0 → 30
+    //   in v0.79). Set via `.beelz admin ability <name> <summoncap|summontimeout> <v>` / `.beelz admin
+    //   tune`. Precedence: per-ability override > global default > engine. (These are read LIVE — not
+    //   baked prefab edits.) A BCH summon-config panel reads/writes these like the other `_override=` fields.
+    // v17 (v0.80.0): summon UNITS-per-cast (additive). `api info` + `catalog-ability` now also emit
+    //   `summon_units_override=` (per-ability max UNITS a single cast produces; `-` = the ability's
+    //   natural count). SEPARATE from `summon_cap_override=` (concurrent USES) — whichever is hit first
+    //   rules. Set via `.beelz admin ability <name|id> summonunits <n>` / `.beelz admin tune`. (v0.80 also
+    //   fixed summoncap to be a true USE cap — it no longer trims units within a single cast — and made
+    //   skinned shapeshift forms recognized; neither is a wire change.)
+    // v18 (v0.84.0): additive. (a) NEW read command **`api info-guid <abilityGuid>`** — returns the same
+    //   chunked `[BEELZ:info]` tooltip data as `api info` but keyed by an ability's PrefabGUID, for
+    //   ACTIVE/ASSIGNED abilities where BCH has the GUID (from `api slots`) but not a captured-list index
+    //   (fixes "No name"/generic tooltips on the bar). The reassembly id is `a=<guid>` instead of
+    //   `i=<index>`; everything else identical (u=0/un=- when the unit is unknown). (b) NEW event
+    //   **`type=collection-complete count=<n> total=<n>`** fired once when a player captures the last
+    //   ability in the curated catalog. All additive — older parsers ignore the new command/event.
+    // v19 (v0.85.0): force-timeout (additive). `api info` + `catalog-ability` now also emit
+    //   `force_timeout_override=` (seconds; `-` = none) — forces an ability's otherwise-INDEFINITE spawned
+    //   effects/buffs to expire after N seconds (adds a LifeTime+Destroy where the buff has none, the case
+    //   `duration_override` can't reach). Set via `.beelz admin ability <name|id> forcetimeout <v>` /
+    //   `.beelz admin tune`. Server-wide baked edit (Abilities_ApplyConfig); cleared by `defaults`.
+    // v20 (v0.87.0): two cast modifiers (additive). `api info` + `catalog-ability` now also emit
+    //   `free_move_secs=` (seconds; `-` = none) — free the caster to move N seconds INTO the cast
+    //   (ModifyMovementDuringCastData.Duration; the cast continues) — and `interrupt_on_hit=on|off|auto`
+    //   — cancel the cast when the caster TAKES DAMAGE (InterruptTypes.OnDamageTaken). Set via
+    //   `.beelz admin ability <name|id> freelymove <sec>` / `interruptonhit on|off` (or `tune`). Server-wide
+    //   baked edit (Abilities_ApplyConfig); cleared by `defaults`. Note `interrupt_on_hit` is distinct from
+    //   the existing `interruptible` (player self-cancel / ManualInterrupt).
+    const int ApiVersion = 20;
 
     [Command("help", description: "List the Beelzebub API/BCH read commands (machine-readable data streams).")]
     public static void Help(ChatCommandContext ctx)
@@ -88,10 +170,15 @@ internal static class ApiCommands
             // v0.51.0: admin Category override (ability_rules.json) wins over the name heuristic.
             var cat = Core.AbilityRules.GetAbilityCategoryOverride(abilityName) ?? Categorization.ClassifyAbility(abilityName);
             var type = Categorization.ClassifyTransform(unitName);
+            // v0.58.0: friendly names so BCH needn't humanize raw prefab names client-side. Raw
+            // an=/un= kept for wire stability; label=/ulabel= are SafeToken-encoded (spaces→_).
+            string abilityLabel = Core.AbilityMetadata?.ResolveAbilityName(c.AbilityPrefabGuid) ?? abilityName.Humanize();
+            string unitLabel = Core.AbilityMetadata?.ResolveUnitName(c.UnitPrefabGuid) ?? unitName.Humanize();
             ctx.Reply(
                 $"[BEELZ:list] i={i} s={(c.Source == CaptureSource.VBlood ? "V" : "R")}" +
                 $" u={c.UnitPrefabGuid} un={unitName}" +
                 $" a={c.AbilityPrefabGuid} an={abilityName}" +
+                $" label={SafeToken(abilityLabel)} ulabel={SafeToken(unitLabel)}" +
                 $" cat={cat} type={type}");
         }
         ctx.Reply($"[BEELZ:end] cmd=list count={captured.Count}");
@@ -125,9 +212,23 @@ internal static class ApiCommands
                 n++;
             }
         }
-        // Current weapon footer so BCH knows which bucket is active right now.
+        // v0.59.0: per-FORM buckets, emitted as a distinct line type so older parsers (which read
+        // bucket= as a WeaponFamily) ignore them cleanly while new BCH builds the per-form picker.
+        var perForm = Core.AbilityRegistry.AllFormSlots(steamId);
+        foreach (var (form, slots) in perForm.OrderBy(kv => kv.Key.ToString()))
+        {
+            foreach (var (slot, abilityGuid) in slots.OrderBy(kv => kv.Key))
+            {
+                ctx.Reply(
+                    $"[BEELZ:form-slot] form={form} slot={slot}" +
+                    $" a={abilityGuid} an={new PrefabGUID(abilityGuid).GetPrefabName()}");
+                n++;
+            }
+        }
+        // Current weapon + form footer so BCH knows which buckets are active right now.
         var current = Beelzebub.Services.SlotApply.GetCurrentWeapon(ctx.Event.SenderCharacterEntity);
-        ctx.Reply($"[BEELZ:slot-current] weapon={current}");
+        var currentForm = Beelzebub.Services.ShapeshiftAbilityService.GetCurrentForm(ctx.Event.SenderCharacterEntity);
+        ctx.Reply($"[BEELZ:slot-current] weapon={current} form={currentForm}");
         ctx.Reply($"[BEELZ:end] cmd=slots count={n}");
     }
 
@@ -209,8 +310,28 @@ internal static class ApiCommands
             return;
         }
         var c = captured[index];
-        string unitName = new PrefabGUID(c.UnitPrefabGuid).GetPrefabName();
-        string abilityName = new PrefabGUID(c.AbilityPrefabGuid).GetPrefabName();
+        EmitInfo(ctx, $"i={index}", c.AbilityPrefabGuid, c.UnitPrefabGuid, c.Source);
+    }
+
+    [Command("info-guid", description: "Return detailed BCH tooltip data for any ability by its PrefabGUID — for ACTIVE/ASSIGNED abilities where you have the GUID (from api slots) but not a captured-list index. Usage: .beelz api info-guid <abilityGuid>")]
+    public static void InfoGuid(ChatCommandContext ctx, int abilityGuid)
+    {
+        if (!Core.IsReady) { ctx.Reply("[BEELZ:err] cmd=info-guid code=not_ready msg=plugin_not_initialized"); return; }
+        if (abilityGuid == 0) { ctx.Reply("[BEELZ:err] cmd=info-guid code=bad_arg msg=guid_0"); return; }
+        ulong sid = ctx.Event.SenderCharacterEntity.GetSteamId();
+        // If the caller has this ability captured, use its real source unit for accurate un=/s=.
+        int unitGuid = 0; CaptureSource src = CaptureSource.Regular;
+        foreach (var cap in Core.AbilityRegistry.ListFor(sid))
+            if (cap.AbilityPrefabGuid == abilityGuid) { unitGuid = cap.UnitPrefabGuid; src = cap.Source; break; }
+        EmitInfo(ctx, $"a={abilityGuid}", abilityGuid, unitGuid, src);
+    }
+
+    /// <summary>v0.84.0: shared [BEELZ:info] body emitter (chunked) used by `api info` (by captured index)
+    /// and `api info-guid` (by GUID). idField is the reassembly key BCH groups the parts by (i=… or a=…).</summary>
+    static void EmitInfo(ChatCommandContext ctx, string idField, int abilityGuid, int unitGuid, CaptureSource source)
+    {
+        string unitName = unitGuid != 0 ? new PrefabGUID(unitGuid).GetPrefabName() : "-";
+        string abilityName = new PrefabGUID(abilityGuid).GetPrefabName();
         string label = abilityName.Humanize();
 
         // A1-full: pull richer metadata from the AbilityMap matrix if curated.
@@ -219,20 +340,20 @@ internal static class ApiCommands
         // BCH so it can render full tooltips without a second round-trip.
         var families = Core.AbilityRules.ClassifyWeaponFamilies(abilityName);
         var forms = Core.AbilityRules.GetFormRestriction(abilityName);
-        bool transformOnly = Core.AbilityRules.IsTransformOnly(abilityName, c.AbilityPrefabGuid);
-        bool enabled = Core.AbilityRules.IsEnabled(abilityName, c.AbilityPrefabGuid);
+        bool transformOnly = Core.AbilityRules.IsTransformOnly(abilityName, abilityGuid);
+        bool enabled = Core.AbilityRules.IsEnabled(abilityName, abilityGuid);
         float damageScale = Core.AbilityRules.GetDamageScale(abilityName);
         float cooldownScale = Core.AbilityRules.GetCooldownScale(abilityName);
 
         // v0.35.0: prefer the REAL ability description from resolved metadata
         // (shipped ability_metadata.json + ECS), with %param% substitution; fall
         // back to the admin-curated Notes, then a generic string.
-        var meta = Core.AbilityMetadata?.Resolve(c.AbilityPrefabGuid);
+        var meta = Core.AbilityMetadata?.Resolve(abilityGuid);
         string realDesc = meta?.Description;
         if (!string.IsNullOrWhiteSpace(realDesc) && meta?.Parameters != null)
             foreach (var kv in meta.Parameters) realDesc = realDesc.Replace("%" + kv.Key + "%", kv.Value);
         string desc = (!string.IsNullOrWhiteSpace(realDesc) ? realDesc : TryGetCuratedNotes(abilityName))
-                      ?? $"Captured from {unitName.Humanize()}.";
+                      ?? (unitGuid != 0 ? $"Captured from {unitName.Humanize()}." : label);
         string difficulty = Core.AbilityRules.GetAbilityDifficulty(abilityName);
 
         // v0.35.0: BCH tooltip enrichment — the weapon whose animation the ability
@@ -248,20 +369,34 @@ internal static class ApiCommands
         var catVal = Core.AbilityRules.GetAbilityCategoryOverride(abilityName) ?? Categorization.ClassifyAbility(abilityName);
         string catOverride = Core.AbilityRules.GetCategoryOverrideRaw(abilityName);
         int phase = Core.AbilityRules.GetAbilityPhase(abilityName);
-        bool allowDenied = Core.AbilityRules.IsAllowDenied(abilityName, c.AbilityPrefabGuid);
+        bool allowDenied = Core.AbilityRules.IsAllowDenied(abilityName, abilityGuid);
         bool? interruptible = Core.AbilityRules.GetInterruptible(abilityName);
         bool freeMove = Core.AbilityRules.GetFreeMoveAfterCast(abilityName);
         float? castSpeed = Core.AbilityRules.GetCastMovementSpeed(abilityName);
+        float? freeMoveSecs = Core.AbilityRules.GetFreeMoveAfterSeconds(abilityName);   // v0.87.0
+        bool? interruptOnHit = Core.AbilityRules.GetInterruptOnHit(abilityName);        // v0.87.0
+        float? cdOverride = Core.AbilityRules.GetCooldownOverride(abilityName);
+        float? rangeOverride = Core.AbilityRules.GetMaxRangeOverride(abilityName);
+        int? chargesOverride = Core.AbilityRules.GetChargesMax(abilityName);
+        float? chargeTimeOverride = Core.AbilityRules.GetChargeTimeSeconds(abilityName);
+        float? aoeOverride = Core.AbilityRules.GetAoeRadius(abilityName);
+        float? projSpeedOverride = Core.AbilityRules.GetProjectileSpeed(abilityName);
+        float? durationOverride = Core.AbilityRules.GetEffectDurationSeconds(abilityName);
+        float? healMultOverride = Core.AbilityRules.GetHealingMultiplier(abilityName);
         string castTime = meta?.CastTimeSeconds.HasValue == true ? meta.CastTimeSeconds.Value.ToString("F2") : "0";
         string range = meta?.MaxRange.HasValue == true ? meta.MaxRange.Value.ToString("F1") : "0";
         string behavior = string.IsNullOrEmpty(meta?.BehaviorType) ? "none" : meta.BehaviorType;
 
-        ctx.Reply(
-            $"[BEELZ:info] i={index} s={(c.Source == CaptureSource.VBlood ? "V" : "R")}" +
-            $" u={c.UnitPrefabGuid} un={unitName}" +
-            $" a={c.AbilityPrefabGuid} an={abilityName}" +
+        // v0.76.0: this line outgrew VCF's 512-byte FixedString reply cap (~30 fields + description),
+        // which threw "Truncation while copying" and FAILED the whole command. Emit it CHUNKED via
+        // ReplyChunked — each line repeats i= and carries part=k/n; BCH reassembles. desc is clamped so
+        // no single token can exceed the per-line budget. (ApiVersion 15.)
+        string body =
+            $"s={(source == CaptureSource.VBlood ? "V" : "R")}" +
+            $" u={unitGuid} un={unitName}" +
+            $" a={abilityGuid} an={abilityName}" +
             $" label={SafeToken(label)}" +
-            $" desc={SafeToken(desc)}" +
+            $" desc={SafeToken(Clamp(desc, 256))}" +
             $" cat={catVal}" +
             $" category_override={(string.IsNullOrEmpty(catOverride) ? "-" : SafeToken(catOverride))}" +
             $" weapons={string.Join(",", families)}" +
@@ -281,7 +416,51 @@ internal static class ApiCommands
             $" free_move={(freeMove ? 1 : 0)}" +
             $" cast_speed={(castSpeed.HasValue ? castSpeed.Value.ToString("F2") : "auto")}" +
             $" damage_scale={damageScale:F2}" +
-            $" cooldown_scale={cooldownScale:F2}");
+            $" cooldown_scale={cooldownScale:F2}" +
+            $" cooldown_override={(cdOverride.HasValue ? cdOverride.Value.ToString("F2") : "-")}" +
+            $" range_override={(rangeOverride.HasValue ? rangeOverride.Value.ToString("F1") : "-")}" +
+            $" charges_override={(chargesOverride.HasValue ? chargesOverride.Value.ToString() : "-")}" +
+            $" chargetime_override={(chargeTimeOverride.HasValue ? chargeTimeOverride.Value.ToString("F2") : "-")}" +
+            $" aoe_override={(aoeOverride.HasValue ? aoeOverride.Value.ToString("F1") : "-")}" +
+            $" projspeed_override={(projSpeedOverride.HasValue ? projSpeedOverride.Value.ToString("F1") : "-")}" +
+            $" duration_override={(durationOverride.HasValue ? durationOverride.Value.ToString("F1") : "-")}" +
+            $" heal_mult={(healMultOverride.HasValue ? healMultOverride.Value.ToString("F2") : "-")}" +
+            $" summon_cap_override={(Core.AbilityRules.GetSummonCap(abilityName) is int sco ? sco.ToString() : "-")}" +
+            $" summon_timeout_override={(Core.AbilityRules.GetSummonTimeout(abilityName) is float sto ? sto.ToString("F1") : "-")}" +
+            $" summon_units_override={(Core.AbilityRules.GetSummonUnitsPerCast(abilityName) is int suo ? suo.ToString() : "-")}" +
+            $" force_timeout_override={(Core.AbilityRules.GetForceTimeoutSeconds(abilityName) is float fto ? fto.ToString("F1") : "-")}" +
+            $" free_move_secs={(freeMoveSecs.HasValue ? freeMoveSecs.Value.ToString("F1") : "-")}" +                          // v0.87.0
+            $" interrupt_on_hit={(interruptOnHit.HasValue ? (interruptOnHit.Value ? "on" : "off") : "auto")}";              // v0.87.0
+        ReplyChunked(ctx, "info", idField, body);
+    }
+
+    /// <summary>v0.76.0: clamp a value to a max length (protects a single token from exceeding the chunk budget).</summary>
+    static string Clamp(string s, int max) => string.IsNullOrEmpty(s) || s.Length <= max ? s : s.Substring(0, max);
+
+    /// <summary>
+    /// v0.76.0: emit a long "[BEELZ:&lt;tag&gt;]" line across multiple replies, each safely under VCF's
+    /// 512-byte FixedString cap. Every line repeats the id field (e.g. <c>i=5</c>) and carries
+    /// <c>part=k/n</c>; the body's space-separated <c>key=value</c> tokens are packed into chunks without
+    /// splitting a token. BCH reassembles all parts for the same id (single-part lines look unchanged
+    /// apart from the new <c>part=1/1</c>). The budget leaves headroom for the prefix + id + part marker.
+    /// </summary>
+    const int ChunkBudget = 420;
+    static void ReplyChunked(ChatCommandContext ctx, string tag, string idField, string body)
+    {
+        var tokens = (body ?? "").Split(' ');
+        var chunks = new System.Collections.Generic.List<string>();
+        var sb = new StringBuilder();
+        foreach (var t in tokens)
+        {
+            if (sb.Length > 0 && sb.Length + 1 + t.Length > ChunkBudget) { chunks.Add(sb.ToString()); sb.Clear(); }
+            if (sb.Length > 0) sb.Append(' ');
+            sb.Append(t);
+        }
+        if (sb.Length > 0) chunks.Add(sb.ToString());
+        if (chunks.Count == 0) chunks.Add("");
+        int n = chunks.Count;
+        for (int k = 0; k < n; k++)
+            ctx.Reply($"[BEELZ:{tag}] {idField} part={k + 1}/{n} {chunks[k]}");
     }
 
     static string TryGetCuratedNotes(string abilityName)
@@ -446,31 +625,74 @@ internal static class ApiCommands
         ctx.Reply($"[BEELZ:end] cmd=catalog-units count={ordered.Count} total={total} page={page} pages={pages}");
     }
 
-    [Command("catalog abilities", description: "Stream every curated ability + its matrix attributes (BCH collection book). Optional page index, default 0. Page size 40.")]
-    public static void CatalogAbilities(ChatCommandContext ctx, int page = 0)
+    // v0.57.0: the catalog now streams the UNION of the curated AbilityMap and the discovered
+    // capturable universe (every AB_*_AbilityGroup/_Group that passes AbilityFilter.ShouldCapture),
+    // so BCH's Bestiary "Missing" list is complete instead of being limited to the hand-curated map.
+    // The union is built once per scan (rebuilt when page 0 is requested — BCH always scans from 0)
+    // and stored as an immutable snapshot so concurrent readers see a consistent list.
+    sealed class CatalogSnapshot
     {
-        if (!Core.IsReady) { ctx.Reply("[BEELZ:err] cmd=catalog-abilities code=not_ready msg=plugin_not_initialized"); return; }
+        public System.Collections.Generic.List<string> Names;
+        public System.Collections.Generic.Dictionary<string, int> Guids;
+    }
+    static CatalogSnapshot _catalog;
+
+    static CatalogSnapshot BuildCatalogSnapshot()
+    {
+        var names = new System.Collections.Generic.SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        var guids = new System.Collections.Generic.Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var map = Core.AbilityRules?.Current?.AbilityMap;
-        if (map == null || map.Count == 0)
+
+        // 1) Every curated entry is always present (so a disabled/curated row still shows with its flags).
+        if (map != null)
+            foreach (var name in map.Keys) names.Add(name);
+
+        // 2) The discovered AB_*_AbilityGroup / _Group universe, filtered to what's actually capturable.
+        foreach (var (guid, name) in Core.PrefabNames)
         {
-            ctx.Reply("[BEELZ:end] cmd=catalog-abilities count=0 total=0 page=0 pages=1");
-            return;
+            if (string.IsNullOrEmpty(name)) continue;
+            if (!name.StartsWith("AB_", StringComparison.OrdinalIgnoreCase)) continue;
+            if (!name.EndsWith("_AbilityGroup", StringComparison.OrdinalIgnoreCase)
+                && !name.EndsWith("_Group", StringComparison.OrdinalIgnoreCase)) continue;
+
+            bool curated = map != null && map.ContainsKey(name);
+            bool capturable = Core.AbilityFilter.ShouldCapture(name, guid, out _);
+            if (!curated && !capturable) continue;
+
+            names.Add(name);
+            guids[name] = guid; // record the guid so per-row predicates (transform_only/allow_denied) resolve
         }
-        const int pageSize = 40;
-        int total = map.Count;
-        int pages = (total + pageSize - 1) / pageSize;
-        if (page < 0) page = 0;
-        if (page >= pages) page = pages - 1;
-        var ordered = map.OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase).Skip(page * pageSize).Take(pageSize).ToList();
-        foreach (var (name, entry) in ordered)
+
+        return new CatalogSnapshot { Names = names.ToList(), Guids = guids };
+    }
+
+    static void EmitCatalogAbilityLine(ChatCommandContext ctx, string name, System.Collections.Generic.Dictionary<string, int> guids)
+    {
+        var map = Core.AbilityRules?.Current?.AbilityMap;
+        // IN2 (v0.15.1): ability `cat` badge derived from prefab name.
+        // v0.51.0: admin Category override (ability_rules.json) wins over the name heuristic.
+        var cat = Core.AbilityRules.GetAbilityCategoryOverride(name) ?? Categorization.ClassifyAbility(name);
+        int guid = (guids != null && guids.TryGetValue(name, out var g)) ? g : 0;
+
+        // v0.58.0: curated description + school for the Bestiary's MISSING rows. Uses the lightweight
+        // dict-only getter (NOT Resolve — no ECS probe per row across the full universe). Only the
+        // curated subset has these; the rest emit `-`/`none`.
+        string desc = "-", school = "none";
+        if (guid != 0 && Core.AbilityMetadata != null
+            && Core.AbilityMetadata.TryGetCuratedText(guid, out var curatedDesc, out var curatedSchool))
+        {
+            if (curatedDesc != null) desc = SafeToken(curatedDesc);
+            if (curatedSchool != null) school = SafeToken(curatedSchool);
+        }
+
+        if (map != null && map.TryGetValue(name, out var entry))
         {
             string weapons = entry.Weapons is { Count: > 0 } ? string.Join(",", entry.Weapons) : "any";
             string forms = entry.Forms is { Count: > 0 } ? string.Join(",", entry.Forms) : "any";
-            // IN2 (v0.15.1): ability `cat` badge derived from prefab name.
-            // v0.51.0: admin Category override (ability_rules.json) wins over the name heuristic.
-            var cat = Core.AbilityRules.GetAbilityCategoryOverride(name) ?? Categorization.ClassifyAbility(name);
-            ctx.Reply(
-                $"[BEELZ:catalog-ability] an={name}" +
+            // No curated metadata description? Fall back to the admin Notes field (also a description).
+            if (desc == "-" && !string.IsNullOrWhiteSpace(entry.Notes)) desc = SafeToken(entry.Notes);
+            string bodyC =
+                $"curated=1" +
                 $" weapons={weapons}" +
                 $" forms={forms}" +
                 $" transform_only={(entry.TransformOnly ? 1 : 0)}" +
@@ -485,9 +707,92 @@ internal static class ApiCommands
                 $" cast_speed={(entry.CastMovementSpeed.HasValue ? entry.CastMovementSpeed.Value.ToString("F2") : "auto")}" +
                 $" damage_scale={entry.DamageScale:F2}" +
                 $" cooldown_scale={entry.CooldownScale:F2}" +
-                $" notes={SafeToken(entry.Notes ?? "")}");
+                $" cooldown_override={(entry.CooldownSeconds.HasValue ? entry.CooldownSeconds.Value.ToString("F2") : "-")}" +
+                $" range_override={(entry.MaxRangeOverride.HasValue ? entry.MaxRangeOverride.Value.ToString("F1") : "-")}" +
+                $" charges_override={(entry.ChargesMax.HasValue ? entry.ChargesMax.Value.ToString() : "-")}" +
+                $" chargetime_override={(entry.ChargeTimeSeconds.HasValue ? entry.ChargeTimeSeconds.Value.ToString("F2") : "-")}" +
+                $" aoe_override={(entry.AoeRadius.HasValue ? entry.AoeRadius.Value.ToString("F1") : "-")}" +
+                $" projspeed_override={(entry.ProjectileSpeed.HasValue ? entry.ProjectileSpeed.Value.ToString("F1") : "-")}" +
+                $" duration_override={(entry.EffectDurationSeconds.HasValue ? entry.EffectDurationSeconds.Value.ToString("F1") : "-")}" +
+                $" heal_mult={(entry.HealingMultiplier.HasValue ? entry.HealingMultiplier.Value.ToString("F2") : "-")}" +
+                $" summon_cap_override={(entry.SummonCap.HasValue ? entry.SummonCap.Value.ToString() : "-")}" +
+                $" summon_timeout_override={(entry.SummonTimeoutSeconds.HasValue ? entry.SummonTimeoutSeconds.Value.ToString("F1") : "-")}" +
+                $" summon_units_override={(entry.SummonUnitsPerCast.HasValue ? entry.SummonUnitsPerCast.Value.ToString() : "-")}" +
+                $" force_timeout_override={(entry.ForceTimeoutSeconds.HasValue ? entry.ForceTimeoutSeconds.Value.ToString("F1") : "-")}" +
+                $" free_move_secs={(entry.FreeMoveAfterSeconds.HasValue ? entry.FreeMoveAfterSeconds.Value.ToString("F1") : "-")}" +   // v0.87.0
+                $" interrupt_on_hit={(entry.InterruptOnHit.HasValue ? (entry.InterruptOnHit.Value ? "on" : "off") : "auto")}" +        // v0.87.0
+                $" school={school}" +
+                $" desc={Clamp(desc, 256)}" +
+                $" notes={SafeToken(Clamp(entry.Notes ?? "", 256))}";
+            ReplyChunked(ctx, "catalog-ability", $"an={name}", bodyC);   // v0.76.0: chunked (was >512-byte crash)
+            return;
         }
-        ctx.Reply($"[BEELZ:end] cmd=catalog-abilities count={ordered.Count} total={total} page={page} pages={pages}");
+
+        // Discovered-but-uncurated row: derive what we can from the name-keyed rule getters, defaults
+        // for the per-ability tuning fields that only a curated entry carries.
+        var fams = Core.AbilityRules.ClassifyWeaponFamilies(name);
+        var famList = fams?
+            .Where(f => f != WeaponFamily.Magic && f != WeaponFamily.None)
+            .Select(f => f.ToString())
+            .ToList();
+        string weaponsU = (famList != null && famList.Count > 0) ? string.Join(",", famList) : "any";
+        string bodyU =
+            $"curated=0" +
+            $" weapons={weaponsU}" +
+            $" forms=any" +
+            $" transform_only={(Core.AbilityRules.IsTransformOnly(name, guid) ? 1 : 0)}" +
+            $" enabled={(Core.AbilityRules.IsEnabled(name, guid) ? 1 : 0)}" +
+            $" difficulty={Core.AbilityRules.GetAbilityDifficulty(name)}" +
+            $" cat={cat}" +
+            $" category_override=-" +
+            $" phase=1" +
+            $" allow_denied={(Core.AbilityRules.IsAllowDenied(name, guid) ? 1 : 0)}" +
+            $" interruptible=auto" +
+            $" free_move=0" +
+            $" cast_speed=auto" +
+            $" damage_scale={Core.AbilityRules.GetDamageScale(name):F2}" +
+            $" cooldown_scale={Core.AbilityRules.GetCooldownScale(name):F2}" +
+            $" cooldown_override=-" +
+            $" range_override=-" +
+            $" charges_override=-" +
+            $" chargetime_override=-" +
+            $" aoe_override=-" +
+            $" projspeed_override=-" +
+            $" duration_override=-" +
+            $" heal_mult=-" +
+            $" summon_cap_override=-" +
+            $" summon_timeout_override=-" +
+            $" summon_units_override=-" +
+            $" force_timeout_override=-" +
+            $" free_move_secs=-" +           // v0.87.0
+            $" interrupt_on_hit=auto" +      // v0.87.0
+            $" school={school}" +
+            $" desc={Clamp(desc, 256)}" +
+            $" notes=";
+        ReplyChunked(ctx, "catalog-ability", $"an={name}", bodyU);   // v0.76.0: chunked (was >512-byte crash)
+    }
+
+    [Command("catalog abilities", description: "Stream the FULL capturable ability catalog (curated rules + discovered universe) with matrix attributes (BCH collection book). Optional page index, default 0. Page size 40.")]
+    public static void CatalogAbilities(ChatCommandContext ctx, int page = 0)
+    {
+        if (!Core.IsReady) { ctx.Reply("[BEELZ:err] cmd=catalog-abilities code=not_ready msg=plugin_not_initialized"); return; }
+        if (page < 0) page = 0;
+        // Rebuild the union when a fresh scan starts (page 0) or nothing is cached; reuse for page>0
+        // so one scan sees a consistent snapshot and we don't re-enumerate ~14k prefabs per page.
+        if (page == 0 || _catalog == null) _catalog = BuildCatalogSnapshot();
+        var snap = _catalog;
+        if (snap == null || snap.Names.Count == 0)
+        {
+            ctx.Reply("[BEELZ:end] cmd=catalog-abilities count=0 total=0 page=0 pages=1");
+            return;
+        }
+        const int pageSize = 40;
+        int total = snap.Names.Count;
+        int pages = (total + pageSize - 1) / pageSize;
+        if (page >= pages) page = pages - 1;
+        var slice = snap.Names.Skip(page * pageSize).Take(pageSize).ToList();
+        foreach (var name in slice) EmitCatalogAbilityLine(ctx, name, snap.Guids);
+        ctx.Reply($"[BEELZ:end] cmd=catalog-abilities count={slice.Count} total={total} page={page} pages={pages}");
     }
 
     [Command("hotkeys", description: "Stream the caller's named hotkey bindings (BCH-readable). W4 extra slots beyond V Rising's 6.")]

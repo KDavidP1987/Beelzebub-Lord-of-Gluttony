@@ -40,11 +40,56 @@ There are **two** config surfaces:
 | `Capture_InclusiveMode` | `true` | **(v0.50)** When on, capture **and Devour** ignore `DenyPatterns`/`DenyGuids` and the Basic/Brutal difficulty gate — abilities across all V-Bloods/NPCs become broadly capturable for testing. A small hardcoded junk filter (idle/spawn/death stubs) and the per-ability `Enabled=false` kill-switch still apply. Turn **off** for a curated server. |
 | `Grant_EnforceTransformOnly` | `false` | **(v0.50)** When off, the per-ability "transform-only" reservation is ignored, so every ability can be granted/slotted/hotkeyed/devoured to the normal bar. Turn **on** to honor the reservation (those abilities become usable only via an actual transform). |
 
-Other relevant global keys: `DropChance_Ability_*`, `DropChance_Transform_*`, `Capture_Pity*`
-(drop rates / bad-luck protection), `Server_DifficultyMode` (`Basic`/`Brutal` — only matters
-when `Capture_InclusiveMode = false`), `Grant_PowerScalingMode` + `Grant_PowerScalingFactor`
-(global granted-ability damage scaling: `PlayerScaled` = vanilla, or `Boosted` × factor),
-`AbilityTuning_Enabled` (enables the per-ability cast tuning in §4).
+Other relevant **global** keys:
+- `DropChance_Ability_Regular` / `DropChance_Ability_VBlood` — per-ability capture chance.
+- `DropChance_Devour_Regular` / `DropChance_Devour_VBlood` — **(v0.64, renamed from
+  `DropChance_Transform_*`)** the rare "jackpot" Devour roll (grants a unit's whole kit at once;
+  for Dracula/Morgana it unlocks transformation). Old keys are migrated to these automatically.
+- `Capture_PityIncrementPerKill` / `Capture_PityMaxBonus` — bad-luck protection for **ability**
+  captures. `Capture_PityIncrement_Devour` / `Capture_PityMax_Devour` — **(v0.64, new)** the same for
+  the **Devour** jackpot, tunable separately (defaults to the ability values).
+- `Server_DifficultyMode` (`Basic`/`Brutal` — only matters when `Capture_InclusiveMode = false`).
+- `Grant_PowerScalingMode` + `Grant_PowerScalingFactor` — global granted-ability damage scaling
+  (`PlayerScaled` = vanilla, or `Boosted` × factor).
+- `Transform_MaxStacksPerSummonAbility` / `Transform_SummonLifetimeSeconds` / `Transform_SummonPowerFactor`
+  — **global** dials that apply to **every** summon ability (transform summons *and* standalone
+  captured summons, since v0.45), despite the `Transform_` prefix.
+- `Abilities_ApplyConfig` **(default ON — master kill-switch, not an opt-in; renamed from
+  `AbilityTuning_Enabled` in v0.66)**: when on, the per-ability config you set (cooldown, range,
+  charges, interrupt, free-move, cast-speed, …) is applied by rewriting the abilities' baked prefab
+  fields. Set false only to disable ALL baked ability-config edits. These edits are server-wide and
+  also affect the source NPC/boss's copy of the ability (intended).
+
+**(v0.65) Per-ability absolute cooldown & range** (require `Abilities_ApplyConfig` — baked, GLOBAL edits):
+- `.beelz admin ability <name> cooldown <seconds>` — set an exact cooldown (`clear` to remove).
+- `.beelz admin ability <name> range <distance>` — set the max cast range (`clear` to remove).
+- (Shortcuts: `.beelz admin tune <name> cooldown <s>` / `... range <d>`.)
+- `Grant_MinimumCooldownSeconds` — **global** floor applied to every ability's cooldown (0 = off).
+- These also surface to BloodCraftHub as `cooldown_override=` / `range_override=` on `api info` and
+  `catalog-ability` (ApiVersion 12).
+
+**(v0.67) More server-wide shaping** (also `Abilities_ApplyConfig`, default ON):
+- `.beelz admin ability <name> charges <n>` / `chargetime <seconds>` — charge-based abilities
+  (`AbilityChargesData` on the group prefab).
+- `.beelz admin ability <name> aoe <radius>` — area-of-effect radius (`TargetAoE.MaxRange` on the
+  ability's spawned AoE prefab, reached by walking Group→Cast→SpawnPrefab).
+- `.beelz admin ability <name> projspeed <speed>` — projectile travel speed (`Projectile.Speed`,
+  same walk). *(Note: a few abilities spawn deeply-nested or oddly-named projectiles the walker
+  doesn't reach; those silently skip — verify in-game.)*
+- Surfaced to BCH as `charges_override` / `chargetime_override` / `aoe_override` /
+  `projspeed_override` (ApiVersion 13).
+
+**(v0.68) Effect duration & healing** (also `Abilities_ApplyConfig`, default ON):
+- `.beelz admin ability <name> duration <seconds>` — absolute duration of the buffs/debuffs the
+  ability applies (`ApplyBuffOnGameplayEvent.OverrideDuration`).
+- `.beelz admin ability <name> healing <multiplier>` — scale the ability's healing
+  (`HealOnGameplayEvent`); 1.0 = unchanged. Computed from cached original values so reloads don't
+  compound the multiplier.
+- Surfaced to BCH as `duration_override` / `heal_mult` (ApiVersion 14).
+- *(Reaches an ability's primary spawned effect; deeply-nested effects may not respond — verify in-game.)*
+
+> **Coming next (multi-ability rules):** *stack limits* (per-ability summon cap), *incompatible-ability
+> locks* (block conflicting binds), and *chain triggers* (one ability auto-firing another).
 
 ---
 
@@ -111,7 +156,7 @@ All fields optional; omit any you don't want to change.
     "Phase": 1,                   // multi-phase boss ability phase
     "AllowDenied": false,         // force past the deny lists (for curated abilities with deny-patterned names)
 
-    // Cast tuning (requires AbilityTuning_Enabled = true). null/absent = leave the game's baked value.
+    // Cast tuning (requires Abilities_ApplyConfig = true). null/absent = leave the game's baked value.
     "Interruptible": true,        // true = dash/shield can cancel the cast
     "FreeMoveAfterCast": true,    // true = player can move the instant the cast finishes
     "CastMovementSpeed": 1.0,     // 0 = rooted during cast, 1 = full speed; null = baked default
@@ -132,7 +177,7 @@ All fields optional; omit any you don't want to change.
 | `Difficulty` | string | `"Basic"` | Capture gate vs. `Server_DifficultyMode` (ignored in inclusive mode). |
 | `Phase` | int | `1` | Boss multi-phase grouping for transform loadouts. |
 | `AllowDenied` | bool | `false` | Force this ability past the deny lists (still honors `Enabled`). |
-| `Interruptible` / `FreeMoveAfterCast` / `CastMovementSpeed` | bool?/bool/float? | unset | Cast tuning (needs `AbilityTuning_Enabled`). ⚠ edits the ability's **shared** cast data, so the source NPC/boss cast changes too. |
+| `Interruptible` / `FreeMoveAfterCast` / `CastMovementSpeed` | bool?/bool/float? | unset | Cast tuning (needs `Abilities_ApplyConfig`). ⚠ edits the ability's **shared** cast data, so the source NPC/boss cast changes too. |
 | `Category` | string | unset | Override the BCH category badge (`Travel`/`Aoe`/`Projectile`/`Melee`/`Summon`/`Buff`/`WeaponSpell`/`Spell`/`Other`). Omit = auto-classify from the name. |
 
 **Set any of these live, no file editing (v0.53.0):**
@@ -158,7 +203,7 @@ Other in-game shortcuts:
 - `.beelz admin reload` — re-read the file (for hand-edits) and re-apply cast tuning.
 
 All command edits persist to `ability_rules.json` immediately (no reload needed); `reload` is only
-for picking up hand-edits or re-applying cast tuning after toggling `AbilityTuning_Enabled`.
+for picking up hand-edits or re-applying cast tuning after toggling `Abilities_ApplyConfig`.
 
 ---
 

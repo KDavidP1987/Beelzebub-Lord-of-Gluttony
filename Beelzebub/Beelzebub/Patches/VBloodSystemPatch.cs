@@ -143,7 +143,7 @@ internal static class VBloodSystemPatch
         bool isGateBossVariant = !string.IsNullOrEmpty(vbloodNameOuter)
             && vbloodNameOuter.IndexOf("_GateBoss_", System.StringComparison.OrdinalIgnoreCase) >= 0;
 
-        float jackpotChance = Settings.DropChance_Transform_VBlood.Value * vBloodPrefabEntity.ResolveTierMultiplier();
+        float jackpotChance = Settings.DropChance_Devour_VBlood.Value * vBloodPrefabEntity.ResolveTierMultiplier();
         bool gotJackpot = false;
         // Tier-1 keeps the transform gates (admin kill-switch + difficulty); the Devour path
         // only excludes gate-boss variants.
@@ -190,7 +190,7 @@ internal static class VBloodSystemPatch
             else
             {
                 Core.AbilityRegistry.BumpPity(steamId, CaptureSource.VBlood, PityKind.Transform,
-                    Settings.Capture_PityIncrementPerKill.Value, Settings.Capture_PityMaxBonus.Value);
+                    Settings.Capture_PityIncrement_Devour.Value, Settings.Capture_PityMax_Devour.Value);
             }
         }
 

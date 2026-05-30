@@ -60,6 +60,30 @@ internal sealed class ChatNotifier
         }
     }
 
+    /// <summary>
+    /// v0.88.0: server-wide announcement — send a system message to EVERY online player, independent of
+    /// their chat verbosity (it's a server broadcast, not per-player chatter). Used by the collection-complete
+    /// + periodic-leaderboard broadcasts.
+    /// </summary>
+    public void Announce(string message)
+    {
+        if (string.IsNullOrEmpty(message)) return;
+        if (Core.EntityManager.World is null) return;
+        var query = Core.EntityManager.CreateEntityQuery(ComponentType.ReadOnly<User>());
+        var users = query.ToEntityArray(Allocator.Temp);
+        try
+        {
+            for (int i = 0; i < users.Length; i++)
+            {
+                if (!users[i].TryGetComponent<User>(out var user)) continue;
+                if (user.PlatformId == 0) continue;
+                SendRaw(user, message);
+            }
+        }
+        catch (Exception ex) { Core.Log.LogWarning($"[Beelz] Announce failed: {ex.Message}"); }
+        finally { users.Dispose(); }
+    }
+
     void SendRaw(User user, string message)
     {
         try

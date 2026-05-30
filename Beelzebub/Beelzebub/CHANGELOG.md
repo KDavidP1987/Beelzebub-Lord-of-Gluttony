@@ -4,6 +4,577 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.94.0] - 2026-05-30
+
+### Per-bucket clear-bar + all form skins recognized
+
+- **New `.beelz clearbar` command (no confirmation).** Clear exactly the loadout you mean:
+  - `.beelz clearbar` or `.beelz clearbar all` — every set (universal + all weapons + all forms)
+  - `.beelz clearbar universal` — your any-weapon set
+  - `.beelz clearbar sword` / `spear` / `unarmed` / `crossbow` / … — that weapon's set
+  - `.beelz clearbar wolf` / `bear` / … — that form's set
+  Your captured abilities are kept. This replaces the awkward all-or-nothing clear (the old `.beelz
+  resetbar` still works but needs a `CONFIRM`, which is why the companion-app "clear bar" button had stopped
+  working — companion apps should call `.beelz clearbar`).
+- **All shapeshift-form skins are now recognized.** Form detection is no longer tied to exact skin GUIDs, so
+  every player skin of a form (wolf/bear/etc., including tailor/cosmetic variants) gets your custom form
+  abilities. Admins can verify the full list with the new `.beelz admin dump forms`.
+- Reset/clear now also clears the primary and ultimate slots (added in v0.91).
+
+## [0.93.0] - 2026-05-30
+
+### freelymove now works on channeled / sustained-fire abilities
+
+`freelymove` previously only freed the cast wind-up — so on an ability like a continuous arrow barrage you
+could move for the first second, then got locked again the moment it started firing. The fix: `freelymove`
+now also lifts the movement-lock on the ability's *channel/firing* buff, so you can move for the whole
+ability (after the brief wind-up you specify). This also clears up the stuttery movement that came from
+being freed and re-locked mid-cast. `defaults` restores the original lock.
+
+## [0.92.0] - 2026-05-30
+
+### Diagnostics + label fix
+
+- **Ultimate slot is the `T` key.** Corrected the labeling — `.beelz grant ultimate <id>` binds to the T-key
+  ultimate slot (the `r` alias is replaced by `t`).
+- **Deeper admin diagnostic.** `.beelz admin dump <abilityGuid>` now also logs the field *values* of an
+  ability's movement/cast-lock components, to pin down why a given ability roots you (used to investigate
+  free-movement on channeled abilities).
+
+## [0.91.0] - 2026-05-30
+
+### Forms exit on non-form casts + assign to primary & ultimate slots
+
+- **Shapeshift forms now exit when you cast a non-form ability.** The form holds while you cast your
+  assigned form abilities (and the form's own native bite/leap), but casting a genuinely foreign ability
+  drops you out of the form — instead of being stuck until you manually leave via the wheel.
+- **Assign abilities to the primary attack and ultimate slots.** `.beelz grant` / `weapon-grant` /
+  `form-grant` now accept **`primary`** (left-click attack) and **`ultimate`** (the T key) in addition to
+  slots 1-6 — e.g. `.beelz grant ultimate <ability ID>` or `.beelz grant primary <ability ID>`. This is why
+  a granted wolf-form ability appeared on the ultimate slot: the wolf form renders on the ultimate slot, and
+  now you can deliberately target it (and the primary) like Bloodcraft's ExoForm.
+
+## [0.90.0] - 2026-05-30
+
+### Forms hold through casting + freelymove works on channels (root-caused via component inspection)
+
+- **Shapeshift forms no longer drop when you cast an injected ability.** The ability appeared on the form
+  bar (v0.89) but casting it kicked you out of the form. The real exit trigger was a different component
+  than we'd been neutralizing — now identified and stripped, so the form **holds while you cast** your
+  granted abilities.
+- **`freelymove` now frees movement on channeled / locked abilities.** A channel's "can't move" comes from
+  a movement-impair flag on the spell's own buff (not the cast windup we were editing). `freelymove` now
+  clears that flag too, so you can move while the ability runs. `defaults` restores the original lock.
+- **New admin diagnostic:** `.beelz admin dump <abilityGuid|form>` logs an ability's full component chain
+  (or your active form buff) to the server log — handy for reporting exactly how an ability behaves.
+
+## [0.89.0] - 2026-05-30
+
+### Fixes from testing: form abilities now render + freelymove works on channels
+
+- **Shapeshift form abilities now actually appear on the form bar.** The previous fix injected them
+  correctly but a moment too late — after the game had already drawn the form's bar — so nothing showed.
+  The loadout is now injected at the exact moment the form bar is built (the same path the weapon bar
+  uses), so your granted abilities render on the form and are castable.
+- **`freelymove` now works on channeled/locked abilities.** It had no effect because the ability's
+  movement lock was set to "use the whole cast duration," which overrode the seconds you specified.
+  We now clear that flag when you set `freelymove`, so the timer you give is respected — e.g.
+  `freelymove 2` frees you ~2 seconds into a channel that otherwise roots you the whole time.
+
+## [0.88.0] - 2026-05-30
+
+### Server announcements: collection-complete + periodic leaderboard
+
+- **100% collection broadcast (default ON).** When a player collects every capturable ability, the whole
+  server sees a thematic announcement. Customize the message pool (pipe-separated, `%player%` placeholder)
+  via the `Broadcast_CollectionComplete_Messages` config; toggle with `Broadcast_CollectionComplete_Enabled`.
+- **Periodic leaderboard broadcast (default OFF).** Optionally announce the top collectors server-wide on a
+  schedule. Admins toggle/configure it live:
+  - `.beelz admin broadcast leaderboard on|off`
+  - `.beelz admin broadcast interval <minutes>` (60 = hourly, 1440 = daily)
+  - `.beelz admin broadcast top <1-5>` — how many to list
+  - `.beelz admin broadcast complete on|off` — the 100% announcement
+  - `.beelz admin broadcast test` — send one now · `.beelz admin broadcast status` — show current settings
+  Message pool (`%top%` / `%count%` placeholders) lives in `Broadcast_Leaderboard_Messages`.
+
+## [0.87.0] - 2026-05-30
+
+### New cast modifiers: free movement mid-cast + interrupt-on-attack
+
+Two admin ability modifiers (server-wide, applied when `Abilities_ApplyConfig` is on — the default):
+
+- **`.beelz admin ability <name|id> freelymove <seconds>`** — for spells that root you in place during a
+  long cast, this frees you to move **after that many seconds into the cast**, while the spell keeps going.
+  (E.g. a spell that locks you for its whole 5s cast → `freelymove 2` releases you after 2s.) `freelymove 0`
+  lets you move immediately; `clear` (or `defaults`) restores the original lock.
+- **`.beelz admin ability <name|id> interruptonhit on`** — makes an ability **cancel when the caster is
+  attacked** (takes damage). Some abilities don't stop when you're hit and probably should — this fixes
+  that per-ability. `off` removes it; `clear`/`defaults` restores the baked behavior. (This is separate from
+  `interruptible`, which is the player's own dash/shield self-cancel.)
+
+Both are reset by `.beelz admin ability <id> defaults` (and the existing `interrupt`/`freemove`/`castspeed`
+modifiers are now restorable by `defaults` too).
+
+## [0.86.0] - 2026-05-30
+
+### Fixes: shapeshift-form abilities now actually appear + honest collection %
+
+- **Shapeshift form abilities now show up on the form bar.** `.beelz form-grant`'d abilities were being
+  injected through a hook the form-entry never reached, so entering a (wolf/bear/…) form showed only its
+  native bar. Form entry is now detected reliably (on the shapeshift event itself) and your granted
+  abilities are injected the instant the form appears — including skinned forms.
+- **Collection % no longer exceeds 100%.** `.beelz top` and `.beelz progress` measured your collection
+  against the curated rules list (~450), which a full-devour player can blow past — so it showed nonsense
+  like 133%. The denominator is now the **full set of capturable abilities in the game** (~1400), so the
+  percentage is honest and 100% genuinely means you've collected everything. The "🏆 COLLECTION COMPLETE"
+  milestone now fires at true 100% (it used to trigger far too early).
+
+## [0.85.0] - 2026-05-30
+
+### Force-timeout: make indefinite ability effects expire
+
+Some abilities apply effects/buffs that otherwise last **forever**. Admins can now force them to expire:
+
+- `.beelz admin ability <name|id> forcetimeout <seconds>` — the ability's spawned effects/buffs will now
+  auto-expire after that many seconds, even if they had no built-in duration (it adds one).
+- `forcetimeout 0` / `clear` (or `.beelz admin ability <id> defaults`) removes the forced timeout and
+  restores the effect's original behavior.
+
+This complements `duration` (which adjusts effects that already have a length); `forcetimeout` is for the
+truly indefinite ones.
+
+## [0.84.0] - 2026-05-30
+
+### Form abilities now appear on the form bar + collection-complete + BCH tooltip lookup
+
+- **Shapeshift form abilities now show up.** A form (wolf/bear/…) only has a couple of ability slots, and
+  they aren't your normal spell slots — so `.beelz form-grant` to slot 5/6 went to a slot the form never
+  displays. Your form abilities now map onto the slots the form actually renders (in order), so they
+  appear and are castable.
+- **Collection-complete milestone.** Capture the last available ability and you get a one-time
+  "🏆 COLLECTION COMPLETE!" message (and BCH gets a `collection-complete` event).
+- **(BCH) Ability tooltips by GUID.** New `api info-guid <guid>` returns full tooltip data for any ability
+  by its ID — fixing "No name"/generic tooltips for the abilities on your active bar.
+
+## [0.83.0] - 2026-05-30
+
+### Player extras: leaderboard, odds, quieter messages, pity options
+
+- **`.beelz top`** — a server leaderboard of the players who've collected the most abilities (count + %).
+  Admins are excluded so the competition is fair.
+- **`.beelz odds`** — see your current ability/devour drop chances and your accumulated pity (bad-luck
+  protection) bonus.
+- **`.beelz silent on`** — hide the "you already knew all of its abilities" message when you devour a unit
+  you've fully collected (`.beelz silent off` to bring it back).
+- **New admin config `Capture_PitySessionBased`** — set it true to make pity reset each time a player logs
+  out (session-based), or leave it false (default) for permanent, multi-session pity.
+
+## [0.82.0] - 2026-05-30
+
+### Summon timeout / cooldown now tick even while idle
+
+Building on v0.81: the periodic heartbeat now also runs on a real per-frame driver, so summon timeouts and
+the cooldown enforcer fire on time even when you're standing still (e.g. you set a long cooldown and can't
+re-cast). Previously they only advanced while something was happening (a cast, combat, a death).
+
+## [0.81.0] - 2026-05-30
+
+### Fix: summon timeout & live config changes now apply reliably
+
+Time-based features (summon auto-despawn, the granted-ability cooldown enforcer, debounced saves) were
+only being processed when a unit died — so if you weren't killing anything, summons outlived their timer
+(then despawned all at once on the next kill) and per-ability cooldown/config changes didn't take effect
+until you reloaded. They now run on a steady heartbeat during normal play, so:
+- Each summon group despawns ~on its own timer (timers are per-cast, not shared).
+- Per-ability cooldown / summon settings apply live without a reload.
+
+## [0.80.0] - 2026-05-30
+
+### Fixes from testing: skinned forms, summon cap meaning, summon timeout
+
+- **Shapeshift form abilities now work with skinned forms.** Custom form loadouts weren't appearing
+  because cosmetic form *skins* (e.g. the wolf "Skin02"/"Blackfang" variants) weren't recognized — only
+  the base form was. All skin variants are now detected, so `.beelz form-grant` applies in them.
+- **`summoncap` is now a true "number of active uses" cap.** Previously, setting a low cap on a
+  multi-unit summon (e.g. a 10-skeleton horde) wrongly trimmed it to that many *skeletons*. Now `summoncap`
+  only limits how many simultaneous casts are active; the cast itself keeps its full unit count.
+- **New `summonunits` knob** for what the old behavior accidentally did, on purpose: cap the number of
+  **units a single cast** summons. `.beelz admin ability <id> summonunits <n>` (0 = the ability's natural
+  count). It's independent of `summoncap` — whichever limit is hit first applies.
+- **Summon timeout reliability.** Per-ability `summontimeout` now resolves the ability correctly (it
+  could fall back to the global timeout before), and expirations are logged when verbose logging is on.
+
+## [0.79.0] - 2026-05-29
+
+### Summon governance: caps + a 30-second timeout on all summons
+
+Summon abilities are now governed by default so hordes can't accumulate forever:
+- **Cap** — at most **3** simultaneous "uses" of a given summon ability (this already existed; it now
+  applies to every summon ability, transform or captured).
+- **Timeout** — summons now **auto-despawn after 30 seconds** by default (previously off). Set
+  `Transform_SummonLifetimeSeconds = 0` to let them live forever again.
+- **Per-ability overrides** — admins can override either for a specific ability, and the per-ability
+  value wins over the global default:
+  - `.beelz admin ability <name|id> summoncap <n>` (0 = unlimited)
+  - `.beelz admin ability <name|id> summontimeout <seconds>` (0 = never expires)
+- Reset with `.beelz admin ability <id> defaults` (or `all defaults`) like the other ability config.
+
+## [0.78.0] - 2026-05-29
+
+### Shapeshift forms now behave like a weapon loadout
+
+Each form (Wolf/Bear/Rat/Spider/Toad/Werewolf/Gargoyle) now works like a weapon family for your bar:
+- **Enter a form** → its assigned abilities (`.beelz form-grant`) auto-load into your slots.
+- **Leave the form** → your bar reverts to whichever **weapon group** you currently have equipped.
+- `.beelz form-grant` / `.beelz weapon-grant` now also accept an **ability ID** (not just a list index),
+  matching `.beelz grant`.
+
+(Requires `Forms_CustomAbilities_Enabled`, which is on by default as of v0.75.)
+
+## [0.77.0] - 2026-05-29
+
+### Fix: a configured cooldown no longer "bleeds" onto other abilities
+
+Setting a long cooldown on one ability could make *other* abilities you placed on the same slot suddenly
+inherit that long cooldown (cooldown was sticking to the slot, not the ability). Now a slot only carries
+its cooldown forward when the **same** ability re-resolves there (e.g. on a weapon swap, so your
+in-progress cooldown is preserved); placing a **different** ability on that slot gives it its own
+cooldown. Cooldown follows the ability, not the slot.
+
+## [0.76.0] - 2026-05-29
+
+### Fix: ability info command crash + stable ability indexes + grant by ID
+
+- **`.beelz info` / `api info` no longer crashes.** With the ability-config fields added over recent
+  versions, the info line outgrew the chat system's size limit and threw an error (the command failed
+  outright; the BCH catalog could abort mid-stream). Long lines are now sent in parts and reassembled.
+- **Your ability indexes are now stable across logins.** Previously the list order could shuffle each
+  session, so a memorized "index 5" wasn't reliable. The list is now sorted deterministically.
+- **`.beelz grant` accepts an ability ID.** `.beelz grant <slot> <index OR ability ID>` — pass the
+  stable ability ID (from `.beelz list`) to bind a specific ability without worrying about its index.
+- **`.beelz resetbar` now asks for confirmation** (`.beelz resetbar CONFIRM`) so you can't wipe all
+  your slot bindings by accident. (Your captures + unlocks are always kept either way.)
+- Setting a **cooldown** on a charge-based ability (e.g. a dash) now tells you it's recharge-governed and
+  points you at `chargetime`/`charges`.
+
+## [0.75.0] - 2026-05-29
+
+### Per-form ability loadouts are now ON by default
+
+The experimental "custom abilities on shapeshift forms" feature (`Forms_CustomAbilities_Enabled`) now
+defaults to **on**, so `.beelz form-grant` works out of the box and your loadout carries into Wolf/Bear
+forms (and the form holds while you cast). Set `Forms_CustomAbilities_Enabled = false` to restore stock
+vanilla form behavior. Still experimental — feedback welcome.
+
+## [0.74.0] - 2026-05-29
+
+### Fix: a vanilla spell you pick now stays put across weapon swaps
+
+When you used the in-game spellbook to put a normal spell back onto a slot that held a granted ability,
+it worked — until you switched weapons and back, at which point the granted ability re-appeared over your
+pick. Two causes: the "you re-picked this slot" baseline was only captured on a weapon swap (so a
+grant-then-repick had nothing to compare against), and a never-before-used weapon would re-adopt the
+re-picked ability and re-mask it.
+
+- The baseline is now captured the moment an ability is granted to a slot.
+- A vanilla re-pick on a spell slot is now recognized on **any** weapon (we detect that the slot's base
+  is weapon-independent), so your pick sticks across every weapon group and the granted ability is
+  cleared from all of them — instead of creeping back on a weapon swap.
+- Weapon-specific ability slots (whose ability legitimately differs per weapon) are unaffected — they
+  won't be cleared by mistake.
+
+## [0.73.0] - 2026-05-29
+
+### Ability shaping: range & duration reach more, clearer charges feedback
+
+- **`range` now shortens projectiles too.** On a projectile spell, `range` previously only changed the
+  aim/cast clamp while the projectile kept flying its full distance. It now also clamps the projectile's
+  actual travel, so a smaller `range` visibly shortens the spell.
+- **`duration` now affects over-time / channel effects.** In addition to applied buff/debuff length, it
+  now sets the lifetime of directly-spawned effect buffs (e.g. a heal/DoT channel), so `duration` actually
+  shortens or lengthens those. (It still does **not** change an ability's cast/channel *time* — that would
+  re-root the caster — only how long the resulting effect lasts.)
+- **Charges feedback.** `charges`/`chargetime` only work on abilities that already have a charge system
+  (we can't add one). Setting them on an ability without charges now tells you so instead of silently
+  doing nothing. Reminder: set **one field per command** (`charges`, then `chargetime` separately).
+
+## [0.72.0] - 2026-05-29
+
+### Fix: ability healing config (and the crash); new "reset to defaults"
+
+- **Healing config fixed.** Setting an ability's `healing` multiplier was reading and writing the wrong
+  internal data, which made channeled/over-time heals behave erratically — dropping to a trickle instead
+  of scaling, and **crashing the server** when set to 0. Healing now scales correctly from the ability's
+  original values (so reloads don't compound it), and `healing 0` is safe.
+- **Reset to shipped defaults.** New admin commands to undo ability shaping without restarting the server:
+  - `.beelz admin ability <id> defaults` — reset one ability's tuning (cooldown, range, charges, AoE,
+    projectile speed, duration, healing, interrupt/freemove/cast-speed, damage/cooldown scale) to baseline.
+  - `.beelz admin ability all defaults` — reset every ability at once.
+  - Your capture/availability rules (enabled, weapons, forms, deny lists) are left untouched. A server
+    restart always restores a full baseline as well.
+
+### Known notes from testing
+
+- `charges`/`chargetime` only apply to abilities that already have a charge system; `range` on a
+  projectile spell is the aim/cast clamp (the projectile's own travel is tuned separately); `duration`
+  sets applied buff/debuff length, not an ability's channel time. Broader coverage for these is planned.
+
+## [0.71.2] - 2026-05-29
+
+### Fix: ability tweaks were being wiped on reload/restart
+
+The new per-ability settings (cooldown, range, charges, AoE radius, projectile speed, effect duration,
+healing) were saved to the config file correctly, but the server **dropped them from memory** every
+time the rules were (re)loaded — so they only worked until the next `.beelz admin reload` or restart.
+They now persist properly, which is what was blocking the cooldown config from ever taking effect.
+
+## [0.71.0] - 2026-05-29
+
+### Ability cooldown config now actually applies to abilities you cast
+
+Setting an ability's cooldown wrote the value but didn't change the cooldown you experienced when
+casting a captured ability from your bar — V Rising drives a granted ability's live cooldown from
+per-player slot state, not the value we were editing.
+
+- Beelzebub now **enforces the configured cooldown directly on the slot** the moment you cast: a
+  captured ability with a set cooldown (or under the global minimum-cooldown floor) is re-anchored to
+  that value. Lengthen or shorten any captured ability's cooldown and it takes effect on the next cast.
+- The earlier prefab-based cooldown still drives the displayed value and NPC casts; this adds the live
+  player-cast enforcement on top.
+
+## [0.70.0] - 2026-05-29
+
+### Fix: ID-set ability tweaks no longer lost on already-configured abilities
+
+- When an ability set by **ID** was auto-migrated to its name (v0.69), and that ability already had
+  server-curated settings, the migration **dropped** your tweak instead of merging it. It now merges
+  correctly, so a cooldown/range/etc. you set by ID sticks even on a pre-configured ability.
+- Ability tweaks that **match no ability** (usually a wrong name/ID) are now flagged in the server log
+  so admins can spot the mistake.
+
+## [0.69.0] - 2026-05-29
+
+### Fix: ability-config commands now accept an ability ID (not just its name)
+
+The ability-tuning commands (`.beelz admin ability …` / `.beelz admin tune …`) only worked if you
+typed the ability's full prefab **name**. If you used the **ID** shown in `.beelz list` / your loadout
+/ BloodCraftHub (e.g. `.beelz admin ability 874909393 cooldown 10`), it silently saved a setting that
+never applied — because the tuner matches abilities by name.
+
+- These commands now accept **either the ID or the name**, resolving the ID to the ability automatically.
+- Any settings you'd already saved by ID are **auto-migrated** to the correct ability on the next load
+  / `.beelz admin reload` — so a value you set earlier will start working without re-entering it.
+- This also fixes ability config driven from BloodCraftHub (which uses IDs).
+
+## [0.68.0] - 2026-05-29
+
+### Ability shaping: effect duration & healing (admin)
+
+Two more server-wide ability levers (applied by default — see v0.66):
+
+- **Effect/debuff duration** — `.beelz admin ability <name> duration <seconds>` sets how long the
+  buffs/debuffs an ability applies last.
+- **Healing** — `.beelz admin ability <name> healing <multiplier>` scales an ability's healing
+  (1.0 = unchanged, 1.5 = +50%, 0.5 = half). Computed from the ability's original values, so repeated
+  `.beelz admin reload`s don't stack the multiplier.
+- (Shortcuts via `.beelz admin tune <name> <duration|healing> <value>`.)
+- BloodCraftHub sees these as `duration_override` / `heal_mult` on ability info + the catalog.
+- **Caveat:** these reach an ability's primary spawned effect; a few abilities with deeply-nested
+  effects may not respond — verify in-game. (Next: multi-ability rules — incompatible-ability locks,
+  chain triggers, and stack limits.)
+
+## [0.67.0] - 2026-05-29
+
+### More ability shaping: charges, AoE radius, projectile speed (admin)
+
+Expanding the server-wide ability-config surface (all applied by default — see v0.66):
+
+- **Charges** — `.beelz admin ability <name> charges <n>` and `chargetime <seconds>` control
+  charge-based abilities (how many casts before recharge, and the recharge time).
+- **AoE radius** — `.beelz admin ability <name> aoe <radius>` resizes an ability's area of effect.
+- **Projectile speed** — `.beelz admin ability <name> projspeed <speed>` changes how fast its
+  projectile travels.
+- (Shortcuts via `.beelz admin tune <name> <charges|chargetime|aoe|projspeed> <value>`.)
+- BloodCraftHub sees these as `charges_override` / `chargetime_override` / `aoe_override` /
+  `projspeed_override` on ability info + the catalog.
+- These are **server-wide** edits (consistent for every player, and the source NPC/boss too), applied
+  automatically. More levers (effect duration, healing) and multi-ability rules (incompatible-ability
+  locks, chain triggers, stack limits) are coming next.
+
+## [0.66.0] - 2026-05-29
+
+### Ability configuration is now on by default (no opt-in)
+
+Server-wide ability balancing is meant to be **defined and adjustable out of the box** — not something
+you have to switch on first.
+
+- The old `AbilityTuning_Enabled` switch (default off) is replaced by **`Abilities_ApplyConfig`
+  (default ON)** — a master kill-switch, not an opt-in. Any per-ability config you set (cooldown,
+  range, charges, interrupt, free-move, cast-speed, …) now **applies automatically** at server start
+  and on `.beelz admin reload`. Existing servers adopt the new default automatically (the old key is
+  migrated out).
+- These edits are **server-wide**: an ability behaves the configured way for *every* player who casts
+  it, and — because V Rising shares the ability's data — the source NPC/boss's version changes too.
+  That's intended: you're configuring how the ability functions on the server, consistently.
+- Set `Abilities_ApplyConfig` to false only if you want to disable all baked ability-config edits.
+
+*(This is the foundation for an expanding server-wide ability-config surface — damage, AoE, durations,
+charges, and more — landing in upcoming updates.)*
+
+## [0.65.0] - 2026-05-29
+
+### Tune captured abilities: set cooldowns and range (admin)
+
+The first half of expanded per-ability balancing — for tuning whether a captured ability is actually
+*viable* on your server. Requires `AbilityTuning_Enabled` (these are baked, server-wide edits).
+
+- **Absolute cooldown.** `.beelz admin ability <name> cooldown <seconds>` (or `.beelz admin tune
+  <name> cooldown <seconds>`) sets an ability's exact cooldown — rein in a spammy capture or speed up
+  a sluggish one.
+- **Max cast range.** `.beelz admin ability <name> range <distance>` sets how far it can be cast.
+- **Global minimum cooldown.** New `Grant_MinimumCooldownSeconds` config floors *every* ability's
+  cooldown at once — a one-setting clamp on zero/low-cooldown abilities server-wide.
+- BloodCraftHub now sees these via `cooldown_override` / `range_override` on ability info + the catalog.
+- **Caveat:** like the existing cast-tuning, these are GLOBAL prefab edits — they also change the
+  source NPC/boss version of the ability. (Per-ability *healing scale* and *effect duration* aren't
+  exposed — they're baked into each ability's spawned effects with no safe override point. Stack
+  limits, incompatible-ability locks, and chain triggers are planned for the next update.)
+
+## [0.64.0] - 2026-05-29
+
+### Clearer "Devour" config + separate Devour luck dial
+
+Config clarity for admins — no gameplay change out of the box; existing settings are migrated for you.
+
+- **"Devour" naming.** The rare jackpot drop-chance settings are renamed to say what they do:
+  `DropChance_Transform_Regular` → **`DropChance_Devour_Regular`** and `DropChance_Transform_VBlood`
+  → **`DropChance_Devour_VBlood`**. If you'd tuned the old keys, your values are carried over
+  automatically (the old keys are removed from the config file).
+- **Separate Devour bad-luck protection.** New **`Capture_PityIncrement_Devour`** /
+  **`Capture_PityMax_Devour`** let you tune the Devour jackpot's pity curve independently from
+  ability-capture pity. They default to your existing ability-pity values, so nothing changes until
+  you adjust them.
+- **Global dials clarified.** Config descriptions now make clear that the summon caps/lifetime/power
+  settings apply to **every** summon ability (not just transforms). (A global minimum-cooldown floor
+  and per-ability cooldown/range/duration overrides are coming with the per-ability tuning expansion.)
+
+## [0.63.0] - 2026-05-29
+
+### Granted abilities show instantly, and vanilla picks stick across weapons
+
+- **No more weapon-swap dance.** When you grant a captured ability to a slot (or load a preset, or
+  `.beelz refresh`), it now appears on your action bar immediately — you no longer have to switch
+  weapons back and forth to make it show up.
+- **Picking a vanilla spell now wins everywhere.** If you re-select one of your normal spells in the
+  in-game spellbook on a slot that had a captured ability, that choice now sticks across **all** your
+  weapons — swapping weapons no longer re-applies the captured ability over your vanilla pick. (Note:
+  this clears that slot's Beelz bind for every weapon set; re-grant per-weapon afterward if you want a
+  weapon-specific bind back. Shapeshift-form loadouts are unaffected.)
+
+## [0.62.0] - 2026-05-29
+
+### Your slotted abilities now reliably return after a relog
+
+- **Grants re-apply on login.** When you reconnect, your universal (and current-weapon) slot binds
+  are now re-applied to your action bar immediately, instead of sometimes staying vanilla until you
+  swapped weapons or ran `.beelz refresh`. This was the last spot in the grant lifecycle that didn't
+  explicitly restore your loadout (weapon-swap, transform revert, reset, and refresh already did).
+- No new commands or settings; universal (Magic) abilities apply on any weapon as before.
+
+## [0.61.0] - 2026-05-29
+
+### Stability: a bad spell slot can no longer break your bar
+
+Hardening pass on the slot system — no new commands or settings, nothing to reconfigure.
+
+- **Out-of-range slot guard.** Slot binds are now validated (1-6) both when saved and when applied
+  to your action bar, and a bind is skipped if your live bar doesn't (yet) have that slot. This
+  closes a path where a corrupt or stale saved slot could cause an `IndexOutOfRange` while
+  resolving your bar (the long-standing intermittent "grant → bar" error). Bad binds are logged and
+  ignored instead of crashing; valid binds that arrive during a transient bar state simply apply on
+  the next resolve.
+- **Capture-luck (pity) tracking hardened** against malformed saved data.
+
+## [0.60.0] - 2026-05-28
+
+### Better ability descriptions & magic-school tags
+
+A data update that nearly doubles how many abilities come with a real, in-game description and a
+magic-school label — so the in-app guide, ability info, and BloodCraftHub's Bestiary show far more
+useful detail.
+
+- **Descriptions roughly doubled** (about 13% → 26% of all abilities). The text now comes straight
+  from V Rising's own tooltip strings, so it matches what you'd read in-game.
+- **Magic-school tags more than doubled** (about 4% → 9%) — Blood, Chaos, Frost, Illusion, Storm, Unholy.
+- **Fixed broken/foreign entries:** a number of abilities previously showed placeholder text or text
+  in the wrong language (Russian, German, Chinese, French). Those are now correct English or cleanly
+  blank (falling back to the friendly name).
+- No new commands or settings; nothing to reconfigure. Admins can still override any description or
+  school per ability in `ability_metadata_overrides.json`.
+
+## [0.59.0] - 2026-05-28
+
+### Per-form ability loadouts (Wolf, Bear, Rat, Spider, Toad, Werewolf, Gargoyle)
+
+Build a distinct captured-ability set for each shapeshift form, the same way you can per weapon.
+
+- **`.beelz form-grant <form> <slot> <index>`** binds a captured ability to a slot for a specific
+  form, and **`.beelz form-unslot <form> <slot>`** clears it. Enter that form from the in-game
+  shapeshift wheel and your custom abilities are on its bar (the form also holds through casting
+  instead of dropping you out). Use `auto` for the form you're currently in.
+- Your per-form sets are saved with the rest of your collection and survive relogs. If you haven't
+  built a set for a form yet, it falls back to your universal binds.
+- **This is opt-in / experimental:** it only takes effect when the server admin enables
+  `Forms_CustomAbilities_Enabled`. Visuals are limited to the seven forms V Rising itself ships.
+
+## [0.58.0] - 2026-05-28
+
+### Friendly names + ability descriptions for the companion app
+
+More polish for the BloodCraftHub collection book — these are data the companion app reads; they
+don't change gameplay.
+
+- **Friendly unit & ability names in your collection feed.** The captured-ability stream now carries
+  proper display names (e.g. "Blackfang Morgana") instead of leaving the companion app to clean up
+  raw prefab names — so boss and ability names read correctly out of the box.
+- **Descriptions & magic school on catalog entries.** The collection catalog now includes an ability
+  description and its magic school where we have them, so the Bestiary can show that text on entries
+  you haven't captured yet. (Coverage is partial today — about 1 in 8 abilities has a written
+  description so far; the rest fill in as we extract more from the game's own text.)
+
+## [0.57.0] - 2026-05-28
+
+### Complete collection book + cleaner ability categories
+
+Mostly for the BloodCraftHub companion app's collection/Bestiary view, plus a tidier ability-type
+badge everywhere.
+
+- **The collection catalog now lists every capturable ability**, not just the ones an admin has
+  hand-curated in the rules file. BloodCraftHub's Bestiary "Missing" list is now complete — you can
+  see the whole pool you're collecting toward. (Each entry is tagged as curated or auto-discovered.)
+- **Fewer abilities show as "Other."** The category classifier got smarter about primary/heavy
+  attacks (and tells melee from ranged-weapon attacks), unarmed strikes (kick/punch), ground fields,
+  pistols, and electric discharges — so more abilities show a meaningful type badge. Admins can still
+  pin any stubborn one with a `Category` override in `ability_rules.json`.
+
+## [0.56.0] - 2026-05-28
+
+### Mix and match: the in-game spellbook can take a slot back from a captured ability
+
+Fixes the most-reported loadout problem from testing: once you put captured abilities on your bar,
+vanilla spells from the in-game spellbook seemed to "refuse to attach," and clearing/refreshing was
+inconsistent.
+
+- **Pick a vanilla spell in the spellbook and it just works again.** If you assign a different
+  in-game ability to a slot that currently holds a captured ability, Beelzebub now notices and
+  **releases that slot back to you** — your spellbook pick sticks. Mix captured abilities and vanilla
+  spells freely across your six slots. (This is per weapon set, so it doesn't disturb your other
+  weapon loadouts.) Releasing a slot this way drops its saved bind — just re-grant it anytime with
+  `.beelz grant` / `.beelz weapon-grant` (or from BloodCraftHub).
+- **Clearing a slot now returns it to vanilla immediately.** `.beelz unslot`, `.beelz resetbar`, and
+  the per-slot Clear in BloodCraftHub now snap the slot straight back to your in-game ability on the
+  spot — no more swapping weapons or relogging to "unstick" it.
+
 ## [0.55.0] - 2026-05-27
 
 ### Public test-launch prep — front page & docs

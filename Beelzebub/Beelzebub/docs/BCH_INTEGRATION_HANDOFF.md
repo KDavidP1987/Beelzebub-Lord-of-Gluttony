@@ -18,7 +18,7 @@
 > in the BCH workspace.
 >
 > **Canonical source of truth for the wire API:**
-> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 8`). If this doc
+> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 20`). If this doc
 > and that file ever disagree, the file wins — and this doc should be corrected.
 >
 > **⚠️ v0.44.0 — PER-ABILITY BASELINE.** Transformation is now **Dracula & Morgana
@@ -50,7 +50,7 @@
 > **⚠️ v0.46.0 — ABILITY CAST TUNING (admin/server-side; no wire change, ApiVersion still 6).**
 > New opt-in server feature: make long casts interruptible (dash/shield-cancel) and free the
 > player to move once the cast finishes. **No new `[BEELZ:*]` line or event** — admin surface only:
-> - Config key **`AbilityTuning_Enabled`** (default false) — appears automatically in `api config`
+> - Config key **`Abilities_ApplyConfig`** (default false) — appears automatically in `api config`
 >   (reflection-streamed), so a BCH settings panel can toggle it via `.beelz admin set`.
 > - New admin commands **`.beelz admin tune <ability> <interrupt|freemove|castspeed> <on|off|0..1>`**
 >   and **`.beelz admin tune-list`**; `.beelz admin reload` re-applies tuning live (no restart).
@@ -74,6 +74,360 @@
 > loadout system — **no BCH impact yet** (no `[BEELZ:*]` line/event). If it holds in-game, a Phase-2
 > per-form loadout (parallel to per-weapon buckets, with `api`/grant surface) would follow and get a
 > wire surface then.
+>
+> **ℹ️ v0.88.0 — SERVER ANNOUNCEMENTS (config-only; no wire/event/ApiVersion change, still 20).** New
+> `Announcements`-section config keys (streamed by `api config` like all others): a 100%-collection
+> broadcast (`Broadcast_CollectionComplete_Enabled`/`_Messages`, default ON) and an optional periodic
+> leaderboard broadcast (`Broadcast_Leaderboard_Enabled` default OFF, `_IntervalMinutes`, `_TopN`,
+> `_Messages`). Admin command `.beelz admin broadcast <status|leaderboard on|off|interval <min>|top <1-5>|
+> complete on|off|test>`. Messages go out as normal server chat (NOT `[BEELZ:*]` events), so no parser
+> change — but a BCH admin panel can expose these keys as toggles/sliders/text-pools (pipe-separated;
+> `%player%` for the complete message, `%top%`/`%count%` for the leaderboard).
+>
+> **⚠️ v0.87.0 — CAST MODIFIERS: freelymove + interrupt-on-hit (ApiVersion 19 → 20; additive).** Two new
+> fields on `api info` + `catalog-ability`:
+> - **`free_move_secs=`** (seconds; `-` = none) — free the caster to move N seconds INTO the cast (the cast
+>   continues). Set via `.beelz admin ability <name|id> freelymove <sec>` / `tune`.
+> - **`interrupt_on_hit=on|off|auto`** — the cast is cancelled when the caster TAKES DAMAGE. Set via
+>   `.beelz admin ability <name|id> interruptonhit on|off`. **Distinct from the existing `interruptible=`
+>   field** (that's the player's own dash/shield self-cancel; this is "an enemy hit breaks my cast").
+> Both server-wide baked edits (Abilities_ApplyConfig), cleared by `defaults`. A BCH ability-config panel
+> reads/writes them like the other `_override`/cast-tuning fields. Additive — older parsers ignore them.
+>
+> **🚨 v0.94.0 — CLEAR-BAR FIX + per-bucket clear (no wire/event/ApiVersion change, still 20). ACTION FOR BCH.**
+> **A BCH "clear bar" button that calls `.beelz resetbar` is broken** — v0.76 made `resetbar` require a
+> `CONFIRM` token, so bare `resetbar` now no-ops. **Switch the clear-bar button to the new
+> `.beelz clearbar`** (no confirmation): `.beelz clearbar` / `clearbar all` (everything), `clearbar universal`,
+> `clearbar <weapon>` (sword/spear/unarmed/…), or `clearbar <form>` (wolf/bear/…). Lets a BCH UI offer
+> per-loadout clear buttons. Still emits `[BEELZ:event] type=slot-cleared`. ("Fix bar" = `.beelz refresh`,
+> unchanged — it re-applies the active bar.) Also: clear/reset now include the primary (0) + ultimate (7)
+> slots, and ALL shapeshift-form **skins** are now recognized for custom-ability injection (admins can audit
+> with `.beelz admin dump forms`).
+>
+> **ℹ️ v0.93.0 — freelymove channel fix (no wire/event/ApiVersion change, still 20).** `freelymove` now also
+> clears the `MovementImpair` flag on an ability's channel/firing buff (the downstream walker now runs for
+> freelymove-only entries), so sustained-fire/channel abilities are move-enabled, not just the cast wind-up.
+> No BCH impact (the `free_move_secs` field is unchanged).
+>
+> **ℹ️ v0.92.0 — diagnostics + label fix (no wire/event/ApiVersion change, still 20).** The `.beelz admin
+> dump` diagnostic now also logs key field VALUES (`[Beelz DUMP-VAL]`: ModifyMovementDuringCast / cast-time
+> / BuffModFlags) for freelymove diagnosis. **Label fix: the ULTIMATE slot is the `T` key (not R)** — slot
+> token `ultimate`/`t`/engine slot 7. No BCH impact beyond the label.
+>
+> **ℹ️ v0.91.0 — FORM SELECTIVE-EXIT + PRIMARY/ULTIMATE SLOTS (no wire/event/ApiVersion change, still 20).**
+> Shapeshift forms now exit when the player casts a genuinely foreign ability (hold for assigned + native
+> form abilities). **Grant commands now accept the PRIMARY (left-click) and ULTIMATE (T-key) slots:** the
+> slot argument of `.beelz grant` / `weapon-grant` / `form-grant` is now a token — `1`–`6`, or `primary`
+> (engine slot 0) / `ultimate` (engine slot 7). Numeric slots still work (backward compatible), and
+> `api slots` can now stream bindings on slots 0 and 7. **BCH impact:** if BCH builds the grant call, it
+> can offer primary/ultimate as targets; a loadout UI should expect slot indices 0 and 7 in addition to 1-6.
+>
+> **ℹ️ v0.90.0 — TEST FIXES ROUND 2 (no wire/event/ApiVersion change, still 20).** Forms now HOLD through
+> casting an injected ability (the real exit trigger was `DestroyOnGameplayEvent`, now stripped), and
+> `freelymove` now frees movement on channeled abilities (clears the `MovementImpair` flag on the spell's
+> spawned buff). New admin diagnostic `.beelz admin dump <abilityGuid|form>` logs an ability's component
+> chain / the active form buff to the server log. No BCH parser impact.
+>
+> **ℹ️ v0.89.0 — TEST FIXES (no wire/event/ApiVersion change, still 20).** Two behavior-only fixes:
+> shapeshift form abilities now actually render on the form bar (the v0.86 inject was a frame too late;
+> now injected during slot resolution), and `freelymove` now works on channeled/locked abilities (it
+> also clears `UseCastDuration` so the seconds are respected). No BCH parser impact — the `free_move_secs`
+> field and per-form loadout data were already correct; they just take effect in-game now.
+>
+> **ℹ️ v0.86.0 — BUGFIXES (no wire/event/ApiVersion change, still 19).** Two fixes, both behavior-only:
+> - **Shapeshift-form abilities now actually inject on the form bar** (entry was detected via a hook the
+>   form-state buff never reached; now driven off the shapeshift enter-event). No BCH impact — form
+>   loadout data was already correct; it just renders in-game now.
+> - **Collection % denominator fixed.** `.beelz top`/`progress` and the `collection-complete` event used to
+>   measure against the curated rules count (~450), which full-devour players exceed (showed >100%). The
+>   denominator is now the **full capturable universe** (~1400 — i.e. the `total=` of `api catalog abilities`).
+>   **BCH implication:** if BCH renders its own collection % or reads `collection-complete`'s `total=`, use the
+>   `api catalog abilities` total as the denominator (not `api catalog`'s curated `abilities=` count). The
+>   `collection-complete` event now fires at true 100% (previously far too early).
+>
+> **⚠️ v0.85.0 — FORCE-TIMEOUT (ApiVersion 18 → 19; additive).** New field on `api info` + `catalog-ability`:
+> **`force_timeout_override=`** (seconds; `-` = none) — forces an ability's otherwise-INDEFINITE spawned
+> effects/buffs to expire after N seconds (adds a LifeTime where the buff has none — the indefinite case
+> `duration_override=` can't reach). Set via `.beelz admin ability <name|id> forcetimeout <v>` / `tune`;
+> server-wide baked, cleared by `defaults`. A BCH ability-config panel reads/writes it like the other
+> `_override=` fields. Additive — older parsers ignore it.
+>
+> **⚠️ v0.84.0 — `api info-guid` + `collection-complete` (ApiVersion 17 → 18; additive). FIXES THE "No name"
+> TOOLTIP GAP.** (a) NEW read command **`api info-guid <abilityGuid>`** — returns the SAME chunked
+> `[BEELZ:info]` tooltip data as `api info`, but keyed by an ability's **PrefabGUID** instead of a
+> captured-list index. Use it for the abilities on a player's ACTIVE BAR: take the `a=<guid>` from
+> `api slots` / `[BEELZ:slot]` and call `api info-guid <guid>` to get full name/desc/school/cooldown/stats.
+> Reassemble exactly like `api info`, but the part id is **`a=<guid>`** (not `i=<index>`); `u=0 un=-` when
+> the source unit is unknown. This removes the need to map a slot GUID back to a captured index. (b) NEW
+> event **`[BEELZ:event] type=collection-complete count=<n> total=<n>`** fired once when a player captures
+> the last ability in the curated catalog — a good hook for a "100%" badge. Both additive.
+>
+> **ℹ️ v0.81–v0.83 — RELIABILITY + PLAYER QOL (no wire change, ApiVersion 17).**
+> - v0.81/v0.82: periodic ticks (summon timeout, cooldown enforcer) now run on a real per-frame
+>   heartbeat — no BCH impact, but per-ability cooldown/summon config now applies live/immediately, so a
+>   BCH config panel's writes take effect without a reload.
+> - v0.83: new PLAYER chat commands (not api): `.beelz top` (leaderboard), `.beelz odds` (drop %/pity),
+>   `.beelz silent <on|off>`. New admin config **`Capture_PitySessionBased`** (bool) — reflection-streamed
+>   via `api config`, settable with `.beelz admin set`.
+> - **🔎 KNOWN BCH GAP (to fix next, will bump ApiVersion): tooltips for ACTIVE ASSIGNED abilities.**
+>   `api slots` gives only `a=<guid> an=<rawPrefabName>`; full tooltip data (`api info`) is keyed by the
+>   CAPTURED-LIST INDEX, not a GUID — so there's no direct GUID→name/desc/stats lookup for a slotted
+>   ability (the "No name"/generic-tooltip symptom). PLANNED FIX: add **`api info-guid <guid>`** returning
+>   the same chunked `[BEELZ:info]` data by GUID. Until then, BCH can map a slot's `a=` GUID to its
+>   `.beelz api list` index and call `api info <index>`.
+>
+> **⚠️ v0.80.0 — SUMMON UNITS-PER-CAST + SKINNED-FORM FIX (ApiVersion 16 → 17; additive).** New field on
+> **`api info`** AND **`catalog-ability`**: **`summon_units_override=`** (per-ability max UNITS one cast
+> produces; `-` = the ability's natural count). This is SEPARATE from `summon_cap_override=` (concurrent
+> USES) — whichever limit is hit first rules. Set via `.beelz admin ability <name|id> summonunits <n>` /
+> `.beelz admin tune`. Behavioral fixes (no wire impact): (a) `summoncap` is now a true USE cap — it no
+> longer trims units within a single multi-unit cast (a BCH "max summons" control should be labelled
+> "concurrent casts," and the new `summon_units_override=` is "units per cast"); (b) skinned shapeshift
+> forms (wolf/bear cosmetic variants) are now recognized for per-form loadouts. All additive — older
+> parsers ignore the new key.
+>
+> **⚠️ v0.79.0 — SUMMON GOVERNANCE (ApiVersion 15 → 16; additive).** Two new fields on **`api info`** AND
+> **`catalog-ability`**: **`summon_cap_override=`** (per-ability max simultaneous summon "uses"; `-` = use
+> the global `Transform_MaxStacksPerSummonAbility`, default 3) and **`summon_timeout_override=`**
+> (per-ability summon auto-despawn seconds; `-` = use the global `Transform_SummonLifetimeSeconds`,
+> default **CHANGED 0 → 30** in v0.79 — summons now fade after 30s by default). Set via `.beelz admin
+> ability <name|id> <summoncap|summontimeout> <v>` / `.beelz admin tune`; precedence per-ability >
+> global > engine. These are read LIVE (not baked). The two globals are reflection-streamed via
+> `api config` (a BCH settings panel can set them with `.beelz admin set`). All additive — older parsers
+> ignore the new keys. A BCH summon-config panel reads/writes these like the other `_override=` fields.
+>
+> **⚠️ v0.77.0 + v0.78.0 — COOLDOWN-BLEED FIX + FORMS-AS-GROUP (behavioral; no wire change, ApiVersion 15).**
+> - **v0.77 cooldown bleed:** a configured cooldown now follows the ABILITY, not the slot — a slot only
+>   carries its live cooldown forward when the SAME ability re-resolves (weapon swap); a different ability
+>   placed on that slot gets its own cooldown. No wire impact; fixes "all my abilities suddenly have a
+>   long cooldown."
+> - **v0.78 forms-as-group:** shapeshift forms (Wolf/Bear/Rat/Spider/Toad/Werewolf/Gargoyle) now behave
+>   like a weapon family — entering a form auto-loads its per-form bucket (`.beelz form-grant`, already in
+>   `api slots` as `bucket=<Form>`), and EXITING reverts the bar to the active WEAPON group. A BCH loadout
+>   UI can present forms as additional buckets alongside weapons; the `api slots` current-context footer
+>   already reports the active form. Requires `Forms_CustomAbilities_Enabled` (default ON since v0.75).
+> - `.beelz form-grant` / `.beelz weapon-grant` now also accept an **ability ID** (like `.beelz grant`) —
+>   BCH "bind to form/weapon" buttons should send the ability **ID**.
+>
+> **🚨 v0.76.0 — `api info` + `catalog-ability` ARE NOW CHUNKED (ApiVersion 14 → 15; WIRE-BREAKING for
+> those two lines — BCH MUST UPDATE ITS PARSER).** These lines had grown past VCF's **512-byte** chat
+> reply cap (≈30 fields + description) and threw `FixedString512Bytes: Truncation while copying` —
+> `api info` failed outright and one long `catalog-ability` row aborted the whole catalog stream. They
+> are now emitted **in parts**:
+> - Each line carries a new **`part=k/n`** field and repeats its id — **`i=<index>`** for `info`,
+>   **`an=<name>`** for `catalog-ability`. Format: `[BEELZ:info] i=5 part=1/2 <tokens…>`.
+> - **Reassemble:** group lines by id, then concatenate the `key=value` tokens of parts `1..n` in order;
+>   parse the merged token set exactly as before. A short ability is a single `part=1/1` line.
+> - No field names changed. `desc`/`notes` are clamped to 256 chars. `[BEELZ:end] cmd=… count=N` still
+>   reports the number of ABILITIES (not lines). All OTHER lines (list/slots/catalog-unit/rules/config/
+>   events) are UNCHANGED and still single-line.
+> - A parser that ignores `part=` reads only the first chunk of a long ability (degraded, not crashed) —
+>   but please update to merge parts so tooltips/config panels see every field.
+> - Also in v0.76 (no wire impact): `.beelz grant <slot> <index OR ability ID>` now accepts the **ability
+>   PrefabGUID** (a BCH "bind this ability" button should send the **ID**, not a list index — indexes are
+>   now stable across logins but the ID is the robust key); `.beelz resetbar` requires `CONFIRM`; setting
+>   `cooldown` on a charge-based ability returns a "use chargetime" note.
+>
+> **⚠️ v0.74.0 — SLOT AUTO-YIELD ACROSS WEAPON GROUPS + PRECEDENCE (behavioral; no wire change).**
+> Confirmed in testing (v0.74): a Beelz **weapon-specific** slot bind OUTRANKS a vanilla spellbook pick;
+> a vanilla pick acts as the default only on the **UNIVERSAL** bar. So "make my vanilla spell the
+> default on this slot" = it must live in the universal bucket (no weapon-specific Beelz bind on that
+> slot). BCH player guidance should state this precedence: granted (esp. weapon-bucket) abilities win;
+> assign a vanilla ability to the universal group to have it act as the across-weapons default.
+> Reliability fix for "mix and match": when a player uses the in-game spellbook to put a vanilla spell
+> back on a slot that held a granted ability, that pick now sticks across ALL weapon groups (previously
+> it crept back on a weapon swap). The slot's Beelz bind is cleared from the universal bucket and every
+> weapon family. **BCH impact:** the existing **`[BEELZ:event] type=slot-cleared slot=<n>`** event fires
+> on each such auto-yield (already in the contract) — a BCH loadout view should treat it as "this slot
+> is no longer Beelz-bound in any bucket" and refresh `api slots` accordingly. No new/changed wire line.
+>
+> **⚠️ v0.73.0 — RANGE/DURATION COVERAGE + CHARGES FEEDBACK (no wire change, ApiVersion still 14).**
+> Behavior of two existing shaping fields broadened; no `api info`/`catalog-ability` field change.
+> - **`range` (`range_override=`) now also clamps a projectile's travel distance** (Projectile.Range),
+>   not just the aim/cast clamp — a BCH range slider on a projectile spell now visibly shortens it.
+> - **`duration` (`duration_override=`) now also sets the lifetime of directly-spawned effect buffs**
+>   (heal/DoT channels), in addition to applied-buff/debuff length. It still does NOT change cast/channel
+>   time. Tooltip wording: "how long the effect lasts," not "channel time."
+> - **`charges`/`chargetime` capability:** the server now replies with a clear "no charge system" note
+>   when these are set on an ability that doesn't support charges (can't be added). A BCH charges control
+>   should ideally be shown only for charge-capable abilities; otherwise surface that server note.
+>   Reminder for any batch UI: shaping commands take **one field per command**.
+>
+> **⚠️ v0.72.0 — HEALING-SHAPING FIX + RESET-TO-DEFAULTS (no wire change, ApiVersion still 14).**
+> Two BCH-relevant admin-surface changes; the `api info`/`catalog-ability` fields are unchanged.
+> - **`healing` now works.** The healing multiplier (`api info` `heal_mult=`) was writing the wrong
+>   memory pre-v0.72 — it corrupted channeled/over-time heals and **crashed the server on `healing 0`**.
+>   A BCH healing slider is now safe to expose; values scale from the ability's original heal so repeated
+>   sends don't compound. (Same field/`heal_mult=` wire value; no parser change.)
+> - **New reset command:** `.beelz admin ability <id> defaults` resets ONE ability's shaping config
+>   (cooldown/range/charges/aoe/projspeed/duration/healing/interrupt/freemove/castspeed/damage+cooldown
+>   scale) to shipped baseline; `.beelz admin ability all defaults` resets every ability. Capture/
+>   availability rules (enabled/weapons/forms/deny) are untouched. **BCH should add a "reset to default"
+>   affordance** per-ability and/or global that sends these — the natural pairing for any config panel.
+>   After a reset, re-read `api info` to refresh displayed values (the overrides clear to "baseline").
+> - Field-coverage caveats to reflect in tooltips: `charges`/`chargetime` apply only to abilities that
+>   already have a charge system; `range` on a projectile is the aim/cast clamp (projectile travel is
+>   separate); `duration` is applied-buff/debuff length, not channel time. (Broader coverage planned.)
+>
+> **⚠️ v0.69.0 — ADMIN ABILITY COMMANDS ACCEPT AN ID (no wire change, ApiVersion still 14). IMPORTANT
+> FOR BCH.** `.beelz admin ability <name|GUID> <field> <value>` and `.beelz admin tune <name|GUID> …`
+> now accept a numeric **PrefabGUID** (the `a=` ID from `api list`/`api info`), not just the prefab
+> name — the server resolves the ID to the ability. **Before this, sending the GUID silently created a
+> dead entry that never applied** (the tuner matches by name), so a BCH ability-config panel that sent
+> `.beelz admin ability <id> cooldown 10` would appear to work but do nothing. BCH can now send the ID
+> directly. Entries previously mis-keyed by GUID are auto-migrated on the server's next load/reload.
+>
+> **⚠️ v0.68.0 — EFFECT-DURATION + HEALING SHAPING (ApiVersion 13 → 14; additive).** Two new fields on
+> **`api info`** AND **`catalog-ability`**: **`duration_override=`** (applied buff/debuff duration,
+> seconds) and **`heal_mult=`** (healing multiplier) — `-` when unset. Set via `.beelz admin ability
+> <name> <duration|healing> <v>` or `.beelz admin tune`; server-wide baked edits (Abilities_ApplyConfig,
+> default ON). Additive — older parsers ignore them. (Next Beelzebub sub-phase: multi-ability rules —
+> incompatible-locks / chain / stack-limit.)
+>
+> **⚠️ v0.67.0 — MORE ABILITY-SHAPING FIELDS (ApiVersion 12 → 13; additive).** Four new fields on
+> **`api info`** AND **`catalog-ability`**: **`charges_override=`** (max charges, int), 
+> **`chargetime_override=`** (recharge seconds), **`aoe_override=`** (area radius), 
+> **`projspeed_override=`** (projectile speed) — `-` when unset. Set via `.beelz admin ability <name>
+> <charges|chargetime|aoe|projspeed> <v>` or `.beelz admin tune`, applied server-wide when
+> `Abilities_ApplyConfig` is on (default). A BCH ability-config panel can add these next to
+> cooldown_override/range_override. All additive — older parsers ignore the new keys. (Effect-duration
+> + healing + multi-ability rules — incompatible-locks/chain/stack-limit — are the next sub-phases.)
+>
+> **⚠️ v0.66.0 — ABILITY CONFIG NOW DEFAULT-ON (config key rename; no wire-format change, ApiVersion
+> still 12).** The opt-in gate **`AbilityTuning_Enabled` (default off)** is renamed to
+> **`Abilities_ApplyConfig` (default ON)** — a master kill-switch, not an opt-in. Per-ability config
+> (cooldown/range/interrupt/etc.) now applies by default, server-wide. `api config` reflection-streams
+> the new key automatically (old key auto-migrated out of the .cfg). **If a BCH settings panel
+> hardcodes the `AbilityTuning_Enabled` key string, rename it to `Abilities_ApplyConfig`** (default ON).
+> No other change. (Foundation for an expanding server-wide ability-config surface —
+> damage/AoE/durations/charges/etc. — in later versions, which WILL bump ApiVersion.)
+>
+> **⚠️ v0.65.0 — PER-ABILITY COOLDOWN / RANGE OVERRIDES (ApiVersion 11 → 12; additive).** Two new
+> fields on **`api info`** AND **`catalog-ability`**: **`cooldown_override=`** (absolute seconds an
+> admin set, or `-` if unset) and **`range_override=`** (max cast distance, or `-`). These are the
+> admin-SET values; the live baked values remain `cooldown_seconds=`/`range=` on `api info`. Set via
+> `.beelz admin ability <name> cooldown|range <v>` (or `.beelz admin tune <name> cooldown|range <v>`),
+> applied only when `Abilities_ApplyConfig` (baked, GLOBAL prefab edit). New **global** config
+> `Grant_MinimumCooldownSeconds` floors every ability's cooldown — it's reflection-streamed via
+> `api config` automatically. A BCH ability-config panel can now show/edit per-ability cooldown+range
+> next to the existing damage_scale/cooldown_scale/tuning fields. All additive — older parsers ignore
+> the new keys. (Historical note: this callout originally said per-ability healing-scale + effect-duration
+> were "server-impossible" — that proved WRONG and they shipped in v0.68 [`heal_mult=`/`duration_override=`],
+> with the healing path fixed in v0.72 and duration broadened in v0.73. The remaining multi-ability rules —
+> stack-limit / incompatible-array / chain-predecessor — are the next Beelzebub sub-phase.)
+>
+> **⚠️ v0.64.0 — CONFIG KEY RENAME (no wire-format change, ApiVersion still 11).** `api config`
+> still streams `[BEELZ:config] section= key= value= type= editable=` the same way, but the KEY
+> STRINGS for the jackpot drop-chance changed: **`DropChance_Transform_Regular`/`_VBlood` →
+> `DropChance_Devour_Regular`/`_VBlood`**, plus two NEW keys **`Capture_PityIncrement_Devour`** and
+> **`Capture_PityMax_Devour`** (separate Devour pity). A BCH config panel that enumerates the stream
+> dynamically needs no change; **if BCH hardcodes any `DropChance_Transform_*` key string (e.g. a
+> labelled slider), update it to `DropChance_Devour_*`.** Old keys are auto-migrated server-side and
+> removed from the .cfg, so they will no longer appear in the stream.
+>
+> **⚠️ v0.61–0.63 — SLOT/BAR RELIABILITY (no wire change, ApiVersion still 11).** A run of
+> server-side robustness fixes; **no new fields, lines, events, commands, or config — BCH needs no
+> changes.** Notable for BCH context: (a) v0.63.0 **grants now refresh the action bar immediately**
+> server-side (the engine `AbilityGroupSlot.DirtyTag` is set on grant/preset/refresh/login), so the
+> old "switch weapons to make a grant appear" workaround is gone — **do NOT build a client-side
+> action-bar refresh; it's handled server-side.** (b) v0.63.0 the spellbook auto-yield (v0.56) now
+> clears the slot's bind across **all** weapon buckets, not just the active one — it still emits the
+> existing `[BEELZ:event] type=slot-cleared slot=<n>` per cleared slot, so a BCH loadout view that
+> already reacts to that event stays correct (it may now see clears for multiple buckets at once;
+> just re-query `api slots`). (c) v0.61 hardened against an out-of-range saved slot; v0.62 re-applies
+> grants on login. Forms are untouched throughout.
+>
+> **⚠️ v0.60.0 — DESCRIPTION / SCHOOL DATA-PASS (no wire change, ApiVersion still 11).** Pure
+> shipped-data improvement — no new fields, lines, events, commands, or config. The `desc=` and
+> `school=` fields that already exist on **`api info`** and **`catalog-ability`** (since v0.58.0) are
+> now **populated for roughly twice as many abilities**: descriptions ~13% → ~26%, magic-school
+> ~4% → ~9% of the full catalog. The text is extracted from V Rising's own localization tooltip
+> strings, so it carries `{param}` placeholders (e.g. `{damage}`, `{duration}`) — BCH should treat
+> `desc=` as a display string and may leave `{param}` tokens as-is (they signal stat-scaled values
+> the server doesn't compute). A handful of previously foreign-language / placeholder descriptions
+> were repaired to English or cleared (→ BCH's friendly-name fallback). **No BCH change required;**
+> the Bestiary "Missing"-row descriptions and any school grouping axis simply light up for more rows.
+> Coverage is still partial (long-tail abilities have no curated text); admins can fill gaps via
+> `ability_metadata_overrides.json`.
+>
+> **⚠️ v0.59.0 — PER-FORM ABILITY LOADOUTS (ApiVersion 10 → 11; all additive). The "coming soon"
+> Forms placeholder can now be a real per-form picker.** Parallel to the per-weapon buckets, players
+> can build a distinct captured-ability set per shapeshift form.
+> - **Forms:** `Wolf`, `Bear`, `Rat`, `Spider`, `Toad`, `Werewolf`, `Gargoyle` (the seven native
+>   models; same name set as the `ShapeshiftForm` enum). Build a per-form dropdown exactly like the
+>   weapon-family dropdown.
+> - **New commands** (mirror weapon-grant/unslot): **`.beelz form-grant <form|auto> <slot 1-6>
+>   <index>`** and **`.beelz form-unslot <form|auto> <slot>`**. `auto` = the form the player is
+>   currently in. Binds save with the collection and survive relogs.
+> - **`api slots`** now also streams a **NEW line type** per form bucket:
+>   **`[BEELZ:form-slot] form=<Form> slot=<n> a=<guid> an=<rawName>`** (distinct from `[BEELZ:slot]`
+>   so older parsers that read `bucket=` as a WeaponFamily ignore it). The
+>   **`[BEELZ:slot-current]`** footer gains **`form=<Form|None>`** (the active shapeshift form). The
+>   `[BEELZ:end] cmd=slots count=` includes the form-slot lines.
+> - **New events:** `type=form-slot-granted form= slot= a= an=` and `type=form-slot-cleared form= slot=`.
+> - **Gating to surface in BCH:** the loadout only APPLIES in-form when the server has
+>   `Forms_CustomAbilities_Enabled` = true (default **off**, experimental — it also depends on the
+>   form holding through a custom-ability cast, still being validated). BCH can always *edit* the sets
+>   (the data persists regardless); just show a hint that they apply only when the server enables form
+>   abilities. Reuse the weapon-loadout UI patterns; a per-form set overrides nothing else (forms are
+>   a separate context entered via the shapeshift wheel). Visuals limited to the 7 native forms (the
+>   [model-swap hard limit] still applies — no arbitrary-unit form rendering server-side).
+>
+> **⚠️ v0.58.0 — FRIENDLY NAMES + CATALOG DESCRIPTIONS (ApiVersion 9 → 10; all additive).**
+> Lets BCH drop client-side humanizing and show description/school on Bestiary "Missing" rows.
+> - **`api list`** now also emits **`label=`** (friendly ability name) and **`ulabel=`** (friendly
+>   unit name) alongside the raw `an=`/`un=`. Both are **SafeToken-encoded** (spaces→`_`, `=`→`-`),
+>   so decode by reversing that (`_`→space) for display. Friendly names come from the curated
+>   metadata (`ability_metadata.json` / overrides; units also via the SourceNpcs table) with a
+>   humanized-prefab fallback — so e.g. `un=CHAR_Blackfang_Morgana_VBlood` now also has
+>   `ulabel=Blackfang_Morgana`. Raw `an=`/`un=` are unchanged (keep keying on them). BCH's
+>   `BeelzNames` humanizer can now defer to `label`/`ulabel` when present.
+> - **`catalog-ability`** now also emits **`desc=`** (curated description, %param%-substituted and
+>   SafeToken-encoded, or `-`) and **`school=`** (`Blood`/`Chaos`/`Frost`/`Illusion`/`Shadow`/
+>   `Shapeshift`/`Storm`/`Unholy`, or `none`). This gives the Bestiary MISSING rows (no capture
+>   index → no `api info`) real description/school text. **Coverage is partial:** only the curated
+>   subset has these (~13% desc / ~4% school today); everything else is `-`/`none` until the
+>   localization data-pass fills more in — so treat `-`/`none` as "unknown," not "empty."
+>   (`api info` already carried `desc=`/`school=` for CAPTURED abilities; this brings the same to the
+>   catalog for uncaptured ones, via a dict-only lookup — no extra per-row cost.)
+>
+> **⚠️ v0.57.0 — FULL-CATALOG `catalog-abilities` + classifier polish (ApiVersion 8 → 9).**
+> Makes the BCH Bestiary "Missing" list complete and shrinks the `cat=Other` bucket.
+> - **`api catalog abilities` now streams the FULL capturable universe** — the union of the curated
+>   `AbilityMap` AND every discovered `AB_*_AbilityGroup`/`_Group` that passes the server capture
+>   filter — instead of only the curated map (which ships empty). So the catalog is now the true
+>   collectible pool; build the "Missing" list straight from it. **Volume:** under the default
+>   `Capture_InclusiveMode=true` this is ~1,400+ rows (≈35+ pages at 40/page). BCH already paginates
+>   to the last page (`[BEELZ:end] … pages=`), so no parser change is needed — just be ready for the
+>   larger count (and the `total=`/`pages=`/progress denominator grows accordingly). The union is
+>   rebuilt server-side when **page 0** is requested, so always start a fresh scan from page 0.
+> - **New additive field `curated={0|1}`** on every `[BEELZ:catalog-ability]` line: `1` = a
+>   hand-curated `ability_rules.json` entry (all tuning fields meaningful); `0` = discovered-only
+>   (its `category_override=-`, `phase=1`, `interruptible=auto`, `free_move=0`, `cast_speed=auto`,
+>   `notes` empty are defaults, not curation — `cat`/`weapons`/`enabled`/`difficulty`/`transform_only`
+>   are still derived from the name heuristics + rules). Older parsers ignore the new key.
+> - **`cat=` classifier broadened again** (still the same enum-NAME set + `Other`): primary/heavy
+>   attacks now route by weapon class (ranged-weapon primary → `Projectile`, else `Melee`), bare
+>   `Melee`/unarmed strikes → `Melee`, ground fields → `Aoe`, pistols/discharges → `Projectile`.
+>   `Other` share on the full AbilityGroup set drops ~39% → ~35%. Still treat any unknown `cat=` as
+>   `Other`; the residual `Other` is genuinely ambiguous proper-noun moves + non-combat utility, best
+>   pinned by an admin `Category` override.
+>
+> **⚠️ v0.56.0 — SPELLBOOK "MIX AND MATCH" auto-yield (behavioral; no wire change, ApiVersion still 8).**
+> Fixes the testers' "vanilla spells won't attach once you've bound captured abilities" report.
+> **No new `[BEELZ:*]` line, event type, command, or config** — but one BCH-visible behavior change:
+> - A player's slot bind can now be **released by the server on its own**, without any BCH-initiated
+>   `unslot`/`resetbar`. When the player uses the in-game **spellbook** to put a *different* vanilla
+>   ability on a slot that held a captured ability, Beelzebub drops that slot's bind and the slot
+>   returns to the player's pick. It is **per weapon set** (the active bucket only).
+> - **Signal BCH already handles:** each auto-yield emits the existing
+>   **`[BEELZ:event] type=slot-cleared slot=<N>`** (the same line `.beelz unslot` sends). So a BCH
+>   loadout view that already refreshes on `slot-cleared` is correct with no change. **Action item:**
+>   make sure the Loadout/slots view treats `slot-cleared` as authoritative and re-reads `api slots`
+>   (a bind can vanish between two `api slots` reads even though the user never touched the BCH UI).
+> - `.beelz unslot` / `.beelz resetbar` / a BCH per-slot Clear now restore the slot's vanilla ability
+>   **instantly** (no weapon-swap/relog needed) — cosmetic for BCH, but the bar will look correct
+>   immediately after the command instead of after the next swap.
 >
 > **⚠️ v0.54.0 — WIRE-EXTRACTION COMPLETENESS (ApiVersion 7 → 8; all additive).** Closes the
 > audit's BCH read-gaps. New fields (older parsers ignore unknown keys):
@@ -166,56 +520,83 @@
 
 ---
 
-## 0.0 — ⚡ SINCE YOUR LAST BUILD (BCH baseline v0.44.0 → now v0.54.0) — READ THIS FIRST
+## 0.0 — ⚡ SINCE YOUR LAST BUILD (BCH baseline v0.44.0 → now v0.88.0) — READ THIS FIRST
 
-> **Update (v0.49.0–v0.54.0, also 2026-05-27):** the section below describes the v0.44→v0.48
-> delta (all at ApiVersion 6). Six more releases followed — see the dated callouts ABOVE this
-> section. Net for BCH: **ApiVersion is now 8**; the transform-only wall is off by default; the
-> `DualHammers` weapon family is gone; `cat=` is broadened (new `Melee`, emitted as the category
-> NAME — treat unknown names as `Other`); and `api info` / `catalog-ability` / `api rules` /
-> `catalog-unit` now expose the previously-missing config + metadata fields (v0.54.0). Admins can
-> also set any ability/transform rule live via chat (v0.53.0), which a BCH panel can relay.
-> Everything else stayed line/event-compatible.
+**Context (updated 2026-05-30):** BCH began building against **v0.44.0** (ApiVersion 6). Beelzebub
+is now at **v0.88.0 / ApiVersion 20**. This is the *consolidated* delta so you can fold everything
+into the UI in one pass — every per-version detail is in the dated callouts ABOVE this section.
 
-**Context (2026-05-27):** BCH began building its Beelzebub UI against the **v0.44.0** handoff
-(commit `306026f`, **ApiVersion 6**). Beelzebub then shipped **v0.45.0 → v0.48.0** the same day.
-**The important news: nothing you already built breaks** — the wire API (`[BEELZ:*]` lines, event
-types, ApiVersion) is UNCHANGED at **6**. This is the consolidated delta so you can fold the new
-bits into the UI without re-reading every callout. (Per-version detail is in the callouts above.)
+> **⚠️ THE ONE BREAKING CHANGE (v0.76.0, ApiVersion 15): `api info` + `catalog-ability` are now
+> CHUNKED.** Those two lines outgrew VCF's 512-byte reply cap, so each is emitted across multiple
+> replies that repeat the id field (`i=<index>` for `info`, `a=<guid>` for `info-guid`, `an=<name>`
+> for `catalog-ability`) and carry **`part=k/n`**. **Your parser MUST reassemble** by concatenating
+> the `key=value` tokens of parts 1..n for the same id before parsing. Single-part lines just carry
+> `part=1/1`. ALL other lines (`list`/`slots`/`catalog-unit`/`rules`/`config`/events) are unchanged.
+> This is the only wire-break since your baseline — everything else below is additive.
 
-**A) Needs NO action — your existing build still works as-is:**
-- ApiVersion is still **6**. No new/changed/removed `[BEELZ:*]` lines or event types. Your parser,
-  state cache, and event-router need zero changes.
-- All of v0.46–v0.48 (cast tuning, form work) is server-side/admin/config — no new read stream.
+### A) NEW PLAYER commands & data (for the user-facing UI)
+- **Leaderboard / odds / silence (v0.83):** `.beelz top` (server leaderboard by collection %),
+  `.beelz odds` (the player's live drop/Devour/pity chances), `.beelz silent <on|off>` (mute the
+  "you already knew that" devour message). Good buttons/toggles for a player panel.
+- **Per-form loadouts (v0.59+, default ON):** `.beelz form-grant <form> <slot> <index|abilityID>` and
+  `.beelz form-unslot` — a third loadout bucket parallel to universal + per-weapon, one per vanilla
+  wheel form (Wolf/Bear/Rat/Spider/Toad/Werewolf/Gargoyle). `api slots` streams these buckets too.
+- **`.beelz grant`/`weapon-grant`/`form-grant` accept the ability GUID** (not just the list index) —
+  v0.83. So a BCH "assign this ability" button can pass the GUID it already holds.
+- **Tooltip-by-GUID (v0.84): `.beelz api info-guid <abilityGuid>`** — returns the same rich `info`
+  body keyed by `a=<guid>` instead of `i=<index>`. **This is the fix for "No name" on active-bar
+  abilities** that aren't in the player's capture list — call it for any ability GUID you need a
+  tooltip for. (Chunked, same as `info`.)
 
-**B) BEHAVIOR CHANGE to account for in the UI (the one thing to actually fix):**
-- **Summons are no longer tied to transformation (v0.45.0).** A player can have live summons while
-  NOT transformed (casting a captured summon ability in normal form). So **`[BEELZ:active] none=1`
-  (no active transform) no longer implies "no summons."** Do NOT gate a summon counter/panel on
-  having an active transform — treat summon state as independent of transform state. `.beelz summons
-  status` and the management commands all work untransformed now.
+### B) NEW EVENTS on the push stream (`api bch on`)
+- **`type=collection-complete count=<n> total=<m>` (v0.84)** — fires once when a player collects the
+  whole catalog. Good for a celebratory toast / 100% badge. **`total=` now means the FULL capturable
+  universe (~1400)**, not the curated count (v0.86 fix) — so it matches the `total=` of
+  `api catalog abilities`. If BCH renders its own collection %, use THAT as the denominator (the old
+  curated `abilities=` from `api catalog` was smaller and produced >100%).
+- (Earlier, still current: `type=devour`, `type=slot-cleared`, `type=config-changed`, etc.)
 
-**C) New things you CAN surface (optional UI wins, no wire schema change):**
-- **Per-weapon loadout UI — build it now.** `api slots` already streams it (unchanged): `bucket=any`
-  = the universal "basic" set, `bucket=<WeaponFamily>` = a per-weapon override set,
-  `[BEELZ:slot-current] weapon=<fam>` = the active bucket. Weapon-specific overrides universal *on
-  its slots only*; the **server auto-switches** the active set on weapon swap (you just re-read
-  `api slots` / reflect `slot-current` — no client logic needed). Unarmed is its own family. New
-  human-readable helper if useful: `.beelz loadouts`.
-- **New player command** for a summons panel button: `.beelz summons clear` (despawn all the
-  player's summons) — alongside the existing `stash|restore|status`.
-- **New config keys** auto-appear in `api config` (same `[BEELZ:config]` rows, no schema change):
-  `AbilityTuning_Enabled`, `Forms_CustomAbilities_Enabled` — a settings panel toggles them via
-  `.beelz admin set <key> <value>` like any other.
-- **New admin commands** (if you build admin panels): `.beelz admin tune <ability>
-  <interrupt|freemove|castspeed> <on|off|0..1>`, `.beelz admin tune-list`, `.beelz admin testform
-  <wolf|bear|off>`.
+### C) NEW FIELDS on `api info` / `info-guid` / `catalog-ability` (per-ability shaping — for an ADMIN ability-config panel)
+All additive `key=value` tokens (reassemble the chunks first). Each is the server-wide override or
+`-`/`auto` when unset. A BCH ability-config panel reads these and writes them via `.beelz admin
+ability …` (section D). Full set as of v0.88:
+`cooldown_override` · `range_override` · `charges_override` · `chargetime_override` · `aoe_override` ·
+`projspeed_override` · `duration_override` · `heal_mult` · `force_timeout_override` ·
+`summon_cap_override` · `summon_timeout_override` · `summon_units_override` · `free_move_secs` ·
+`interrupt_on_hit` (on/off/auto) · `interruptible` (on/off/auto) · `free_move` (0/1) · `cast_speed`.
 
-**D) Experimental — NO BCH wire surface yet (a Phase-2 delta will follow):**
-- Cast tuning (interrupt / post-cast move-unlock) and custom-abilities-on-forms (Wolf/Bear test) are
-  live as server/admin features but expose nothing new over the wire. If the form test holds in-game,
-  a Phase-2 **per-form loadout** (parallel to the per-weapon buckets, with an `api`/grant surface +
-  an ApiVersion bump) follows — you'll get a new "since your last build" section here then.
+### D) NEW/CHANGED ADMIN commands (for admin panels)
+- **`.beelz admin ability <name|id> <field> <value>` — the master per-ability editor.** Accepts the
+  ability NAME *or* GUID (v0.69). Fields: `cooldown · range · charges · chargetime · aoe · projspeed ·
+  duration · healing · forcetimeout · freelymove · interruptonhit · interruptible · freemove ·
+  castspeed · summoncap · summontimeout · summonunits · damagescale · cooldownscale · enabled ·
+  weapons · forms · category · notes · …`. Reset: `.beelz admin ability <id> defaults` (one) /
+  `all defaults` (every ability). `.beelz admin tune <ability> <knob> <value>` is the one-field
+  shorthand. These are GLOBAL prefab edits (the source NPC/boss cast changes too).
+- **`.beelz admin broadcast <status|leaderboard on|off|interval <min>|top <1-5>|complete on|off|test>`
+  (v0.88)** — toggles/schedules the server announcements. Config-only; messages go out as normal
+  server chat (NOT `[BEELZ:*]`), so no parser change — but a panel can expose the toggles + message
+  pools.
+
+### E) CONFIG keys (settings panel — all stream via `api config`, set via `.beelz admin set`)
+- **Renamed (migrate any hardcoded slider keys):** `AbilityTuning_Enabled` → **`Abilities_ApplyConfig`
+  (now DEFAULT ON)** (v0.66); `DropChance_Transform_Regular/VBlood` → **`DropChance_Devour_Regular/VBlood`**
+  (v0.64). `Forms_CustomAbilities_Enabled` is now **DEFAULT ON** (v0.75).
+- **New:** `Capture_PitySessionBased` (v0.83 — logout resets pity), and the **`Announcements`** section
+  (v0.88): `Broadcast_CollectionComplete_Enabled`/`_Messages`, `Broadcast_Leaderboard_Enabled`/
+  `_IntervalMinutes`/`_TopN`/`_Messages` (pipe-separated pools; `%player%` / `%top%` / `%count%`).
+
+### F) BEHAVIOR changes that affect the UI (no wire schema change)
+- **Summons are independent of transformation (v0.45).** `[BEELZ:active] none=1` does NOT imply "no
+  summons" — don't gate a summon panel on having an active transform.
+- **Forms now inject reliably on entry (v0.86).** Per-form loadouts actually render on the form bar
+  now — if you built a per-form UI, it's live.
+- `cat=` is the category NAME and broadened over time (e.g. `Melee`) — treat unknown names as `Other`.
+
+> **Per-weapon / per-form loadouts** stream via `api slots`: `bucket=any` = universal set,
+> `bucket=<WeaponFamily>` = per-weapon override, `bucket=<Form>` = per-form set; `[BEELZ:slot-current]`
+> reflects the active bucket. The server auto-switches on weapon swap / form enter — you just re-read
+> `api slots`. Unarmed is its own family.
 
 ---
 
@@ -339,7 +720,7 @@ All under the `.beelz api` group. Verified against `ApiCommands.cs`.
 | Command | Marker(s) | Returns |
 |---|---|---|
 | `.beelz api version` | `[BEELZ:version]` | `api=<int> plugin=<ver> ready=0\|1` |
-| `.beelz api list` | `[BEELZ:list]` … `[BEELZ:end]` | Caller's captured abilities: `i= s=R\|V u=<unitGuid> un=<unitName> a=<abilityGuid> an=<abilityName> cat=<category-NAME> type=<unitType>`. **`cat=` is the category NAME** (`Other\|Travel\|Aoe\|Projectile\|Summon\|Buff\|WeaponSpell\|Spell\|Melee`), not a number — treat unknown names as `Other`. |
+| `.beelz api list` | `[BEELZ:list]` … `[BEELZ:end]` | Caller's captured abilities: `i= s=R\|V u=<unitGuid> un=<unitName> a=<abilityGuid> an=<abilityName> label=<friendlyAbilityName> ulabel=<friendlyUnitName> cat=<category-NAME> type=<unitType>`. **(v10 added `label=`/`ulabel=` — SafeToken-encoded friendly names; raw `an=`/`un=` unchanged.)** **`cat=` is the category NAME** (`Other\|Travel\|Aoe\|Projectile\|Summon\|Buff\|WeaponSpell\|Spell\|Melee`), not a number — treat unknown names as `Other`. |
 | `.beelz api slots` | `[BEELZ:slot]`, `[BEELZ:slot-current]`, `[BEELZ:end]` | Slot assignments per bucket: `bucket=any\|<WeaponFamily> slot=1-6 a= an=`; footer `weapon=<current>` |
 | `.beelz api transforms` | `[BEELZ:tx]` … `[BEELZ:end]` | Transform unlocks + matrix attrs: `i= s= u= un= enabled= difficulty= tier= damage_scale= cooldown_scale= health_scale= speed_scale= type= full_replace= scaling_mode=`. **(v6) Now 0–2 entries — Dracula/Morgana only.** |
 | `.beelz api active` | `[BEELZ:active]` | Active transform: `u= un= s= ttl=<sec>\|toggle` + phase info; or `none=1` |
@@ -349,7 +730,7 @@ All under the `.beelz api` group. Verified against `ApiCommands.cs`.
 | `.beelz api transform-config` | `[BEELZ:tx-config]` … `[BEELZ:end]` | One line per category `R`/`V`/`S` (shard boss): `src= mode=Toggle\|Timed\|Disabled duration= cooldown=` (count=3, **`src=S` added v0.43.0**). Live cooldown remaining (incl. shard) is in `api cooldowns`. |
 | `.beelz api catalog` | `[BEELZ:catalog-summary]` | `abilities= units= server_mode=Basic\|Brutal` |
 | `.beelz api catalog units [page]` | `[BEELZ:catalog-unit]` … `[BEELZ:end]` | Curated per-unit TransformMap, 40/page: `un= enabled= difficulty= tier= type= full_replace= shard= scaling_mode=<mode\|inherit> damage_scale= cooldown_scale= health_scale= speed_scale= slot_template=<slot:ability;…\|-> notes=` **(v8 added `slot_template`)**. Read as Devour/collection targets, NOT transform targets — only Dracula/Morgana transform. |
-| `.beelz api catalog abilities [page]` | `[BEELZ:catalog-ability]` … `[BEELZ:end]` | Curated per-ability AbilityMap, 40/page: `an= weapons= forms= transform_only= enabled= difficulty= cat=<NAME> category_override=<NAME\|-> phase= allow_denied= interruptible=<on\|off\|auto> free_move= cast_speed=<0..1\|auto> damage_scale= cooldown_scale= notes=` **(v8 added category_override, phase, allow_denied, interruptible, free_move, cast_speed)** |
+| `.beelz api catalog abilities [page]` | `[BEELZ:catalog-ability]` … `[BEELZ:end]` | **FULL capturable universe** (curated AbilityMap ∪ discovered `AB_*` passing the capture filter), 40/page, start at page 0: `an= curated=<0\|1> weapons= forms= transform_only= enabled= difficulty= cat=<NAME> category_override=<NAME\|-> phase= allow_denied= interruptible=<on\|off\|auto> free_move= cast_speed=<0..1\|auto> damage_scale= cooldown_scale= school=<school\|none> desc=<SafeToken\|-> notes=` **(v10 added `school=`/`desc=`; v9 made the stream the full universe + added `curated=`; v8 added category_override, phase, allow_denied, interruptible, free_move, cast_speed)**. Under default inclusive mode this is ~35+ pages — the `total=`/`pages=` denominator is now the whole pool. `desc=`/`school=` are populated only for the curated subset (~13%/4%); else `-`/`none`. |
 | `.beelz api hotkeys` | `[BEELZ:hotkeys-config]`, `[BEELZ:hotkey]`, `[BEELZ:end]` | Config footer (`enabled= max=`) + named hotkey bindings |
 | `.beelz api verbosity` | `[BEELZ:verbosity]` | `level=Silent\|Summary\|Verbose default=<server default>` |
 | `.beelz api bestiary [page]` | `[BEELZ:bestiary]` … `[BEELZ:end]` | Collection book — one line per collected unit: `u= un= s=R\|V captured=X total=Y transform=0\|1` (v2). Cross-ref `api list` (per-ability) for which abilities. Page size 40. |
@@ -394,11 +775,15 @@ BCH sends these exactly as a player would type them. Replies are
 **human-readable text**, not API format — treat them fire-and-forget and
 re-fetch the affected read command (or wait for the event).
 
-**Player:** `.beelz grant <slot 1-6> <index>` · `.beelz unslot <slot>` ·
-`.beelz resetbar` (v0.43.8 — end any active transform + clear ALL slot bindings
-[universal + weapon] → vanilla in-game bar; keeps captures/unlocks; emits a
-`slot-cleared` event per previously-bound slot, so no new event type. A natural
-"reset my bar" button alongside `refresh`) ·
+**Player:** `.beelz grant <slot|primary|ultimate> <index>` · `.beelz unslot <slot>` ·
+**`.beelz clearbar [all|universal|<weapon>|<form>]`** (v0.94.0 — **USE THIS for a "clear bar" button**, NOT
+`resetbar`: it needs NO confirmation and lets you clear a specific bucket. No arg / `all` = every bucket;
+`universal` = the any-weapon set; a weapon family = that weapon's set; a form = that form's set. Keeps
+captures; emits a `slot-cleared` event.) ·
+`.beelz resetbar CONFIRM` (v0.43.8 — clear ALL slot bindings [universal + weapon + form] → vanilla in-game
+bar; keeps captures/unlocks. **⚠️ v0.76.0 added a required `CONFIRM` token — `.beelz resetbar` alone now
+just prints a warning and does NOTHING. This is why a BCH clear-bar button calling bare `resetbar` stopped
+working; switch it to `.beelz clearbar`.**) ·
 `.beelz transforms [vblood\|shard\|regular]` / `.beelz list [vblood\|shard\|regular] [page]`
 (v3 filter — also splits shard bosses into their own group) ·
 `.beelz weapon-grant <weapon\|auto> <slot> <index>` ·
@@ -489,11 +874,21 @@ file editing) via the commands below — all audited to `LogOutput.log` as
 - **Filter rules:** `admin rules` · `admin deny/undeny <pattern>` ·
   `admin allow/unallow <pattern>` · `admin denyguid/allowguid <add\|remove> <guid>` ·
   `admin transformonly <add\|remove> <pattern\|guid>` · `admin reload`.
-- **Per-ability config (v0.53.0):** `admin ability <name> <field> <value>` — sets ANY
-  AbilityMap field live (`enabled`, `weapons`, `forms`, `transformonly`, `difficulty`,
-  `phase`, `allowdenied`, `damagescale`, `cooldownscale`, `category`, `interruptible`,
-  `freemove`, `castspeed`, `notes`). `admin tune …` is the cast-tuning shortcut; `admin tune-list`
-  lists tuned abilities. Read current values back from `api info` / `api catalog abilities`.
+- **Per-ability config (v0.53.0; shaping fields added v0.65–0.68, accepts ID since v0.69):**
+  `admin ability <name|ID> <field> <value>` — sets ANY AbilityMap field live: curation
+  (`enabled`, `weapons`, `forms`, `transformonly`, `difficulty`, `phase`, `allowdenied`, `category`,
+  `notes`), scaling (`damagescale`, `cooldownscale`), and the SERVER-WIDE baked shaping fields
+  (`cooldown`, `range`, `charges`, `chargetime`, `aoe`, `projspeed`, `duration`, `healing`,
+  `interruptible`, `freemove`, `castspeed`) — applied when `Abilities_ApplyConfig` (default ON).
+  **ONE field per command.** **(v0.72) Reset:** `admin ability <id> defaults` reverts ONE ability's
+  shaping fields to shipped baseline (live, no restart); `admin ability all defaults` resets every
+  ability — curation/availability (enabled/weapons/forms/deny) is left untouched. `admin tune <ability>
+  <knob> <value>` is the shaping shortcut; `admin tune-list` lists tuned abilities. Read values back from
+  `api info` (`cooldown_override=`/`range_override=`/`charges_override=`/`chargetime_override=`/
+  `aoe_override=`/`projspeed_override=`/`duration_override=`/`heal_mult=`) / `api catalog abilities`.
+  **Coverage caveats (v0.73):** `range` clamps both aim and projectile travel; `duration` = applied-buff
+  + over-time effect length (NOT cast/channel time); `charges`/`chargetime` only apply to abilities that
+  already have a charge system (the server replies with a "no charge system" note otherwise).
 - **Per-unit transform config (v0.53.0):** `admin transform-set <CHAR_unit> <field> <value>` —
   sets any TransformMap scalar (`enabled`, `difficulty`, `tier`, `damagescale`, `cooldownscale`,
   `healthscale`, `speedscale`, `fullreplace`, `powerscalingmode`, `notes`). Read back via
@@ -523,7 +918,7 @@ matched fuzzily; `<unitGuid>`/`<abilityGuid>` = integer PrefabGUIDs from `api li
 | Command | Signature |
 |---|---|
 | Filter rules | `admin rules` · `admin deny <pattern>` · `admin undeny <pattern>` · `admin allow <pattern>` · `admin unallow <pattern>` · `admin denyguid <add\|remove> <guid>` · `admin allowguid <add\|remove> <guid>` · `admin transformonly <add\|remove> <pattern\|guid>` · `admin reload` |
-| **Per-ability config (v0.53.0)** | `admin ability <name> <field> <value>` — field ∈ enabled, weapons (csv\|any), forms (csv\|any), transformonly, difficulty, phase, allowdenied, damagescale, cooldownscale, category, interruptible (on\|off\|clear), freemove, castspeed (0..1\|clear), notes. Toggles take on\|off. · `admin tune <ability> <interrupt\|freemove\|castspeed> <on\|off\|0..1>` · `admin tune-list` |
+| **Per-ability config (v0.53.0; +shaping v0.65–0.68; +ID v0.69; +reset v0.72)** | `admin ability <name\|ID> <field> <value>` — ONE field per command. field ∈ curation: enabled, weapons (csv\|any), forms (csv\|any), transformonly, difficulty, phase, allowdenied, category, notes · scaling: damagescale, cooldownscale · baked shaping (Abilities_ApplyConfig, default ON): cooldown (sec\|clear), range (dist\|clear), charges (int\|clear), chargetime (sec\|clear), aoe (radius\|clear), projspeed (speed\|clear), duration (sec\|clear), healing (mult\|clear), interruptible (on\|off\|clear), freemove (on\|off), castspeed (0..1\|clear). Toggles take on\|off. **Reset:** `admin ability <id> defaults` / `admin ability all defaults` (revert shaping to baseline, live). · `admin tune <ability> <interrupt\|freemove\|castspeed\|cooldown\|range\|charges\|chargetime\|aoe\|projspeed\|duration\|healing> <value\|clear>` (one field per command) · `admin tune-list` |
 | **Per-unit transform config (v0.53.0)** | `admin transform-set <CHAR_unit> <field> <value>` — field ∈ enabled, difficulty, tier, damagescale, cooldownscale, healthscale, speedscale, fullreplace, powerscalingmode (or `inherit`), notes |
 | **Global defaults (v0.53.0)** | `admin default <damagescale\|cooldownscale> <value>` |
 | Runtime config | `admin set <key> <value>` (any `api config` key; live + persists; emits `config-changed`) |
@@ -700,9 +1095,11 @@ Rarely, a kill hits the **Devour jackpot** and grants a unit's *entire* ability 
 - **Capture** — a per-ability roll on each kill (rates configurable). Captured abilities live in
   your collection (`api list` / `api bestiary`).
 - **Devour** — the rare jackpot: a unit's whole eligible kit granted at once (`type=devour` event).
-- **Slots & loadouts** — bind a captured ability to one of 6 action-bar slots. Two bucket types:
-  the **universal** loadout (fires on any weapon) and **per-weapon** loadouts (fire only when that
-  weapon is drawn; they override the universal bind on their slots). Auto-switches on weapon swap.
+- **Slots & loadouts** — bind a captured ability to one of 6 action-bar slots. Three bucket types:
+  the **universal** loadout (fires on any weapon), **per-weapon** loadouts (fire only when that
+  weapon is drawn; they override the universal bind on their slots), and **per-form** loadouts (one
+  per vanilla wheel form — Wolf/Bear/Rat/Spider/Toad/Werewolf/Gargoyle). Auto-switches on weapon swap
+  / form enter; all stream via `api slots` (`bucket=any` / `<WeaponFamily>` / `<Form>`).
 - **Hotkeys** — named bindings beyond the 6 slots; cast via `.beelz cast <name>` (the BCH-button
   mechanism). Capped by `Hotkeys_MaxPerPlayer`.
 - **Transform** — become **Dracula or Morgana** (the only two renderable forms). Multi-phase kits,
@@ -726,15 +1123,17 @@ use the `api` equivalents.)
 - `.beelz search <term>` — find a captured ability by name.
 - `.beelz info <index|name>` — one ability's details (machine: `api info <index>`).
 - `.beelz bestiary [page]` · `.beelz bestiary unit <name>` — collection book, per-unit X/Y.
-- `.beelz progress` — completion % (machine: `api progress`).
+- `.beelz progress` — completion % (machine: `api progress`). `.beelz top` — server leaderboard by collection %.
+- `.beelz odds` — your live drop / Devour / pity chances.
 - `.beelz catalog [page]` — curated ability/unit reference. `.beelz current` — your active bar.
 
 **Loadouts (action bar)**
-- `.beelz grant <slot 1-6> <index>` — bind a captured ability to a universal slot.
+- `.beelz grant <slot 1-6> <index|abilityID>` — bind a captured ability to a universal slot (accepts the list index OR the ability GUID).
 - `.beelz unslot <slot>` — clear a universal slot.
-- `.beelz weapon-grant <weapon|auto> <slot 1-6> <index>` — bind to a per-weapon loadout (`auto` = your current weapon).
+- `.beelz weapon-grant <weapon|auto> <slot 1-6> <index|abilityID>` — bind to a per-weapon loadout (`auto` = your current weapon).
 - `.beelz weapon-unslot <weapon|auto> <slot>` — clear a per-weapon bind.
-- `.beelz loadouts` — summary of universal + per-weapon sets + active weapon (machine: `api slots`).
+- `.beelz form-grant <form> <slot 1-6> <index|abilityID>` · `.beelz form-unslot <form> <slot>` — per-form loadouts (Wolf/Bear/Rat/Spider/Toad/Werewolf/Gargoyle); abilities map onto the slots the form actually renders.
+- `.beelz loadouts` — summary of universal + per-weapon + per-form sets + active bucket (machine: `api slots`).
 - `.beelz resetbar` — clear ALL binds → vanilla bar (keeps captures). `.beelz refresh` — re-apply your bar if it looks wrong.
 - `.beelz preset save|load|list|delete <name>` — save/restore loadout presets.
 
@@ -756,9 +1155,9 @@ use the `api` equivalents.)
 **Manage / settings**
 - `.beelz forget <i>` · `.beelz forget-transform <i>` — delete a capture/unlock.
 - `.beelz clear CONFIRM` — wipe all your captures + slots (literal `CONFIRM` required).
-- `.beelz verbosity <silent|summary|verbose>` — chat-notification level.
+- `.beelz verbosity <silent|summary|verbose>` — chat-notification level. `.beelz silent <on|off>` — mute just the "you already knew that" devour message.
 
-**Machine API (player-runnable; what BCH calls)** — `.beelz api <version|list|slots|transforms|active|info|progress|rules|catalog|catalog units|catalog abilities|hotkeys|transform-config|bestiary|config|cooldowns|verbosity|bch>` (full field specs in §2). `.beelz api bch on` subscribes to the live event stream.
+**Machine API (player-runnable; what BCH calls)** — `.beelz api <version|list|slots|transforms|active|info|info-guid <abilityGuid>|progress|rules|catalog|catalog units|catalog abilities|hotkeys|transform-config|bestiary|config|cooldowns|verbosity|bch>` (full field specs in §2; `info`/`info-guid`/`catalog-ability` are chunked — reassemble `part=k/n`). `.beelz api bch on` subscribes to the live event stream.
 
 ### 10.4 ADMIN command reference (`.beelz admin …`)
 
@@ -768,11 +1167,13 @@ All `adminOnly` (VCF gates on V Rising admin status). Reply in human text; audit
 
 **Capture filters** — `admin deny/undeny <pattern>` · `admin allow/unallow <pattern>` · `admin denyguid/allowguid <add|remove> <guid>` · `admin transformonly <add|remove> <pattern|guid>` · `admin reload`.
 
-**Per-ability config (live)** — `admin ability <name> <field> <value>` (enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, damagescale, cooldownscale, category, interruptible, freemove, castspeed, notes) · `admin tune <ability> <interrupt|freemove|castspeed> <…>`.
+**Per-ability config (live)** — `admin ability <name|ID> <field> <value>` — ONE field per command. Curation: enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, category, notes · scaling: damagescale, cooldownscale · server-wide shaping (Abilities_ApplyConfig, default ON): cooldown, range, charges, chargetime, aoe, projspeed, duration, healing, **forcetimeout** (make an indefinite effect expire after N s), **freelymove** (free to move N s into a cast), **interruptonhit** (cancel the cast when hit), interruptible (player self-cancel), freemove, castspeed, **summoncap** (concurrent uses), **summontimeout** (lifespan s), **summonunits** (units per cast). **Reset to baseline:** `admin ability <id> defaults` / `admin ability all defaults`. Shortcut: `admin tune <ability> <knob> <value>` · `admin tune-list`. Caveats: `range` also clamps projectile travel; `duration` = effect length not channel time; `charges` only works on abilities that already have charges; `interruptonhit` ≠ `interruptible` (hit-cancel vs player self-cancel).
 
 **Per-unit transform config (live)** — `admin transform-set <CHAR_unit> <field> <value>` (enabled, difficulty, tier, damagescale, cooldownscale, healthscale, speedscale, fullreplace, powerscalingmode, notes).
 
 **Global config** — `admin default <damagescale|cooldownscale> <value>` · `admin set <key> <value>` (any `.cfg` key) · `admin difficulty [basic|brutal]` · `admin freeze-captures <on|off|status>` · `admin transform mode|duration|cooldown <regular|vblood> <…>`.
+
+**Server announcements (v0.88)** — `admin broadcast <status | leaderboard on|off | interval <minutes> | top <1-5> | complete on|off | test>` — toggles/schedules the 100%-collection broadcast and the periodic leaderboard broadcast. Message pools + enables live in the `Announcements` config section (`Broadcast_*`).
 
 **Player grants** — `admin give|revoke <player> <unitGuid> <abilityGuid>` · `admin devour <player> <unitGuid>` · `admin give-transform|revoke-transform <player> <unitGuid>` · `admin set-slot|clear-slot <player> <slot> [abilityGuid]` · `admin set-weapon-slot|clear-weapon-slot <player> <weapon> <slot> [abilityGuid]`.
 
@@ -789,7 +1190,7 @@ defaults with zero setup):
 
 | File | Controls | Live in-game? |
 |---|---|---|
-| `kdpen.Beelzebub.cfg` | Global switches: capture on/off + drop rates, `Capture_InclusiveMode`, `Grant_EnforceTransformOnly`, transform modes/durations/cooldowns, summon behavior, power-scaling modes, server difficulty, hotkey limits, logging. | `admin set <key> <value>` (+ `difficulty`, `freeze-captures`, `transform …`). Hand-edits need a **server restart**. |
+| `kdpen.Beelzebub.cfg` | Global switches: capture on/off + drop rates, `Capture_InclusiveMode`, `Grant_EnforceTransformOnly`, `Capture_PitySessionBased`, transform modes/durations/cooldowns, summon behavior, power-scaling modes, `Abilities_ApplyConfig` (per-ability shaping master, **default ON**), `Forms_CustomAbilities_Enabled` (**default ON**), the **`Announcements`** section (`Broadcast_CollectionComplete_*`, `Broadcast_Leaderboard_*`), server difficulty, hotkey limits, logging. NOTE renamed keys: `AbilityTuning_Enabled`→`Abilities_ApplyConfig`, `DropChance_Transform_*`→`DropChance_Devour_*`. | `admin set <key> <value>` (+ `difficulty`, `freeze-captures`, `transform …`, `broadcast …`). Hand-edits need a **server restart**. |
 | `kdpen.Beelzebub/ability_rules.json` | Capture deny/allow lists + GUIDs, transform-only lists, `Defaults` scaling, per-ability `AbilityMap`, per-unit `TransformMap`, drop-rate overrides. | `admin ability` / `transform-set` / `default` / `deny*` / `allow*` / `transformonly`. Hand-edits need **`admin reload`** (no restart). |
 | `kdpen.Beelzebub/ability_metadata_overrides.json` | Optional: override an ability's display name/description/school/type/category. | Hand-edit + `admin reload`. |
 

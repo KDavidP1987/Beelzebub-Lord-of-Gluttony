@@ -41,6 +41,7 @@ internal static class BeelzCommands
         ctx.Reply("-- SLOTS / LOADOUT --");
         ctx.Reply(".beelz grant <slot 1-6> <index> / .beelz unslot <slot> — universal slot binds");
         ctx.Reply(".beelz weapon-grant <weapon|auto> <slot> <index> / weapon-unslot <weapon> <slot> — per-weapon binds (unarmed = its own family; swapping weapons auto-switches the set)");
+        ctx.Reply(".beelz form-grant <form|auto> <slot> <index> / form-unslot <form> <slot> — per-FORM binds (Wolf/Bear/Rat/Spider/Toad/Werewolf/Gargoyle; applies in the shapeshift form — requires Forms_CustomAbilities_Enabled)");
         ctx.Reply(".beelz loadouts — view your universal 'basic' set + each per-weapon set, and which is active");
         ctx.Reply(".beelz preset save|load|list|delete <name> — slot loadout presets");
         ctx.Reply(".beelz cast <hotkey|index> — cast a capture on demand (extra hotkeys: .beelz hotkey help)");
@@ -463,21 +464,52 @@ internal static class BeelzCommands
         ctx.Reply($"({string.Join(", ", sources)})");
     }
 
-    [Command("grant", description: "Assign a captured ability to a spell slot. Usage: .beelz grant <slot 1-6> <index>. Universal abilities apply on any weapon; weapon-tagged ones only on their weapon family.")]
-    public static void Grant(ChatCommandContext ctx, int slot, int index)
+    /// <summary>
+    /// v0.76.0: resolve a `.beelz grant`-style selector to a captured-list index. An in-range value
+    /// (0..count-1) is treated as the list index (backward compatible); any other value is matched
+    /// against the captured abilities' PrefabGUIDs (so a player can pass the stable ability ID instead
+    /// of a shifting index). Returns the index, or -1 with a message in <paramref name="error"/>.
+    /// </summary>
+    private static int ResolveCapturedSelector(System.Collections.Generic.IReadOnlyList<Beelzebub.Services.CapturedAbility> captured, int indexOrId, out string error)
+    {
+        error = null;
+        if (captured.Count == 0) { error = "You have no captured abilities yet. Defeat units to capture their abilities, then .beelz list."; return -1; }
+        if (indexOrId >= 0 && indexOrId < captured.Count) return indexOrId;   // list index (backward compatible)
+        for (int i = 0; i < captured.Count; i++)                              // otherwise: match the ability PrefabGUID
+            if (captured[i].AbilityPrefabGuid == indexOrId) return i;
+        error = $"'{indexOrId}' is neither a valid list index (0-{captured.Count - 1}) nor an ability ID you've captured. Use .beelz list to see your indices + IDs.";
+        return -1;
+    }
+
+    /// <summary>v0.91.0: parse a slot token — a number in the bindable range, or the named
+    /// 'primary' (left-click attack, slot 0) / 'ultimate' (R, slot 7) slots.</summary>
+    private static bool TryParseSlotToken(string token, out int slot, out string error)
+    {
+        slot = -1; error = null;
+        string t = (token ?? "").Trim().ToLowerInvariant();
+        if (t is "primary" or "p" or "left" or "leftclick" or "attack") { slot = Beelzebub.Services.AbilityRegistry.PrimarySlot; return true; }
+        if (t is "ultimate" or "ult" or "ulti" or "t" or "super") { slot = Beelzebub.Services.AbilityRegistry.UltimateSlot; return true; }
+        if (int.TryParse(t, out int n) && Beelzebub.Services.AbilityRegistry.IsValidSlot(n)) { slot = n; return true; }
+        error = "Slot must be 1-6, or 'primary' (left-click attack) / 'ultimate' (T key).";
+        return false;
+    }
+
+    [Command("grant", description: "Assign a captured ability to a slot. Usage: .beelz grant <slot> <index OR ability ID>. Slot is 1-6, or 'primary' (left-click attack) / 'ultimate' (T key). The number is read as a list index (0-based, from .beelz list) when in range, otherwise as the ability's PrefabGUID. Universal abilities apply on any weapon; weapon-tagged ones only on their weapon family.")]
+    public static void Grant(ChatCommandContext ctx, string slotToken, int indexOrId)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
-        if (slot < 1 || slot > 6) { ctx.Reply("Slot must be 1-6 (1=primary attack, 3=Q/shift, 5=spell1, 6=spell2)."); return; }
+        if (!TryParseSlotToken(slotToken, out int slot, out string slotErr)) { ctx.Reply(slotErr); return; }
 
         ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
         var captured = Core.AbilityRegistry.ListFor(steamId);
-        if (index < 0 || index >= captured.Count)
-        {
-            ctx.Reply($"Index {index} out of range (valid: 0-{captured.Count - 1}). Use .beelz list to see indices.");
-            return;
-        }
+        // v0.76.0: accept an index OR the ability's PrefabGUID. An in-range value is a list index
+        // (backward compatible); anything else is matched against captured ability GUIDs (the stable
+        // way to address a specific ability — its index can shift when you capture new ones).
+        int selIdx = ResolveCapturedSelector(captured, indexOrId, out string selErr);
+        if (selIdx < 0) { ctx.Reply(selErr); return; }
+        var sel = captured[selIdx];
 
-        PrefabGUID ability = new(captured[index].AbilityPrefabGuid);
+        PrefabGUID ability = new(sel.AbilityPrefabGuid);
 
         // Admin kill-switch + transform-only gates.
         string abilityName = ability.GetPrefabName();
@@ -502,7 +534,7 @@ internal static class BeelzCommands
             && Beelzebub.Config.Settings.Grant_EnforceWeaponMatch.Value)
         {
             ctx.Reply($"'{abilityName}' is a {animWeapon} ability — its cast animation only reads right with that weapon. " +
-                      $"Bind it to the {animWeapon} loadout instead: .beelz weapon-grant {animWeapon} {slot} {index}");
+                      $"Bind it to the {animWeapon} loadout instead: .beelz weapon-grant {animWeapon} {slot} {sel.AbilityPrefabGuid}");
             return;
         }
 
@@ -531,6 +563,63 @@ internal static class BeelzCommands
             $"[BEELZ:event] type=slot-granted slot={slot} a={ability._Value} an={ability.GetPrefabName()}");
     }
 
+    [Command("odds", description: "Show your current ability/devour drop chances and your accumulated pity (bad-luck protection) bonus.")]
+    public static void Odds(ChatCommandContext ctx)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        float abR = Beelzebub.Config.Settings.DropChance_Ability_Regular.Value, abV = Beelzebub.Config.Settings.DropChance_Ability_VBlood.Value;
+        float dvR = Beelzebub.Config.Settings.DropChance_Devour_Regular.Value, dvV = Beelzebub.Config.Settings.DropChance_Devour_VBlood.Value;
+        float pAbR = Core.AbilityRegistry.GetPityBonus(steamId, Beelzebub.Services.CaptureSource.Regular, Beelzebub.Services.PityKind.Ability);
+        float pAbV = Core.AbilityRegistry.GetPityBonus(steamId, Beelzebub.Services.CaptureSource.VBlood, Beelzebub.Services.PityKind.Ability);
+        float pDvR = Core.AbilityRegistry.GetPityBonus(steamId, Beelzebub.Services.CaptureSource.Regular, Beelzebub.Services.PityKind.Transform);
+        float pDvV = Core.AbilityRegistry.GetPityBonus(steamId, Beelzebub.Services.CaptureSource.VBlood, Beelzebub.Services.PityKind.Transform);
+        ctx.Reply("=== Your capture odds (per eligible ability / kill) ===");
+        ctx.Reply($"Ability — Regular {abR * 100:F1}% + pity {pAbR * 100:F1}% = {(abR + pAbR) * 100:F1}%  ·  V-Blood {abV * 100:F1}% + pity {pAbV * 100:F1}% = {(abV + pAbV) * 100:F1}%");
+        ctx.Reply($"Devour (full kit) — Regular {dvR * 100:F1}% + pity {pDvR * 100:F1}% = {(dvR + pDvR) * 100:F1}%  ·  V-Blood {dvV * 100:F1}% + pity {pDvV * 100:F1}% = {(dvV + pDvV) * 100:F1}%");
+        ctx.Reply("Chance is also multiplied by the unit's tier. Pity rises on each dry kill and resets when you capture/devour.");
+    }
+
+    [Command("silent", description: "Toggle whether you see the 'you already knew all of its abilities' devour message. Usage: .beelz silent <on|off> (on = hide it).")]
+    public static void Silent(ChatCommandContext ctx, string state = null)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        string v = (state ?? "").Trim().ToLowerInvariant();
+        if (v is "on" or "true" or "1" or "yes") { Core.AbilityRegistry.SetSilenceOwned(steamId, true); ctx.Reply("Silenced: you'll no longer see the 'already knew all of its abilities' message on a Devour of a unit you've fully collected."); }
+        else if (v is "off" or "false" or "0" or "no") { Core.AbilityRegistry.SetSilenceOwned(steamId, false); ctx.Reply("Un-silenced: the 'already knew all' Devour message is back on."); }
+        else ctx.Reply($"Usage: .beelz silent <on|off>. Currently: {(Core.AbilityRegistry.GetSilenceOwned(steamId) ? "ON (hidden)" : "OFF (shown)")}.");
+    }
+
+    [Command("top", description: "Show the server leaderboard: the top players by abilities collected (count + %). Admins are excluded. Usage: .beelz top")]
+    public static void Top(ChatCommandContext ctx)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        // v0.86.0 (Bug B): denominator = the full capturable universe (~1400), not the curated
+        // AbilityMap.Count (~453) which captures can exceed → the old >100% bug. Fall back to the
+        // curated count only if the universe isn't computed yet.
+        int total = Beelzebub.Services.BestiaryService.TotalCapturableAbilities();
+        if (total <= 0) total = Core.AbilityRules?.Current?.AbilityMap?.Count ?? 0;
+        var board = new System.Collections.Generic.List<(string name, int count)>();
+        foreach (var (sid, name, isAdmin) in EntityExtensions.AllUsers())
+        {
+            if (isAdmin) continue;   // exclude admin IDs
+            int c = Core.AbilityRegistry.CapturedCount(sid);
+            if (c > 0) board.Add((name, c));
+        }
+        if (board.Count == 0) { ctx.Reply("No abilities collected yet — be the first! Defeat units to steal their abilities."); return; }
+        board.Sort((a, b) => b.count.CompareTo(a.count));
+        ctx.Reply("=== 🏆 Ability Collection Leaderboard ===");
+        int n = System.Math.Min(5, board.Count);
+        for (int i = 0; i < n; i++)
+        {
+            var (name, count) = board[i];
+            string pct = total > 0 ? $" ({System.Math.Min(100f, count * 100f / total):F1}%)" : "";
+            string medal = i == 0 ? "🥇" : i == 1 ? "🥈" : i == 2 ? "🥉" : $"#{i + 1}";
+            ctx.Reply($"{medal} {name} — {count} abilities{pct}");
+        }
+    }
+
     [Command("unslot", description: "Remove your universal-bucket assignment from a spell slot. Usage: .beelz unslot <slot>.")]
     public static void Unslot(ChatCommandContext ctx, int slot)
     {
@@ -546,10 +635,16 @@ internal static class BeelzCommands
             $"[BEELZ:event] type=slot-cleared slot={slot}");
     }
 
-    [Command("resetbar", description: "Reset your action bar to its vanilla in-game state: ends any active transformation and removes ALL Beelzebub slot bindings (universal + weapon-specific), so your normal spells and weapon skills return. Keeps your captured abilities and transform unlocks — re-grant anytime with .beelz grant. Usage: .beelz resetbar")]
-    public static void ResetBar(ChatCommandContext ctx)
+    [Command("resetbar", description: "Reset your action bar to its vanilla in-game state: ends any active transformation and removes ALL Beelzebub slot bindings (universal + weapon-specific), so your normal spells and weapon skills return. Keeps your captured abilities and transform unlocks — re-grant anytime with .beelz grant. Requires confirmation: .beelz resetbar CONFIRM")]
+    public static void ResetBar(ChatCommandContext ctx, string confirm = null)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        // v0.76.0: guard against an accidental wipe of every slot bind — require the CONFIRM token.
+        if (!string.Equals(confirm, "CONFIRM", System.StringComparison.Ordinal))
+        {
+            ctx.Reply("This removes ALL your Beelzebub slot bindings (universal + weapon-specific) and returns your bar to vanilla. Your captured abilities + unlocks are KEPT. Re-run as: .beelz resetbar CONFIRM");
+            return;
+        }
         Entity character = ctx.Event.SenderCharacterEntity;
         ulong steamId = character.GetSteamId();
 
@@ -564,7 +659,8 @@ internal static class BeelzCommands
 
         // 3) Wipe the injected overrides off the LIVE bar so it returns to vanilla right now
         //    (mirrors `.beelz unslot`, which only the player can otherwise do one slot at a time).
-        for (int slot = 1; slot <= 6; slot++)
+        //    v0.94.0: 0-7 so the primary (0) and ultimate (7) slots are cleared too (v0.91 made them bindable).
+        for (int slot = Beelzebub.Services.AbilityRegistry.PrimarySlot; slot <= Beelzebub.Services.AbilityRegistry.UltimateSlot; slot++)
             Beelzebub.Services.SlotApply.ClearGrant(character, slot);
 
         // 4) Hardened teardown: walk the live buff buffer and destroy any lingering
@@ -593,16 +689,68 @@ internal static class BeelzCommands
             Core.Chat.SendEvent(character, $"[BEELZ:event] type=slot-cleared slot={slot}");
     }
 
+    [Command("clearbar", description: "Clear your captured-ability bindings (no confirmation needed) — choose WHICH set. Usage: .beelz clearbar [all|universal|<weapon>|<form>]. No arg or 'all' = every set (universal + all weapons + all forms). 'universal'/'basic' = the any-weapon set. A weapon (sword/spear/unarmed/crossbow/…) = that weapon's set. A form (wolf/bear/rat/spider/toad/…) = that form's set. Your captured abilities are KEPT — re-grant anytime with .beelz grant / weapon-grant / form-grant.")]
+    public static void ClearBar(ChatCommandContext ctx, string bucket = null)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        Entity character = ctx.Event.SenderCharacterEntity;
+        ulong steamId = character.GetSteamId();
+        string b = (bucket ?? "all").Trim().ToLowerInvariant();
+
+        int cleared;
+        string what;
+        if (b is "all" or "")
+        {
+            Core.Transforms.Revert(steamId, "clearbar", restoreBar: false);   // end any active transform first
+            cleared = Core.AbilityRegistry.ClearAllSlots(steamId);
+            what = "ALL loadouts (universal + every weapon + every form)";
+        }
+        else if (b is "universal" or "basic" or "any")
+        {
+            cleared = Core.AbilityRegistry.ClearUniversalBucket(steamId);
+            what = "your universal loadout";
+        }
+        else if (System.Enum.TryParse<Beelzebub.Services.WeaponFamily>(b, ignoreCase: true, out var weapon)
+                 && weapon != Beelzebub.Services.WeaponFamily.None && weapon != Beelzebub.Services.WeaponFamily.Magic)
+        {
+            cleared = Core.AbilityRegistry.ClearWeaponBucket(steamId, weapon);
+            what = $"your {weapon} loadout";
+        }
+        else if (System.Enum.TryParse<Beelzebub.Services.ShapeshiftForm>(b, ignoreCase: true, out var form)
+                 && form != Beelzebub.Services.ShapeshiftForm.None)
+        {
+            cleared = Core.AbilityRegistry.ClearFormBucket(steamId, form);
+            what = $"your {form} form loadout";
+        }
+        else
+        {
+            ctx.Reply("Usage: .beelz clearbar [all | universal | <weapon: sword/spear/unarmed/crossbow/…> | <form: wolf/bear/rat/spider/toad/…>].");
+            return;
+        }
+
+        // Re-resolve the LIVE bar now: wipe our overrides (0-7) then re-apply whatever's left for the
+        // active weapon. The cleared set is gone, so its binds don't come back.
+        for (int slot = Beelzebub.Services.AbilityRegistry.PrimarySlot; slot <= Beelzebub.Services.AbilityRegistry.UltimateSlot; slot++)
+            Beelzebub.Services.SlotApply.ClearGrant(character, slot);
+        try { Beelzebub.Services.SlotApply.RestoreResolvedGrants(character); } catch { /* re-resolve best-effort */ }
+        Core.Persistence.RequestSave();
+
+        ctx.Reply(cleared > 0
+            ? $"Cleared {what} — {cleared} binding(s) removed. Captured abilities kept; re-grant anytime."
+            : $"Nothing was bound in {what}.");
+        Core.Chat.SendEvent(character, $"[BEELZ:event] type=slot-cleared");
+    }
+
     /// <summary>
     /// W3: weapon-family-specific slot bind. Lets the player keep a sword loadout
     /// AND a crossbow loadout AND a universal loadout simultaneously; switching
     /// weapons swaps loadouts automatically.
     /// </summary>
-    [Command("weapon-grant", description: "Bind a captured ability to a slot for a specific weapon family. Usage: .beelz weapon-grant <weapon|auto> <slot 1-6> <index>. Use 'auto' for the weapon you're currently wielding.")]
-    public static void WeaponGrant(ChatCommandContext ctx, string weaponStr, int slot, int index)
+    [Command("weapon-grant", description: "Bind a captured ability to a slot for a specific weapon family. Usage: .beelz weapon-grant <weapon|auto> <slot> <index OR ability ID>. Slot is 1-6, or 'primary' / 'ultimate'. Use 'auto' for the weapon you're currently wielding; pass the stable ability ID (from .beelz list) instead of an index if you prefer.")]
+    public static void WeaponGrant(ChatCommandContext ctx, string weaponStr, string slotToken, int index)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
-        if (slot < 1 || slot > 6) { ctx.Reply("Slot must be 1-6 (1=primary attack, 3=Q/shift, 5=spell1, 6=spell2)."); return; }
+        if (!TryParseSlotToken(slotToken, out int slot, out string slotErr)) { ctx.Reply(slotErr); return; }
 
         ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
         Entity character = ctx.Event.SenderCharacterEntity;
@@ -626,13 +774,10 @@ internal static class BeelzCommands
         }
 
         var captured = Core.AbilityRegistry.ListFor(steamId);
-        if (index < 0 || index >= captured.Count)
-        {
-            ctx.Reply($"Index {index} out of range (valid: 0-{captured.Count - 1}). Use .beelz list to see indices.");
-            return;
-        }
+        int selIdx = ResolveCapturedSelector(captured, index, out string selErr);   // v0.76.0: index OR ability ID
+        if (selIdx < 0) { ctx.Reply(selErr); return; }
 
-        PrefabGUID ability = new(captured[index].AbilityPrefabGuid);
+        PrefabGUID ability = new(captured[selIdx].AbilityPrefabGuid);
         string abilityName = ability.GetPrefabName();
         if (!Core.AbilityRules.IsEnabled(abilityName, ability._Value))
         {
@@ -705,6 +850,81 @@ internal static class BeelzCommands
             : $"{weapon} slot {slot} cleared.");
         Core.Chat.SendEvent(character,
             $"[BEELZ:event] type=weapon-slot-cleared weapon={weapon} slot={slot}");
+    }
+
+    // --- v0.59.0: per-FORM ability sets (parallel to the per-weapon buckets) ---
+
+    static bool TryParseForm(ChatCommandContext ctx, string formStr, Entity character, out Beelzebub.Services.ShapeshiftForm form)
+    {
+        form = Beelzebub.Services.ShapeshiftForm.None;
+        if (string.Equals(formStr, "auto", System.StringComparison.OrdinalIgnoreCase))
+        {
+            form = Beelzebub.Services.ShapeshiftAbilityService.GetCurrentForm(character);
+            if (form == Beelzebub.Services.ShapeshiftForm.None)
+            {
+                ctx.Reply("You're not in a shapeshift form right now. Name it explicitly: .beelz form-grant <wolf|bear|rat|spider|toad|werewolf|gargoyle> <slot> <index>.");
+                return false;
+            }
+            return true;
+        }
+        if (!System.Enum.TryParse<Beelzebub.Services.ShapeshiftForm>(formStr, ignoreCase: true, out form)
+            || form == Beelzebub.Services.ShapeshiftForm.None)
+        {
+            ctx.Reply($"Unknown form '{formStr}'. Valid: Wolf, Bear, Rat, Spider, Toad, Werewolf, Gargoyle.");
+            return false;
+        }
+        return true;
+    }
+
+    [Command("form-grant", description: "Bind a captured ability to a shapeshift FORM (Wolf/Bear/Rat/Spider/Toad/Werewolf/Gargoyle), like a weapon loadout: it auto-loads when you enter that form and reverts to your weapon bar on exit. Usage: .beelz form-grant <form|auto> <slot 1-6> <index OR ability ID>. NOTE: a form has only a FEW ability slots, so your form abilities fill them in slot order (your lowest-numbered grant takes the form's first slot, etc.); extras beyond the form's slot count won't appear. Takes effect next time you enter that form.")]
+    public static void FormGrant(ChatCommandContext ctx, string formStr, string slotToken, int index)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        if (!TryParseSlotToken(slotToken, out int slot, out string slotErr)) { ctx.Reply(slotErr); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        Entity character = ctx.Event.SenderCharacterEntity;
+
+        if (!TryParseForm(ctx, formStr, character, out var form)) return;
+
+        var captured = Core.AbilityRegistry.ListFor(steamId);
+        int selIdx = ResolveCapturedSelector(captured, index, out string selErr);   // v0.76.0: index OR ability ID
+        if (selIdx < 0) { ctx.Reply(selErr); return; }
+        PrefabGUID ability = new(captured[selIdx].AbilityPrefabGuid);
+        string abilityName = ability.GetPrefabName();
+        // A form IS a transform context, so transform-only abilities are allowed here (unlike the
+        // normal-bar grant). Only the admin Enabled kill-switch blocks.
+        if (!Core.AbilityRules.IsEnabled(abilityName, ability._Value))
+        {
+            ctx.Reply($"'{abilityName}' is currently disabled by the server admin.");
+            return;
+        }
+
+        Core.AbilityRegistry.SetFormSlot(steamId, form, slot, ability._Value);
+        Core.Persistence.RequestSave();
+
+        string gateHint = Beelzebub.Config.Settings.Forms_CustomAbilities_Enabled.Value
+            ? $"Enter {form} form (shapeshift wheel) to use it; re-enter to apply changes."
+            : "NOTE: custom form abilities are OFF on this server — an admin must enable Forms_CustomAbilities_Enabled for this to take effect in-form.";
+        ctx.Reply($"{form} slot {slot} = {abilityName}. {gateHint}");
+        Core.Log.LogInfo($"[Beelz] {steamId} form-grant form={form} slot={slot} ability={ability._Value} ({abilityName})");
+        Core.Chat.SendEvent(character,
+            $"[BEELZ:event] type=form-slot-granted form={form} slot={slot} a={ability._Value} an={abilityName}");
+    }
+
+    [Command("form-unslot", description: "Clear a form-specific slot bind. Usage: .beelz form-unslot <form|auto> <slot>.")]
+    public static void FormUnslot(ChatCommandContext ctx, string formStr, int slot)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        Entity character = ctx.Event.SenderCharacterEntity;
+
+        if (!TryParseForm(ctx, formStr, character, out var form)) return;
+
+        Core.AbilityRegistry.ClearFormSlot(steamId, form, slot);
+        Core.Persistence.RequestSave();
+        ctx.Reply($"{form} slot {slot} cleared. Re-enter the form to apply.");
+        Core.Chat.SendEvent(character,
+            $"[BEELZ:event] type=form-slot-cleared form={form} slot={slot}");
     }
 
     [Command("verbosity", description: "Set your in-chat notification level: silent | summary | verbose.")]
@@ -919,9 +1139,12 @@ internal static class BeelzCommands
         var captured = Core.AbilityRegistry.ListFor(steamId);
         var transforms = Core.AbilityRegistry.ListTransforms(steamId);
 
-        // Total abilities = size of curated AbilityMap (admins control the denominator
-        // by editing ability_rules.json). Falls back to 0 if no matrix is loaded.
-        int totalAbilities = Core.AbilityRules?.Current?.AbilityMap?.Count ?? 0;
+        // v0.86.0 (Bug B): total = the full capturable universe (~1400 distinct abilities), so the %
+        // reflects "of every ability in the game" and can never exceed 100% (the curated AbilityMap.Count
+        // was smaller than what a full-devour player holds → the old >100% bug). Fall back to the curated
+        // count only before the universe is computed.
+        int totalAbilities = Beelzebub.Services.BestiaryService.TotalCapturableAbilities();
+        if (totalAbilities <= 0) totalAbilities = Core.AbilityRules?.Current?.AbilityMap?.Count ?? 0;
         // v0.44.0: transformation is Dracula/Morgana-only now, so the honest denominator is
         // the number of real transform forms (BossFormRegistry.Count), not the full curated
         // TransformMap. Other units' kits surface in the Abilities line (via capture / Devour).
@@ -930,7 +1153,7 @@ internal static class BeelzCommands
         int vbloodCaptures = captured.Count(c => c.Source == Beelzebub.Services.CaptureSource.VBlood);
 
         float abilityPct = totalAbilities > 0
-            ? captured.Count * 100f / totalAbilities
+            ? System.Math.Min(100f, captured.Count * 100f / totalAbilities)
             : 0f;
 
         var sb = new System.Text.StringBuilder();

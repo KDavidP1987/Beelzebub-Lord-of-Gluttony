@@ -29,8 +29,14 @@ namespace Beelzebub.Patches;
 /// Bloodcraft also stashes on other surfaces (DominatingPresence/Psychic form,
 /// the recall emote, combat entry). Those are not implemented here — bat form
 /// is the requested case and the only travel-style form that strands summons.
-/// The same pattern extends to wolf/rat/other shapeshifts by adding their group
-/// GUIDs to <see cref="StashOnEnterForms"/> if desired.
+///
+/// v0.86.0 (Bug A): this hook ALSO drives custom-ability form ENTRY now. The form-state buff
+/// never appears in <c>BuffSystem_Spawn_Server.EntityQueries[0]</c> (confirmed in-game: form
+/// entry injected nothing while the exit hook fired every time), so the old BuffSpawnServer
+/// detection silently no-op'd. <c>EnterShapeshiftEvent</c> is the reliable enter signal — we
+/// record a pending loadout-apply (<see cref="ShapeshiftAbilityService.NotifyEnterShapeshift"/>)
+/// and the heartbeat injects once the form buff materializes. This runs independent of the
+/// summons-ally setting (it's gated by <c>Forms_CustomAbilities_Enabled</c> internally).
 /// </summary>
 [HarmonyPatch(typeof(ShapeshiftSystem), nameof(ShapeshiftSystem.OnUpdate))]
 internal static class ShapeshiftSystemPatch
@@ -42,8 +48,6 @@ internal static class ShapeshiftSystemPatch
     public static void OnUpdatePrefix(ShapeshiftSystem __instance)
     {
         if (!Core.IsReady) return;
-        if (!Beelzebub.Config.Settings.Transform_SummonsAreAllies.Value) return;
-        if (Core.AbilityRegistry is null) return;
 
         NativeArray<Entity> entities;
         try
@@ -52,9 +56,11 @@ internal static class ShapeshiftSystemPatch
         }
         catch (Exception ex)
         {
-            Core.Log.LogWarning($"[Beelz SUMMON] ShapeshiftSystem query failed: {ex.Message}");
+            Core.Log.LogWarning($"[Beelz FORM] ShapeshiftSystem query failed: {ex.Message}");
             return;
         }
+
+        bool summonsAllies = Beelzebub.Config.Settings.Transform_SummonsAreAllies.Value;
 
         try
         {
@@ -63,12 +69,21 @@ internal static class ShapeshiftSystemPatch
                 Entity e = entities[i];
                 if (!e.TryGetComponent<FromCharacter>(out var fromChar)) continue;
                 if (!e.TryGetComponent<EnterShapeshiftEvent>(out var evt)) continue;
-                if (evt.Shapeshift._Value != BatForm._Value) continue;
 
                 Entity player = fromChar.Character;
                 if (!player.Exists() || !player.IsPlayer()) continue;
                 ulong steamId = player.GetSteamId();
                 if (steamId == 0) continue;
+
+                // v0.86.0 (Bug A): record a pending custom-ability form-loadout apply on ANY shapeshift
+                // entry. Gated internally by Forms_CustomAbilities_Enabled; the injection happens in the
+                // heartbeat once the form buff appears. Independent of the summons-ally setting.
+                try { Services.ShapeshiftAbilityService.NotifyEnterShapeshift(player); }
+                catch (Exception ex) { Core.Log.LogWarning($"[Beelz FORM] NotifyEnterShapeshift failed for {steamId}: {ex.Message}"); }
+
+                // --- Bat-form summon stash (requires the summons-ally system) ---
+                if (!summonsAllies || Core.AbilityRegistry is null) continue;
+                if (evt.Shapeshift._Value != BatForm._Value) continue;
 
                 var active = Core.AbilityRegistry.GetSummonOwner(steamId, createIfMissing: false);
                 if (active == null) continue;

@@ -40,6 +40,7 @@ internal static class DealDamageSystemPatch
     public static void OnUpdatePrefix(DealDamageSystem __instance)
     {
         if (!Core.IsReady) return;
+        Services.Heartbeat.Pulse();   // v0.81.0: drive periodic ticks during combat (throttled)
 
         // v0.23.1: this patch now serves two purposes:
         //   (a) telemetry (existing W5 observe path — verbose only)

@@ -140,6 +140,7 @@ internal static class AbilityCastStartedSystemPatch
     public static void OnUpdatePrefix(AbilityCastStarted_SetupAbilityTargetSystem_Shared __instance)
     {
         if (!Core.IsReady) return;
+        Services.Heartbeat.Pulse();   // v0.81.0: drive periodic ticks on every cast (throttled)
 
         NativeArray<AbilityCastStartedEvent> events;
         try
@@ -163,10 +164,20 @@ internal static class AbilityCastStartedSystemPatch
                 try { Services.GrantPowerScalingService.OnGrantedCast(evt.Character, evt.AbilityGroup.GetPrefabGuid()); }
                 catch (Exception ex) { Core.Log.LogWarning($"[Beelz] grant power-scale failed: {ex.Message}"); }
 
+                // v0.71.0: enforce a configured cooldown on a granted ability's live slot state
+                // (the prefab cooldown edit doesn't reach granted casts). Records here; applied on tick.
+                try { Services.AbilityCooldownEnforcer.OnCast(evt.Character, evt.AbilityGroup.GetPrefabGuid()); }
+                catch (Exception ex) { Core.Log.LogWarning($"[Beelz] cooldown-enforce record failed: {ex.Message}"); }
+
                 // v0.52.0: attribute an untransformed CAPTURED-ability cast so the spawn patches
                 // can team-fixup its chain entities (untransformed chain casting).
                 try { RecordGrantCastIfCaptured(evt); }
                 catch (Exception ex) { Core.Log.LogWarning($"[Beelz] grant-cast attribution failed: {ex.Message}"); }
+
+                // v0.91.0: selective form exit — if a player in a custom shapeshift form casts a NON-form,
+                // non-assigned ability, exit the form (the form holds for assigned + native abilities).
+                try { Services.ShapeshiftAbilityService.HandleFormCastExit(evt.Character, evt.AbilityGroup.GetPrefabGuid()._Value); }
+                catch (Exception ex) { Core.Log.LogWarning($"[Beelz FORM] HandleFormCastExit failed: {ex.Message}"); }
 
                 // Summon-ally cast handling (transform-only) stays gated by its config.
                 if (summonsAllies)
@@ -290,7 +301,8 @@ internal static class AbilityCastStartedSystemPatch
         // each group is one cast). Refuses when N uses of the ability are still
         // alive. Different from v0.23.0-5 which counted live ENTITIES.
         int liveCount = SummonAllyService.LiveCastCount(active, abilityPrefab._Value);
-        int cap = Beelzebub.Config.Settings.Transform_MaxStacksPerSummonAbility.Value;
+        // v0.79.0: per-ability summon cap overrides the global default (precedence per-ability > global).
+        int cap = Core.AbilityRules.ResolveSummonCap(abilityName, Beelzebub.Config.Settings.Transform_MaxStacksPerSummonAbility.Value);
         if (cap > 0 && liveCount >= cap)
         {
             Core.Log.LogInfo($"[Beelz SUMMON] {steamId} cast {abilityName} REFUSED — at use cap {liveCount}/{cap}. Wait for a previous use's minions to fully die.");

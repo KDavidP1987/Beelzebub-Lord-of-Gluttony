@@ -44,6 +44,14 @@ internal static class ServerBootstrapSystemPatch
             ulong steamId = user.PlatformId;
             if (steamId == 0) return;
 
+            // v0.83.0 (#10): session-based pity resets on logout.
+            if (Beelzebub.Config.Settings.Capture_PitySessionBased.Value && Core.AbilityRegistry.ClearPity(steamId))
+            {
+                Core.Persistence.RequestSave();
+                if (Beelzebub.Config.Settings.VerboseLogging.Value)
+                    Core.Log.LogInfo($"[Beelz] session-pity: cleared accumulated pity for {steamId} on disconnect.");
+            }
+
             var active = Core.AbilityRegistry.GetActiveTransform(steamId);
             if (active == null)
             {

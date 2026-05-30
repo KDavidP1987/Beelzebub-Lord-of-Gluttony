@@ -49,6 +49,22 @@ internal static class ReplaceAbilityOnSlotSystemPatch
 
     static void ProcessEvent(Entity entity)
     {
+        if (!Core.EntityManager.HasBuffer<ReplaceAbilityOnSlotBuff>(entity)) return;
+
+        // v0.89.0 (forms render fix): if this modification-source entity is a shapeshift FORM buff
+        // resolving its slot bar right now, inject the player's per-form loadout into its buffer at THIS
+        // moment — the same in-resolution timing the weapon path uses. The v0.86 heartbeat path set the
+        // same data but AFTER V Rising had already resolved + synced the form bar to the client, so the
+        // abilities never appeared. Here the system resolves our edit immediately. (Uses Buff.Target for
+        // the player — more reliable than EntityOwner on a form buff.)
+        int prefabId = entity.GetPrefabGuid()._Value;
+        if (Services.ShapeshiftAbilityService.IsSupportedForm(prefabId, entity.GetPrefabGuid().GetPrefabName())
+            && entity.TryGetComponent<Buff>(out var formBuff) && formBuff.Target.IsPlayer())
+        {
+            Services.ShapeshiftAbilityService.ApplyFormLoadout(entity, formBuff.Target, prefabId, triggerUpdate: false);
+            return;
+        }
+
         if (!entity.TryGetComponent<EntityOwner>(out var entityOwner)) return;
         Entity owner = entityOwner.Owner;
         if (!owner.IsPlayer()) return;
@@ -57,7 +73,6 @@ internal static class ReplaceAbilityOnSlotSystemPatch
         if (steamId == 0) return;
 
         if (!Core.EntityManager.HasBuffer<ReplaceAbilityOnSlotBuff>(entity)) return;
-        var buffer = Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(entity);
 
         // Z1 (v0.14.0): the active-transform injection branch is gone. Transforms now
         // own their slot overrides via a dedicated carrier buff (TransformBuffService).
@@ -70,10 +85,11 @@ internal static class ReplaceAbilityOnSlotSystemPatch
         // re-flicker on the bar each weapon swap.
         if (Core.AbilityRegistry.GetActiveTransform(steamId) is not null) return;
 
-        // W2: no active transform. Inject Beelzebub's saved grants per slot based on
-        // weapon-family compatibility — universal/Magic abilities fire for any weapon,
-        // weapon-family-tagged abilities fire only when wielding that weapon. Replaces
-        // the old "unarmed-only" gate.
+        // W2: no active transform. The equip-buff event entity (`entity`) is the player's
+        // EquipBuff_Weapon_* — both the modification source and the carrier of the
+        // ReplaceAbilityOnSlotBuff buffer. Inject saved grants per slot by weapon-family
+        // compatibility (universal/Magic fire on any weapon; weapon-tagged only on that weapon),
+        // OR auto-yield a slot the player has re-claimed via the in-game spellbook (v0.56.0).
         PrefabGUID eventPrefab = entity.GetPrefabGuid();
         string eventName = eventPrefab.GetPrefabName() ?? "";
         var weapon = Beelzebub.Services.SlotApply.DetectFamily(eventName);
@@ -83,30 +99,8 @@ internal static class ReplaceAbilityOnSlotSystemPatch
             return;
         }
 
-        // W3: resolved slot map = universal bucket + weapon-specific overrides for the
-        // currently-equipped weapon family, each tagged with its origin (v0.49.0).
-        var slots = Core.AbilityRegistry.GetSlotsResolvedWithOrigin(steamId, weapon);
-        if (slots.Count == 0) return;
-
-        foreach (var (slot, entry) in slots)
-        {
-            // v0.49.0: an EXPLICIT weapon-bucket bind (the player put this on, say, the Reaper
-            // bar) is honored regardless of the ability's name-derived family — only the admin
-            // kill-switch / transform-only reservation can block it. Universal binds keep the
-            // family-compatibility filter (a sword spell shouldn't auto-fire on a crossbow).
-            bool ok = entry.weaponSpecific
-                ? Beelzebub.Services.SlotApply.IsGrantUsable(entry.abilityGuid)
-                : Beelzebub.Services.SlotApply.IsGrantCompatible(entry.abilityGuid, weapon);
-            if (!ok) continue;
-            buffer.Add(new ReplaceAbilityOnSlotBuff
-            {
-                Slot = slot,
-                NewGroupId = new PrefabGUID(entry.abilityGuid),
-                CopyCooldown = true,
-                Priority = 0,
-            });
-            if (Beelzebub.Config.Settings.VerboseLogging.Value)
-                Core.Log.LogInfo($"[Beelz] inject slot={slot} ability={new PrefabGUID(entry.abilityGuid).GetPrefabName()} weapon={weapon} explicit={entry.weaponSpecific} for {steamId}");
-        }
+        var buffer = Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(entity);
+        // owner = the player character entity; entity = the equip-buff modification source.
+        Beelzebub.Services.SlotApply.ResolveAndInjectGrants(owner, entity, weapon, buffer);
     }
 }

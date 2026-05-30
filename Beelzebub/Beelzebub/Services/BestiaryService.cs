@@ -146,4 +146,47 @@ internal static class BestiaryService
             AllAbilityGuids = all.ToList(),
         };
     }
+
+    // v0.86.0 (Bug B): server-wide count of DISTINCT capturable abilities in the game — the honest
+    // denominator for collection %. The old denominator was the curated AbilityMap.Count (~453), but
+    // captures aren't gated on the curated map (they use AbilityFilter.ShouldCapture), so a player who
+    // devoured full kits could hold MORE distinct abilities (605) than the curated count → 133%. This
+    // mirrors ApiCommands.BuildCatalogSnapshot's "full capturable universe": every AB_*_AbilityGroup/_Group
+    // that's curated OR passes ShouldCapture. Counted by GUID so it's directly comparable to
+    // AbilityRegistry.CapturedCount (also distinct GUIDs) → captured ⊆ universe, so % ≤ 100.
+    static int _totalCapturableCache = -1;
+
+    /// <summary>
+    /// Total distinct capturable ability GUIDs across the whole catalog (cached after first build —
+    /// stable once prefabs are loaded; call <see cref="InvalidateTotals"/> after a rules reload). Returns
+    /// 0 until prefabs are available, so callers should fall back to the curated count when it's 0.
+    /// </summary>
+    public static int TotalCapturableAbilities()
+    {
+        if (_totalCapturableCache > 0) return _totalCapturableCache;
+        if (!Core.IsReady || Core.PrefabNames == null || Core.AbilityFilter == null) return 0;
+
+        var map = Core.AbilityRules?.Current?.AbilityMap;
+        var seen = new HashSet<int>();
+        foreach (var (guid, name) in Core.PrefabNames)
+        {
+            if (string.IsNullOrEmpty(name)) continue;
+            if (!name.StartsWith("AB_", StringComparison.OrdinalIgnoreCase)) continue;
+            if (!name.EndsWith("_AbilityGroup", StringComparison.OrdinalIgnoreCase)
+                && !name.EndsWith("_Group", StringComparison.OrdinalIgnoreCase)) continue;
+
+            bool curated = map != null && map.ContainsKey(name);
+            bool capturable = Core.AbilityFilter.ShouldCapture(name, guid, out _);
+            if (!curated && !capturable) continue;
+
+            seen.Add(guid);
+        }
+
+        if (seen.Count > 0) _totalCapturableCache = seen.Count;
+        return seen.Count;
+    }
+
+    /// <summary>v0.86.0: drop the cached capturable total (call after an admin rules reload, since
+    /// deny/allow-pattern changes can shift what passes ShouldCapture).</summary>
+    public static void InvalidateTotals() => _totalCapturableCache = -1;
 }

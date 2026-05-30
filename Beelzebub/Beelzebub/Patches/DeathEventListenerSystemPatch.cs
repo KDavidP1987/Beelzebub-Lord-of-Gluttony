@@ -25,19 +25,20 @@ internal static class DeathEventListenerSystemPatch
         public List<(string unit, int learned)> Devoured = new();
     }
 
+    // v0.84.0 (#7): players who've already been congratulated for completing the collection this session
+    // (avoids re-firing the milestone every subsequent capture). Runtime-only.
+    static readonly HashSet<ulong> _completionAnnounced = new();
+
     [HarmonyPostfix]
     public static void OnUpdatePostfix(DeathEventListenerSystem __instance)
     {
         if (!Core.IsReady) Core.TryInitialize(nameof(DeathEventListenerSystemPatch));
         if (!Core.IsReady) return;
 
-        // Phase 5: per-frame tick for auto-revert of Timed transforms.
-        try { Core.Transforms.Tick(); }
-        catch (System.Exception ex) { Core.Log.LogError($"[Beelz] TransformService.Tick failed: {ex}"); }
-
-        // Phase B1: drain any pending state save (debounced).
-        try { Core.Persistence.MaybeSave(); }
-        catch (System.Exception ex) { Core.Log.LogError($"[Beelz] Persistence.MaybeSave failed: {ex}"); }
+        // v0.81.0: periodic ticks (timed-transform revert, summon-lifespan sweep, cooldown enforcer,
+        // debounced save) now run via the throttled Heartbeat — also pulsed from cast/buff/damage systems
+        // so they fire during play even when nothing is dying (death events alone were too sparse).
+        Services.Heartbeat.Pulse();
 
         if (!Settings.CaptureOnKill.Value) return;
 
@@ -230,7 +231,7 @@ internal static class DeathEventListenerSystemPatch
             return;
         }
 
-        float devourChance = Settings.DropChance_Transform_Regular.Value * died.ResolveTierMultiplier();
+        float devourChance = Settings.DropChance_Devour_Regular.Value * died.ResolveTierMultiplier();
         if (devourChance > 0f)
         {
             // v0.38.0 pity carries over: the same bad-luck-protection bucket now feeds the Devour roll.
@@ -250,7 +251,7 @@ internal static class DeathEventListenerSystemPatch
             else
             {
                 Core.AbilityRegistry.BumpPity(steamId, CaptureSource.Regular, PityKind.Transform,
-                    Settings.Capture_PityIncrementPerKill.Value, Settings.Capture_PityMaxBonus.Value);
+                    Settings.Capture_PityIncrement_Devour.Value, Settings.Capture_PityMax_Devour.Value);
             }
         }
     }
@@ -270,10 +271,40 @@ internal static class DeathEventListenerSystemPatch
                     ? BuildSingleUnitSummary(agg)
                     : BuildMultiUnitSummary(agg);
                 Core.Chat.Send(agg.Character, Verbosity.Summary, summary);
+
+                // v0.84.0 (#7): collection-complete milestone — when a new capture brings the player up to
+                // the full capturable catalog, fire a one-time celebratory message + BCH event (the server-wide
+                // "you've devoured everything" moment). Once per session per player.
+                // v0.86.0 (Bug B): total = the full capturable universe (~1400), not the curated
+                // AbilityMap.Count (~453) which a full-devour player can exceed — that made the milestone
+                // fire FAR too early. Now 100% genuinely means "collected everything".
+                int total = Beelzebub.Services.BestiaryService.TotalCapturableAbilities();
+                if (total > 0 && Core.AbilityRegistry.CapturedCount(steamId) >= total && _completionAnnounced.Add(steamId))
+                {
+                    Core.Chat.Send(agg.Character, Verbosity.Summary,
+                        "🏆 COLLECTION COMPLETE! You've devoured the bestiary — every available ability is yours. See where you rank with .beelz top!");
+                    Core.Chat.SendEvent(agg.Character,
+                        $"[BEELZ:event] type=collection-complete count={Core.AbilityRegistry.CapturedCount(steamId)} total={total}");
+                    Core.Log.LogInfo($"[Beelz] {steamId} COMPLETED their ability collection ({Core.AbilityRegistry.CapturedCount(steamId)}/{total}).");
+
+                    // v0.88.0: server-wide celebratory broadcast (config-gated, default ON).
+                    string completerName = "A vampire";
+                    if (agg.Character.TryGetComponent<ProjectM.PlayerCharacter>(out var cpc)
+                        && cpc.UserEntity.TryGetComponent<ProjectM.Network.User>(out var cu))
+                    {
+                        string cn = cu.CharacterName.ToString();
+                        if (!string.IsNullOrEmpty(cn)) completerName = cn;
+                    }
+                    try { Beelzebub.Services.BroadcastService.OnCollectionComplete(completerName); }
+                    catch (Exception bex) { Core.Log.LogWarning($"[Beelz] collection-complete broadcast failed: {bex.Message}"); }
+                }
             }
 
+            bool silenceOwned = Core.AbilityRegistry.GetSilenceOwned(steamId);   // v0.83.0 (#6)
             foreach (var (unit, learned) in agg.Devoured)
             {
+                // v0.83.0 (#6): suppress the "you already knew all" line for players who opted into silence.
+                if (learned == 0 && silenceOwned) continue;
                 Core.Chat.Send(agg.Character, Verbosity.Summary,
                     learned > 0
                         ? $"⭐ DEVOURED {unit} — learned all {learned} of its abilities at once! Slot them with .beelz grant."

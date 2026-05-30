@@ -64,6 +64,7 @@ internal sealed class PersistenceService
 
             int slotCount = 0;
             int weaponSlotCount = 0;
+            int formSlotCount = 0;
             int verbositySet = 0;
             int transformCount = 0;
             foreach (var (key, player) in dto.Players)
@@ -98,6 +99,27 @@ internal sealed class PersistenceService
                     if (perWeapon.Count > 0)
                     {
                         registry.LoadWeaponSlotsSnapshot(steamId, perWeapon);
+                    }
+                }
+                // v0.59.0 / state.json v8: per-FORM slot bindings (absent in older files → skipped).
+                if (player.FormSlots is not null)
+                {
+                    var perForm = new Dictionary<ShapeshiftForm, Dictionary<int, int>>();
+                    foreach (var (formStr, slotMap) in player.FormSlots)
+                    {
+                        if (!Enum.TryParse<ShapeshiftForm>(formStr, ignoreCase: true, out var form)
+                            || form == ShapeshiftForm.None) continue;
+                        var slots = new Dictionary<int, int>();
+                        foreach (var (slotStr, abilityGuid) in slotMap)
+                        {
+                            if (int.TryParse(slotStr, out int slot)) slots[slot] = abilityGuid;
+                        }
+                        if (slots.Count > 0) perForm[form] = slots;
+                        formSlotCount += slots.Count;
+                    }
+                    if (perForm.Count > 0)
+                    {
+                        registry.LoadFormSlotsSnapshot(steamId, perForm);
                     }
                 }
                 if (player.Verbosity.HasValue)
@@ -144,7 +166,7 @@ internal sealed class PersistenceService
                 }
             }
 
-            Core.Log.LogInfo($"Loaded {registry.PlayerCount} player(s), {slotCount} universal slot(s), {weaponSlotCount} weapon-specific slot(s), {verbositySet} verbosity, {transformCount} transform unlock(s) from {StateFilePath}.");
+            Core.Log.LogInfo($"Loaded {registry.PlayerCount} player(s), {slotCount} universal slot(s), {weaponSlotCount} weapon-specific slot(s), {formSlotCount} form-specific slot(s), {verbositySet} verbosity, {transformCount} transform unlock(s) from {StateFilePath}.");
         }
         catch (Exception e)
         {
@@ -163,6 +185,7 @@ internal sealed class PersistenceService
                 .ToDictionary(kv => kv.Key, kv => kv.Value);
             var presetsSnapshot = Core.AbilityRegistry.PresetsSnapshot();
             var weaponSlotsSnapshot = Core.AbilityRegistry.WeaponSlotsSnapshot();
+            var formSlotsSnapshot = Core.AbilityRegistry.FormSlotsSnapshot();
             var hotkeysSnapshot = Core.AbilityRegistry.HotkeysSnapshot();
             var pitySnapshot = Core.AbilityRegistry.PitySnapshot().ToDictionary(kv => kv.Key, kv => kv.Value);
 
@@ -172,6 +195,7 @@ internal sealed class PersistenceService
             foreach (var sid in transformSnapshot.Keys) playerIds.Add(sid);
             foreach (var sid in presetsSnapshot.Keys) playerIds.Add(sid);
             foreach (var sid in weaponSlotsSnapshot.Keys) playerIds.Add(sid);
+            foreach (var sid in formSlotsSnapshot.Keys) playerIds.Add(sid);
             foreach (var sid in hotkeysSnapshot.Keys) playerIds.Add(sid);
             foreach (var sid in pitySnapshot.Keys) playerIds.Add(sid);
 
@@ -202,6 +226,16 @@ internal sealed class PersistenceService
                         weaponSlotsForPlayer[weapon.ToString()] = slotMap.ToDictionary(s => s.Key.ToString(), s => s.Value);
                     }
                 }
+                // v0.59.0: serialize per-form slot bindings. Outer key = ShapeshiftForm enum name.
+                Dictionary<string, Dictionary<string, int>> formSlotsForPlayer = null;
+                if (formSlotsSnapshot.TryGetValue(steamId, out var formSlotsRaw) && formSlotsRaw.Count > 0)
+                {
+                    formSlotsForPlayer = new Dictionary<string, Dictionary<string, int>>();
+                    foreach (var (form, slotMap) in formSlotsRaw)
+                    {
+                        formSlotsForPlayer[form.ToString()] = slotMap.ToDictionary(s => s.Key.ToString(), s => s.Value);
+                    }
+                }
                 // W4: named hotkeys, name → ability guid.
                 Dictionary<string, int> hotkeysForPlayer = null;
                 if (hotkeysSnapshot.TryGetValue(steamId, out var hotkeysRaw) && hotkeysRaw.Count > 0)
@@ -219,6 +253,7 @@ internal sealed class PersistenceService
                     }).ToList(),
                     Slots = slots.ToDictionary(s => s.Key.ToString(), s => s.Value),
                     WeaponSlots = weaponSlotsForPlayer,
+                    FormSlots = formSlotsForPlayer,
                     Verbosity = allVerbosity.ContainsKey(steamId) ? (byte?)verbosity : null,
                     EmitApiEvents = allEmitEvents.TryGetValue(steamId, out var e) && e ? true : (bool?)null,
                     Transforms = transforms?.Select(t => new TransformDto
@@ -234,7 +269,7 @@ internal sealed class PersistenceService
 
             var dto = new StateDto
             {
-                Version = 7,
+                Version = 8,
                 Players = players,
             };
 
@@ -265,6 +300,9 @@ internal sealed class PersistenceService
         // W3 / v5: weapon-family-specific slot bindings.
         // Outer key = WeaponFamily enum name; inner key = slot stringified (JSON).
         public Dictionary<string, Dictionary<string, int>> WeaponSlots { get; set; }
+        // v0.59.0 / v8: per-FORM slot bindings. Outer key = ShapeshiftForm enum name; inner = slot→guid.
+        // Absent in older state files (≤ v7) → loader skips it (backward-compatible).
+        public Dictionary<string, Dictionary<string, int>> FormSlots { get; set; }
         public byte? Verbosity { get; set; }
         public bool? EmitApiEvents { get; set; }
         public List<TransformDto> Transforms { get; set; }

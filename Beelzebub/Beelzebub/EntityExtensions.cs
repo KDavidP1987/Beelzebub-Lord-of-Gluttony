@@ -187,6 +187,31 @@ internal static class EntityExtensions
     }
 
     /// <summary>
+    /// v0.83.0 (#8): enumerate every known user (online + persisted offline) with their steamId, character
+    /// name, and admin flag — for the collection leaderboard (which excludes admins).
+    /// </summary>
+    public static System.Collections.Generic.List<(ulong steamId, string name, bool isAdmin)> AllUsers()
+    {
+        var result = new System.Collections.Generic.List<(ulong, string, bool)>();
+        if (Core.EntityManager.World is null) return result;
+        var query = Core.EntityManager.CreateEntityQuery(Unity.Entities.ComponentType.ReadOnly<ProjectM.Network.User>());
+        var users = query.ToEntityArray(Unity.Collections.Allocator.Temp);
+        try
+        {
+            for (int i = 0; i < users.Length; i++)
+            {
+                if (!users[i].TryGetComponent<ProjectM.Network.User>(out var u)) continue;
+                ulong sid = u.PlatformId;
+                if (sid == 0) continue;
+                string name = u.CharacterName.ToString();
+                result.Add((sid, string.IsNullOrEmpty(name) ? sid.ToString() : name, u.IsAdmin));
+            }
+        }
+        finally { users.Dispose(); }
+        return result;
+    }
+
+    /// <summary>
     /// C3: classify a killed unit's UnitLevel into a tier multiplier from settings.
     /// Returns 1.0 if the unit has no UnitLevel component (no effect).
     /// </summary>

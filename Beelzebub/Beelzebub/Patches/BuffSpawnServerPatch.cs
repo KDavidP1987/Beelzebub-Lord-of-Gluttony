@@ -141,6 +141,7 @@ internal static class BuffSpawnServerPatch
     public static void OnUpdatePrefix(BuffSystem_Spawn_Server __instance)
     {
         if (!Core.IsReady) return;
+        Services.Heartbeat.Pulse();   // v0.81.0: drive periodic ticks on buff spawns (throttled)
 
         // v0.43.1 CRASH FIX / v0.43.2 revert-orphan guard: when a form buff appears in the
         // spawn query, either ENRICH it (pending async form like Morgana's SnakePhase) or
@@ -309,11 +310,12 @@ internal static class BuffSpawnServerPatch
                         Core.Log.LogError($"[Beelz SUMMON] HandleMount failed: {ex}");
                     }
                 }
-                else if (Services.ShapeshiftAbilityService.IsTestForm(prefab._Value))
+                else if (Services.ShapeshiftAbilityService.IsSupportedForm(prefab._Value, prefab.GetPrefabName()))
                 {
-                    // v0.48.0: player entered a vanilla shapeshift form (Wolf/Bear test) via the
-                    // in-game wheel → inject their loadout onto the form bar + strip the
-                    // break-on-cast trigger so the form holds while casting. Gated by config.
+                    // v0.48.0 / v0.59.0: player entered a vanilla shapeshift form (Wolf/Bear/Rat/
+                    // Spider/Toad/Werewolf/Gargoyle) via the in-game wheel → inject their per-form
+                    // loadout onto the form bar + strip the break-on-cast trigger so the form holds
+                    // while casting. Gated by Forms_CustomAbilities_Enabled (default off).
                     try { Services.ShapeshiftAbilityService.ApplyFormLoadout(e, target, prefab._Value); }
                     catch (Exception ex)
                     {

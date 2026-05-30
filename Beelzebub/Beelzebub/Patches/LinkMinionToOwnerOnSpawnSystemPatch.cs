@@ -146,12 +146,33 @@ internal static class LinkMinionToOwnerOnSpawnSystemPatch
         // groups don't exist) still get caught when populated counts reach cap.
         if (abilityGuid.HasValue)
         {
-            int liveCount = SummonAllyService.LivePopulatedCastCount(active, abilityGuid.Value);
-            int cap = Beelzebub.Config.Settings.Transform_MaxStacksPerSummonAbility.Value;
-            if (cap > 0 && liveCount >= cap)
+            // v0.80.0: resolve the canonical AbilityMap key (Core.PrefabNames, same as the admin command)
+            // so per-ability summoncap/summonunits actually match the entry.
+            string abName = Beelzebub.Services.AbilityRules.ResolveAbilityKey(abilityGuid.Value.ToString())
+                            ?? new Stunlock.Core.PrefabGUID(abilityGuid.Value).GetPrefabName();
+
+            // v0.80.0 — TWO SEPARATE LIMITS (whichever is hit first):
+            //  (1) summoncap = concurrent USES. This is enforced at CAST-START (refuses the over-cap cast).
+            //      Here we keep only a STRICT backstop: a populated-group count STRICTLY ABOVE cap means an
+            //      extra group slipped past (a refused cast that somehow opened one) → drop. Using `>` not
+            //      `>=` is the fix for "summoncap 1 on a 10-skeleton horde gave only 1 skeleton" — the old
+            //      `>=` destroyed units 2..N of the SAME admitted cast once its group became populated.
+            int cap = Core.AbilityRules.ResolveSummonCap(abName, Beelzebub.Config.Settings.Transform_MaxStacksPerSummonAbility.Value);
+            if (cap > 0 && SummonAllyService.LivePopulatedCastCount(active, abilityGuid.Value) > cap)
             {
                 if (Beelzebub.Config.Settings.VerboseLogging.Value)
-                    Core.Log.LogInfo($"[Beelz SUMMON] over-cap natural-chain spawn {minion} for player {steamId} ability={new Stunlock.Core.PrefabGUID(abilityGuid.Value).GetPrefabName()} — destroying immediately (populated uses {liveCount}/{cap}).");
+                    Core.Log.LogInfo($"[Beelz SUMMON] over-USE-cap spawn {minion} ability={abName} for {steamId} — dropping (groups exceed cap {cap}).");
+                SummonAllyService.EnqueueAdminDespawn(minion);
+                SummonAllyService.DrainAdminQueueImmediate();
+                return;
+            }
+            //  (2) summonunits = max UNITS this single cast may produce. Drop units beyond N in this cast's
+            //      group (lets an admin shrink a 10-skeleton horde to e.g. 3, independent of the use cap).
+            int unitsPerCast = Core.AbilityRules.ResolveSummonUnitsPerCast(abName, 0);
+            if (unitsPerCast > 0 && SummonAllyService.CurrentGroupUnitCount(active, abilityGuid.Value) >= unitsPerCast)
+            {
+                if (Beelzebub.Config.Settings.VerboseLogging.Value)
+                    Core.Log.LogInfo($"[Beelz SUMMON] over-UNITS-per-cast spawn {minion} ability={abName} for {steamId} — dropping (cast already has {unitsPerCast} unit(s)).");
                 SummonAllyService.EnqueueAdminDespawn(minion);
                 SummonAllyService.DrainAdminQueueImmediate();
                 return;

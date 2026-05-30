@@ -157,8 +157,23 @@ internal sealed class AbilityRegistry
     // W3: weapon-family-specific slot bindings: steamId → weapon → slot → abilityGuid.
     // Win over universal bindings when the player wields that weapon family.
     readonly ConcurrentDictionary<ulong, ConcurrentDictionary<WeaponFamily, ConcurrentDictionary<int, int>>> _weaponSlots = new();
+    // v0.56.0 "mix and match": per-(weapon,slot) record of the VANILLA base ability that a
+    // Beelzebub override is currently masking. Captured lazily the first time we inject an
+    // override over a slot; the slot injector compares it to the live base each resolve and,
+    // when the player re-picks a DIFFERENT ability in the in-game spellbook (the base changes
+    // out from under our override), auto-yields the slot back to vanilla. Runtime-only — never
+    // persisted; re-captured each session. Keyed by the CURRENTLY-wielded weapon so a universal
+    // bind on a weapon-skill slot (whose base legitimately differs per weapon) never false-yields.
+    readonly ConcurrentDictionary<ulong, ConcurrentDictionary<(WeaponFamily weapon, int slot), int>> _slotBaseline = new();
+    // v0.59.0: per-FORM slot bindings: steamId → form → slot → abilityGuid. Parallel to
+    // _weaponSlots; consumed by ShapeshiftAbilityService.ApplyFormLoadout when a player enters a
+    // vanilla shapeshift form (Wolf/Bear/Rat/Spider/Toad/Werewolf/Gargoyle). Persisted by NAME.
+    readonly ConcurrentDictionary<ulong, ConcurrentDictionary<ShapeshiftForm, ConcurrentDictionary<int, int>>> _formSlots = new();
     readonly ConcurrentDictionary<ulong, Verbosity> _verbosity = new();
     readonly ConcurrentDictionary<ulong, bool> _emitApiEvents = new();
+    // v0.83.0 (#6): per-player toggle to SILENCE the "you already knew all of its abilities" devour
+    // chat line (some players find it noisy once their collection is full). Runtime-only preference.
+    readonly ConcurrentDictionary<ulong, bool> _silenceOwned = new();
 
     // C1: per-player slot-loadout presets, keyed by case-sensitive name.
     readonly ConcurrentDictionary<ulong, ConcurrentDictionary<string, ConcurrentDictionary<int, int>>> _presets = new();
@@ -200,6 +215,27 @@ internal sealed class AbilityRegistry
     }
 
     public Dictionary<ulong, bool> AllEmitApiEvents() => new(_emitApiEvents);
+
+    // v0.83.0 (#6): silence-when-owned preference.
+    public bool GetSilenceOwned(ulong steamId) => _silenceOwned.TryGetValue(steamId, out var b) && b;
+    public void SetSilenceOwned(ulong steamId, bool value)
+    {
+        if (value) _silenceOwned[steamId] = true;
+        else _silenceOwned.TryRemove(steamId, out _);
+    }
+
+    // v0.83.0 (#10): clear ALL pity buckets for a player (session-based-pity reset on disconnect).
+    public bool ClearPity(ulong steamId) => _pity.TryRemove(steamId, out _);
+
+    // v0.83.0 (#8): per-player captured-ability count (distinct ability groups), for the leaderboard.
+    public int CapturedCount(ulong steamId)
+    {
+        if (!_data.TryGetValue(steamId, out var byUnit)) return 0;
+        var seen = new HashSet<int>();
+        foreach (var abilities in byUnit.Values)
+            foreach (var abilityGuid in abilities.Keys) seen.Add(abilityGuid);
+        return seen.Count;
+    }
 
     // --- Slot loadout presets (C1) ---
     public void SavePreset(ulong steamId, string name)
@@ -338,6 +374,26 @@ internal sealed class AbilityRegistry
     }
 
     /// <summary>
+    /// v0.61.0: the player-facing spell-slot range Beelzebub binds to (matches every
+    /// grant command's <c>1-6</c> validation: 1=primary, 3=Q/shift, 5=spell1, 6=spell2).
+    /// Used to reject an out-of-range slot at the write boundary so a corrupt value can
+    /// never be persisted and later fed to the engine's ability-slot system (which would
+    /// IndexOutOfRange inside a Burst job — uncatchable). See also the live-buffer guard
+    /// in <see cref="SlotApply.ResolveAndInjectGrants"/>.
+    /// </summary>
+    public const int MinSlot = 1;
+    public const int MaxSlot = 6;
+    // v0.91.0: V Rising's ability bar also has a primary-attack slot (left-click, engine slot 0) and an
+    // ultimate slot (T key, engine slot 7) — like Bloodcraft's ExoForm. These are bindable too (the wolf
+    // form confirmed slot 7 = ultimate). They're outside the 1-6 spell range but valid grant targets.
+    public const int PrimarySlot = 0;
+    public const int UltimateSlot = 7;
+
+    /// <summary>True if <paramref name="slot"/> is a bindable bar slot: the 1-6 spell range, the primary
+    /// attack (0), or the ultimate (7).</summary>
+    public static bool IsValidSlot(int slot) => (slot >= MinSlot && slot <= MaxSlot) || slot == PrimarySlot || slot == UltimateSlot;
+
+    /// <summary>
     /// Universal slot bind. Backward-compatible overload — equivalent to
     /// SetSlot(steamId, WeaponFamily.None, slot, abilityGuid).
     /// </summary>
@@ -352,6 +408,11 @@ internal sealed class AbilityRegistry
     /// </summary>
     public void SetSlot(ulong steamId, WeaponFamily weapon, int slot, int abilityGuid)
     {
+        if (!IsValidSlot(slot))
+        {
+            Core.Log.LogWarning($"[Beelz] SetSlot ignored out-of-range slot={slot} (valid {MinSlot}-{MaxSlot}) steamId={steamId} weapon={weapon} ability={abilityGuid}.");
+            return;
+        }
         if (IsUniversalBucket(weapon))
         {
             var slots = _slotAssignments.GetOrAdd(steamId, _ => new ConcurrentDictionary<int, int>());
@@ -379,6 +440,75 @@ internal sealed class AbilityRegistry
         {
             slots.TryRemove(slot, out _);
         }
+        // The masked-vanilla baseline only matters while the bind exists — drop it so a later
+        // re-bind re-captures a fresh baseline rather than yielding against a stale one.
+        ClearSlotBaseline(steamId, slot);
+    }
+
+    /// <summary>
+    /// v0.63.0 (#1): drop a slot's bind from EVERY weapon bucket — the universal bucket AND every
+    /// weapon family — so a vanilla spellbook re-pick on that slot wins across all weapon groups
+    /// (the auto-yield "applied across all groups" behavior). Form buckets are intentionally NOT
+    /// touched (forms are a separate context entered via the shapeshift wheel). Returns the number
+    /// of bucket binds removed. Does NOT clear the baseline (the caller owns that).
+    /// </summary>
+    public int ClearSlotAllBuckets(ulong steamId, int slot)
+    {
+        int removed = 0;
+        if (_slotAssignments.TryGetValue(steamId, out var uni) && uni.TryRemove(slot, out _)) removed++;
+        if (_weaponSlots.TryGetValue(steamId, out var byWeapon))
+            foreach (var slots in byWeapon.Values)
+                if (slots.TryRemove(slot, out _)) removed++;
+        return removed;
+    }
+
+    // --- v0.56.0 spellbook auto-yield: masked-vanilla baseline (runtime-only) ---
+
+    /// <summary>True if we've recorded the vanilla base our override masks for (weapon, slot).</summary>
+    public bool TryGetSlotBaseline(ulong steamId, WeaponFamily weapon, int slot, out int baseGuid)
+    {
+        baseGuid = 0;
+        return _slotBaseline.TryGetValue(steamId, out var m) && m.TryGetValue((weapon, slot), out baseGuid);
+    }
+
+    /// <summary>Record the vanilla base our override is masking for (weapon, slot).</summary>
+    public void SetSlotBaseline(ulong steamId, WeaponFamily weapon, int slot, int baseGuid)
+    {
+        var m = _slotBaseline.GetOrAdd(steamId, _ => new ConcurrentDictionary<(WeaponFamily, int), int>());
+        m[(weapon, slot)] = baseGuid;
+    }
+
+    /// <summary>
+    /// v0.74.0 (#5): if we've recorded the masked vanilla base for this slot on ≥2 different weapons and
+    /// they ALL agree, the slot is weapon-INDEPENDENT (a spell slot) and that agreed value is its true
+    /// vanilla base regardless of the equipped weapon. This lets the spellbook auto-yield fire on a
+    /// never-before-seen weapon when the live base has diverged (the player re-picked) — without
+    /// false-yielding weapon-ABILITY slots, whose base legitimately differs per weapon and therefore
+    /// never agree across weapons. Returns false unless ≥2 recorded weapons agree on the same base.
+    /// </summary>
+    public bool TryGetConsistentSlotBaseline(ulong steamId, int slot, out int commonBase)
+    {
+        commonBase = 0;
+        if (!_slotBaseline.TryGetValue(steamId, out var m)) return false;
+        int common = 0, count = 0;
+        foreach (var kv in m)
+        {
+            if (kv.Key.slot != slot) continue;
+            if (count == 0) common = kv.Value;
+            else if (kv.Value != common) return false;   // disagreement → weapon-dependent slot, can't infer
+            count++;
+        }
+        if (count < 2) return false;
+        commonBase = common;
+        return true;
+    }
+
+    /// <summary>Drop every weapon's baseline for a slot (the bind for it is going away).</summary>
+    public void ClearSlotBaseline(ulong steamId, int slot)
+    {
+        if (!_slotBaseline.TryGetValue(steamId, out var m)) return;
+        foreach (var key in m.Keys)
+            if (key.slot == slot) m.TryRemove(key, out _);
     }
 
     /// <summary>
@@ -395,8 +525,25 @@ internal sealed class AbilityRegistry
         {
             foreach (var slots in byWeapon.Values) removed += slots.Count;
         }
+        if (_formSlots.TryRemove(steamId, out var byForm))
+        {
+            foreach (var slots in byForm.Values) removed += slots.Count;
+        }
+        _slotBaseline.TryRemove(steamId, out _);
         return removed;
     }
+
+    /// <summary>v0.94.0: clear EVERY slot in the universal ("basic") bucket. Returns count removed.</summary>
+    public int ClearUniversalBucket(ulong steamId)
+        => _slotAssignments.TryRemove(steamId, out var uni) ? uni.Count : 0;
+
+    /// <summary>v0.94.0: clear EVERY slot in one WEAPON bucket. Returns count removed.</summary>
+    public int ClearWeaponBucket(ulong steamId, WeaponFamily weapon)
+        => _weaponSlots.TryGetValue(steamId, out var byWeapon) && byWeapon.TryRemove(weapon, out var slots) ? slots.Count : 0;
+
+    /// <summary>v0.94.0: clear EVERY slot in one FORM bucket. Returns count removed.</summary>
+    public int ClearFormBucket(ulong steamId, ShapeshiftForm form)
+        => _formSlots.TryGetValue(steamId, out var byForm) && byForm.TryRemove(form, out var slots) ? slots.Count : 0;
 
     /// <summary>
     /// Returns the universal-bucket slots. Backward-compatible — pre-W3 callers
@@ -510,6 +657,77 @@ internal sealed class AbilityRegistry
         }
     }
 
+    // --- v0.59.0: per-FORM slot bindings (parallel to the per-weapon bucket API above) ---
+
+    /// <summary>Bind an ability to a slot for a specific shapeshift form. ShapeshiftForm.None is ignored.</summary>
+    public void SetFormSlot(ulong steamId, ShapeshiftForm form, int slot, int abilityGuid)
+    {
+        if (form == ShapeshiftForm.None) return;
+        if (!IsValidSlot(slot))
+        {
+            Core.Log.LogWarning($"[Beelz] SetFormSlot ignored out-of-range slot={slot} (valid {MinSlot}-{MaxSlot}) steamId={steamId} form={form} ability={abilityGuid}.");
+            return;
+        }
+        var byForm = _formSlots.GetOrAdd(steamId, _ => new ConcurrentDictionary<ShapeshiftForm, ConcurrentDictionary<int, int>>());
+        var slots = byForm.GetOrAdd(form, _ => new ConcurrentDictionary<int, int>());
+        slots[slot] = abilityGuid;
+    }
+
+    /// <summary>Clear a single form-specific slot bind.</summary>
+    public void ClearFormSlot(ulong steamId, ShapeshiftForm form, int slot)
+    {
+        if (_formSlots.TryGetValue(steamId, out var byForm) && byForm.TryGetValue(form, out var slots))
+            slots.TryRemove(slot, out _);
+    }
+
+    /// <summary>The bindings for one specific form. Empty if none set.</summary>
+    public IReadOnlyDictionary<int, int> GetFormSlots(ulong steamId, ShapeshiftForm form)
+    {
+        if (form != ShapeshiftForm.None
+            && _formSlots.TryGetValue(steamId, out var byForm)
+            && byForm.TryGetValue(form, out var slots)) return slots;
+        return new Dictionary<int, int>();
+    }
+
+    /// <summary>Snapshot of every form-specific bucket for a player. Empty if nothing form-specific is bound.</summary>
+    public Dictionary<ShapeshiftForm, Dictionary<int, int>> AllFormSlots(ulong steamId)
+    {
+        var result = new Dictionary<ShapeshiftForm, Dictionary<int, int>>();
+        if (_formSlots.TryGetValue(steamId, out var byForm))
+        {
+            foreach (var (form, slots) in byForm)
+            {
+                if (slots.IsEmpty) continue;
+                result[form] = new Dictionary<int, int>(slots);
+            }
+        }
+        return result;
+    }
+
+    /// <summary>Persistence snapshot of every player's form-specific bindings.</summary>
+    public Dictionary<ulong, Dictionary<ShapeshiftForm, Dictionary<int, int>>> FormSlotsSnapshot()
+    {
+        var result = new Dictionary<ulong, Dictionary<ShapeshiftForm, Dictionary<int, int>>>();
+        foreach (var (steamId, _) in _formSlots)
+        {
+            var nested = AllFormSlots(steamId);
+            if (nested.Count > 0) result[steamId] = nested;
+        }
+        return result;
+    }
+
+    public void LoadFormSlotsSnapshot(ulong steamId, Dictionary<ShapeshiftForm, Dictionary<int, int>> snapshot)
+    {
+        var byForm = _formSlots.GetOrAdd(steamId, _ => new ConcurrentDictionary<ShapeshiftForm, ConcurrentDictionary<int, int>>());
+        foreach (var (form, slots) in snapshot)
+        {
+            if (form == ShapeshiftForm.None) continue;
+            var bucket = byForm.GetOrAdd(form, _ => new ConcurrentDictionary<int, int>());
+            bucket.Clear();
+            foreach (var (slot, abilityGuid) in slots) bucket[slot] = abilityGuid;
+        }
+    }
+
     static bool IsUniversalBucket(WeaponFamily weapon) =>
         weapon == WeaponFamily.None || weapon == WeaponFamily.Magic;
 
@@ -564,6 +782,17 @@ internal sealed class AbilityRegistry
                 result.Add(new CapturedAbility(unitGuid, abilityGuid, source));
             }
         }
+        // v0.76.0: deterministic order so the index a player sees in `.beelz list` / passes to
+        // `.beelz grant <slot> <index>` is STABLE across logins. Dictionary iteration order isn't
+        // guaranteed (varies by insertion + rehash + deserialization), which shuffled indices every
+        // session. Sort by (unit, ability) GUID — fixed for a given collection regardless of capture
+        // order. (Capturing a NEW ability still inserts in sorted position; use the ability ID with
+        // `.beelz grant` to address an ability independent of its index.)
+        result.Sort((a, b) =>
+        {
+            int u = a.UnitPrefabGuid.CompareTo(b.UnitPrefabGuid);
+            return u != 0 ? u : a.AbilityPrefabGuid.CompareTo(b.AbilityPrefabGuid);
+        });
         return result;
     }
 
@@ -586,6 +815,8 @@ internal sealed class AbilityRegistry
         _data.Clear();
         _slotAssignments.Clear();
         _weaponSlots.Clear();
+        _formSlots.Clear();
+        _slotBaseline.Clear();
         _hotkeys.Clear();
         _presets.Clear();
         _transformUnlocks.Clear();
@@ -604,6 +835,8 @@ internal sealed class AbilityRegistry
     {
         _slotAssignments.TryRemove(steamId, out _);
         _weaponSlots.TryRemove(steamId, out _);
+        _formSlots.TryRemove(steamId, out _);
+        _slotBaseline.TryRemove(steamId, out _);
         _hotkeys.TryRemove(steamId, out _);
         _transformUnlocks.TryRemove(steamId, out _);
         _activeTransforms.TryRemove(steamId, out _);
@@ -786,13 +1019,18 @@ internal sealed class AbilityRegistry
         => ((source == CaptureSource.VBlood) ? 2 : 0) + (int)kind;
 
     public float GetPityBonus(ulong steamId, CaptureSource source, PityKind kind)
-        => _pity.TryGetValue(steamId, out var arr) ? arr[PityIndex(source, kind)] : 0f;
+    {
+        if (!_pity.TryGetValue(steamId, out var arr)) return 0f;
+        int i = PityIndex(source, kind);
+        return (i >= 0 && i < arr.Length) ? arr[i] : 0f;   // v0.61.0: tolerate a short/legacy pity array
+    }
 
     public void BumpPity(ulong steamId, CaptureSource source, PityKind kind, float step, float max)
     {
         if (step <= 0f) return;
         var arr = _pity.GetOrAdd(steamId, _ => new float[4]);
         int i = PityIndex(source, kind);
+        if (i < 0 || i >= arr.Length) return;
         float v = arr[i] + step;
         if (max > 0f && v > max) v = max;
         arr[i] = v;
@@ -800,7 +1038,9 @@ internal sealed class AbilityRegistry
 
     public void ResetPity(ulong steamId, CaptureSource source, PityKind kind)
     {
-        if (_pity.TryGetValue(steamId, out var arr)) arr[PityIndex(source, kind)] = 0f;
+        if (!_pity.TryGetValue(steamId, out var arr)) return;
+        int i = PityIndex(source, kind);
+        if (i >= 0 && i < arr.Length) arr[i] = 0f;
     }
 
     /// <summary>v0.44.0: snapshot per-player pity arrays for persistence (skips all-zero players).</summary>

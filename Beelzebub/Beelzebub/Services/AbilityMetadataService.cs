@@ -149,6 +149,20 @@ internal sealed class AbilityMetadataService
     }
 
     /// <summary>
+    /// v0.58.0: friendly ability-group display name — the curated override/shipped <c>Name</c> when
+    /// present, else the humanized prefab name. Dict-only (no ECS probe), so it's cheap to call per
+    /// row of a list/catalog stream. Never returns null/empty.
+    /// </summary>
+    public string ResolveAbilityName(int abilityGuid)
+    {
+        if (_overrides.TryGetValue(abilityGuid, out var over) && !string.IsNullOrWhiteSpace(over.Name))
+            return over.Name;
+        if (_shipped.TryGetValue(abilityGuid, out var ship) && !string.IsNullOrWhiteSpace(ship.Name))
+            return ship.Name;
+        return new PrefabGUID(abilityGuid).GetPrefabName().Humanize();
+    }
+
+    /// <summary>
     /// Fallback prettifier for a CHAR_ prefab name with no curated/source name.
     /// "CHAR_Blackfang_Morgana_VBlood" → "Blackfang Morgana".
     /// </summary>
@@ -275,6 +289,34 @@ internal sealed class AbilityMetadataService
             Incompatible = incompatible,
             IncompatibleReason = incompatibleReason,
         };
+    }
+
+    /// <summary>
+    /// v0.58.0: lightweight curated-text lookup for the catalog stream — returns just the
+    /// shipped/override <c>Description</c> (with %param% substitution) + <c>School</c>, WITHOUT the
+    /// per-call ECS prefab probe that <see cref="Resolve"/> runs. The catalog emits the full
+    /// capturable universe (~1,400 rows/scan), so calling <see cref="Resolve"/> per row would probe
+    /// the ECS prefab thousands of times for fields the catalog doesn't even use. Returns false when
+    /// neither a description nor a school is curated for this guid (caller emits the "-"/none defaults).
+    /// </summary>
+    public bool TryGetCuratedText(int abilityGroupGuid, out string description, out string school)
+    {
+        description = null;
+        school = null;
+        _shipped.TryGetValue(abilityGroupGuid, out var ship);
+        _overrides.TryGetValue(abilityGroupGuid, out var over);
+        if (ship == null && over == null) return false;
+
+        var desc = over?.Description ?? ship?.Description;
+        var parameters = over?.Parameters ?? ship?.Parameters;
+        if (!string.IsNullOrWhiteSpace(desc) && parameters != null)
+            foreach (var kv in parameters) desc = desc.Replace("%" + kv.Key + "%", kv.Value);
+        description = string.IsNullOrWhiteSpace(desc) ? null : desc;
+
+        var sch = over?.School ?? ship?.School;
+        school = string.IsNullOrWhiteSpace(sch) ? null : sch;
+
+        return description != null || school != null;
     }
 
     /// <summary>

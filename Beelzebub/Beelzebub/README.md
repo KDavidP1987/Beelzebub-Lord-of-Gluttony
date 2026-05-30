@@ -48,7 +48,7 @@ A **server-side** V Rising mod that turns the whole bestiary into a collection-a
 
 **Source · issues · roadmap:** [github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony) · **License:** MIT
 
-> **Status:** active early access / **public test build (v0.55.0)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
+> **Status:** active early access / **public test build (v0.94.0)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
 
 ---
 
@@ -77,6 +77,7 @@ A **server-side** V Rising mod that turns the whole bestiary into a collection-a
 
 ### Use your abilities
 - **Assign captures to your six spell slots** — universal, or bound to a specific weapon family. Applies instantly.
+- **Mix captured abilities with vanilla spells** — keep some slots on captured abilities and others on your normal kit. Want a slot back? Just pick a vanilla spell for it in the in-game spellbook and Beelzebub releases that slot to you (or use `.beelz unslot` / the companion app).
 - **Expanded action bar** — you're not capped at six. Bind any captured ability to a named hotkey and fire it on demand with `.beelz cast <name>` (cooldown-respecting). A companion app can surface these as on-screen buttons for 10, 15, 20+ abilities.
 - **Wield-the-right-weapon hints** — weapon-based abilities tell you which weapon makes their animation read correctly.
 
@@ -91,9 +92,14 @@ A **server-side** V Rising mod that turns the whole bestiary into a collection-a
 - **Power scaling, your way** — transforms and granted abilities already scale with the player's stats (so they track level/gear/prestige); on top of that, admins get global scaling modes and **per-ability damage tuning**, plus summon level-matching and a summon power factor.
 - **Curated rules** in a hot-reloadable JSON: allow/deny lists, per-ability weapon/difficulty/scaling, per-unit transform tiers and stat scales. Full admin reference in [`docs/ABILITY_CONFIG.md`](docs/ABILITY_CONFIG.md).
 - **Inclusive testing mode (on by default, v0.50)** — `Capture_InclusiveMode` makes abilities across **all** V-Bloods/NPCs broadly capturable, and `Grant_EnforceTransformOnly` (off by default) drops the "only for transformation" wall so any ability can be slotted on your normal bar. Flip both off for a curated, balanced server.
-- **Cast tuning (opt-in, v0.46)** — make long casts **interruptible** (dash out / raise a shield to cancel) and **free the player to move once the cast finishes** (instead of staying rooted for the whole effect), per-ability via the rules file or `.beelz admin tune`. Off by default (`AbilityTuning_Enabled`); note it edits the ability's shared cast data, so the source NPC/boss cast changes too — enable, tune one ability, and test.
-- **Custom abilities on shapeshift forms (experimental, v0.48)** — `Forms_CustomAbilities_Enabled` (off by default): shift into **Wolf or Bear** (the current test forms) via the in-game wheel and your loadout's abilities are loaded onto the form bar, with the form's "break on cast" removed so the form *holds* while you cast. Feasibility test for a full per-form-loadout system (assign abilities per form, like the per-weapon loadouts).
+- **Deep per-ability shaping (server-wide, on by default)** — reshape how any ability *functions* with `.beelz admin ability <name|id> <field> <value>` (accepts the ability's name **or** its ID): **cooldown**, cast **range**, **charges**/recharge, **AoE radius**, **projectile speed**, effect/**duration**, **healing** multiplier, and **force-timeout** (make an otherwise-*indefinite* effect expire after N seconds). Cast feel too: **freelymove `<sec>`** (free to move that many seconds *into* a long cast — the spell keeps going), **interruptonhit** (cancel the cast when you're hit), **interruptible** (let the player dash/shield-cancel), and **castspeed** (movement speed during the cast). It's applied out of the box (`Abilities_ApplyConfig`, default on) and `.beelz admin ability <id> defaults` reverts any ability to its shipped baseline. Note: it's a *global* prefab edit, so the original NPC/boss cast changes too.
+- **Summon governance (per-ability + global)** — cap how many summons a player can have, how many units a single cast spawns, and how long they live before despawning — globally or per summon ability (`summoncap` / `summonunits` / `summontimeout`).
+- **Per-form loadouts on shapeshift forms (on by default, v0.75+)** — `Forms_CustomAbilities_Enabled`: build a distinct captured-ability loadout for each vanilla wheel form (**Wolf, Bear, Rat, Spider, Toad, Werewolf, Gargoyle**, including skinned variants) with `.beelz form-grant <form> <slot> <ability>`. Shift in via the in-game wheel and your abilities are mapped onto the slots the form actually renders, with "break on cast" removed so the form *holds* while you cast.
 - **Difficulty gating, grant/revoke, `devour` (bulk-grant a unit's whole kit), inspect, audit logging** — full operator toolkit.
+
+### Compete & celebrate
+- **Server leaderboard** — `.beelz top` ranks players by collection %. `.beelz odds` shows your live drop/Devour/pity chances; `.beelz silent on` hushes the "you already knew that" devour spam.
+- **Collection-complete milestone + server announcements** — finish the whole capturable catalog and the server cheers you by name. Admins can also schedule a **periodic leaderboard broadcast** — all configurable, with editable thematic message pools (`.beelz admin broadcast …`).
 
 ### 🔌 BloodCraftHub companion app — strongly recommended
 Beelzebub is built to pair with the **client-side BloodCraftHub (BCH)** mod. A structured
@@ -116,16 +122,17 @@ Install with [r2modman](https://thunderstore.io/package/ebkr/r2modman/) / Thunde
 
 ## Command cheat-sheet
 
-**Collect & inspect:** `.beelz list [vblood|shard|regular]` · `.beelz search <term>` · `.beelz info <i>` · `.beelz bestiary` · `.beelz progress` · `.beelz catalog`
-**Use abilities:** `.beelz grant <slot 1-6> <index>` · `.beelz weapon-grant <weapon> <slot> <index>` · `.beelz loadouts` (view universal + per-weapon sets) · `.beelz unslot <slot>` · `.beelz resetbar` (clear all bindings → vanilla bar) · `.beelz hotkey set <name> <index>` → `.beelz cast <name>`
+**Collect & inspect:** `.beelz list [vblood|shard|regular]` · `.beelz search <term>` · `.beelz info <i>` · `.beelz bestiary` · `.beelz progress` · `.beelz catalog` · `.beelz top` (leaderboard) · `.beelz odds` (your drop/pity chances)
+**Use abilities:** `.beelz grant <slot|primary|ultimate> <index|abilityID>` (slot 1-6, or `primary` = left-click / `ultimate` = T key) · `.beelz weapon-grant <weapon> <slot> <index>` · `.beelz form-grant <form> <slot> <index>` (per-form loadouts) · `.beelz loadouts` (view universal + per-weapon sets) · `.beelz unslot <slot>` · `.beelz clearbar [all|universal|<weapon>|<form>]` (clear a chosen loadout, abilities kept) · `.beelz resetbar CONFIRM` (clear everything → vanilla bar) · `.beelz hotkey set <name> <index>` → `.beelz cast <name>`
 **Summons:** `.beelz summons <stash|restore|clear|status>` (works for captured summon abilities, not just transforms) · `.beelz summon [n]` (a transformed boss's signature add-summon)
 **Transform (Dracula & Morgana):** `.beelz transforms` · `.beelz transform <name>` · `.beelz phase [n]` · `.beelz revert` · `.beelz refresh` (re-apply your bar if it ever goes blank) · `.beelz detonate`
-**Admin:** `.beelz admin set <key> <value>` · `.beelz admin devour <player> <unitGuid>` (grant a unit's whole kit) · `.beelz admin give/revoke …` · `.beelz admin rules` / `deny` / `allow` / `reload` · `.beelz admin difficulty <basic|brutal>` · `.beelz admin tune <ability> <interrupt|freemove|castspeed>` (opt-in cast tuning) · `.beelz admin testform <wolf|bear|off>` (experimental form test) · `.beelz admin help`
-**Settings:** `.beelz verbosity <silent|summary|verbose>` · `.beelz help` · `.beelz commands`
+**Admin — shape abilities:** `.beelz admin ability <name|id> <field> <value>` — field ∈ `cooldown · range · charges · chargetime · aoe · projspeed · duration · healing · forcetimeout · freelymove · interruptonhit · interruptible · freemove · castspeed · summoncap · summontimeout · summonunits · damagescale · …` (or the shorthand `.beelz admin tune <ability> <knob> <value>`); `.beelz admin ability <id> defaults` reverts one ability, `all defaults` reverts every ability
+**Admin — server:** `.beelz admin set <key> <value>` · `.beelz admin devour <player> <unitGuid>` · `.beelz admin give/revoke …` · `.beelz admin rules` / `deny` / `allow` / `reload` · `.beelz admin difficulty <basic|brutal>` · `.beelz admin broadcast <status|leaderboard on|off|interval <min>|top <1-5>|complete on|off|test>` · `.beelz admin help`
+**Settings:** `.beelz verbosity <silent|summary|verbose>` · `.beelz silent <on|off>` · `.beelz help` · `.beelz commands`
 
 ## Configuration
 
-`BepInEx\config\kdpen.Beelzebub.cfg` holds server defaults (drop chances, pity, transform modes/durations/cooldowns per category incl. shard bosses, summon caps + lifetime + level-matching + power factor, mounted-summon behavior, granted-ability power scaling, hotkey limits, difficulty). Most can also be changed live with `.beelz admin set`. `ability_rules.json` holds the curation matrix incl. per-ability damage scaling (auto-created, hot-reload with `.beelz admin reload`); `state.json` holds per-player data.
+`BepInEx\config\kdpen.Beelzebub.cfg` holds server defaults (drop chances, pity incl. optional session-reset, transform modes/durations/cooldowns per category incl. shard bosses, summon caps + lifetime + level-matching + power factor, mounted-summon behavior, granted-ability power scaling, per-form custom abilities, server **announcements** — collection-complete + leaderboard broadcasts with editable message pools, hotkey limits, difficulty). Most can also be changed live with `.beelz admin set` / `.beelz admin broadcast`. `ability_rules.json` holds the curation + per-ability shaping matrix (cooldown/range/charges/AoE/projspeed/duration/healing/force-timeout/cast-feel/summon governance/damage scaling — applied by default via `Abilities_ApplyConfig`; auto-created, hot-reload with `.beelz admin reload`); `state.json` holds per-player data.
 
 ---
 
@@ -159,7 +166,9 @@ help confirm or break any of these, that's the most valuable feedback we can get
 - **Cross-server / config behavior is unverified.** Different presets, difficulty
   modes, populations, and hardware haven't been tested. The power-scaling modes for
   transforms in particular benefit from real-world tuning feedback.
-- **Things we'd especially love tested:** the expanded action bar (`.beelz cast`),
+- **Things we'd especially love tested:** mixing captured abilities with vanilla
+  spells (assign a vanilla spell in the spellbook to a captured slot — it should
+  take the slot back), the expanded action bar (`.beelz cast`),
   ability-bar persistence across weapon swaps / transforms / dismounting, summon
   behavior in group combat, whether the Devour jackpot rate feels right, and
   **disconnect/reconnect while transformed** — a quick relog should resume your form
@@ -173,18 +182,19 @@ If something breaks: grab the `[Beelz]`-tagged lines from
 
 Where this is heading (subject to change based on your feedback):
 
-- **Collection & mastery loop** — per-unit *mastery levels* and *milestone/set
-  rewards* on top of the existing bestiary + pity systems.
+- **Collection & mastery loop** — per-unit *mastery levels* and *set rewards* on top of
+  the bestiary, pity, leaderboard, and the collection-complete milestone that already ship.
 - **BloodCraftHub companion UI** — on-screen ability buttons (including the expanded
   action bar), live cooldown rings, the collection book, a transform browser, and
-  admin panels. The server-side contract for this already ships in Beelzebub.
+  admin panels (incl. the per-ability shaping controls). The server-side contract for all
+  of this already ships in Beelzebub.
 - **Phase two: creature transformation** — becoming units beyond Dracula & Morgana
   (model + animation), achievable only via a client-side companion mod (BloodCraftHub).
   Researched and on the roadmap; postponed because a server can't drive client rendering.
+- **Summon combat AI / PvP targeting** — make summoned allies engage enemies more
+  reliably and attack hostile *players* in PvP (never allies). Researched; up next.
 - **Continued ability-chain auditing** — get more boss kits firing cleanly when cast
-  by a player, and expand the manual-detonation roster.
-- **Quality of life** — persisting pity across restarts, broadcasting config changes
-  to all connected companion clients, and more curation tooling for admins.
+  by a player, and expand the manual-detonation + AoE-on-area-spell coverage.
 
 Want to influence priorities? Open an issue — early feedback shapes the order.
 

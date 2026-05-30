@@ -26,15 +26,32 @@ internal static class Settings
     // Drop chances (Phase 4)
     public static ConfigEntry<float> DropChance_Ability_Regular { get; private set; }
     public static ConfigEntry<float> DropChance_Ability_VBlood { get; private set; }
-    public static ConfigEntry<float> DropChance_Transform_Regular { get; private set; }
-    public static ConfigEntry<float> DropChance_Transform_VBlood { get; private set; }
+    // v0.64.0 (#3): the rare "jackpot" roll that DEVOURS a unit (grants its whole kit at once; for
+    // Dracula/Morgana it unlocks transformation instead). Renamed from DropChance_Transform_* — the
+    // old keys' values are migrated to these automatically on load (see Initialize).
+    public static ConfigEntry<float> DropChance_Devour_Regular { get; private set; }
+    public static ConfigEntry<float> DropChance_Devour_VBlood { get; private set; }
 
-    // v0.38.0: escalating pity / bad-luck protection.
+    // v0.38.0: escalating pity / bad-luck protection. (v0.64.0: this pair governs ABILITY-capture
+    // pity; the Devour jackpot roll has its own pity pair below so admins can tune them apart.)
     public static ConfigEntry<float> Capture_PityIncrementPerKill { get; private set; }
     public static ConfigEntry<float> Capture_PityMaxBonus { get; private set; }
+    // v0.64.0 (#3): separate bad-luck protection for the Devour jackpot roll (defaults to the
+    // ability values, so existing balance is unchanged until an admin diverges them).
+    public static ConfigEntry<float> Capture_PityIncrement_Devour { get; private set; }
+    public static ConfigEntry<float> Capture_PityMax_Devour { get; private set; }
+    public static ConfigEntry<bool> Capture_PitySessionBased { get; private set; }
 
     // Notifications (Phase 3)
     public static ConfigEntry<string> DefaultVerbosity { get; private set; }
+
+    // v0.88.0 — server-wide announcements (collection-complete + periodic leaderboard)
+    public static ConfigEntry<bool> Broadcast_CollectionComplete_Enabled { get; private set; }
+    public static ConfigEntry<string> Broadcast_CollectionComplete_Messages { get; private set; }
+    public static ConfigEntry<bool> Broadcast_Leaderboard_Enabled { get; private set; }
+    public static ConfigEntry<int> Broadcast_Leaderboard_IntervalMinutes { get; private set; }
+    public static ConfigEntry<int> Broadcast_Leaderboard_TopN { get; private set; }
+    public static ConfigEntry<string> Broadcast_Leaderboard_Messages { get; private set; }
 
     // Transformation (Phase 5)
     public static ConfigEntry<string> Transform_Mode_Regular { get; private set; }
@@ -144,11 +161,14 @@ internal static class Settings
     public static ConfigEntry<float> Transform_ReconnectGraceSeconds { get; private set; }
 
     // v0.46.0: master switch for ability-tuning (cast interrupt + post-cast movement
-    // unlock). When true, Beelzebub rewrites baked fields on the curated abilities'
-    // CAST prefabs at server init (AbilityRules AbilityMap entries with Interruptible /
-    // FreeMoveAfterCast / CastMovementSpeed set). The edit is GLOBAL — it also changes
-    // how the original NPC/boss casts that same ability. Default false (opt-in).
-    public static ConfigEntry<bool> AbilityTuning_Enabled { get; private set; }
+    // unlock). When true (the DEFAULT — this is a master kill-switch, NOT an opt-in), Beelzebub
+    // applies the per-ability config you set (cooldown, range, charges, interrupt, cast tuning, …)
+    // by rewriting the curated abilities' baked prefab fields at server init / on reload. The edits
+    // are SERVER-WIDE — an ability behaves the configured way for every player who casts it, and
+    // because the ability prefab is shared, the source NPC/boss's copy changes too (intended: you're
+    // configuring how the ability functions on the server). Set false only to disable ALL baked
+    // ability-config edits. Renamed from AbilityTuning_Enabled in v0.66.0 (now default ON).
+    public static ConfigEntry<bool> Abilities_ApplyConfig { get; private set; }
 
     // v0.48.0 (Phase-1.5 native-form abilities test): when true, entering a VANILLA shapeshift
     // form (Wolf/Bear — the test set) via the in-game shapeshift wheel injects the player's
@@ -219,6 +239,9 @@ internal static class Settings
     public static ConfigEntry<string> Grant_PowerScalingMode { get; private set; }
     public static ConfigEntry<float> Grant_PowerScalingFactor { get; private set; }
 
+    // v0.65.0 (J1): global minimum-cooldown floor, applied via the baked-prefab tuning path.
+    public static ConfigEntry<float> Grant_MinimumCooldownSeconds { get; private set; }
+
     public static void Initialize(ConfigFile config)
     {
         CaptureOnKill = config.Bind(
@@ -276,30 +299,93 @@ internal static class Settings
             "Capture.DropChance", nameof(DropChance_Ability_VBlood), 0.05f,
             "Per-ability chance (0.0-1.0) to capture each eligible ability from a V-Blood kill.");
 
-        DropChance_Transform_Regular = config.Bind(
-            "Capture.DropChance", nameof(DropChance_Transform_Regular), 0.0025f,
-            "Per-kill JACKPOT chance (0.0-1.0) on a regular mob. The jackpot DEVOURS the unit — grants ALL of its eligible abilities at once instead of one at a time. (Arbitrary-unit transformation is a postponed phase-two feature; only Dracula & Morgana, both V-Bloods, transform.)");
+        // v0.64.0 (#3): renamed Transform_* -> Devour_*. Migrate any tuned value automatically — bind
+        // the legacy key (which reads the existing .cfg value if present), seed the new Devour key
+        // from it, then drop the legacy orphan so only the Devour_* key persists. The config.Save()
+        // at the end of Initialize purges the removed legacy key from disk.
+        var legacyDevourRegular = config.Bind(
+            "Capture.DropChance", "DropChance_Transform_Regular", 0.0025f,
+            "(deprecated — renamed to DropChance_Devour_Regular; value migrated automatically)");
+        DropChance_Devour_Regular = config.Bind(
+            "Capture.DropChance", nameof(DropChance_Devour_Regular), legacyDevourRegular.Value,
+            "Per-kill DEVOUR chance (0.0-1.0) on a regular mob. The Devour roll grants ALL of the unit's eligible abilities at once instead of one at a time. (Arbitrary-unit transformation is a postponed phase-two feature; only Dracula & Morgana, both V-Bloods, transform.)");
+        config.Remove(legacyDevourRegular.Definition);
 
-        DropChance_Transform_VBlood = config.Bind(
-            "Capture.DropChance", nameof(DropChance_Transform_VBlood), 0.0025f,
-            "Per-kill JACKPOT chance (0.0-1.0) on a V-Blood. The jackpot DEVOURS the unit (all abilities at once); for Dracula & Morgana it unlocks their TRANSFORMATION instead.");
+        var legacyDevourVBlood = config.Bind(
+            "Capture.DropChance", "DropChance_Transform_VBlood", 0.0025f,
+            "(deprecated — renamed to DropChance_Devour_VBlood; value migrated automatically)");
+        DropChance_Devour_VBlood = config.Bind(
+            "Capture.DropChance", nameof(DropChance_Devour_VBlood), legacyDevourVBlood.Value,
+            "Per-kill DEVOUR chance (0.0-1.0) on a V-Blood. The Devour roll grants ALL of its eligible abilities at once; for Dracula & Morgana it unlocks their TRANSFORMATION instead.");
+        config.Remove(legacyDevourVBlood.Definition);
 
         Capture_PityIncrementPerKill = config.Bind(
             "Capture.Pity", nameof(Capture_PityIncrementPerKill), 0.0025f,
-            "v0.38.0 bad-luck protection: each kill whose roll gives nothing raises that roll's effective " +
-            "chance by this amount (0.0025 = +0.25%), resetting to baseline the moment it pays out. Tracked " +
-            "independently per source (Regular/V-Blood) and per type (ability / transform), so a dry streak " +
-            "gradually guarantees a payout. 0 = disabled (pure flat chance).");
+            "v0.38.0 bad-luck protection for ABILITY captures: each kill whose ability roll gives nothing " +
+            "raises that roll's effective chance by this amount (0.0025 = +0.25%), resetting to baseline the " +
+            "moment it pays out. Tracked independently per source (Regular/V-Blood). The rare Devour jackpot " +
+            "has its own pity dial (Capture_PityIncrement_Devour). 0 = disabled (pure flat chance).");
 
         Capture_PityMaxBonus = config.Bind(
             "Capture.Pity", nameof(Capture_PityMaxBonus), 1.0f,
-            "v0.38.0: cap on the accumulated pity bonus (1.0 = +100%, i.e. the chance can climb to a guaranteed " +
-            "payout over a long enough dry streak). Lower it (e.g. 0.5) to keep rare drops rare even on long " +
-            "streaks. 0 = uncapped.");
+            "v0.38.0: cap on the accumulated ABILITY-capture pity bonus (1.0 = +100%, i.e. the chance can " +
+            "climb to a guaranteed payout over a long enough dry streak). Lower it (e.g. 0.5) to keep rare " +
+            "drops rare even on long streaks. 0 = uncapped.");
+
+        // v0.64.0 (#3): Devour-specific pity, separate from ability-capture pity. Seeded from the
+        // ability values so balance is unchanged until an admin diverges them.
+        Capture_PityIncrement_Devour = config.Bind(
+            "Capture.Pity", nameof(Capture_PityIncrement_Devour), Capture_PityIncrementPerKill.Value,
+            "Bad-luck protection for the rare DEVOUR jackpot roll (separate from ability-capture pity). Each " +
+            "kill whose Devour roll fails raises the next Devour chance by this amount, reset on a Devour. " +
+            "Defaults to the ability pity increment; raise it to make a long dry streak reach a Devour sooner. " +
+            "0 = disabled.");
+
+        Capture_PityMax_Devour = config.Bind(
+            "Capture.Pity", nameof(Capture_PityMax_Devour), Capture_PityMaxBonus.Value,
+            "Cap on the accumulated DEVOUR pity bonus. Defaults to the ability pity cap. 0 = uncapped.");
+
+        Capture_PitySessionBased = config.Bind(
+            "Capture.Pity", nameof(Capture_PitySessionBased), false,
+            "v0.83.0: if true, a player's accumulated pity (bad-luck protection) RESETS when they log out " +
+            "(session-based). If false (default), pity is PERMANENT and carries across sessions. Session-based " +
+            "makes pity a within-session catch-up only; permanent rewards long-term grinding.");
 
         DefaultVerbosity = config.Bind(
             "Notifications", nameof(DefaultVerbosity), "Summary",
             "Default chat verbosity for new players: Silent | Summary | Verbose. Each player can override with .beelz verbosity <level>.");
+
+        // v0.88.0 — server-wide announcements.
+        Broadcast_CollectionComplete_Enabled = config.Bind(
+            "Announcements", nameof(Broadcast_CollectionComplete_Enabled), true,
+            "v0.88.0: when a player collects EVERY capturable ability (100%), post a server-wide " +
+            "celebratory message. Default ON.");
+        Broadcast_CollectionComplete_Messages = config.Bind(
+            "Announcements", nameof(Broadcast_CollectionComplete_Messages),
+            "🩸 %player% has devoured the entire bestiary — every ability in the realm now bends to their will.|" +
+            "👑 The Lord of Gluttony is sated: %player% has collected ALL known abilities. Bow before the complete collection.|" +
+            "🦇 Legend spreads through the night — %player% has mastered every ability V Rising has to offer.",
+            "v0.88.0: pipe ( | )-separated pool of collection-complete messages (one is picked per event). " +
+            "Use %player% for the player's name. Edit freely — keep them short (one chat line).");
+
+        Broadcast_Leaderboard_Enabled = config.Bind(
+            "Announcements", nameof(Broadcast_Leaderboard_Enabled), false,
+            "v0.88.0: periodically post a server-wide leaderboard of the top players by ability-collection %. " +
+            "Default OFF. Toggle live with .beelz admin broadcast leaderboard on|off.");
+        Broadcast_Leaderboard_IntervalMinutes = config.Bind(
+            "Announcements", nameof(Broadcast_Leaderboard_IntervalMinutes), 60,
+            "v0.88.0: minutes between leaderboard broadcasts (60 = hourly, 1440 = daily). Min 1. " +
+            "Set live with .beelz admin broadcast interval <minutes>.");
+        Broadcast_Leaderboard_TopN = config.Bind(
+            "Announcements", nameof(Broadcast_Leaderboard_TopN), 3,
+            "v0.88.0: how many top players to list in the leaderboard broadcast (1, 3, or 5). Clamped to 1..5.");
+        Broadcast_Leaderboard_Messages = config.Bind(
+            "Announcements", nameof(Broadcast_Leaderboard_Messages),
+            "🏆 The hungriest vampires tonight: %top%|" +
+            "🩸 Bestiary standings — %top%|" +
+            "👑 Who devours the most? %top%",
+            "v0.88.0: pipe ( | )-separated pool of leaderboard messages (one is picked per broadcast). " +
+            "Use %top% for the ranked list (e.g. '🥇 Alice (62%) · 🥈 Bob (55%)') and %count% for the number of collectors.");
 
         Transform_Mode_Regular = config.Bind(
             "Transformation", nameof(Transform_Mode_Regular), "Toggle",
@@ -432,10 +518,13 @@ internal static class Settings
 
         Transform_MaxStacksPerSummonAbility = config.Bind(
             "Transformation", nameof(Transform_MaxStacksPerSummonAbility), 3,
-            "v0.23.0: maximum number of live ally-summons a player can have from a single " +
-            "summon ability at once. Subsequent casts are refused (or destroyed for natural-chain " +
-            "summons that V Rising spawns through its own pipeline). Stack decays as minions die. " +
-            "0 = no cap (legacy behavior, prone to runaway). Default 3.");
+            "GLOBAL ability dial (applies to EVERY summon ability — transform summons AND standalone " +
+            "captured summons cast in normal form, since v0.45): maximum number of live ally-summons a " +
+            "player can have from a single summon ability at once. Subsequent casts are refused (or " +
+            "destroyed for natural-chain summons that V Rising spawns through its own pipeline). Stack " +
+            "decays as minions die. 0 = no cap (legacy behavior, prone to runaway). Default 3. " +
+            "v0.79.0: a PER-ABILITY override (.beelz admin ability <name> summoncap <n>) takes precedence " +
+            "over this global default for that ability.");
 
         Transform_DespawnBudgetPerFrame = config.Bind(
             "Transformation", nameof(Transform_DespawnBudgetPerFrame), 5,
@@ -451,12 +540,13 @@ internal static class Settings
             "BehaviourTreeState (means they gave up on combat). Default 30. Set 0 to disable leashing.");
 
         Transform_SummonLifetimeSeconds = config.Bind(
-            "Transformation", nameof(Transform_SummonLifetimeSeconds), 0f,
-            "v0.26.0: max lifetime in seconds for a summon cast-group before it is " +
-            "automatically despawned. Each cast of a summon ability starts its own timer. " +
-            "0 = infinite (default). Set e.g. 120 to make summons fade 2 minutes after casting, " +
-            "preventing indefinite horde accumulation. Uses the same crash-safe staged despawn " +
-            "as revert/disconnect cleanup.");
+            "Transformation", nameof(Transform_SummonLifetimeSeconds), 30f,
+            "GLOBAL summon TIMEOUT (applies to EVERY summon ability — transform AND standalone): max " +
+            "lifetime in seconds for a summon cast-group before it is automatically despawned. Each cast " +
+            "of a summon ability starts its own timer. v0.79.0: default changed 0 → 30 so summons that " +
+            "would otherwise persist indefinitely fade after 30s (set 0 to make summons never expire). A " +
+            "PER-ABILITY override (.beelz admin ability <name> summontimeout <seconds>) takes precedence " +
+            "for that ability. Uses the same crash-safe staged despawn as revert/disconnect cleanup.");
 
         Transform_SummonMatchPlayerLevel = config.Bind(
             "Transformation", nameof(Transform_SummonMatchPlayerLevel), true,
@@ -530,6 +620,15 @@ internal static class Settings
             "Implemented as a brief Physical+Spell power buff around the cast, so other actions in a " +
             "~1.5s window are also affected (a tuning approximation, not a surgical per-hit multiply).");
 
+        Grant_MinimumCooldownSeconds = config.Bind(
+            "Abilities", nameof(Grant_MinimumCooldownSeconds), 0f,
+            "v0.65.0: GLOBAL minimum cooldown (seconds) floored onto EVERY ability whose baked cooldown " +
+            "is lower — stops spammy low/zero-cooldown captured abilities server-wide. 0 = off (default). " +
+            "Requires Abilities_ApplyConfig (default ON; it's a baked-prefab edit applied at load + on `.beelz admin " +
+            "reload`). WARNING: GLOBAL — it also raises the source NPC/boss cooldown of any ability below " +
+            "the floor. A per-ability absolute cooldown (`.beelz admin ability <name> cooldown <sec>`) is " +
+            "still floored by this value.");
+
         Capture_GrantSignatureSummons = config.Bind(
             "Capture", nameof(Capture_GrantSignatureSummons), true,
             "v0.43.4: when true, unlocking a unit's transform ALSO grants that unit's signature " +
@@ -570,27 +669,40 @@ internal static class Settings
             "to match (the curve continues to apply at this:1 ratio even above; clamp keeps it " +
             "from exploding past 100% boss-tier).");
 
-        AbilityTuning_Enabled = config.Bind(
-            "AbilityTuning", nameof(AbilityTuning_Enabled), false,
-            "v0.46.0: master switch for per-ability CAST tuning — making long-cast abilities " +
-            "interruptible (dash/shield out of a cast) and freeing the player to move once the " +
-            "cast finishes. When true, Beelzebub rewrites baked fields (AbilityInterruptData / " +
-            "ModifyMovementDuringCastData) on the CAST prefabs of abilities you curate in " +
-            "ability_rules.json (AbilityMap entries with Interruptible / FreeMoveAfterCast / " +
-            "CastMovementSpeed). Set them per-ability there or via `.beelz admin tune`, then " +
-            "`.beelz admin reload`. WARNING: the edit is GLOBAL — the original NPC/boss casts of " +
-            "that same ability change too. Default false (opt-in). Verify one ability in-game " +
-            "before curating broadly (these are baked-data edits).");
+        // v0.66.0: renamed from AbilityTuning_Enabled and flipped to DEFAULT ON. Migrate by removing
+        // the old key so EVERY server (not just fresh ones) adopts the new default — the per-ability
+        // config you set now applies out of the box, no opt-in. Deliberately NOT seeding from the old
+        // value: the old default was off/opt-in, and the intent is that configured values just apply.
+        var legacyTuningGate = config.Bind(
+            "AbilityTuning", "AbilityTuning_Enabled", false,
+            "(deprecated — renamed to Abilities.Abilities_ApplyConfig, now default ON)");
+        config.Remove(legacyTuningGate.Definition);
+        Abilities_ApplyConfig = config.Bind(
+            "Abilities", nameof(Abilities_ApplyConfig), true,
+            "v0.66.0 (renamed from AbilityTuning_Enabled, now DEFAULT ON — a master kill-switch, not " +
+            "an opt-in): apply the per-ability config you set (cooldown, range, charges, interrupt, " +
+            "free-move, cast-speed, …) by rewriting the curated abilities' baked prefab fields at " +
+            "server init and on `.beelz admin reload`. Set per-ability via `.beelz admin ability " +
+            "<name> <field> <value>` / `.beelz admin tune`, or hand-edit ability_rules.json. The edits " +
+            "are SERVER-WIDE: the ability behaves the configured way for every player who casts it, " +
+            "and because V Rising shares the ability prefab, the source NPC/boss's copy changes too " +
+            "(this is intended — you're configuring how the ability functions on the server). Set " +
+            "false ONLY to disable ALL baked ability-config edits (e.g. to debug a conflict).");
 
         Forms_CustomAbilities_Enabled = config.Bind(
-            "Forms", nameof(Forms_CustomAbilities_Enabled), false,
-            "v0.48.0 [EXPERIMENTAL TEST]: when you enter a vanilla shapeshift form (currently the " +
+            "Forms", nameof(Forms_CustomAbilities_Enabled), true,
+            "v0.48.0 [EXPERIMENTAL]: when you enter a vanilla shapeshift form (currently the " +
             "Wolf/Bear test set) via the in-game shapeshift wheel, inject your current loadout's " +
             "abilities onto the form's bar AND strip the form's break-on-cast trigger so the form " +
             "HOLDS while you cast them (vanilla travel forms normally exit on the first cast). This " +
             "is the feasibility probe for a full per-form-loadout feature (assign abilities per " +
-            "form, auto-applied when you shift into it, like the per-weapon loadouts). Default " +
-            "false — it changes vanilla form behavior for every player when on. The form buff keeps " +
-            "its own RemoveOnDisconnect, so logging out still exits the form cleanly.");
+            "form, auto-applied when you shift into it, like the per-weapon loadouts). v0.75.0: now " +
+            "DEFAULT TRUE so per-form loadouts work out of the box — set false to restore stock " +
+            "vanilla form behavior. It changes vanilla form behavior for every player when on. The " +
+            "form buff keeps its own RemoveOnDisconnect, so logging out still exits the form cleanly.");
+
+        // v0.64.0 (#3): flush the file so the legacy DropChance_Transform_* keys we migrated +
+        // removed above don't linger as orphans on disk (only the Devour_* keys persist).
+        config.Save();
     }
 }

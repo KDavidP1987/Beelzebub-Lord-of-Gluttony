@@ -40,10 +40,11 @@ internal static class AdminCommands
         ctx.Reply("=== Beelzebub ADMIN commands === (player commands: .beelz commands)");
         ctx.Reply("-- RULES / CAPTURE FILTERS --");
         ctx.Reply(".beelz admin rules / reload — show / re-read the ability rules");
-        ctx.Reply(".beelz admin ability <name> <field> <value> — set ANY per-ability rule live (enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, damagescale, cooldownscale, category, interrupt/freemove/castspeed, notes)");
+        ctx.Reply(".beelz admin ability <name> <field> <value> — set ANY per-ability rule live (enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, damagescale, cooldownscale, cooldown, range, charges, chargetime, aoe, projspeed, duration, healing, category, interrupt/freemove/castspeed, notes)");
+        ctx.Reply(".beelz admin ability <id> defaults  /  .beelz admin ability all defaults — reset one/every ability's shaping config to shipped baseline");
         ctx.Reply(".beelz admin transform-set <CHAR_unit> <field> <value> — set a per-unit transform rule (enabled, difficulty, tier, damagescale, cooldownscale, healthscale, speedscale, fullreplace, powerscalingmode, notes)");
         ctx.Reply(".beelz admin default <damagescale|cooldownscale> <value> — server-wide scaling baseline");
-        ctx.Reply(".beelz admin tune <ability> <interrupt|freemove|castspeed> <on|off|0..1> / tune-list — cast-tuning shortcut (needs AbilityTuning_Enabled)");
+        ctx.Reply(".beelz admin tune <ability> <interrupt|freemove|castspeed|cooldown|range|charges|chargetime|aoe|projspeed|duration|healing> <value> / tune-list — ability shaping shortcut, ONE field per command (Abilities_ApplyConfig, default ON)");
         ctx.Reply(".beelz admin deny|undeny|allow|unallow <pattern> · denyguid|allowguid <add|remove> <guid> · transformonly <add|remove> <pattern|guid> — capture/reservation filters");
         ctx.Reply(".beelz admin freeze-captures <on|off|status> — master CaptureOnKill toggle");
         ctx.Reply("-- TRANSFORM CONFIG --");
@@ -130,22 +131,30 @@ internal static class AdminCommands
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
         Core.AbilityRules.Load();
+        Beelzebub.Services.BestiaryService.InvalidateTotals();   // v0.86.0 (Bug B): deny/allow changes can shift the capturable total
         // v0.46.0: re-apply ability cast-tuning from the freshly-loaded rules (no-op unless
-        // AbilityTuning_Enabled). Lets admins hand-edit Interruptible/FreeMoveAfterCast and
+        // Abilities_ApplyConfig). Lets admins hand-edit Interruptible/FreeMoveAfterCast and
         // reload without a server restart.
         int tuned = AbilityTuningService.ApplyAll();
-        string tuneNote = Beelzebub.Config.Settings.AbilityTuning_Enabled.Value
+        string tuneNote = Beelzebub.Config.Settings.Abilities_ApplyConfig.Value
             ? $" Ability tuning re-applied to {tuned} cast prefab(s)."
-            : " (Ability tuning disabled — set AbilityTuning_Enabled to use it.)";
+            : " (Ability tuning disabled — set Abilities_ApplyConfig to use it.)";
         ctx.Reply($"Rules reloaded from {Core.AbilityRules.RulesFilePath}.{tuneNote}");
     }
 
-    [Command("tune", description: "Tune a captured ability's CAST: interrupt on|off (dash/shield can cancel), freemove on|off (free to move once the cast ends), or castspeed <0..1> (move speed during cast). Needs AbilityTuning_Enabled. Usage: .beelz admin tune <ability name> <interrupt|freemove|castspeed> <on|off|0..1>", adminOnly: true)]
+    [Command("tune", description: "Shape an ability server-wide: interrupt on|off, interruptonhit on|off, freemove on|off, freelymove <seconds>, castspeed <0..1>, cooldown <seconds>, range <distance>, charges <n>, chargetime <seconds>, aoe <radius>, projspeed <speed>, duration <seconds>, healing <multiplier>, summoncap <n>, summontimeout <seconds>, forcetimeout <seconds>. Applies when Abilities_ApplyConfig is on (default). ONE field per command. Usage: .beelz admin tune <ability name> <knob> <value|clear>", adminOnly: true)]
     public static void Tune(ChatCommandContext ctx, string ability, string knob, string value)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
         string name = (ability ?? "").Trim();
-        if (name.Length == 0) { ctx.Reply("Usage: .beelz admin tune <ability name> <interrupt|freemove|castspeed> <on|off|0..1>. Use the ability/group prefab name from .beelz list / .beelz api list."); return; }
+        if (name.Length == 0) { ctx.Reply("Usage: .beelz admin tune <ability name or ID> <knob> <value>. Use the ability/group prefab name OR ID from .beelz list / .beelz api list."); return; }
+        // v0.69.0: accept a numeric PrefabGUID (the ID .beelz list / BCH show) and resolve to the name key.
+        if (int.TryParse(name, out _))
+        {
+            string resolved = Beelzebub.Services.AbilityRules.ResolveAbilityKey(name);
+            if (resolved == null) { ctx.Reply($"No ability prefab found for ID '{name}'. Use the name or a valid ID from .beelz list."); return; }
+            name = resolved;
+        }
 
         var map = Core.AbilityRules.Current.AbilityMap;
         if (!map.TryGetValue(name, out var e)) { e = new AbilityRules.AbilityEntry(); map[name] = e; }
@@ -153,6 +162,7 @@ internal static class AdminCommands
         string k = (knob ?? "").Trim().ToLowerInvariant();
         string v = (value ?? "").Trim().ToLowerInvariant();
         bool? onOff = v is "on" or "true" or "1" ? true : v is "off" or "false" or "0" ? false : (bool?)null;
+        bool clear = v is "clear" or "none" or "null";
 
         switch (k)
         {
@@ -160,28 +170,116 @@ internal static class AdminCommands
                 if (onOff == null) { ctx.Reply("interrupt expects on|off."); return; }
                 e.Interruptible = onOff.Value;
                 break;
+            case "interruptonhit": case "interruptattack": case "breakonhit":   // v0.87.0
+                if (onOff == null) { ctx.Reply("interruptonhit expects on|off (cancel the cast when the caster is hit)."); return; }
+                e.InterruptOnHit = onOff.Value;
+                break;
             case "freemove":
                 if (onOff == null) { ctx.Reply("freemove expects on|off."); return; }
                 e.FreeMoveAfterCast = onOff.Value;
+                break;
+            case "freelymove": case "freemovesecs": case "freemoveafter":         // v0.87.0
+                if (clear) { e.FreeMoveAfterSeconds = null; break; }
+                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float fms) || fms < 0f)
+                { ctx.Reply("freelymove expects seconds >= 0 — free to move that many seconds INTO the cast (the cast continues), or 'clear'."); return; }
+                e.FreeMoveAfterSeconds = fms;
                 break;
             case "castspeed":
                 if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float f) || f < 0f)
                 { ctx.Reply("castspeed expects a number >= 0 (0 = rooted during cast, 1 = full speed)."); return; }
                 e.CastMovementSpeed = f;
                 break;
+            case "cooldown": case "cd":
+                if (clear) { e.CooldownSeconds = null; break; }
+                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float cd) || cd < 0f)
+                { ctx.Reply("cooldown expects an absolute time in seconds >= 0, or 'clear'."); return; }
+                e.CooldownSeconds = cd;
+                break;
+            case "range": case "maxrange":
+                if (clear) { e.MaxRangeOverride = null; break; }
+                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float rg) || rg < 0f)
+                { ctx.Reply("range expects a max cast distance >= 0, or 'clear'."); return; }
+                e.MaxRangeOverride = rg;
+                break;
+            case "charges": case "maxcharges":
+                if (clear) { e.ChargesMax = null; break; }
+                if (!int.TryParse(v, out int mc) || mc < 0) { ctx.Reply("charges expects an integer >= 0, or 'clear'."); return; }
+                e.ChargesMax = mc;
+                break;
+            case "chargetime": case "chargeuptime":
+                if (clear) { e.ChargeTimeSeconds = null; break; }
+                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float ctv) || ctv < 0f)
+                { ctx.Reply("chargetime expects seconds >= 0 (recharge per charge), or 'clear'."); return; }
+                e.ChargeTimeSeconds = ctv;
+                break;
+            case "aoe": case "aoeradius": case "radius":
+                if (clear) { e.AoeRadius = null; break; }
+                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float ar) || ar < 0f)
+                { ctx.Reply("aoe expects an area radius >= 0, or 'clear'."); return; }
+                e.AoeRadius = ar;
+                break;
+            case "projspeed": case "projectilespeed":
+                if (clear) { e.ProjectileSpeed = null; break; }
+                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float ps) || ps < 0f)
+                { ctx.Reply("projspeed expects a projectile speed >= 0, or 'clear'."); return; }
+                e.ProjectileSpeed = ps;
+                break;
+            case "duration": case "effectduration":
+                if (clear) { e.EffectDurationSeconds = null; break; }
+                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float ed) || ed < 0f)
+                { ctx.Reply("duration expects the buff/debuff duration in seconds >= 0, or 'clear'."); return; }
+                e.EffectDurationSeconds = ed;
+                break;
+            case "healing": case "healmult":
+                if (clear) { e.HealingMultiplier = null; break; }
+                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float hm) || hm < 0f)
+                { ctx.Reply("healing expects a multiplier >= 0 (1.0 = no change), or 'clear'."); return; }
+                e.HealingMultiplier = hm;
+                break;
+            case "summoncap": case "summonlimit":
+                if (clear) { e.SummonCap = null; break; }
+                if (!int.TryParse(v, out int sc) || sc < 0)
+                { ctx.Reply("summoncap expects an integer >= 0 (0 = unlimited), or 'clear'. Overrides the global summon cap for this ability."); return; }
+                e.SummonCap = sc;
+                break;
+            case "summontimeout": case "summonlifetime":
+                if (clear) { e.SummonTimeoutSeconds = null; break; }
+                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float st) || st < 0f)
+                { ctx.Reply("summontimeout expects seconds >= 0 (0 = never expires), or 'clear'. Overrides the global summon timeout for this ability."); return; }
+                e.SummonTimeoutSeconds = st;
+                break;
+            case "summonunits": case "unitspercast":
+                if (clear) { e.SummonUnitsPerCast = null; break; }
+                if (!int.TryParse(v, out int su) || su < 0)
+                { ctx.Reply("summonunits expects an integer >= 0 (max UNITS one cast summons; 0 = natural count), or 'clear'. Separate from summoncap (concurrent USES)."); return; }
+                e.SummonUnitsPerCast = su;
+                break;
+            case "forcetimeout": case "bufftimeout":
+                if (clear) { e.ForceTimeoutSeconds = null; break; }
+                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float fto) || fto < 0f)
+                { ctx.Reply("forcetimeout expects seconds >= 0 — force this ability's otherwise-INDEFINITE effects/buffs to expire after this long (adds a lifetime where there is none), or 'clear'."); return; }
+                e.ForceTimeoutSeconds = fto;
+                break;
             default:
-                ctx.Reply("Unknown knob. Use: interrupt | freemove | castspeed.");
+                ctx.Reply("Unknown knob. Use: interrupt | interruptonhit | freemove | freelymove | castspeed | cooldown | range | charges | chargetime | aoe | projspeed | duration | healing | summoncap | summontimeout | summonunits | forcetimeout.");
                 return;
         }
         Core.AbilityRules.Save();
 
-        if (!Beelzebub.Config.Settings.AbilityTuning_Enabled.Value)
+        if (!Beelzebub.Config.Settings.Abilities_ApplyConfig.Value)
         {
-            ctx.Reply($"Saved {k}={v} for '{name}', but AbilityTuning_Enabled is OFF — set it true (it applies on next load / reload).");
+            ctx.Reply($"Saved {k}={v} for '{name}', but Abilities_ApplyConfig is OFF — set it true (it applies on next load / reload).");
             return;
         }
         int applied = AbilityTuningService.ApplyAll();
         ctx.Reply($"Tuned '{name}': {k}={v}. Re-applied to {applied} cast prefab(s). NOTE: this is a GLOBAL prefab edit — the original NPC/boss cast of this ability changes too.");
+        // v0.73.0: warn when charges can't apply (the ability has no charge system).
+        if ((k == "charges" || k == "maxcharges" || k == "chargetime" || k == "chargeuptime")
+            && !AbilityTuningService.AbilityChainHasCharges(name))
+            ctx.Reply("NOTE: this ability has no charge system, so this won't apply. Charges can only be tuned on abilities that already use charges (e.g. dashes).");
+        // v0.76.0: cooldown on a charge-based ability is governed by recharge, not AbilityCooldownData.
+        if ((k == "cooldown" || k == "cd") && AbilityTuningService.AbilityChainHasCharges(name))
+            ctx.Reply("NOTE: this ability is charge-based — its delay is the charge RECHARGE, not a cooldown. Use 'chargetime' (recharge seconds) and/or 'charges' instead.");
         Audit(ctx, "tune", 0, name, $"{k}={v} applied={applied}");
     }
 
@@ -190,21 +288,182 @@ internal static class AdminCommands
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
         var map = Core.AbilityRules.Current.AbilityMap;
-        bool enabled = Beelzebub.Config.Settings.AbilityTuning_Enabled.Value;
-        ctx.Reply($"=== Ability cast-tuning === (AbilityTuning_Enabled={(enabled ? "ON" : "OFF")})");
+        bool enabled = Beelzebub.Config.Settings.Abilities_ApplyConfig.Value;
+        ctx.Reply($"=== Ability cast-tuning === (Abilities_ApplyConfig={(enabled ? "ON" : "OFF")})");
         int n = 0;
         foreach (var (name, e) in map.OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase))
         {
-            if (e.Interruptible == null && !e.FreeMoveAfterCast && e.CastMovementSpeed == null) continue;
+            if (e.Interruptible == null && e.InterruptOnHit == null && !e.FreeMoveAfterCast
+                && e.CastMovementSpeed == null && e.FreeMoveAfterSeconds == null) continue;
             string parts = "";
             if (e.Interruptible.HasValue) parts += $" interrupt={(e.Interruptible.Value ? "on" : "off")}";
+            if (e.InterruptOnHit.HasValue) parts += $" interruptonhit={(e.InterruptOnHit.Value ? "on" : "off")}";
             if (e.FreeMoveAfterCast) parts += " freemove=on";
+            if (e.FreeMoveAfterSeconds.HasValue) parts += $" freelymove={e.FreeMoveAfterSeconds.Value:F2}s";
             if (e.CastMovementSpeed.HasValue) parts += $" castspeed={e.CastMovementSpeed.Value:F2}";
             ctx.Reply($"  {name}:{parts}");
             n++;
         }
         if (n == 0) ctx.Reply("  (none — e.g. .beelz admin tune AB_Vampire_VeilOfChaos_Group interrupt on)");
-        else ctx.Reply($"{n} tuned ability(ies).{(enabled ? "" : " Set AbilityTuning_Enabled to apply them.")}");
+        else ctx.Reply($"{n} tuned ability(ies).{(enabled ? "" : " Set Abilities_ApplyConfig to apply them.")}");
+    }
+
+    [Command("broadcast", description: "Server announcements. Sub: status | leaderboard on|off | interval <minutes> | top <1-5> | complete on|off | test. Usage: .beelz admin broadcast <sub> [value]", adminOnly: true)]
+    public static void Broadcast(ChatCommandContext ctx, string sub = "status", string value = null)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        string s = (sub ?? "status").Trim().ToLowerInvariant();
+        string v = (value ?? "").Trim().ToLowerInvariant();
+        bool? onOff = v is "on" or "true" or "1" ? true : v is "off" or "false" or "0" ? false : (bool?)null;
+
+        switch (s)
+        {
+            case "status":
+                ctx.Reply($"=== Broadcasts === collection-complete={(Beelzebub.Config.Settings.Broadcast_CollectionComplete_Enabled.Value ? "ON" : "off")} · " +
+                    $"leaderboard={(Beelzebub.Config.Settings.Broadcast_Leaderboard_Enabled.Value ? "ON" : "off")} " +
+                    $"(every {Math.Max(1, Beelzebub.Config.Settings.Broadcast_Leaderboard_IntervalMinutes.Value)} min, top {Math.Clamp(Beelzebub.Config.Settings.Broadcast_Leaderboard_TopN.Value, 1, 5)})");
+                return;
+            case "leaderboard": case "board":
+                if (onOff == null) { ctx.Reply("Usage: .beelz admin broadcast leaderboard on|off"); return; }
+                Beelzebub.Config.Settings.Broadcast_Leaderboard_Enabled.Value = onOff.Value;
+                if (onOff.Value) Beelzebub.Services.BroadcastService.ResetLeaderboardClock();
+                ctx.Reply($"Leaderboard broadcast {(onOff.Value ? $"ON — next in ~{Math.Max(1, Beelzebub.Config.Settings.Broadcast_Leaderboard_IntervalMinutes.Value)} min" : "off")}.");
+                break;
+            case "interval": case "minutes":
+                if (!int.TryParse(v, out int mins) || mins < 1) { ctx.Reply("interval expects minutes >= 1 (60 = hourly, 1440 = daily)."); return; }
+                Beelzebub.Config.Settings.Broadcast_Leaderboard_IntervalMinutes.Value = mins;
+                Beelzebub.Services.BroadcastService.ResetLeaderboardClock();
+                ctx.Reply($"Leaderboard interval set to {mins} min.");
+                break;
+            case "top": case "topn":
+                if (!int.TryParse(v, out int topn) || topn < 1 || topn > 5) { ctx.Reply("top expects 1..5."); return; }
+                Beelzebub.Config.Settings.Broadcast_Leaderboard_TopN.Value = topn;
+                ctx.Reply($"Leaderboard will list the top {topn}.");
+                break;
+            case "complete": case "completion":
+                if (onOff == null) { ctx.Reply("Usage: .beelz admin broadcast complete on|off"); return; }
+                Beelzebub.Config.Settings.Broadcast_CollectionComplete_Enabled.Value = onOff.Value;
+                ctx.Reply($"Collection-complete broadcast {(onOff.Value ? "ON" : "off")}.");
+                break;
+            case "test":
+                Beelzebub.Services.BroadcastService.BroadcastLeaderboard();
+                ctx.Reply("Sent a leaderboard broadcast now (if anyone has collected abilities).");
+                break;
+            default:
+                ctx.Reply("Unknown sub. Use: status | leaderboard on|off | interval <minutes> | top <1-5> | complete on|off | test.");
+                return;
+        }
+        Audit(ctx, "broadcast", 0, s, v);
+    }
+
+    // v0.89.1 DIAGNOSTIC: dump the ECS component list of an ability's prefab chain
+    // (Group → Cast → spawned), or of the caster's active shapeshift form buff, to
+    // LogOutput.log. Used to find which component governs a channel's movement-lock
+    // (freelymove) and a vanilla form's exit-on-cast (forms). Read-only.
+    [Command("dump", description: "DIAGNOSTIC: log to LogOutput.log. <abilityGuid> = an ability's full prefab chain (Group→Cast→spawned) + key field values; 'form' = your active shapeshift form buff's components; 'forms' = every shapeshift form-buff prefab the game has + which form Beelzebub maps it to (verify skin coverage). Usage: .beelz admin dump <abilityGuid|form|forms>", adminOnly: true)]
+    public static void Dump(ChatCommandContext ctx, string target)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        string t = (target ?? "").Trim();
+
+        if (t.Equals("forms", StringComparison.OrdinalIgnoreCase))
+        {
+            // v0.94.0: list EVERY shapeshift form buff the game knows about + which form Beelzebub maps it
+            // to — so admins can confirm all player skins are recognized for custom-ability injection.
+            int total = 0, recognized = 0;
+            var byForm = new System.Collections.Generic.SortedDictionary<string, System.Collections.Generic.List<string>>();
+            foreach (var (fguid, fname) in Core.PrefabNames)
+            {
+                if (string.IsNullOrEmpty(fname)) continue;
+                if (fname.IndexOf("Shapeshift", StringComparison.OrdinalIgnoreCase) < 0) continue;
+                if (!fname.EndsWith("_Buff", StringComparison.Ordinal)) continue;
+                total++;
+                var form = Beelzebub.Services.ShapeshiftAbilityService.FormForBuff(fguid, fname);
+                string key = form.ToString();
+                if (form != Beelzebub.Services.ShapeshiftForm.None) recognized++;
+                if (!byForm.TryGetValue(key, out var list)) { list = new System.Collections.Generic.List<string>(); byForm[key] = list; }
+                list.Add($"{fname}({fguid})");
+            }
+            foreach (var (form, list) in byForm)
+            {
+                list.Sort(StringComparer.OrdinalIgnoreCase);
+                Core.Log.LogInfo($"[Beelz DUMP-FORMS] {form} ({list.Count}): {string.Join(", ", list)}");
+            }
+            ctx.Reply($"Dumped {total} shapeshift form-buff prefab(s) — {recognized} recognized as injectable forms, {total - recognized} = None (travel/utility/ability buffs). See [Beelz DUMP-FORMS] in LogOutput.log.");
+            return;
+        }
+
+        if (t.Equals("form", StringComparison.OrdinalIgnoreCase))
+        {
+            Entity ch = ctx.Event.SenderCharacterEntity;
+            if (!Core.EntityManager.HasBuffer<BuffBuffer>(ch)) { ctx.Reply("No buff buffer on your character."); return; }
+            var buffs = Core.EntityManager.GetBuffer<BuffBuffer>(ch);
+            int dumped = 0;
+            for (int i = 0; i < buffs.Length; i++)
+            {
+                int g = buffs[i].PrefabGuid._Value;
+                string nm = buffs[i].PrefabGuid.GetPrefabName() ?? "";
+                if (Beelzebub.Services.ShapeshiftAbilityService.IsSupportedForm(g, nm))
+                {
+                    DumpEntity(buffs[i].Entity, $"FORM-BUFF {nm} ({g})");
+                    dumped++;
+                }
+            }
+            ctx.Reply(dumped > 0
+                ? $"Dumped {dumped} form buff(s) to LogOutput.log — share the [Beelz DUMP] lines."
+                : "You're not in a tracked shapeshift form — enter one first, then run this.");
+            return;
+        }
+
+        if (!int.TryParse(t, out int guid)) { ctx.Reply("Usage: .beelz admin dump <abilityGuid|form>"); return; }
+        if (!Core.PrefabCollectionSystem._PrefabLookupMap.TryGetValue(new PrefabGUID(guid), out Entity group) || !group.Exists())
+        { ctx.Reply($"No prefab found for {guid}."); return; }
+
+        DumpEntity(group, $"GROUP {new PrefabGUID(guid).GetPrefabName()} ({guid})");
+        int casts = 0, spawns = 0;
+        if (Core.EntityManager.HasBuffer<AbilityGroupStartAbilitiesBuffer>(group))
+        {
+            var starts = Core.EntityManager.GetBuffer<AbilityGroupStartAbilitiesBuffer>(group);
+            for (int i = 0; i < starts.Length; i++)
+            {
+                if (!Core.PrefabCollectionSystem._PrefabLookupMap.TryGetValue(starts[i].PrefabGUID, out Entity cast) || !cast.Exists()) continue;
+                DumpEntity(cast, $"  CAST {starts[i].PrefabGUID.GetPrefabName()} ({starts[i].PrefabGUID._Value})");
+                casts++;
+                if (!Core.EntityManager.HasBuffer<AbilitySpawnPrefabOnCast>(cast)) continue;
+                var sp = Core.EntityManager.GetBuffer<AbilitySpawnPrefabOnCast>(cast);
+                for (int j = 0; j < sp.Length; j++)
+                {
+                    if (!Core.PrefabCollectionSystem._PrefabLookupMap.TryGetValue(sp[j].SpawnPrefab, out Entity spe) || !spe.Exists()) continue;
+                    DumpEntity(spe, $"    SPAWN {sp[j].SpawnPrefab.GetPrefabName()} ({sp[j].SpawnPrefab._Value})");
+                    spawns++;
+                }
+            }
+        }
+        ctx.Reply($"Dumped GROUP + {casts} cast(s) + {spawns} spawn(s) to LogOutput.log — share the [Beelz DUMP] lines.");
+    }
+
+    static void DumpEntity(Entity e, string label)
+    {
+        try
+        {
+            var arr = Core.EntityManager.GetComponentTypes(e).ToArray();
+            var names = arr
+                .Select(x => { try { return Unity.Entities.TypeManager.GetType(x.TypeIndex).Name; } catch { return null; } })
+                .Where(n => !string.IsNullOrEmpty(n))
+                .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            Core.Log.LogInfo($"[Beelz DUMP] {label}: {string.Join(", ", names)}");
+
+            // v0.92.0: also dump the VALUES of the lock/movement/cast components so freelymove can be
+            // diagnosed (is the cast a channel? did UseCastDuration=false take? is the root MovementImpair?).
+            if (e.TryGetComponent<ModifyMovementDuringCastData>(out var mm))
+                Core.Log.LogInfo($"[Beelz DUMP-VAL] {label} ModifyMovementDuringCast: speedMult={mm.MovementSpeedMultiplier._Value:F2} in={mm.InDuration._Value:F2} dur={mm.Duration._Value:F2} out={mm.OutDuration._Value:F2} useCastDur={mm.UseCastDuration}");
+            if (e.TryGetComponent<AbilityCastTimeData>(out var ct))
+                Core.Log.LogInfo($"[Beelz DUMP-VAL] {label} AbilityCastTime: maxCast={ct.MaxCastTime._Value:F2} postCast={ct.PostCastTime._Value:F2} hideBar={ct.HideCastBar}");
+            if (e.TryGetComponent<BuffModificationFlagData>(out var bm))
+                Core.Log.LogInfo($"[Beelz DUMP-VAL] {label} BuffModFlags: ModificationTypes={bm.ModificationTypes} (MovementImpair={(bm.ModificationTypes & 16L) == 16L})");
+        }
+        catch (Exception ex) { Core.Log.LogWarning($"[Beelz DUMP] {label} failed: {ex.Message}"); }
     }
 
     // ---------------------------------------------------------------------
@@ -213,15 +472,52 @@ internal static class AdminCommands
     // Closes the gap where per-ability/per-unit/global-default fields were hand-edit-only.
     // ---------------------------------------------------------------------
 
-    [Command("ability", description: "Set ANY per-ability rule live. Usage: .beelz admin ability <name> <field> <value>. Fields: enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, damagescale, cooldownscale, category, interruptible, freemove, castspeed, notes. (weapons/forms take a comma list or 'any' to clear.)", adminOnly: true)]
-    public static void AbilitySet(ChatCommandContext ctx, string ability, string field, string value)
+    [Command("ability", description: "Set ANY per-ability rule live. Usage: .beelz admin ability <name> <field> <value>. Fields: enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, damagescale, cooldownscale, cooldown, range, charges, chargetime, aoe, projspeed, duration, healing, summoncap, summontimeout, summonunits, forcetimeout, category, interruptible, interruptonhit, freemove, freelymove, castspeed, notes. (weapons/forms take a comma list or 'any' to clear; cooldown/range/charges/aoe/projspeed/duration/healing/forcetimeout/freelymove/interruptonhit are baked edits applied when Abilities_ApplyConfig is on, default; forcetimeout makes otherwise-indefinite effects expire; freelymove frees movement N seconds into a cast; interruptonhit cancels the cast when the caster is hit; summoncap/summontimeout/summonunits govern summons.) RESET: .beelz admin ability <id> defaults — clear one ability's shaping config back to shipped baseline; .beelz admin ability all defaults — reset every ability.", adminOnly: true)]
+    public static void AbilitySet(ChatCommandContext ctx, string ability, string field, string value = null)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+
+        // v0.72.0: reset-to-defaults. `.beelz admin ability <id> defaults` / `.beelz admin ability all defaults`.
+        string f = (field ?? "").Trim().ToLowerInvariant();
+        if (f is "defaults" or "default" or "reset")
+        {
+            bool apply = Beelzebub.Config.Settings.Abilities_ApplyConfig.Value;
+            if (string.Equals((ability ?? "").Trim(), "all", StringComparison.OrdinalIgnoreCase))
+            {
+                int cleared = Core.AbilityRules.ResetAllAbilityDefaults();
+                int restored = apply ? AbilityTuningService.RestoreAll() : 0;
+                if (apply) AbilityTuningService.ApplyAll();   // re-assert any global cooldown floor
+                ctx.Reply($"Reset shaping config on {cleared} ability(ies) to shipped defaults; live-restored {restored} prefab(s)."
+                    + (apply ? "" : " (Abilities_ApplyConfig is OFF — baseline takes effect on next load.)")
+                    + " Captures/availability rules (enabled/weapons/forms/deny) are unchanged. A server restart guarantees a full baseline.");
+                Audit(ctx, "ability-defaults", 0, "all", $"cleared={cleared} restored={restored}");
+                return;
+            }
+            var (rok, rmsg) = Core.AbilityRules.ResetAbilityDefaults(ability);
+            ctx.Reply(rmsg);
+            if (!rok) return;
+            if (apply) { AbilityTuningService.RestoreAbility(ability); AbilityTuningService.ApplyAll(); }
+            else ctx.Reply("(Abilities_ApplyConfig is OFF — baseline takes effect on next load.)");
+            Audit(ctx, "ability-defaults", 0, ability ?? "", "reset");
+            return;
+        }
+
+        if (value == null) { ctx.Reply("Usage: .beelz admin ability <name|id> <field> <value>  —  or  '<id> defaults' / 'all defaults' to reset shaping config."); return; }
+
         var (ok, msg) = Core.AbilityRules.SetAbilityField(ability, field, value);
         ctx.Reply(msg);
         if (!ok) return;
         // Re-apply cast tuning live if a tuning field may have changed and tuning is on.
-        if (Beelzebub.Config.Settings.AbilityTuning_Enabled.Value) AbilityTuningService.ApplyAll();
+        if (Beelzebub.Config.Settings.Abilities_ApplyConfig.Value) AbilityTuningService.ApplyAll();
+        // v0.73.0: charges/chargetime only apply to abilities that already have a charge system — warn
+        // rather than silently no-op (this bit a tester who set charges on a non-charge ability).
+        if (f.Contains("charge") && !AbilityTuningService.AbilityChainHasCharges(ability))
+            ctx.Reply("NOTE: this ability has no charge system, so 'charges'/'chargetime' won't apply. Charges can only be tuned on abilities that already use charges (e.g. dashes).");
+        // v0.76.0: a charge-governed ability (e.g. a dash) is gated by its charge RECHARGE, not an
+        // AbilityCooldownData cooldown — so setting 'cooldown' on it does nothing visible. Point the
+        // admin at chargetime instead.
+        if ((f == "cooldown" || f == "cd") && AbilityTuningService.AbilityChainHasCharges(ability))
+            ctx.Reply("NOTE: this ability is charge-based — its delay is the charge RECHARGE, not a cooldown, so 'cooldown' won't change what you feel. Use 'chargetime' (recharge seconds) and/or 'charges' instead.");
         Audit(ctx, "ability-set", 0, ability ?? "", $"{field}={value}");
     }
 
