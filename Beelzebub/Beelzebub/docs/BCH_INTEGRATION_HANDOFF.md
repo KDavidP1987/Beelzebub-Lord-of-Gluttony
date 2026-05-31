@@ -743,10 +743,10 @@
 ## 0.0 — ⚡ SINCE YOUR LAST BUILD (BCH baseline v0.44.0 → now v0.100.0) — READ THIS FIRST
 
 **Context (updated 2026-05-31):** BCH began building against **v0.44.0** (ApiVersion 6). Beelzebub
-is now at **v0.100.0 / ApiVersion 21**. This is the *consolidated* delta so you can fold everything
+is now at **v0.100.0 / ApiVersion 22**. This is the *consolidated* delta so you can fold everything
 into the UI in one pass — every per-version detail is in the dated callouts ABOVE this section.
 
-> **🆕 v0.95 → v0.100 (the 2026-05-31 session) — BCH ACTION SUMMARY (ApiVersion 20 → 21, all additive):**
+> **🆕 v0.95 → v0.100 (the 2026-05-31 session) — BCH ACTION SUMMARY (ApiVersion 20 → 22, all additive):**
 > - **ONE small wire add (ApiVersion 21):** `catalog-ability` now also carries **`a=<guid>` `unit=<name>`
 >   `unitguid=<int>`** (`unit=` SafeToken-encoded; `-`/`0` when unknown). Fill the Unit + ID columns + GUID
 >   search for UNCAPTURED abilities from the existing scan. Older parsers ignore them — no regression.
@@ -767,11 +767,27 @@ into the UI in one pass — every per-version detail is in the dated callouts AB
 >   `Capture_PityIncrement_Transform`/`_Max_Transform`, `Transform_Enabled` (master), `Transform_CooldownScope`.
 > - **PENDING #5 DONE:** `unslot` / `weapon-unslot` / `form-unslot` accept the `primary` / `ultimate` tokens —
 >   BCH can clear a single primary/ultimate bind directly (no more clearbar-the-whole-bucket workaround).
-> - **New chat-only admin commands a BCH panel can relay** (no `[BEELZ:*]` line): `.beelz tform <unit>
+> - **New chat-only WRITE commands a BCH panel can relay** (no `[BEELZ:*]` line): `.beelz tform <unit>
 >   abilities|set|clear|defaults` (per-player custom transform loadouts), `.beelz admin transform-set <unit>
 >   duration|cooldown <sec>`, `.beelz admin broadcast-msg <complete|leaderboard> <list|add|remove|edit>`
->   (manage announcement pools; `api config` SafeToken-mangles the two pooled `_Messages` strings, so
->   `broadcast-msg list` is the reliable read), `.beelz admin reset-loadouts <player>`.
+>   (manage announcement pools), `.beelz admin reset-loadouts <player>`. **The reads for these are now
+>   structured — see the next bullet (don't parse the human-text replies anymore).**
+> - **✅ PENDING #7 + #8 DONE (NEW wire reads, ApiVersion 21 → 22) — switch the BCH transform-loadout +
+>   announcements editors off chat-text parsing.** Three additive read commands; gate them on **`api>=22`**
+>   (keep the old human-text fallback only if you still support pre-22 servers):
+>   - **`api tform-kit <unit>`** → one `[BEELZ:tform-ability] unit=<int> idx=<int> a=<int> an=<rawPrefab>` per
+>     ability in that transform's FULL eligible kit + `[BEELZ:end] cmd=tform-kit unit=<int> count=<n>`.
+>     `idx` is what you pass to `.beelz tform <unit> set <phase> <slot> <idx>`. **Replaces** parsing the
+>     `.beelz tform <unit> abilities` chat reply.
+>   - **`api tform-binds <unit>`** → one `[BEELZ:tform-slot] unit=<int> phase=<int> slot=<0-7> a=<int>
+>     an=<rawPrefab>` per slot the player has CUSTOM-bound + `[BEELZ:end] cmd=tform-binds unit=<int>
+>     count=<n> phases=<n>`. This is the read the editor previously had **no way** to do — render the 8-slot ×
+>     per-phase grid from it (unbound slots = "empty → curated default"); use the `phases=` footer for how
+>     many phase tabs to show. `<unit>` resolves like `.beelz tform` (unlock index / unlocked GUID / name).
+>   - **`api broadcast-msgs <complete|leaderboard>`** (ADMIN) → one `[BEELZ:broadcast-msg] pool=<...>
+>     idx=<1-based> text=<SafeToken>` per message + `[BEELZ:end] cmd=broadcast-msgs pool=<...> count=<n>`.
+>     **Replaces** parsing the `broadcast-msg ... list` chat reply; `idx` is 1-based so it feeds straight into
+>     `broadcast-msg <pool> edit|remove <idx>`. Decode `text=` like `desc=`/`notes=` (SafeToken, clamped 256).
 
 > **🔧 v0.89–v0.94 (all ApiVersion 20, mostly behavior; the items below are the BCH-relevant ones):**
 > **clear-bar button must move to `.beelz clearbar`** (bare `resetbar` no-ops since v0.76 — see §A/§4);
