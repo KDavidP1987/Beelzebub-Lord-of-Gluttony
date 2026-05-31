@@ -133,7 +133,13 @@ internal static class ApiCommands
     //   `.beelz admin ability <name|id> freelymove <sec>` / `interruptonhit on|off` (or `tune`). Server-wide
     //   baked edit (Abilities_ApplyConfig); cleared by `defaults`. Note `interrupt_on_hit` is distinct from
     //   the existing `interruptible` (player self-cancel / ManualInterrupt).
-    const int ApiVersion = 20;
+    // v21 (v0.100.0): `catalog-ability` now also emits `a=<guid>` (the ability's PrefabGUID), `unit=<name>`
+    //   (SafeToken-encoded primary source-NPC name, `-` if unknown) and `unitguid=<int>` (source-NPC GUID,
+    //   0 if unknown) — filling the owning-unit + ID for UNCAPTURED abilities (was capture-line only). New
+    //   admin command `api catalog abilities-all` streams EVERY ability group regardless of enable/deny/
+    //   difficulty (for config); the existing `api catalog abilities` stays the collectible/player set, and
+    //   both carry `enabled=` so a client filters to the enabled set for progress tracking. All additive.
+    const int ApiVersion = 21;
 
     [Command("help", description: "List the Beelzebub API/BCH read commands (machine-readable data streams).")]
     public static void Help(ChatCommandContext ctx)
@@ -636,18 +642,24 @@ internal static class ApiCommands
         public System.Collections.Generic.Dictionary<string, int> Guids;
     }
     static CatalogSnapshot _catalog;
+    static CatalogSnapshot _catalogAll;   // v0.100.0: admin "all abilities" scope (separate page cache)
 
-    static CatalogSnapshot BuildCatalogSnapshot()
+    // v0.100.0: two scopes. adminAll=false (player/default) = the COLLECTIBLE set — curated rows + every
+    // discovered ability that passes the capture filter (respects enable/deny/difficulty/inclusive), so the
+    // count/% is the honest "available to collect" total. adminAll=true (admin config) = EVERY real ability
+    // group regardless of enable/deny/difficulty (junk stubs excluded), so an admin can configure anything.
+    // Both emit enabled= per row, so a client can also filter the admin list down to the enabled set.
+    static CatalogSnapshot BuildCatalogSnapshot(bool adminAll)
     {
         var names = new System.Collections.Generic.SortedSet<string>(StringComparer.OrdinalIgnoreCase);
         var guids = new System.Collections.Generic.Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var map = Core.AbilityRules?.Current?.AbilityMap;
 
-        // 1) Every curated entry is always present (so a disabled/curated row still shows with its flags).
+        // 1) Every curated entry is always present (a disabled/curated row still shows with its flags).
         if (map != null)
             foreach (var name in map.Keys) names.Add(name);
 
-        // 2) The discovered AB_*_AbilityGroup / _Group universe, filtered to what's actually capturable.
+        // 2) The discovered AB_*_AbilityGroup / _Group universe.
         foreach (var (guid, name) in Core.PrefabNames)
         {
             if (string.IsNullOrEmpty(name)) continue;
@@ -656,8 +668,10 @@ internal static class ApiCommands
                 && !name.EndsWith("_Group", StringComparison.OrdinalIgnoreCase)) continue;
 
             bool curated = map != null && map.ContainsKey(name);
-            bool capturable = Core.AbilityFilter.ShouldCapture(name, guid, out _);
-            if (!curated && !capturable) continue;
+            bool include = adminAll
+                ? !Core.AbilityFilter.IsJunkAbility(name)                          // admin: every real ability group
+                : (curated || Core.AbilityFilter.ShouldCapture(name, guid, out _)); // player: collectible only
+            if (!include) continue;
 
             names.Add(name);
             guids[name] = guid; // record the guid so per-row predicates (transform_only/allow_denied) resolve
@@ -685,6 +699,14 @@ internal static class ApiCommands
             if (curatedSchool != null) school = SafeToken(curatedSchool);
         }
 
+        // v0.100.0 (ApiVersion 21): owning-unit name + GUID for the FULL list — fills the Unit column / ID
+        // search for UNCAPTURED abilities (the capture line already carries the unit; this brings it to the
+        // catalog). From ability_metadata SourceNpcs; `-`/`0` when unknown. unit= is SafeToken-encoded.
+        string unit = "-"; int unitGuid = 0;
+        if (guid != 0 && Core.AbilityMetadata != null
+            && Core.AbilityMetadata.TryGetPrimarySourceNpc(guid, out int ug, out string un))
+        { unitGuid = ug; unit = string.IsNullOrWhiteSpace(un) ? "-" : SafeToken(un); }
+
         if (map != null && map.TryGetValue(name, out var entry))
         {
             string weapons = entry.Weapons is { Count: > 0 } ? string.Join(",", entry.Weapons) : "any";
@@ -693,6 +715,7 @@ internal static class ApiCommands
             if (desc == "-" && !string.IsNullOrWhiteSpace(entry.Notes)) desc = SafeToken(entry.Notes);
             string bodyC =
                 $"curated=1" +
+                $" a={guid} unit={unit} unitguid={unitGuid}" +   // v0.100.0 / ApiVersion 21
                 $" weapons={weapons}" +
                 $" forms={forms}" +
                 $" transform_only={(entry.TransformOnly ? 1 : 0)}" +
@@ -738,6 +761,7 @@ internal static class ApiCommands
         string weaponsU = (famList != null && famList.Count > 0) ? string.Join(",", famList) : "any";
         string bodyU =
             $"curated=0" +
+            $" a={guid} unit={unit} unitguid={unitGuid}" +   // v0.100.0 / ApiVersion 21
             $" weapons={weaponsU}" +
             $" forms=any" +
             $" transform_only={(Core.AbilityRules.IsTransformOnly(name, guid) ? 1 : 0)}" +
@@ -779,11 +803,25 @@ internal static class ApiCommands
         if (page < 0) page = 0;
         // Rebuild the union when a fresh scan starts (page 0) or nothing is cached; reuse for page>0
         // so one scan sees a consistent snapshot and we don't re-enumerate ~14k prefabs per page.
-        if (page == 0 || _catalog == null) _catalog = BuildCatalogSnapshot();
-        var snap = _catalog;
+        if (page == 0 || _catalog == null) _catalog = BuildCatalogSnapshot(adminAll: false);
+        StreamCatalog(ctx, _catalog, page, "catalog-abilities");
+    }
+
+    [Command("catalog abilities-all", description: "ADMIN: stream EVERY ability group for configuration — regardless of enable/deny/difficulty/inclusive (junk stubs excluded). Same line format + fields as `catalog abilities` (each row carries enabled=, so a client can filter to the enabled set). Optional page, default 0. Page size 40.", adminOnly: true)]
+    public static void CatalogAbilitiesAll(ChatCommandContext ctx, int page = 0)
+    {
+        if (!Core.IsReady) { ctx.Reply("[BEELZ:err] cmd=catalog-abilities-all code=not_ready msg=plugin_not_initialized"); return; }
+        if (page < 0) page = 0;
+        if (page == 0 || _catalogAll == null) _catalogAll = BuildCatalogSnapshot(adminAll: true);
+        StreamCatalog(ctx, _catalogAll, page, "catalog-abilities-all");
+    }
+
+    /// <summary>v0.100.0: shared paginated emit for the player + admin catalog scopes.</summary>
+    static void StreamCatalog(ChatCommandContext ctx, CatalogSnapshot snap, int page, string cmd)
+    {
         if (snap == null || snap.Names.Count == 0)
         {
-            ctx.Reply("[BEELZ:end] cmd=catalog-abilities count=0 total=0 page=0 pages=1");
+            ctx.Reply($"[BEELZ:end] cmd={cmd} count=0 total=0 page=0 pages=1");
             return;
         }
         const int pageSize = 40;
@@ -792,7 +830,7 @@ internal static class ApiCommands
         if (page >= pages) page = pages - 1;
         var slice = snap.Names.Skip(page * pageSize).Take(pageSize).ToList();
         foreach (var name in slice) EmitCatalogAbilityLine(ctx, name, snap.Guids);
-        ctx.Reply($"[BEELZ:end] cmd=catalog-abilities count={slice.Count} total={total} page={page} pages={pages}");
+        ctx.Reply($"[BEELZ:end] cmd={cmd} count={slice.Count} total={total} page={page} pages={pages}");
     }
 
     [Command("hotkeys", description: "Stream the caller's named hotkey bindings (BCH-readable). W4 extra slots beyond V Rising's 6.")]
@@ -892,7 +930,7 @@ internal static class ApiCommands
         var now = System.DateTime.UtcNow;
         foreach (var cat in new[] { TransformCategory.Regular, TransformCategory.VBlood, TransformCategory.ShardBoss })
         {
-            double rem = (Core.AbilityRegistry.CooldownUntil(steamId, cat) - now).TotalSeconds;
+            double rem = (Core.AbilityRegistry.CooldownUntil(steamId, Core.Transforms.CooldownScopeKey(cat, 0)) - now).TotalSeconds;
             if (rem < 0) rem = 0;
             ctx.Reply($"[BEELZ:cooldown] category={cat.ToString().ToLowerInvariant()} remaining={rem:F0}");
         }

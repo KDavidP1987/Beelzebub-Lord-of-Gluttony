@@ -57,6 +57,16 @@ internal sealed class AbilityMetadataService
     /// </summary>
     readonly Dictionary<int, string> _unitNames = new();
 
+    // v0.99.0: reverse index — unit/NPC GUID → every ability GUID whose SourceNpcs include that unit.
+    // Built from the SAME metadata scan as _unitNames. This is the full CROSS-PHASE kit (the scraper maps
+    // each AB_<Boss>_* ability to its source boss regardless of which combat phase uses it), so Devour /
+    // capture can grant a boss's complete kit instead of only the base/phase-1 ability bar.
+    readonly Dictionary<int, List<int>> _abilitiesByUnit = new();
+
+    /// <summary>v0.99.0: every ability GUID the metadata attributes to this unit (all phases). Empty if none.</summary>
+    public IReadOnlyList<int> GetAbilitiesForUnit(int unitGuid)
+        => _abilitiesByUnit.TryGetValue(unitGuid, out var list) ? list : System.Array.Empty<int>();
+
     public string OverridesFilePath { get; }
     public int ShippedCount => _shipped.Count;
     public int OverrideCount => _overrides.Count;
@@ -86,24 +96,36 @@ internal sealed class AbilityMetadataService
     void BuildUnitNameIndex()
     {
         _unitNames.Clear();
+        _abilitiesByUnit.Clear();
         var candidates = new Dictionary<int, List<string>>();
 
-        void Collect(IEnumerable<AbilityMetadataEntry> entries)
+        // v0.99.0: iterate KVPs so we have each ability GUID (the dict KEY) for the reverse index.
+        void Collect(IEnumerable<KeyValuePair<int, AbilityMetadataEntry>> entries)
         {
-            foreach (var e in entries)
+            foreach (var (abilityGuid, e) in entries)
             {
                 if (e?.SourceNpcs == null) continue;
                 foreach (var npc in e.SourceNpcs)
                 {
-                    if (npc == null || string.IsNullOrWhiteSpace(npc.Name)) continue;
-                    if (!candidates.TryGetValue(npc.Guid, out var list))
-                        candidates[npc.Guid] = list = new List<string>();
-                    if (!list.Contains(npc.Name)) list.Add(npc.Name);
+                    if (npc == null) continue;
+                    if (!string.IsNullOrWhiteSpace(npc.Name))
+                    {
+                        if (!candidates.TryGetValue(npc.Guid, out var list))
+                            candidates[npc.Guid] = list = new List<string>();
+                        if (!list.Contains(npc.Name)) list.Add(npc.Name);
+                    }
+                    // v0.99.0: unit → abilities reverse index.
+                    if (abilityGuid != 0)
+                    {
+                        if (!_abilitiesByUnit.TryGetValue(npc.Guid, out var abils))
+                            _abilitiesByUnit[npc.Guid] = abils = new List<int>();
+                        if (!abils.Contains(abilityGuid)) abils.Add(abilityGuid);
+                    }
                 }
             }
         }
-        Collect(_shipped.Values);
-        Collect(_overrides.Values);
+        Collect(_shipped);
+        Collect(_overrides);
 
         foreach (var (guid, names) in candidates)
         {
@@ -111,7 +133,7 @@ internal sealed class AbilityMetadataService
             if (!string.IsNullOrWhiteSpace(best)) _unitNames[guid] = best;
         }
 
-        Core.Log.LogInfo($"[AbilityMetadata] Built unit-name index: {_unitNames.Count} units from SourceNpcs.");
+        Core.Log.LogInfo($"[AbilityMetadata] Built unit-name index: {_unitNames.Count} units from SourceNpcs; unit→abilities index: {_abilitiesByUnit.Count} units.");
     }
 
     static bool IsAscii(string s)
@@ -299,6 +321,28 @@ internal sealed class AbilityMetadataService
     /// the ECS prefab thousands of times for fields the catalog doesn't even use. Returns false when
     /// neither a description nor a school is curated for this guid (caller emits the "-"/none defaults).
     /// </summary>
+    /// <summary>
+    /// v0.100.0 (ApiVersion 21): the primary (first valid) SOURCE NPC for an ability group — its GUID and a
+    /// resolved English display name — from the curated SourceNpcs (override beats shipped). Lets
+    /// `catalog-ability` carry unit=/unitguid= for UNCAPTURED abilities. Returns false if unknown.
+    /// </summary>
+    public bool TryGetPrimarySourceNpc(int abilityGroupGuid, out int npcGuid, out string npcName)
+    {
+        npcGuid = 0; npcName = null;
+        _overrides.TryGetValue(abilityGroupGuid, out var over);
+        _shipped.TryGetValue(abilityGroupGuid, out var ship);
+        var npcs = (over?.SourceNpcs is { Count: > 0 }) ? over.SourceNpcs : ship?.SourceNpcs;
+        if (npcs == null) return false;
+        foreach (var n in npcs)
+        {
+            if (n == null || n.Guid == 0) continue;
+            npcGuid = n.Guid;
+            npcName = ResolveUnitName(n.Guid);   // best English name (never null/empty)
+            return true;
+        }
+        return false;
+    }
+
     public bool TryGetCuratedText(int abilityGroupGuid, out string description, out string school)
     {
         description = null;

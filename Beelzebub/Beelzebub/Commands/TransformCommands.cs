@@ -20,7 +20,7 @@ internal static class TransformCommands
         var unlocks = Core.AbilityRegistry.ListTransforms(steamId);
         if (unlocks.Count == 0)
         {
-            ctx.Reply("No transformation unlocks yet. In this version only DRACULA and MORGANA transform — defeat them for a rare chance to unlock it.");
+            ctx.Reply("No transformation unlocks yet. Transforms come from bosses the game can render as a player form — Dracula, Morgana, the Werewolf Chieftain, Terah the Geomancer (Golem), the Tailor (Gargoyle), and the basic werewolf. Defeat them for a rare chance to unlock it.");
             ctx.Reply("Every other unit's powers are collected as ABILITIES: capture them one at a time, or hit the rare 'Devour' jackpot to learn a unit's whole kit at once, then slot with .beelz grant. (Becoming any unit is a researched, postponed phase-two feature.)");
             return;
         }
@@ -131,6 +131,100 @@ internal static class TransformCommands
         }
     }
 
+    // v0.100.0: per-player CUSTOM transform loadouts. Pick which of a boss's full cross-phase kit fills
+    // each phase slot — overwrite the curated defaults, or define a phase the form doesn't have by default.
+    [Command("tform", description: "Customize YOUR transformation loadout. Usage: .beelz tform <unit|index> <abilities|set|clear|defaults> [phase] [slot] [abilityIndex|id]. 'abilities' = list that boss's full kit; 'set <phase> <slot> <index>' = bind one of its abilities to a slot (0=primary, 7=ultimate); 'clear <phase> <slot>'; 'defaults' = reset that transform to the curated kit.")]
+    public static void Tform(ChatCommandContext ctx, string unit, string action = "abilities", string a1 = null, string a2 = null, string a3 = null)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        if (!TryResolveTransformUnit(steamId, unit, out int unitGuid, out string err)) { ctx.Reply(err); return; }
+
+        string uname = Core.AbilityMetadata?.ResolveUnitName(unitGuid) ?? new PrefabGUID(unitGuid).GetPrefabName();
+        string Name(int g) => Core.AbilityMetadata?.ResolveAbilityName(g) ?? new PrefabGUID(g).GetPrefabName();
+        var kit = Services.UnitKitService.FullEligibleKit(unitGuid);
+        string act = (action ?? "abilities").Trim().ToLowerInvariant();
+
+        if (act is "abilities" or "list" or "kit")
+        {
+            if (kit.Count == 0) { ctx.Reply($"{uname}: no eligible abilities found in its kit."); return; }
+            ctx.Reply($"{uname} — {kit.Count} abilities. Bind with: .beelz tform {unit} set <phase> <slot 0-7> <index>");
+            for (int i = 0; i < kit.Count; i++) ctx.Reply($"  [{i}] {Name(kit[i])} (id {kit[i]})");
+            return;
+        }
+
+        if (act is "defaults" or "reset")
+        {
+            Core.AbilityRegistry.ClearTransformLoadout(steamId, unitGuid);
+            Core.Persistence.RequestSave();
+            ReapplyIfActive(ctx, steamId, unitGuid);
+            ctx.Reply($"Reset your {uname} transform loadout to the curated defaults.");
+            return;
+        }
+
+        if (a1 == null || !int.TryParse(a1, out int phase) || phase < 1) { ctx.Reply("Need a phase >= 1. Usage: .beelz tform <unit> set <phase> <slot> <index>."); return; }
+        if (a2 == null || !int.TryParse(a2, out int slot) || slot < 0 || slot > 7) { ctx.Reply("Slot must be 0-7 (0 = primary/left-click, 7 = ultimate)."); return; }
+
+        if (act == "clear")
+        {
+            Core.AbilityRegistry.ClearTransformLoadoutSlot(steamId, unitGuid, phase, slot);
+            Core.Persistence.RequestSave();
+            ReapplyIfActive(ctx, steamId, unitGuid);
+            ctx.Reply($"Cleared {uname} phase {phase} slot {slot} (reverts to the curated default).");
+            return;
+        }
+
+        if (act == "set")
+        {
+            if (a3 == null) { ctx.Reply("Usage: .beelz tform <unit> set <phase> <slot> <abilityIndex|id>."); return; }
+            if (kit.Count == 0) { ctx.Reply($"{uname} has no kit to choose from."); return; }
+            int abilityGuid;
+            if (int.TryParse(a3, out int parsed) && parsed >= 0 && parsed < kit.Count) abilityGuid = kit[parsed];     // index
+            else if (int.TryParse(a3, out int gid) && kit.Contains(gid)) abilityGuid = gid;                            // raw ability id in-kit
+            else { ctx.Reply($"'{a3}' isn't a valid index (0-{kit.Count - 1}) or an ability in {uname}'s kit. See .beelz tform {unit} abilities."); return; }
+
+            Core.AbilityRegistry.SetTransformLoadoutSlot(steamId, unitGuid, phase, slot, abilityGuid);
+            Core.Persistence.RequestSave();
+            ReapplyIfActive(ctx, steamId, unitGuid);
+            ctx.Reply($"{uname}: bound {Name(abilityGuid)} to phase {phase}, slot {slot}. (If you're in that form/phase now it updated live; otherwise re-enter it.)");
+            return;
+        }
+
+        ctx.Reply("Unknown action. Use: abilities | set <phase> <slot> <index> | clear <phase> <slot> | defaults.");
+    }
+
+    /// <summary>v0.100.0: re-apply the active transform if the player is currently in this unit's form (live update).</summary>
+    static void ReapplyIfActive(ChatCommandContext ctx, ulong steamId, int unitGuid)
+    {
+        var active = Core.AbilityRegistry.GetActiveTransform(steamId);
+        if (active != null && active.UnitPrefabGuid == unitGuid)
+        {
+            try { Core.Transforms.ReapplyActiveTransform(steamId, active, ctx.Event.SenderCharacterEntity); }
+            catch { /* live re-apply is best-effort; re-entering the form always picks it up */ }
+        }
+    }
+
+    /// <summary>v0.100.0: resolve a transform unit from an index into the player's unlocks, an unlocked GUID, or a name.</summary>
+    static bool TryResolveTransformUnit(ulong steamId, string unitOrIndex, out int unitGuid, out string err)
+    {
+        unitGuid = 0; err = null;
+        var unlocks = Core.AbilityRegistry.ListTransforms(steamId);
+        if (unlocks.Count == 0) { err = "You have no transformation unlocks. Use .beelz transforms once you've unlocked one."; return false; }
+        const System.StringComparison OIC = System.StringComparison.OrdinalIgnoreCase;
+        string Prefab(int g) => new PrefabGUID(g).GetPrefabName() ?? "";
+        string Display(int g) => Core.AbilityMetadata?.ResolveUnitName(g) ?? Prefab(g);
+
+        if (int.TryParse(unitOrIndex, out int idx) && idx >= 0 && idx < unlocks.Count) { unitGuid = unlocks[idx].UnitPrefabGuid; return true; }
+        if (int.TryParse(unitOrIndex, out int rawGuid) && rawGuid != 0)
+            foreach (var u in unlocks) if (u.UnitPrefabGuid == rawGuid) { unitGuid = rawGuid; return true; }
+
+        var matches = unlocks.Where(u => Prefab(u.UnitPrefabGuid).Contains(unitOrIndex, OIC) || Display(u.UnitPrefabGuid).Contains(unitOrIndex, OIC)).ToList();
+        if (matches.Count == 0) { err = $"No unlocked transform matches '{unitOrIndex}'. Use .beelz transforms for the list (or its index)."; return false; }
+        var exact = matches.Where(u => Prefab(u.UnitPrefabGuid).Equals(unitOrIndex, OIC) || Display(u.UnitPrefabGuid).Equals(unitOrIndex, OIC)).ToList();
+        unitGuid = exact.Count > 0 ? exact[0].UnitPrefabGuid : matches[0].UnitPrefabGuid;
+        return true;
+    }
+
     [Command("phase", description: "Switch your active transformation's spell bar between boss-phase loadouts. Usage: .beelz phase [n]. No arg = show current + available phases.")]
     public static void Phase(ChatCommandContext ctx, int n = -1)
     {
@@ -140,7 +234,7 @@ internal static class TransformCommands
         if (active == null) { ctx.Reply("You are not currently transformed. Use .beelz transform <unit> first."); return; }
 
         var pg = new PrefabGUID(active.UnitPrefabGuid);
-        var available = Core.Transforms.GetAvailablePhases(pg);
+        var available = Core.Transforms.GetAvailablePhases(pg, steamId);   // v0.100.0: include player-defined custom phases
 
         if (n <= 0)
         {
@@ -164,9 +258,11 @@ internal static class TransformCommands
             return;
         }
 
-        // Validate the phase actually has abilities before swapping (nicer message).
+        // Validate the phase actually has abilities before swapping (nicer message). v0.100.0: a player's
+        // custom loadout for this phase counts even if the prefab has no natural abilities for it.
         var abilities = Core.Transforms.GetTransformAbilities(pg, n);
-        if (abilities.Count == 0)
+        bool hasCustom = Core.AbilityRegistry.GetTransformLoadout(steamId, active.UnitPrefabGuid, n).Count > 0;
+        if (abilities.Count == 0 && !hasCustom)
         {
             ctx.Reply($"Phase {n} has no eligible abilities for {Core.AbilityMetadata.ResolveUnitName(pg._Value)}. Aborting.");
             return;
@@ -604,7 +700,7 @@ internal static class TransformCommands
 
         // v0.44.0: real transformation is Dracula/Morgana-only now; this curated list is best
         // read as a boss-kit reference. Use .beelz bestiary to track your ability collection.
-        ctx.Reply($"[CATALOG] Curated boss kits ({total}). NOTE: only Dracula & Morgana transform in this version — others are collected as ABILITIES (see .beelz bestiary). Page {page + 1}/{pages}.");
+        ctx.Reply($"[CATALOG] Curated boss kits ({total}). NOTE: only player-renderable forms transform (Dracula, Morgana, Werewolf, Golem, Gargoyle); every other unit's kit is collected as ABILITIES (see .beelz bestiary). Page {page + 1}/{pages}.");
         foreach (var (name, entry) in ordered.Skip(page * pageSize).Take(pageSize))
         {
             bool unlocked = TryResolveUnitGuid(name, out int unitGuid) && unlockedGuids.Contains(unitGuid);

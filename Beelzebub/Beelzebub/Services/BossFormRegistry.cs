@@ -42,6 +42,12 @@ internal static class BossFormRegistry
         /// <summary>Optional per-set names (parallel to FormSets) for messages.</summary>
         public string[] FormNames;
 
+        // NOTE (v0.99.1): a per-phase form-buff array was trialled (v0.98 Dracula "Wolf" phase) to let one
+        // unit swap MODELS across phases, but swapping the model mid-transform routes through the async
+        // form re-apply that breaks on native forms — so it was removed. A second model for an existing
+        // transform should be its OWN standalone transform/unlock instead. All phases of a unit share the
+        // one FormBuffGuid model; `.beelz phase` only swaps the ability set.
+
         public int FormCount => FormSets?.Length ?? 0;
         public int[] SetForPhase(int phase) // phase is 1-based
         {
@@ -63,6 +69,11 @@ internal static class BossFormRegistry
         { -327335305, new BossForm {
             Label = "Dracula",
             FormBuffGuid = -31099041,
+            // v0.99.1: the v0.98 experimental "Wolf" phase 3 was REMOVED. It swapped to a different MODEL
+            // mid-transform (a per-phase form buff), which routes through the async destroy+respawn form
+            // apply — the same path that breaks mid-transform on native forms — so it didn't work in-game.
+            // Dracula's wolf is really a standalone shapeshift (his WolfLeap ability), so a "Dracula's Wolf"
+            // would need to be its OWN transform/unlock, not a phase of the spell form. Deferred (see notes).
             FormNames = new[] { "Warrior", "Bloodmage" },
             FormSets = new[]
             {
@@ -95,6 +106,126 @@ internal static class BossFormRegistry
                 // Phase 2 Serpent (8 form slots): MeleeAttack, GroundPiercer, QuickTeleport,
                 // MistSpinners, CrossWindSlash, SpectralBlast, SpectralBeam, EyeOfTheCorruption.
                 new[] { 2134120100, -668068170, -1940289109, 1278045964, 846291757, 1173842428, 2099754785, 734658196 },
+            },
+        }},
+        // v0.96.0 — Werewolf Chieftain (Willfred) → the real cursed-forest WEREWOLF form
+        // (Buff_General_Shapeshift_Werewolf_Standard). The third player-renderable transform after
+        // Dracula/Morgana, and the first that ISN'T a boss spell-phase buff — it's the werewolf-curse
+        // shapeshift, so the player takes the werewolf MODEL. The Werewolf Chieftain VBlood ships ONLY as
+        // a `_GateBoss_Major` variant, so VBloodSystemPatch was changed to let registered Tier-1 units
+        // unlock despite the gate-boss exclusion.
+        //
+        // ⚠️ EXPERIMENTAL/TEST: this form's ability bar is normally defined by a CastOptions prefab
+        // (CO_Werewolf), NOT ReplaceAbilityOnSlotBuff. EnrichFormBuff still injects the curated kit on
+        // slots 0-7 exactly like Dracula/Morgana — IN-GAME TEST whether the injected abilities render +
+        // fire, or the CastOptions werewolf bar wins. If the latter, the form is still a valid cosmetic
+        // "become a werewolf" with its native kit. See docs/WEREWOLF_FORM_TRANSFORM_DESIGN.md.
+        { 2079933370, new BossForm {
+            Label = "Werewolf",
+            FormBuffGuid = -622259665,              // v0.98.0: the V-BLOOD werewolf form (the boss variant);
+                                                    // the basic NPC werewolf below uses the _Standard buff so the two are distinct.
+            // v0.99.0: two combat phases (same werewolf model) — `.beelz phase` swaps the kit.
+            FormNames = new[] { "Feral", "Alpha" },
+            FormSets = new[]
+            {
+                // Phase 1 "Feral" — agile bleed kit (the core AB_Werewolf_* moves that match the rig).
+                new[]
+                {
+                    -831562637,   // 0 AB_Werewolf_MeleeAttack_Group (primary claw)
+                    -1789525825,  // 1 AB_Werewolf_Bite_AbilityGroup (bite → bleed)
+                    1063690361,   // 2 AB_Werewolf_Dash_AbilityGroup (travel/leap)
+                    797495975,    // 3 AB_Werewolf_Howl_Group
+                },
+                // Phase 2 "Alpha" — the Chieftain's heavy crowd-control kit.
+                new[]
+                {
+                    -831562637,   // 0 AB_Werewolf_MeleeAttack_Group (primary claw)
+                    -174926399,   // 1 AB_WerewolfChieftain_MultiBite_AbilityGroup
+                    1445822330,   // 2 AB_WerewolfChieftain_Knockdown_AbilityGroup
+                    -566065717,   // 3 AB_WerewolfChieftain_ShadowDash_AbilityGroup
+                    -192549213,   // 4 AB_WerewolfChieftain_Stealth_AbilityGroup
+                },
+            },
+        }},
+        // v0.97.0 — Geomancer (Terah) → GOLEM form (AB_Shapeshift_Golem_T02_Buff). The iron-golem
+        // model-swap shapeshift V Rising ships (historically flagged "not reliably player-usable" — this
+        // is the in-game test of whether it renders + holds for a player). Kit = the Geomancer's earth
+        // abilities (adopted from Bloodcraft's commented-out AncientGuardian set).
+        // ⚠️ EXPERIMENTAL/TEST — report which slots render + fire.
+        { -1065970933, new BossForm {        // CHAR_Geomancer_Human_VBlood
+            Label = "Golem",
+            FormBuffGuid = 914043867,          // AB_Shapeshift_Golem_T02_Buff
+            // v0.99.0: two combat phases (same golem model) mirroring the Geomancer's calm→enraged fight.
+            FormNames = new[] { "Earthshaper", "Enraged" },
+            FormSets = new[]
+            {
+                // Phase 1 "Earthshaper" — controlled earth kit.
+                new[]
+                {
+                    1500843923,   // 0 AB_Geomancer_MeleeAttack_Group (primary slam)
+                    2106422510,   // 1 AB_Geomancer_GroundSlam_Group
+                    -1940289109,  // 2 AB_Vampire_Dracula_QuickTeleport_AbilityGroup (mobility — player-safe)
+                    -221719333,   // 3 AB_Geomancer_RockSlam_AbilityGroup
+                },
+                // Phase 2 "Enraged" — the boss's enrage kit (summon guardians + heavy smashes).
+                new[]
+                {
+                    1500843923,   // 0 AB_Geomancer_MeleeAttack_Group (primary slam)
+                    1079488801,   // 1 AB_Geomancer_EnragedSmash_AbilityGroup
+                    -598112885,   // 2 AB_Geomancer_Golem_RaiseGuardians_AbilityGroup (summon)
+                    -1204505053,  // 3 AB_Geomancer_Enrage_AbilityGroup
+                    -1148606177,  // 4 AB_Geomancer_UndergroundTremmors_AbilityGroup
+                },
+            },
+        }},
+        // v0.97.0 — The Tailor → GARGOYLE form (AB_Tailor_Shapeshift_Gargoyle_Buff). The Tailor's phase-2
+        // gargoyle is a model-swap shapeshift V Rising ships. The gargoyle's native ability pool is THIN
+        // (it's primarily a flying/defensive form — fly + wing-shield), so this kit is sparse + leans on
+        // those gargoyle moves plus a generic teleport. ⚠️ EXPERIMENTAL/TEST — the fly/shield abilities are
+        // scripted travel/defense sequences that may not behave as normal slot casts; report what works.
+        { -1942352521, new BossForm {        // CHAR_Villager_Tailor_VBlood
+            Label = "Gargoyle",
+            FormBuffGuid = -395216184,         // AB_Tailor_Shapeshift_Gargoyle_Buff
+            // v0.99.0: two phases (same gargoyle model) — grounded defense vs flight. The gargoyle's native
+            // pool is thin (fly + wing-shield), so the two kits overlap more than the other forms.
+            FormNames = new[] { "Sentinel", "Skyterror" },
+            FormSets = new[]
+            {
+                // Phase 1 "Sentinel" — grounded wing-shield defense.
+                new[]
+                {
+                    88850785,     // 0 AB_Gargoyle_WingShield_Emerge_AbilityGroup (wing slam)
+                    1460741503,   // 1 AB_Gargoyle_WingShield_AbilityGroup        (wing shield)
+                    -1940289109,  // 2 AB_Vampire_Dracula_QuickTeleport_AbilityGroup (mobility — player-safe)
+                    1529659981,   // 3 AB_Gargoyle_WingShield_EmergeSpawn_AbilityGroup
+                },
+                // Phase 2 "Skyterror" — flight kit.
+                new[]
+                {
+                    88850785,     // 0 AB_Gargoyle_WingShield_Emerge_AbilityGroup (wing slam)
+                    -382913708,   // 1 AB_Gargoyle_FlyStart_AbilityGroup (take flight / travel)
+                    1563014858,   // 2 AB_Gargoyle_FlyEnd_AbilityGroup   (dive / land)
+                    -1940289109,  // 3 AB_Vampire_Dracula_QuickTeleport_AbilityGroup (mobility)
+                },
+            },
+        }},
+        // v0.98.0 — BASIC WEREWOLF: the common (non-boss) werewolf NPC's curse form. Uses the _Standard
+        // werewolf shapeshift (distinct from the Chieftain's _VBlood form above). Unlocked from the regular
+        // werewolf NPC via the regular-kill transform roll (DropChance_TransformUnlock_Regular) — more
+        // accessible than the boss form. Core AB_Werewolf_* kit (no Chieftain specials).
+        { -951976780, new BossForm {        // CHAR_Farmlands_HostileVillager_Werewolf
+            Label = "Basic Werewolf",
+            FormBuffGuid = -1598161201,         // Buff_General_Shapeshift_Werewolf_Standard
+            FormNames = new[] { "Basic Werewolf" },
+            FormSets = new[]
+            {
+                new[]
+                {
+                    -831562637,   // 0 AB_Werewolf_MeleeAttack_Group (primary claw)
+                    -1789525825,  // 1 AB_Werewolf_Bite_AbilityGroup
+                    1063690361,   // 2 AB_Werewolf_Dash_AbilityGroup (travel)
+                    797495975,    // 3 AB_Werewolf_Howl_Group
+                },
             },
         }},
     };

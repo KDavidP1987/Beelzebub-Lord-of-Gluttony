@@ -29,30 +29,13 @@ internal static class DevourService
         && Core.PrefabCollectionSystem._PrefabLookupMap.TryGetValue(unit, out Entity prefab)
         && Core.EntityManager.HasBuffer<AbilityGroupSlotBuffer>(prefab);
 
-    /// <summary>Every eligible (capture-allowed, slottable) ability-group GUID on a unit's prefab.</summary>
-    public static List<int> EligibleAbilitiesFor(PrefabGUID unit)
-    {
-        var result = new List<int>();
-        if (unit._Value == 0) return result;
-        if (!Core.PrefabCollectionSystem._PrefabLookupMap.TryGetValue(unit, out Entity prefab)) return result;
-        if (!Core.EntityManager.HasBuffer<AbilityGroupSlotBuffer>(prefab)) return result;
-
-        var slots = Core.EntityManager.GetBuffer<AbilityGroupSlotBuffer>(prefab);
-        for (int i = 0; i < slots.Length; i++)
-        {
-            PrefabGUID ability = slots[i].BaseAbilityGroupOnSlot;
-            if (ability._Value == 0) continue;
-            string name = ability.GetPrefabName();
-            if (!Core.AbilityFilter.ShouldCapture(name, ability._Value, out _)) continue;
-            // v0.44.0: don't Devour transform-only abilities — they can't be slotted or
-            // .beelz cast (both refuse IsTransformOnly), and transformation is now
-            // Dracula/Morgana-only (curated kits, not captured), so they'd be dead entries.
-            // v0.50.0: only when transform-only enforcement is on (default off → devour them too).
-            if (Core.AbilityRules.IsTransformOnlyEnforced(name, ability._Value)) continue;
-            if (!result.Contains(ability._Value)) result.Add(ability._Value);
-        }
-        return result;
-    }
+    /// <summary>
+    /// Every eligible (capture-allowed, slottable) ability-group GUID a unit has. v0.99.0: this is now the
+    /// FULL CROSS-PHASE kit (base bar ∪ metadata reverse-map ∪ curated transform-form sets), not just the
+    /// prefab's base/phase-1 bar — so devouring a multi-phase boss grants its phase-2/3 abilities too.
+    /// See <see cref="UnitKitService.FullEligibleKit"/>.
+    /// </summary>
+    public static List<int> EligibleAbilitiesFor(PrefabGUID unit) => UnitKitService.FullEligibleKit(unit._Value);
 
     /// <summary>
     /// Grant the player every eligible ability of a unit (reads the unit's prefab).

@@ -14,6 +14,13 @@ internal sealed class AbilityFilter
         "_Death_", "_Wounded_", "_Test_", "_Internal_", "_DEBUG_",
     };
 
+    /// <summary>
+    /// v0.100.0: true if the name is a non-ability stub (idle/spawn/death/test/etc.), independent of
+    /// enable/deny/difficulty/inclusive rules. Used by the admin "all abilities" catalog scope to include
+    /// every REAL ability group an admin might configure — even disabled/denied ones.
+    /// </summary>
+    public bool IsJunkAbility(string abilityName) => MatchesAlwaysJunk(abilityName);
+
     static bool MatchesAlwaysJunk(string abilityName)
     {
         foreach (var j in _alwaysJunk)

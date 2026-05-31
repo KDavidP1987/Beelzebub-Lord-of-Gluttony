@@ -508,6 +508,54 @@ internal static class TransformBuffService
     }
 
     /// <summary>
+    /// v0.99.1: swap a form's ability set IN PLACE on the already-active form buff — for `.beelz phase`
+    /// when the new phase wears the SAME model (form buff GUID unchanged). The native shapeshift forms
+    /// (Werewolf/Golem/Gargoyle) have NO LifeTime, so <see cref="ApplyForm"/> takes the async destroy+
+    /// re-spawn path, which races on a mid-transform phase switch — the buff the player is wearing isn't
+    /// reaped before the re-apply, so phase 2 silently never landed. Editing the existing form buff's
+    /// ReplaceAbilityOnSlotBuff buffer + re-running the slot system avoids the respawn entirely (the same
+    /// in-place technique <see cref="ShapeshiftAbilityService.ApplyFormLoadout"/> uses, which renders fine).
+    /// Returns false if the form buff isn't currently on the player (caller then does a full ApplyForm).
+    /// </summary>
+    public static bool ReapplyFormAbilitiesInPlace(Entity character, int formBuffGuid, IReadOnlyList<int> abilities)
+    {
+        if (!character.Exists() || formBuffGuid == 0 || abilities == null || abilities.Count == 0) return false;
+        if (!Core.ServerGameManager.TryGetBuff(character, new PrefabGUID(formBuffGuid).ToIdentifier(), out Entity buffEntity)
+            || !buffEntity.Exists())
+            return false;   // not currently in this form → let the caller apply it fresh
+        try
+        {
+            if (!Core.EntityManager.HasComponent<ReplaceAbilityOnSlotData>(buffEntity))
+                Core.EntityManager.AddComponent<ReplaceAbilityOnSlotData>(buffEntity);
+            DynamicBuffer<ReplaceAbilityOnSlotBuff> buffer = Core.EntityManager.HasBuffer<ReplaceAbilityOnSlotBuff>(buffEntity)
+                ? Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(buffEntity)
+                : Core.EntityManager.AddBuffer<ReplaceAbilityOnSlotBuff>(buffEntity);
+            buffer.Clear();
+            for (int i = 0; i < abilities.Count && i < 8; i++)
+            {
+                buffer.Add(new ReplaceAbilityOnSlotBuff
+                {
+                    Target = ReplaceAbilityTarget.BuffTarget,
+                    Slot = i,
+                    NewGroupId = new PrefabGUID(abilities[i]),
+                    Priority = 99,
+                    CopyCooldown = true,
+                    CastBlockType = GroupSlotModificationCastBlockType.WholeCast,
+                });
+            }
+            if (Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+            if (Beelzebub.Config.Settings.VerboseLogging.Value)
+                Core.Log.LogInfo($"[Beelz] phase swap in-place on {new PrefabGUID(formBuffGuid).GetPrefabName()} → {abilities.Count} abilities (no respawn).");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError($"[Beelz] ReapplyFormAbilitiesInPlace failed: {ex}");
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Destroy the carrier buff, letting V Rising re-resolve the player's slot stack
     /// from natural sources (weapon + spell-book + any other overlays). Returns true
     /// if a buff was found and destroyed.

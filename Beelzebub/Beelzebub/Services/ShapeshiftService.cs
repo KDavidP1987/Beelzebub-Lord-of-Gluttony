@@ -43,7 +43,12 @@ internal static class ShapeshiftService
     // v0.21.1: expanded form roster — partial answer to user's "EXO form works,
     // why don't bosses?" question. We can't add NEW models, but we weren't using
     // all the models V Rising already ships.
-    static readonly PrefabGUID WerewolfStandard = new(-1158884666); // AB_Shapeshift_Wolf_Skin01_Buff (Werewolf-like skin)
+    // NOTE (v0.95.0): this is a cosmetic WOLF SKIN, not the real werewolf-curse form. The genuine
+    // player-reachable werewolf shapeshift is Buff_General_Shapeshift_Werewolf_Standard (-1598161201) /
+    // _VBlood (-622259665), whose bar comes from a CastOptions prefab (CO_Werewolf), not
+    // ReplaceAbilityOnSlotBuff — so it needs a different injection path. Tracked in
+    // docs/WEREWOLF_FORM_TRANSFORM_DESIGN.md; remap is deferred to that scoped feature.
+    static readonly PrefabGUID WerewolfStandard = new(-1158884666); // AB_Shapeshift_Wolf_Skin01_Buff (wolf reskin used as a stand-in)
     static readonly PrefabGUID TailorGargoyle   = new(-395216184);  // AB_Tailor_Shapeshift_Gargoyle_Buff (Tailor phase-2)
 
     /// <summary>

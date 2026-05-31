@@ -15,6 +15,7 @@ internal enum PityKind : byte
 {
     Ability = 0,
     Transform = 1,
+    Devour = 2,   // v0.98.0: Devour-jackpot pity, split out from Transform (see PityIndex append-layout note)
 }
 
 /// <summary>
@@ -169,6 +170,11 @@ internal sealed class AbilityRegistry
     // _weaponSlots; consumed by ShapeshiftAbilityService.ApplyFormLoadout when a player enters a
     // vanilla shapeshift form (Wolf/Bear/Rat/Spider/Toad/Werewolf/Gargoyle). Persisted by NAME.
     readonly ConcurrentDictionary<ulong, ConcurrentDictionary<ShapeshiftForm, ConcurrentDictionary<int, int>>> _formSlots = new();
+    // v0.100.0: per-player CUSTOM TRANSFORM ability loadouts: steamId → (unitGuid, phase) → slot → abilityGuid.
+    // Overrides the curated BossFormRegistry FormSets PER SLOT (un-set slots keep the curated default), and a
+    // player can define a phase the boss has no default for. Validated against the unit's full kit on set.
+    // Persisted by "unit:phase" string key.
+    readonly ConcurrentDictionary<ulong, ConcurrentDictionary<(int unit, int phase), ConcurrentDictionary<int, int>>> _transformLoadouts = new();
     readonly ConcurrentDictionary<ulong, Verbosity> _verbosity = new();
     readonly ConcurrentDictionary<ulong, bool> _emitApiEvents = new();
     // v0.83.0 (#6): per-player toggle to SILENCE the "you already knew all of its abilities" devour
@@ -192,9 +198,8 @@ internal sealed class AbilityRegistry
     // abilities cast in normal form be tracked/allied/despawned exactly like transform
     // summons. Created on demand by GetSummonOwner; runtime-only (never persisted).
     readonly ConcurrentDictionary<ulong, SummonOwnerState> _standaloneSummons = new();
-    readonly ConcurrentDictionary<ulong, System.DateTime> _cooldownRegularUntil = new(); // runtime-only
-    readonly ConcurrentDictionary<ulong, System.DateTime> _cooldownVBloodUntil = new(); // runtime-only
-    readonly ConcurrentDictionary<ulong, System.DateTime> _cooldownShardUntil = new(); // runtime-only (v0.39.0)
+    // v0.100.0: transform cooldowns keyed by (steamId, scopeKey) — see CooldownUntil. Runtime-only.
+    readonly ConcurrentDictionary<(ulong steamId, string scope), System.DateTime> _transformCooldownUntil = new();
 
     public int PlayerCount => _data.Count;
 
@@ -546,6 +551,22 @@ internal sealed class AbilityRegistry
         => _formSlots.TryGetValue(steamId, out var byForm) && byForm.TryRemove(form, out var slots) ? slots.Count : 0;
 
     /// <summary>
+    /// v0.100.0: clear ALL of a player's slot bindings (universal + every weapon + every form) AND their
+    /// custom transform loadouts + slot baseline. KEEPS captured abilities + transform unlocks. Returns the
+    /// number of slot binds removed. Used by `.beelz admin reset-loadouts` to un-stick a player non-destructively.
+    /// </summary>
+    public int ClearAllLoadouts(ulong steamId)
+    {
+        int n = 0;
+        if (_slotAssignments.TryRemove(steamId, out var uni)) n += uni.Count;
+        if (_weaponSlots.TryRemove(steamId, out var byWeapon)) foreach (var s in byWeapon.Values) n += s.Count;
+        if (_formSlots.TryRemove(steamId, out var byForm)) foreach (var s in byForm.Values) n += s.Count;
+        _transformLoadouts.TryRemove(steamId, out _);
+        _slotBaseline.TryRemove(steamId, out _);
+        return n;
+    }
+
+    /// <summary>
     /// Returns the universal-bucket slots. Backward-compatible — pre-W3 callers
     /// (like `.beelz list`, presets) keep seeing only the universal bindings.
     /// </summary>
@@ -728,6 +749,87 @@ internal sealed class AbilityRegistry
         }
     }
 
+    // --- v0.100.0: per-player CUSTOM TRANSFORM loadouts (unit, phase) → slot → ability ---
+
+    /// <summary>Bind one of a transform boss's abilities to a (1-based) phase slot. Validated by the caller.</summary>
+    public void SetTransformLoadoutSlot(ulong steamId, int unit, int phase, int slot, int abilityGuid)
+    {
+        if (unit == 0 || phase < 1 || !IsValidSlot(slot)) return;
+        var byKey = _transformLoadouts.GetOrAdd(steamId, _ => new ConcurrentDictionary<(int, int), ConcurrentDictionary<int, int>>());
+        var slots = byKey.GetOrAdd((unit, phase), _ => new ConcurrentDictionary<int, int>());
+        slots[slot] = abilityGuid;
+    }
+
+    /// <summary>Clear a single custom transform-loadout slot.</summary>
+    public void ClearTransformLoadoutSlot(ulong steamId, int unit, int phase, int slot)
+    {
+        if (_transformLoadouts.TryGetValue(steamId, out var byKey) && byKey.TryGetValue((unit, phase), out var slots))
+            slots.TryRemove(slot, out _);
+    }
+
+    /// <summary>Reset ALL custom phases for one transform unit back to the curated defaults.</summary>
+    public void ClearTransformLoadout(ulong steamId, int unit)
+    {
+        if (!_transformLoadouts.TryGetValue(steamId, out var byKey)) return;
+        foreach (var k in new List<(int unit, int phase)>(byKey.Keys))
+            if (k.unit == unit) byKey.TryRemove(k, out _);
+    }
+
+    /// <summary>The player's custom slot binds for (unit, phase). Empty if none — caller uses the curated default.</summary>
+    public IReadOnlyDictionary<int, int> GetTransformLoadout(ulong steamId, int unit, int phase)
+    {
+        if (_transformLoadouts.TryGetValue(steamId, out var byKey)
+            && byKey.TryGetValue((unit, phase), out var slots) && !slots.IsEmpty)
+            return slots;
+        return new Dictionary<int, int>();
+    }
+
+    /// <summary>Highest phase the player has customized for a unit (0 if none) — lets a custom phase 2+ be reachable.</summary>
+    public int MaxCustomTransformPhase(ulong steamId, int unit)
+    {
+        int max = 0;
+        if (_transformLoadouts.TryGetValue(steamId, out var byKey))
+            foreach (var (k, slots) in byKey)
+                if (k.unit == unit && !slots.IsEmpty && k.phase > max) max = k.phase;
+        return max;
+    }
+
+    /// <summary>Persistence snapshot for one player: "unit:phase" → slot → ability.</summary>
+    public Dictionary<string, Dictionary<int, int>> TransformLoadoutSnapshotFor(ulong steamId)
+    {
+        var result = new Dictionary<string, Dictionary<int, int>>();
+        if (_transformLoadouts.TryGetValue(steamId, out var byKey))
+            foreach (var (k, slots) in byKey)
+                if (!slots.IsEmpty) result[$"{k.unit}:{k.phase}"] = new Dictionary<int, int>(slots);
+        return result;
+    }
+
+    /// <summary>Every player's transform-loadout snapshot (for the save pass).</summary>
+    public Dictionary<ulong, Dictionary<string, Dictionary<int, int>>> TransformLoadoutsSnapshot()
+    {
+        var result = new Dictionary<ulong, Dictionary<string, Dictionary<int, int>>>();
+        foreach (var (steamId, _) in _transformLoadouts)
+        {
+            var nested = TransformLoadoutSnapshotFor(steamId);
+            if (nested.Count > 0) result[steamId] = nested;
+        }
+        return result;
+    }
+
+    public void LoadTransformLoadoutSnapshot(ulong steamId, Dictionary<string, Dictionary<int, int>> snapshot)
+    {
+        if (snapshot == null) return;
+        var byKey = _transformLoadouts.GetOrAdd(steamId, _ => new ConcurrentDictionary<(int, int), ConcurrentDictionary<int, int>>());
+        foreach (var (keyStr, slotMap) in snapshot)
+        {
+            var parts = keyStr.Split(':');
+            if (parts.Length != 2 || !int.TryParse(parts[0], out int unit) || !int.TryParse(parts[1], out int phase)) continue;
+            var bucket = byKey.GetOrAdd((unit, phase), _ => new ConcurrentDictionary<int, int>());
+            bucket.Clear();
+            foreach (var (slot, abilityGuid) in slotMap) bucket[slot] = abilityGuid;
+        }
+    }
+
     static bool IsUniversalBucket(WeaponFamily weapon) =>
         weapon == WeaponFamily.None || weapon == WeaponFamily.Magic;
 
@@ -822,9 +924,8 @@ internal sealed class AbilityRegistry
         _transformUnlocks.Clear();
         _activeTransforms.Clear();
         _standaloneSummons.Clear();
-        _cooldownRegularUntil.Clear();
-        _cooldownVBloodUntil.Clear();
-        _cooldownShardUntil.Clear();
+        _transformCooldownUntil.Clear();
+        _transformLoadouts.Clear();
         _verbosity.Clear();
         _emitApiEvents.Clear();
         _pity.Clear();
@@ -836,6 +937,8 @@ internal sealed class AbilityRegistry
         _slotAssignments.TryRemove(steamId, out _);
         _weaponSlots.TryRemove(steamId, out _);
         _formSlots.TryRemove(steamId, out _);
+        _transformLoadouts.TryRemove(steamId, out _);
+        ClearTransformCooldowns(steamId);
         _slotBaseline.TryRemove(steamId, out _);
         _hotkeys.TryRemove(steamId, out _);
         _transformUnlocks.TryRemove(steamId, out _);
@@ -991,20 +1094,22 @@ internal sealed class AbilityRegistry
     }
 
     // --- Cooldowns (runtime) ---
-    // v0.39.0: cooldowns are now bucketed by TransformCategory (Regular/VBlood/ShardBoss)
-    // so a shard-boss cooldown doesn't lock out regular V-Blood transforms and vice-versa.
-    ConcurrentDictionary<ulong, System.DateTime> CooldownDict(TransformCategory cat) => cat switch
+    // v0.100.0: cooldowns are keyed by (steamId, scopeKey). The caller (TransformService.CooldownScopeKey)
+    // computes the scope string from Transform_CooldownScope: "G" (Global — one bucket for all transforms),
+    // "C:<cat>" (PerCategory — the legacy Regular/VBlood/ShardBoss bucket), or "U:<unit>" (PerTransformation
+    // — each unit its own cooldown). Runtime-only, as before.
+    public System.DateTime CooldownUntil(ulong steamId, string scopeKey)
+        => _transformCooldownUntil.TryGetValue((steamId, scopeKey), out var ts) ? ts : System.DateTime.MinValue;
+
+    public void SetCooldownUntil(ulong steamId, string scopeKey, System.DateTime untilUtc)
+        => _transformCooldownUntil[(steamId, scopeKey)] = untilUtc;
+
+    /// <summary>v0.100.0: clear EVERY transform cooldown for a player (any scope) — used by admin grant/clear.</summary>
+    public void ClearTransformCooldowns(ulong steamId)
     {
-        TransformCategory.ShardBoss => _cooldownShardUntil,
-        TransformCategory.VBlood => _cooldownVBloodUntil,
-        _ => _cooldownRegularUntil,
-    };
-
-    public System.DateTime CooldownUntil(ulong steamId, TransformCategory category)
-        => CooldownDict(category).TryGetValue(steamId, out var ts) ? ts : System.DateTime.MinValue;
-
-    public void SetCooldownUntil(ulong steamId, TransformCategory category, System.DateTime untilUtc)
-        => CooldownDict(category)[steamId] = untilUtc;
+        foreach (var key in _transformCooldownUntil.Keys)
+            if (key.steamId == steamId) _transformCooldownUntil.TryRemove(key, out _);
+    }
 
     // --- Escalating pity / bad-luck protection (v0.38.0, in-memory) ---
     // Per-player accumulated drop-chance bonus, indexed [source*2 + kind]:
@@ -1015,8 +1120,17 @@ internal sealed class AbilityRegistry
     // so a long dry streak isn't wiped by a server reboot.
     readonly System.Collections.Concurrent.ConcurrentDictionary<ulong, float[]> _pity = new();
 
+    // v0.98.0: 3 kinds × 2 sources = 6 slots. Devour is APPENDED at indices 4 (Regular) / 5 (V-Blood) so
+    // the original Ability/Transform indices (0-3) are UNCHANGED — a length-4 array persisted before v0.98
+    // still reads its Ability/Transform pity correctly; Devour just starts at 0 and grows on first bump.
+    const int PityArrayLength = 6;
     static int PityIndex(CaptureSource source, PityKind kind)
-        => ((source == CaptureSource.VBlood) ? 2 : 0) + (int)kind;
+    {
+        bool vb = source == CaptureSource.VBlood;
+        return kind == PityKind.Devour
+            ? (vb ? 5 : 4)
+            : (vb ? 2 : 0) + (int)kind;   // Ability=0, Transform=1 → indices 0,1 (Regular) / 2,3 (V-Blood)
+    }
 
     public float GetPityBonus(ulong steamId, CaptureSource source, PityKind kind)
     {
@@ -1028,9 +1142,17 @@ internal sealed class AbilityRegistry
     public void BumpPity(ulong steamId, CaptureSource source, PityKind kind, float step, float max)
     {
         if (step <= 0f) return;
-        var arr = _pity.GetOrAdd(steamId, _ => new float[4]);
+        var arr = _pity.GetOrAdd(steamId, _ => new float[PityArrayLength]);
         int i = PityIndex(source, kind);
-        if (i < 0 || i >= arr.Length) return;
+        if (i < 0) return;
+        // v0.98.0: grow a legacy short array (length 4) so the appended Devour slots (4/5) can accumulate.
+        if (i >= arr.Length)
+        {
+            var grown = new float[PityArrayLength];
+            System.Array.Copy(arr, grown, arr.Length);
+            _pity[steamId] = grown;
+            arr = grown;
+        }
         float v = arr[i] + step;
         if (max > 0f && v > max) v = max;
         arr[i] = v;
@@ -1058,7 +1180,9 @@ internal sealed class AbilityRegistry
     public void LoadPity(ulong steamId, float[] values)
     {
         if (values == null || values.Length == 0) return;
-        var arr = _pity.GetOrAdd(steamId, _ => new float[4]);
+        // v0.100.0 FIX: allocate the FULL length (6) so the v0.98 Devour pity slots (indices 4/5) load —
+        // a length-4 alloc here silently dropped saved Devour bad-luck protection on every restart.
+        var arr = _pity.GetOrAdd(steamId, _ => new float[PityArrayLength]);
         for (int i = 0; i < arr.Length && i < values.Length; i++) arr[i] = values[i];
     }
 

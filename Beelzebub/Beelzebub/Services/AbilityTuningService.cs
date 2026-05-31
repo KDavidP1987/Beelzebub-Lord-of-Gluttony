@@ -109,8 +109,9 @@ internal static class AbilityTuningService
             if (!matchedStems.Contains(stem))
                 Core.Log.LogWarning($"[Beelz TUNE] tuned entry '{stem}' matched NO ability prefab — check the ability name/ID (use .beelz list / api list).");
 
-        Core.Log.LogInfo($"[Beelz TUNE] applied tuning to {prefabsTuned} prefab(s) from {tuned.Count} curated entry(ies)"
-            + (globalMinCd > 0f ? $" + global min-cooldown {globalMinCd:F2}s" : "") + ".");
+        if (Beelzebub.Config.Settings.VerboseLogging.Value)   // v0.95.0: gate the batch summary behind verbose (BCH never reads it)
+            Core.Log.LogInfo($"[Beelz TUNE] applied tuning to {prefabsTuned} prefab(s) from {tuned.Count} curated entry(ies)"
+                + (globalMinCd > 0f ? $" + global min-cooldown {globalMinCd:F2}s" : "") + ".");
         return prefabsTuned;
     }
 
@@ -184,7 +185,7 @@ internal static class AbilityTuningService
         // only thing that touches uncurated prefabs).
         if (entry == null)
         {
-            if (changed) Core.Log.LogInfo($"[Beelz TUNE] {prefabName}:{log}");
+            if (changed && Beelzebub.Config.Settings.VerboseLogging.Value) Core.Log.LogInfo($"[Beelz TUNE] {prefabName}:{log}");
             return changed;
         }
 
@@ -305,7 +306,7 @@ internal static class AbilityTuningService
             catch (Exception ex) { Core.Log.LogWarning($"[Beelz TUNE] movement write failed on {prefabName}: {ex.Message}"); }
         }
 
-        if (changed) Core.Log.LogInfo($"[Beelz TUNE] {prefabName}:{log}");
+        if (changed && Beelzebub.Config.Settings.VerboseLogging.Value) Core.Log.LogInfo($"[Beelz TUNE] {prefabName}:{log}");
         return changed;
     }
 

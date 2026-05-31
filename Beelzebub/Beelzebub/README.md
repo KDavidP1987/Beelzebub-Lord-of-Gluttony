@@ -48,7 +48,7 @@ A **server-side** V Rising mod that turns the whole bestiary into a collection-a
 
 **Source · issues · roadmap:** [github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony) · **License:** MIT
 
-> **Status:** active early access / **public test build (v0.94.0)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
+> **Status:** active early access / **public test build (v0.100.0)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
 
 ---
 
@@ -81,9 +81,13 @@ A **server-side** V Rising mod that turns the whole bestiary into a collection-a
 - **Expanded action bar** — you're not capped at six. Bind any captured ability to a named hotkey and fire it on demand with `.beelz cast <name>` (cooldown-respecting). A companion app can surface these as on-screen buttons for 10, 15, 20+ abilities.
 - **Wield-the-right-weapon hints** — weapon-based abilities tell you which weapon makes their animation read correctly.
 
-### Transform — Dracula & Morgana
-- **Two real boss forms.** Dracula and Morgana transform into their actual in-game forms — model, rig, and the abilities that need them — with **switchable kits** via `.beelz phase`, signature summons, and a manual AoE detonation (`.beelz detonate`).
-- **Why only two?** A server-side mod *cannot* render your character as an arbitrary creature — the game decides your on-screen model on the client. Dracula and Morgana ship as player-renderable forms; every other unit's powers are instead collected as **abilities** (capture / Devour) and slotted onto your normal bar. **Becoming any other unit is a researched, postponed "phase two" feature** — it requires a future client-side companion mod to render the model, which the server alone can't do.
+### Transform — Dracula, Morgana, Werewolf, Golem & Gargoyle
+- **Real boss forms.** Dracula and Morgana transform into their actual in-game forms — model, rig, and the abilities that need them — with **switchable kits** via `.beelz phase`, signature summons, and a manual AoE detonation (`.beelz detonate`). **More forms (test):** defeat the **Werewolf Chieftain** (Werewolf), **Terah the Geomancer** (Golem), or **the Tailor** (Gargoyle) to unlock those, plus a **Basic Werewolf** from the common werewolf NPC — each a real model-swapping creature with its own kit.
+- **Transformations are their own gated prize.** Capturing single abilities, *devouring* a boss's whole kit, and unlocking its *transformation* are three independent rolls, each with its own drop chance + bad-luck protection — so the form is something you work toward separately, never handed out for free with a devour.
+- **Full multi-phase kits.** Capturing/devouring a boss now collects its **complete cross-phase** ability set (not just its phase-1 bar), and every form is **phase-switchable** with `.beelz phase` — so Werewolf, Golem, and Gargoyle each have two combat kits like Dracula & Morgana.
+- **Build your own transform loadout.** Bosses have more abilities than you have slots, so you choose: `.beelz tform <unit> abilities` lists the kit, `.beelz tform <unit> set <phase> <slot> <index>` binds one (slots you don't set keep the default), and you can even define your own phase 2. Per player, saved across restarts.
+- **Admin controls:** master on/off (`Transform_Enabled`), per-form duration & cooldown overrides, a cooldown-budget scope (per-category / per-transformation / global — e.g. "30 min once per day, per form"), per-unit/per-category/whole-server blocking, and power scaling that can match the boss's own power *or* your level.
+- **Why these?** A server-side mod *cannot* render your character as an arbitrary creature — the game decides your on-screen model on the client. These are the forms the game already ships as player-renderable; every other unit's powers are instead collected as **abilities** (capture / Devour) and slotted onto your normal bar. **Becoming any other unit is a researched, postponed "phase two" feature** — it requires a future client-side companion mod to render the model, which the server alone can't do.
 - **Summons fight for you — transformed or not.** Abilities that raise minions spawn them as your allies whether you're transformed **or** casting a captured summon ability in normal form (v0.45), with caps, leashing, and clean despawn. They **scale to your level** with an admin power dial; hop on a horse and your summons either stash-and-restore or keep following, your choice (`Transform_MountedSummonMode`). Manage them anytime with `.beelz summons <stash|restore|clear|status>`.
 - **Signature add-summons** (`.beelz summon`) — call the adds a boss normally only spawns at low health (the Toad King's frogs, the Werewolf Chieftain's caged wolves, …). You also **learn a unit's summon as a standalone ability** you can slot or hotkey and use anytime.
 
@@ -94,7 +98,7 @@ A **server-side** V Rising mod that turns the whole bestiary into a collection-a
 - **Inclusive testing mode (on by default, v0.50)** — `Capture_InclusiveMode` makes abilities across **all** V-Bloods/NPCs broadly capturable, and `Grant_EnforceTransformOnly` (off by default) drops the "only for transformation" wall so any ability can be slotted on your normal bar. Flip both off for a curated, balanced server.
 - **Deep per-ability shaping (server-wide, on by default)** — reshape how any ability *functions* with `.beelz admin ability <name|id> <field> <value>` (accepts the ability's name **or** its ID): **cooldown**, cast **range**, **charges**/recharge, **AoE radius**, **projectile speed**, effect/**duration**, **healing** multiplier, and **force-timeout** (make an otherwise-*indefinite* effect expire after N seconds). Cast feel too: **freelymove `<sec>`** (free to move that many seconds *into* a long cast — the spell keeps going), **interruptonhit** (cancel the cast when you're hit), **interruptible** (let the player dash/shield-cancel), and **castspeed** (movement speed during the cast). It's applied out of the box (`Abilities_ApplyConfig`, default on) and `.beelz admin ability <id> defaults` reverts any ability to its shipped baseline. Note: it's a *global* prefab edit, so the original NPC/boss cast changes too.
 - **Summon governance (per-ability + global)** — cap how many summons a player can have, how many units a single cast spawns, and how long they live before despawning — globally or per summon ability (`summoncap` / `summonunits` / `summontimeout`).
-- **Per-form loadouts on shapeshift forms (on by default, v0.75+)** — `Forms_CustomAbilities_Enabled`: build a distinct captured-ability loadout for each vanilla wheel form (**Wolf, Bear, Rat, Spider, Toad, Werewolf, Gargoyle**, including skinned variants) with `.beelz form-grant <form> <slot> <ability>`. Shift in via the in-game wheel and your abilities are mapped onto the slots the form actually renders, with "break on cast" removed so the form *holds* while you cast.
+- **Per-form loadouts on shapeshift forms (on by default, v0.75+)** — `Forms_CustomAbilities_Enabled`: build a distinct captured-ability loadout for each vanilla wheel form (**Wolf, Bear, Rat, Spider, Toad, Werewolf, Gargoyle**, including skinned variants) with `.beelz form-grant <form> <slot> <ability>`. Shift in via the in-game wheel and your abilities land on the **exact slots you grant** (v0.95 — the form bar becomes your loadout, with your left-click attack preserved), with "break on cast" removed so the form *holds* while you cast. *("Werewolf" here is a cosmetic wolf skin; a real werewolf-curse transform is planned.)*
 - **Difficulty gating, grant/revoke, `devour` (bulk-grant a unit's whole kit), inspect, audit logging** — full operator toolkit.
 
 ### Compete & celebrate
@@ -125,9 +129,9 @@ Install with [r2modman](https://thunderstore.io/package/ebkr/r2modman/) / Thunde
 **Collect & inspect:** `.beelz list [vblood|shard|regular]` · `.beelz search <term>` · `.beelz info <i>` · `.beelz bestiary` · `.beelz progress` · `.beelz catalog` · `.beelz top` (leaderboard) · `.beelz odds` (your drop/pity chances)
 **Use abilities:** `.beelz grant <slot|primary|ultimate> <index|abilityID>` (slot 1-6, or `primary` = left-click / `ultimate` = T key) · `.beelz weapon-grant <weapon> <slot> <index>` · `.beelz form-grant <form> <slot> <index>` (per-form loadouts) · `.beelz loadouts` (view universal + per-weapon sets) · `.beelz unslot <slot>` · `.beelz clearbar [all|universal|<weapon>|<form>]` (clear a chosen loadout, abilities kept) · `.beelz resetbar CONFIRM` (clear everything → vanilla bar) · `.beelz hotkey set <name> <index>` → `.beelz cast <name>`
 **Summons:** `.beelz summons <stash|restore|clear|status>` (works for captured summon abilities, not just transforms) · `.beelz summon [n]` (a transformed boss's signature add-summon)
-**Transform (Dracula & Morgana):** `.beelz transforms` · `.beelz transform <name>` · `.beelz phase [n]` · `.beelz revert` · `.beelz refresh` (re-apply your bar if it ever goes blank) · `.beelz detonate`
+**Transform (Dracula, Morgana, Werewolf, Golem, Gargoyle):** `.beelz transforms` · `.beelz transform <name>` · `.beelz phase [n]` · `.beelz tform <unit> abilities | set <phase> <slot> <index> | defaults` (build a form's kit) · `.beelz revert` · `.beelz refresh` (re-apply your bar if it ever goes blank) · `.beelz detonate`
 **Admin — shape abilities:** `.beelz admin ability <name|id> <field> <value>` — field ∈ `cooldown · range · charges · chargetime · aoe · projspeed · duration · healing · forcetimeout · freelymove · interruptonhit · interruptible · freemove · castspeed · summoncap · summontimeout · summonunits · damagescale · …` (or the shorthand `.beelz admin tune <ability> <knob> <value>`); `.beelz admin ability <id> defaults` reverts one ability, `all defaults` reverts every ability
-**Admin — server:** `.beelz admin set <key> <value>` · `.beelz admin devour <player> <unitGuid>` · `.beelz admin give/revoke …` · `.beelz admin rules` / `deny` / `allow` / `reload` · `.beelz admin difficulty <basic|brutal>` · `.beelz admin broadcast <status|leaderboard on|off|interval <min>|top <1-5>|complete on|off|test>` · `.beelz admin help`
+**Admin — server:** `.beelz admin set <key> <value>` · `.beelz admin devour <player> <unitGuid>` · `.beelz admin give/revoke …` · `.beelz admin transform-set <unit> <field> <value>` (enabled/difficulty/scaling/duration/cooldown) · `.beelz admin reset-loadouts <player>` (clear binds, keep collection) · `.beelz admin rules` / `deny` / `allow` / `reload` · `.beelz admin difficulty <basic|brutal>` · `.beelz admin broadcast <status|leaderboard on|off|…>` / `broadcast-msg <complete|leaderboard> <list|add|remove|edit>` · `.beelz admin help`
 **Settings:** `.beelz verbosity <silent|summary|verbose>` · `.beelz silent <on|off>` · `.beelz help` · `.beelz commands`
 
 ## Configuration
@@ -142,15 +146,15 @@ Honest, up front. These are the areas we **know** are rough or unverified at wid
 scale — they're exactly what this test release is meant to shake out. If you can
 help confirm or break any of these, that's the most valuable feedback we can get.
 
-- **Transformation is intentionally Dracula & Morgana only.** A server-side mod
-  *cannot* render your character as an arbitrary creature — the game decides your
-  on-screen model on the client. Rather than ship "transformations" that don't
-  visually change anything for most units, every other unit's powers are collected
-  as **abilities** (capture / the Devour jackpot) and slotted onto your normal bar.
-  True "become any unit" visuals are a **researched, postponed phase-two feature**
-  that needs a client-side companion mod to render the model (planned via
-  BloodCraftHub). Dracula & Morgana ship as player-renderable forms, so they remain
-  full transformations today.
+- **Transformations are limited to forms the game can render** (Dracula, Morgana,
+  and — newer test forms — Werewolf, Golem & Gargoyle). A server-side mod *cannot* render your
+  character as an arbitrary creature — the game decides your on-screen model on the
+  client. Rather than ship "transformations" that don't visually change anything for
+  most units, every other unit's powers are collected as **abilities** (capture / the
+  Devour jackpot) and slotted onto your normal bar. True "become any unit" visuals are
+  a **researched, postponed phase-two feature** that needs a client-side companion mod
+  to render the model (planned via BloodCraftHub). Dracula, Morgana, Werewolf, Golem &
+  Gargoyle ship as player-renderable forms, so they remain full transformations today.
 - **Ability chaining can misfire.** Some captured boss abilities are multi-stage
   "chains" (a cast that spawns a projectile that spawns an AoE, etc.). A handful of
   these don't fully complete when cast by a player instead of the original NPC —

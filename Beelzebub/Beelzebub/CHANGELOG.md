@@ -4,6 +4,144 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.100.0] - 2026-05-31
+
+### Build your own transformation loadouts + full transform admin controls
+
+- **Custom transformation loadouts (per player).** Each boss has more abilities than you have slots — now you
+  choose which ones to wield. New commands:
+  - `.beelz tform <unit> abilities` — list that transform's full ability kit (with indices).
+  - `.beelz tform <unit> set <phase> <slot> <index>` — put one of its abilities on a phase slot (slot 0 =
+    primary/left-click, 7 = ultimate). Slots you don't set keep the curated default.
+  - `.beelz tform <unit> clear <phase> <slot>` · `.beelz tform <unit> defaults` (reset).
+  - You can even define a **phase 2** on a form that didn't have one. `<unit>` accepts the index from
+    `.beelz transforms`, a name, or the unit id. Loadouts are per-player and persist across restarts.
+- **Full transform admin controls.**
+  - **Master switch:** `Transform_Enabled` (default on) turns ALL transformations off server-wide.
+  - **Per-transformation duration & cooldown:** `.beelz admin transform-set <unit> duration <sec>` and
+    `... cooldown <sec>` override the category defaults for a single form.
+  - **Cooldown budget scope:** `Transform_CooldownScope` = `PerCategory` (default), `PerTransformation`
+    (each form its own cooldown — e.g. 30 min/day *per* form), or `Global` (one cooldown across all forms —
+    e.g. 30 min/day total). Pairs with per-form duration to build "once a day for 30 minutes" rules.
+  - **Blocking:** whole-server via `Transform_Enabled`; per category via `Transform_Mode_* = Disabled`;
+    per unit via `.beelz admin transform-set <unit> enabled false`.
+  - **Power scaling** (already present, confirmed): `Transform_PowerScalingMode` + a per-unit `scaling_mode`
+    override — `PrefabAbsolute` (the boss's own power), `PlayerScaled`/`PlayerLeveled` (match your level), or
+    `CuratedScales` (admin multipliers).
+
+### Broadcast message management + stabilization pass
+
+- **Manage announcement messages individually:** `.beelz admin broadcast-msg <complete|leaderboard>
+  <list|add|remove|edit>` — `add "<text>"`, `remove <n>`, `edit <n> "<text>"`, `list`. No more editing one
+  giant config string. (Wrap multi-word messages in quotes.)
+- **Full-mod audit hardening** (pre-stable): fixed a bug where a player's *Devour* bad-luck (pity) protection
+  was wiped on server restart; corrected the now-outdated "Dracula & Morgana only" wording across the player
+  and admin help/replies (5 transforms exist now); `.beelz unslot` / `weapon-unslot` / `form-unslot` now
+  accept the **primary** / **ultimate** slot tokens (so you can unbind them without clearing a whole bar);
+  `.beelz loadouts` now also lists your per-**form** loadouts; `.beelz admin tune-list` now shows **every**
+  shaping field set on an ability (cooldown/range/aoe/etc.), not just cast modifiers; `.beelz forget-transform`
+  now reverts the form first if you're in it; and a new **`.beelz admin reset-loadouts <player>`** clears a
+  player's bindings + custom loadouts + active transform while **keeping** their collection.
+- **Companion-app ability list improved (for BloodCraftHub).** The ability catalog now reports each ability's
+  owning unit + IDs (so uncaptured abilities show their source), and there are now two views: the normal list
+  is what players can collect (for progress %), and admins get a full list of *every* ability regardless of
+  whether it's enabled (for configuration).
+
+## [0.99.1] - 2026-05-31
+
+### Form phase-switching fix
+
+- **`.beelz phase` now works on the Werewolf, Golem, and Gargoyle forms.** Switching to phase 2 was silently
+  failing on those forms (a timing issue with how the creature forms re-apply); the kit now swaps in place
+  on the form you're already wearing, so phase 1 ⟷ phase 2 works like it does for Dracula & Morgana.
+- **Dracula's experimental "Wolf" phase was removed.** Turning into a wolf mid-Dracula-transform was a model
+  swap that doesn't work through the phase system — Dracula's wolf is really its own shapeshift, so it'll be
+  revisited as a standalone transform later. Dracula is back to Warrior / Bloodmage.
+- *Known limitation being investigated:* some boss abilities don't fire while transformed — they're either
+  bound to the original creature's skeleton/animation or are multi-step "chain" abilities that don't fully
+  resolve on a player. Report which slots are dead per form and they'll be swapped for working ones.
+
+## [0.99.0] - 2026-05-31
+
+### Full multi-phase boss kits + phase-switchable forms
+
+- **Capturing and devouring a boss now covers its FULL kit — every phase.** Bosses swap in different
+  abilities across their combat phases, and several (the Geomancer, Werewolf Chieftain, Tailor) even start
+  the fight in a *human* form. Before, you could only collect a boss's base/phase-1 bar — so devouring the
+  Geomancer might give you his human abilities and miss the golem kit entirely. Now capture and Devour draw
+  from the boss's complete cross-phase ability set, so you can collect everything it uses.
+- **The new transforms are now phase-switchable** like Dracula & Morgana. Use `.beelz phase` to swap kits:
+  - **Werewolf** — *Feral* (agile bleed) ⟷ *Alpha* (heavy crowd-control).
+  - **Golem** — *Earthshaper* (control) ⟷ *Enraged* (guardians + smashes).
+  - **Gargoyle** — *Sentinel* (grounded defense) ⟷ *Skyterror* (flight).
+  ⚠️ Still test builds — report which abilities fire on each form.
+
+## [0.98.0] - 2026-05-31
+
+### Transformations are now their own gated prize + more forms
+
+- **Capturing, devouring, and transforming are now three separate rolls** — each with its own drop chance
+  and its own bad-luck (pity) protection. Before, a boss's rare jackpot gave *either* its whole kit *or* its
+  transformation. Now, on a transform boss, you can devour its abilities **and** still chase its
+  transformation as a separate, rarer prize you work toward — and devouring a boss never just hands you its
+  form for free. New configurable chances: `DropChance_TransformUnlock_VBlood` / `_Regular` (default rarer
+  than Devour), with `Capture_PityIncrement_Transform` / `_Max_Transform` dials.
+- **Basic Werewolf transformation** — the common werewolf NPC (not the boss) can now grant a basic werewolf
+  form, separate from and more accessible than the Werewolf Chieftain's. The Chieftain now uses the V-Blood
+  werewolf form so the two look distinct.
+- **Dracula's Wolf form (experimental)** — Dracula gains a third phase: `.beelz phase 3` turns him into a
+  wolf with a feral kit (claw, bite, leap, howl); `.beelz phase 1` returns to his vampire form. ⚠️ Test
+  build — report how the model swap and the leave-wolf-phase transition behave.
+
+## [0.97.0] - 2026-05-31
+
+### Two more transformations (Golem & Gargoyle) + natural fallback on form bars
+
+- **Two new transformations to test:**
+  - **Golem** — defeat **Terah the Geomancer** to unlock the iron-golem form, with an earth-shaper kit
+    (slam, ground slam, rock slam, raise guardians, enrage, enraged smash, underground tremors).
+  - **Gargoyle** — defeat **the Tailor** to unlock the gargoyle form (wing-shield, take flight, dive).
+  Both join Dracula, Morgana & Werewolf on the transform list. ⚠️ **Test builds** — the golem and gargoyle
+  forms were never meant for players, so some abilities may not render/fire; please report what works.
+  Admins can grant without the kill: `.beelz admin give-transform <player> -1065970933` (Golem) or
+  `-1942352521` (Gargoyle).
+  - *Note:* there's no separate "boss" form for Bear, Spider, or Toad — V Rising only ships the wheel
+    forms for those; the Werewolf existed because the game ships a dedicated werewolf curse form.
+- **Form abilities now keep the form's natural move as a fallback.** When you put a captured ability on a
+  shapeshift-form slot it overrides that slot — but any slot you *don't* assign now keeps the form's own
+  natural ability (e.g. the wolf's leap stays on the space-bar) instead of being blanked. This matches how
+  your normal bar falls back to vanilla abilities on unassigned slots.
+
+## [0.96.0] - 2026-05-31
+
+### Become a Werewolf (new transformation)
+
+- **Defeat the Werewolf Chieftain (Willfred) to unlock the Werewolf transformation.** It joins Dracula and
+  Morgana as a real, model-swapping form — you take on the cursed-forest werewolf and a werewolf ability kit
+  (claw, bite, leap-dash, multi-bite, knockdown, shadow-dash, stealth, howl). Activate with
+  `.beelz transform Werewolf`, leave with `.beelz revert`, like the other transforms.
+- ⚠️ **This is a test build of the werewolf form.** The werewolf's bar is built differently from the other
+  bosses, so some injected abilities may not appear or fire correctly yet — please report which of the 8 do
+  and don't work so the kit can be tuned. Admins can grant it for testing without the kill via
+  `.beelz admin give-transform <player> 2079933370`.
+
+## [0.95.0] - 2026-05-31
+
+### Form abilities now fill every slot + quieter server log
+
+- **Your form loadout now lands on the exact slots you grant — on every form.** Before, a form only showed
+  abilities on the slots its vanilla bar happened to pre-define, mapped in order: Wolf showed 2, Bear showed
+  3 (even though it has room for 7), Spider showed 1, and a grant to slot 5 could land somewhere else. Now
+  each granted ability is placed on the **exact slot** you chose and slots the form doesn't natively use are
+  added, so your loadout shows up where you put it. (Slots you don't assign keep the form's natural ability —
+  see v0.97.) *Please re-test wolf, bear, and spider and report which slots show up.*
+- **Werewolf form clarified.** The "Werewolf" form has always been a cosmetic wolf reskin, not the real
+  werewolf-curse form — a proper werewolf transform is now scoped for a future update (see
+  `docs/WEREWOLF_FORM_TRANSFORM_DESIGN.md`).
+- **Quieter server log.** Toggling an ability on/off no longer needlessly re-applies (and logs) all cast
+  tuning — that re-tune now runs only when you actually change a tuning field. The remaining `[Beelz TUNE]`
+  detail lines are now behind verbose logging, so turning verbose off gives a clean log.
+
 ## [0.94.0] - 2026-05-30
 
 ### Per-bucket clear-bar + all form skins recognized

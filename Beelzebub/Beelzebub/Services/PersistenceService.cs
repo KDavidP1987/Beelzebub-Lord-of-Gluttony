@@ -122,6 +122,19 @@ internal sealed class PersistenceService
                         registry.LoadFormSlotsSnapshot(steamId, perForm);
                     }
                 }
+                // v0.100.0: per-player custom transform loadouts (absent in older files → skipped).
+                if (player.TransformLoadouts is not null && player.TransformLoadouts.Count > 0)
+                {
+                    var perKey = new Dictionary<string, Dictionary<int, int>>();
+                    foreach (var (keyStr, slotMap) in player.TransformLoadouts)
+                    {
+                        var slots = new Dictionary<int, int>();
+                        foreach (var (slotStr, abilityGuid) in slotMap)
+                            if (int.TryParse(slotStr, out int slot)) slots[slot] = abilityGuid;
+                        if (slots.Count > 0) perKey[keyStr] = slots;
+                    }
+                    if (perKey.Count > 0) registry.LoadTransformLoadoutSnapshot(steamId, perKey);
+                }
                 if (player.Verbosity.HasValue)
                 {
                     registry.SetVerbosity(steamId, (Verbosity)player.Verbosity.Value);
@@ -186,6 +199,7 @@ internal sealed class PersistenceService
             var presetsSnapshot = Core.AbilityRegistry.PresetsSnapshot();
             var weaponSlotsSnapshot = Core.AbilityRegistry.WeaponSlotsSnapshot();
             var formSlotsSnapshot = Core.AbilityRegistry.FormSlotsSnapshot();
+            var transformLoadoutsSnapshot = Core.AbilityRegistry.TransformLoadoutsSnapshot();   // v0.100.0
             var hotkeysSnapshot = Core.AbilityRegistry.HotkeysSnapshot();
             var pitySnapshot = Core.AbilityRegistry.PitySnapshot().ToDictionary(kv => kv.Key, kv => kv.Value);
 
@@ -196,6 +210,7 @@ internal sealed class PersistenceService
             foreach (var sid in presetsSnapshot.Keys) playerIds.Add(sid);
             foreach (var sid in weaponSlotsSnapshot.Keys) playerIds.Add(sid);
             foreach (var sid in formSlotsSnapshot.Keys) playerIds.Add(sid);
+            foreach (var sid in transformLoadoutsSnapshot.Keys) playerIds.Add(sid);
             foreach (var sid in hotkeysSnapshot.Keys) playerIds.Add(sid);
             foreach (var sid in pitySnapshot.Keys) playerIds.Add(sid);
 
@@ -236,6 +251,14 @@ internal sealed class PersistenceService
                         formSlotsForPlayer[form.ToString()] = slotMap.ToDictionary(s => s.Key.ToString(), s => s.Value);
                     }
                 }
+                // v0.100.0: serialize per-player custom transform loadouts. Outer key = "unit:phase".
+                Dictionary<string, Dictionary<string, int>> transformLoadoutsForPlayer = null;
+                if (transformLoadoutsSnapshot.TryGetValue(steamId, out var tformRaw) && tformRaw.Count > 0)
+                {
+                    transformLoadoutsForPlayer = new Dictionary<string, Dictionary<string, int>>();
+                    foreach (var (key, slotMap) in tformRaw)
+                        transformLoadoutsForPlayer[key] = slotMap.ToDictionary(s => s.Key.ToString(), s => s.Value);
+                }
                 // W4: named hotkeys, name → ability guid.
                 Dictionary<string, int> hotkeysForPlayer = null;
                 if (hotkeysSnapshot.TryGetValue(steamId, out var hotkeysRaw) && hotkeysRaw.Count > 0)
@@ -254,6 +277,7 @@ internal sealed class PersistenceService
                     Slots = slots.ToDictionary(s => s.Key.ToString(), s => s.Value),
                     WeaponSlots = weaponSlotsForPlayer,
                     FormSlots = formSlotsForPlayer,
+                    TransformLoadouts = transformLoadoutsForPlayer,
                     Verbosity = allVerbosity.ContainsKey(steamId) ? (byte?)verbosity : null,
                     EmitApiEvents = allEmitEvents.TryGetValue(steamId, out var e) && e ? true : (bool?)null,
                     Transforms = transforms?.Select(t => new TransformDto
@@ -303,6 +327,9 @@ internal sealed class PersistenceService
         // v0.59.0 / v8: per-FORM slot bindings. Outer key = ShapeshiftForm enum name; inner = slot→guid.
         // Absent in older state files (≤ v7) → loader skips it (backward-compatible).
         public Dictionary<string, Dictionary<string, int>> FormSlots { get; set; }
+        // v0.100.0: per-player custom transform loadouts. Outer key = "unit:phase"; inner = slot→abilityGuid.
+        // Absent in older state files → loader skips it (backward-compatible).
+        public Dictionary<string, Dictionary<string, int>> TransformLoadouts { get; set; }
         public byte? Verbosity { get; set; }
         public bool? EmitApiEvents { get; set; }
         public List<TransformDto> Transforms { get; set; }

@@ -33,19 +33,44 @@ internal sealed class TransformService
         };
     }
 
-    public float DurationSecondsFor(TransformCategory category) => category switch
+    // v0.100.0: a per-transformation override (TransformMap) beats the category default for both duration + cooldown.
+    public float DurationSecondsFor(TransformCategory category, int unitGuid = 0)
     {
-        TransformCategory.ShardBoss => Settings.Transform_DurationSeconds_ShardBoss.Value,
-        TransformCategory.VBlood => Settings.Transform_DurationSeconds_VBlood.Value,
-        _ => Settings.Transform_DurationSeconds_Regular.Value,
-    };
+        if (unitGuid != 0 && Core.AbilityRules.GetTransformDurationOverride(unitGuid) is float d) return d;
+        return category switch
+        {
+            TransformCategory.ShardBoss => Settings.Transform_DurationSeconds_ShardBoss.Value,
+            TransformCategory.VBlood => Settings.Transform_DurationSeconds_VBlood.Value,
+            _ => Settings.Transform_DurationSeconds_Regular.Value,
+        };
+    }
 
-    public float CooldownSecondsFor(TransformCategory category) => category switch
+    public float CooldownSecondsFor(TransformCategory category, int unitGuid = 0)
     {
-        TransformCategory.ShardBoss => Settings.Transform_CooldownSeconds_ShardBoss.Value,
-        TransformCategory.VBlood => Settings.Transform_CooldownSeconds_VBlood.Value,
-        _ => Settings.Transform_CooldownSeconds_Regular.Value,
-    };
+        if (unitGuid != 0 && Core.AbilityRules.GetTransformCooldownOverride(unitGuid) is float c) return c;
+        return category switch
+        {
+            TransformCategory.ShardBoss => Settings.Transform_CooldownSeconds_ShardBoss.Value,
+            TransformCategory.VBlood => Settings.Transform_CooldownSeconds_VBlood.Value,
+            _ => Settings.Transform_CooldownSeconds_Regular.Value,
+        };
+    }
+
+    /// <summary>
+    /// v0.100.0: the cooldown-bucket key for a (category, unit) under the configured Transform_CooldownScope —
+    /// "G" (one global budget), "C:&lt;cat&gt;" (per category, legacy), or "U:&lt;unit&gt;" (per transformation).
+    /// A unit of 0 under PerTransformation falls back to the category key (for the api-cooldowns summary view).
+    /// </summary>
+    public string CooldownScopeKey(TransformCategory category, int unitGuid)
+    {
+        string scope = (Settings.Transform_CooldownScope.Value ?? "PerCategory").Trim().ToLowerInvariant();
+        return scope switch
+        {
+            "global" => "G",
+            "pertransformation" or "perunit" or "perform" => unitGuid != 0 ? $"U:{unitGuid}" : $"C:{category}",
+            _ => $"C:{category}",
+        };
+    }
 
     /// <summary>
     /// v0.39.0: is this transform target one of the configured shard bosses
@@ -138,6 +163,10 @@ internal sealed class TransformService
             if (u.UnitPrefabGuid == unitPrefabGuid) { source = u.Source; break; }
         }
 
+        // v0.100.0: master kill-switch — no transformations at all when off (captures/devour unaffected).
+        if (!Settings.Transform_Enabled.Value)
+            return (false, "Transformations are disabled on this server.");
+
         TransformCategory category = CategoryFor(source, unitPrefabGuid);
         TransformMode mode = ModeFor(category);
         if (mode == TransformMode.Disabled)
@@ -147,9 +176,9 @@ internal sealed class TransformService
             return (false, $"Transformations are disabled for {catLabel} by the server admin.");
         }
 
-        // Cooldown check (per-category bucket: Regular / V-Blood / shard boss).
+        // Cooldown check (scope per Transform_CooldownScope: global / per-category / per-transformation).
         var now = DateTime.UtcNow;
-        var cooldownUntil = Core.AbilityRegistry.CooldownUntil(steamId, category);
+        var cooldownUntil = Core.AbilityRegistry.CooldownUntil(steamId, CooldownScopeKey(category, unitPrefabGuid));
         if (cooldownUntil > now)
         {
             var remaining = (cooldownUntil - now).TotalSeconds;
@@ -177,7 +206,7 @@ internal sealed class TransformService
             UnitPrefabGuid = unitPrefabGuid,
             Source = source,
             ActivatedAtUtc = now,
-            Duration = mode == TransformMode.Timed ? TimeSpan.FromSeconds(DurationSecondsFor(category)) : null,
+            Duration = mode == TransformMode.Timed ? TimeSpan.FromSeconds(DurationSecondsFor(category, unitPrefabGuid)) : null,
         };
 
         // Z1: apply spell bar via the dedicated carrier buff. Lifetime mirrors
@@ -204,11 +233,12 @@ internal sealed class TransformService
                 // own curated abilities — a REAL persistent transform, not the cosmetic
                 // path that broke on first cast.
                 active.CurrentPhase = 1;
-                int[] set = bossForm.SetForPhase(1);
-                appliedNow = TransformBuffService.ApplyForm(character, bossForm.FormBuffGuid, set, duration);
+                int[] set = EffectiveSet(steamId, unitPrefabGuid, 1, bossForm);   // v0.100.0: player's custom loadout over the default
+                int formBuf = bossForm.FormBuffGuid;
+                appliedNow = TransformBuffService.ApplyForm(character, formBuf, set, duration);
                 active.AppliedShapeshiftForm = 0; // form buff handles the visual itself
                 if (Beelzebub.Config.Settings.VerboseLogging.Value)
-                    Core.Log.LogInfo($"[Beelz] transform {steamId} → {pgUnit.GetPrefabName()}: ExoForm path (form={new PrefabGUID(bossForm.FormBuffGuid).GetPrefabName()}, {bossForm.FormCount} set(s), {set.Length} abilities in form 1).");
+                    Core.Log.LogInfo($"[Beelz] transform {steamId} → {pgUnit.GetPrefabName()}: ExoForm path (form={new PrefabGUID(formBuf).GetPrefabName()}, {bossForm.FormCount} set(s), {set.Length} abilities in form 1).");
             }
             else
             {
@@ -386,10 +416,10 @@ internal sealed class TransformService
 
         TransformCategory category = CategoryFor(active.Source, active.UnitPrefabGuid);
         TransformMode mode = ModeFor(category);
-        float cooldownSec = CooldownSecondsFor(category);
+        float cooldownSec = CooldownSecondsFor(category, active.UnitPrefabGuid);
         if (mode == TransformMode.Timed && cooldownSec > 0f)
         {
-            Core.AbilityRegistry.SetCooldownUntil(steamId, category, DateTime.UtcNow.AddSeconds(cooldownSec));
+            Core.AbilityRegistry.SetCooldownUntil(steamId, CooldownScopeKey(category, active.UnitPrefabGuid), DateTime.UtcNow.AddSeconds(cooldownSec));
         }
 
         // v0.35.0: emit transform-ended centrally so EVERY revert path notifies BCH —
@@ -542,10 +572,10 @@ internal sealed class TransformService
 
             Core.AbilityRegistry.ClearActiveTransform(steamId);
             TransformCategory category = CategoryFor(active.Source, active.UnitPrefabGuid);
-            float cooldownSec = CooldownSecondsFor(category);
+            float cooldownSec = CooldownSecondsFor(category, active.UnitPrefabGuid);
             if (cooldownSec > 0f)
             {
-                Core.AbilityRegistry.SetCooldownUntil(steamId, category, now.AddSeconds(cooldownSec));
+                Core.AbilityRegistry.SetCooldownUntil(steamId, CooldownScopeKey(category, active.UnitPrefabGuid), now.AddSeconds(cooldownSec));
             }
 
             string unitName = new PrefabGUID(active.UnitPrefabGuid).GetPrefabName();
@@ -1000,11 +1030,17 @@ internal sealed class TransformService
 
         if (Services.BossFormRegistry.TryResolve(active.UnitPrefabGuid, abilities, out var bossForm))
         {
-            int[] set = bossForm.SetForPhase(phase);
+            int[] set = EffectiveSet(steamId, active.UnitPrefabGuid, phase, bossForm);   // v0.100.0: custom loadout over default
             if (set.Length == 0) return false;
             float? dur = active.Duration.HasValue ? (float)active.Duration.Value.TotalSeconds : (float?)null;
+            int formBuf = bossForm.FormBuffGuid;
+            // v0.99.1: if the player is already wearing this phase's model, swap the ability set IN PLACE
+            // (works for the async/native forms where a full re-apply races mid-transform — the
+            // phase-2-doesn't-work bug on Werewolf/Golem/Gargoyle). Only fall back to a full ApplyForm when
+            // the form buff isn't present yet (first apply or a genuine model change).
             bool okForm = character.Exists()
-                && TransformBuffService.ApplyForm(character, bossForm.FormBuffGuid, set, dur);
+                && (TransformBuffService.ReapplyFormAbilitiesInPlace(character, formBuf, set)
+                    || TransformBuffService.ApplyForm(character, formBuf, set, dur));
             active.CurrentPhase = phase;
             Core.AbilityRegistry.SetActiveTransform(steamId, active);
             if (character.Exists())
@@ -1291,6 +1327,41 @@ internal sealed class TransformService
             phases.Add(Core.AbilityRules.GetAbilityPhase(ability.GetPrefabName()));
         }
         return phases.OrderBy(p => p).ToList();
+    }
+
+    /// <summary>
+    /// v0.100.0: phases available to a SPECIFIC player — the unit's default phases plus any higher phase the
+    /// player has defined a custom loadout for (so a player-authored phase 2 on a 1-phase form is reachable).
+    /// </summary>
+    public List<int> GetAvailablePhases(PrefabGUID unitGuid, ulong steamId)
+    {
+        var basePhases = GetAvailablePhases(unitGuid);
+        int maxCustom = Core.AbilityRegistry.MaxCustomTransformPhase(steamId, unitGuid._Value);
+        int max = basePhases.Count > 0 ? basePhases[basePhases.Count - 1] : 0;
+        if (maxCustom <= max) return basePhases;
+        var extended = new List<int>(basePhases);
+        for (int p = max + 1; p <= maxCustom; p++) extended.Add(p);
+        return extended;
+    }
+
+    /// <summary>
+    /// v0.100.0: the ability set to apply for (player, unit, phase) — the player's CUSTOM loadout slots
+    /// layered over the curated default FormSet (slots the player didn't set keep the default). Slot-indexed
+    /// (index = slot). A phase beyond the unit's default count uses ONLY the player's custom slots.
+    /// </summary>
+    int[] EffectiveSet(ulong steamId, int unitGuid, int phase, Services.BossFormRegistry.BossForm bossForm)
+    {
+        int defaultCount = bossForm?.FormCount ?? 0;
+        int[] def = (bossForm != null && phase >= 1 && phase <= defaultCount)
+            ? bossForm.SetForPhase(phase) : System.Array.Empty<int>();
+        var custom = Core.AbilityRegistry.GetTransformLoadout(steamId, unitGuid, phase);
+        if (custom.Count == 0) return def;
+        int max = def.Length;
+        foreach (var slot in custom.Keys) if (slot + 1 > max) max = slot + 1;
+        var merged = new int[max];
+        for (int i = 0; i < def.Length; i++) merged[i] = def[i];
+        foreach (var (slot, ab) in custom) if (slot >= 0 && slot < max) merged[slot] = ab;
+        return merged;
     }
 
     static string ReplaceFirst(string source, string search, string replacement)

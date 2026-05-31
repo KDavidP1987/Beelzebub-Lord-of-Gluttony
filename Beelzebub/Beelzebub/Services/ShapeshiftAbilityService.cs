@@ -42,7 +42,7 @@ internal static class ShapeshiftAbilityService
         { 902394170,   ShapeshiftForm.Rat },       // AB_Shapeshift_Rat_Buff
         { 124832551,   ShapeshiftForm.Spider },    // AB_Shapeshift_Spider_Buff
         { -1038422434, ShapeshiftForm.Toad },      // AB_Shapeshift_Toad_Buff
-        { -1158884666, ShapeshiftForm.Werewolf },  // AB_Shapeshift_Wolf_Skin01_Buff
+        { -1158884666, ShapeshiftForm.Werewolf },  // AB_Shapeshift_Wolf_Skin01_Buff — NOTE: a cosmetic WOLF skin, NOT the real werewolf-curse form (Buff_General_Shapeshift_Werewolf_Standard -1598161201). See docs/WEREWOLF_FORM_TRANSFORM_DESIGN.md.
         { -395216184,  ShapeshiftForm.Gargoyle },  // AB_Tailor_Shapeshift_Gargoyle_Buff
     };
 
@@ -314,69 +314,61 @@ internal static class ShapeshiftAbilityService
             // 2. Ensure the buff is allowed to replace ability slots.
             if (!buffEntity.Has<ReplaceAbilityOnSlotData>()) Core.EntityManager.AddComponent<ReplaceAbilityOnSlotData>(buffEntity);
 
-            // 3. Inject the loadout (Priority 99 wins over the form's native bar; BuffTarget = the
-            //    player wearing the form; WholeCast so the override holds for the entire cast).
+            // 3. v0.95.0 + v0.97.0 — OVERRIDE-GRANTED, KEEP-NATIVE-FALLBACK, EXACT-SLOT injection. Earlier
+            //    versions discovered the form's pre-populated slots and mapped abilities onto them IN ORDER,
+            //    capped at that count — so wolf (declares only slots 2 & 7) showed 2, bear showed 3 (its
+            //    empty-but-declared slots 2/4/5/6 were skipped because they had no NewGroupId), spider showed
+            //    1, and a grant to slot 5 landed on whatever native slot came next. Bloodcraft's ExoForms
+            //    prove a ReplaceAbilityOnSlotBuff entry renders on ANY slot 0-7, so we place each granted
+            //    ability on the EXACT slot it was granted to and ADD entries for slots the vanilla form
+            //    doesn't natively declare (extends sparse creature bars like wolf/spider). v0.97.0: a slot the
+            //    player did NOT grant is LEFT ALONE so the form's own natural ability stays as a fallback
+            //    (KDPen: an ungranted slot — e.g. the wolf's space-bar leap — should keep its native move, not
+            //    be blanked). So: grant overrides the slot; no grant = the form's vanilla ability shows.
             DynamicBuffer<ReplaceAbilityOnSlotBuff> buffer = Core.EntityManager.HasBuffer<ReplaceAbilityOnSlotBuff>(buffEntity)
                 ? Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(buffEntity)
                 : Core.EntityManager.AddBuffer<ReplaceAbilityOnSlotBuff>(buffEntity);
 
-            // v0.84.0 (#1): a shapeshift form's HUD only renders the slots ITS OWN bar uses (e.g. wolf =
-            // slots 2 & 7 for Leap & Howl), NOT the normal spell slots (5/6) a player grants to — so a
-            // form-grant to slot 5 was injected onto a slot the form never shows and nothing appeared.
-            // Discover the form's renderable ability slots from its existing overrides and map the player's
-            // chosen abilities onto them IN ORDER (their 1st form-grant → the form's 1st slot, etc.),
-            // replacing the form's natural abilities so the player's actually appear on the form bar.
-            var formSlots = new List<int>();
-            for (int b = 0; b < buffer.Length; b++)
-                if (buffer[b].NewGroupId._Value != 0 && !formSlots.Contains(buffer[b].Slot))
-                    formSlots.Add(buffer[b].Slot);
-            formSlots.Sort();
-
             var sortedSlots = new List<int>(perSlot.Keys);
             sortedSlots.Sort();
-            var playerAbilities = new List<int>();
-            foreach (var slot in sortedSlots) if (perSlot[slot] != 0) playerAbilities.Add(perSlot[slot]);
 
-            int injected = 0;
-            if (formSlots.Count > 0)
+            // 3a. Override ONLY the slots the player granted; leave every other declared slot on its native
+            //     ability (natural fallback). Idempotent: a re-apply re-derives granted slots from perSlot.
+            //     NOTE: this means a re-grant that MOVES an ability off a slot won't auto-restore that slot's
+            //     native move until the form is re-entered — acceptable (forms are re-entered constantly).
+            for (int b = 0; b < buffer.Length; b++)
             {
-                for (int i = 0; i < playerAbilities.Count && i < formSlots.Count; i++)
-                {
-                    int targetSlot = formSlots[i];
-                    for (int b = 0; b < buffer.Length; b++)
-                    {
-                        if (buffer[b].Slot != targetSlot) continue;
-                        var e = buffer[b];
-                        e.NewGroupId = new PrefabGUID(playerAbilities[i]);
-                        e.CopyCooldown = true;
-                        buffer[b] = e;
-                        break;
-                    }
-                    injected++;
-                }
+                if (!perSlot.TryGetValue(buffer[b].Slot, out int ab) || ab == 0) continue; // keep native fallback
+                var e = buffer[b];
+                e.Target = ReplaceAbilityTarget.BuffTarget;
+                e.NewGroupId = new PrefabGUID(ab);
+                e.Priority = 99;
+                e.CopyCooldown = true;
+                e.CastBlockType = GroupSlotModificationCastBlockType.WholeCast;
+                buffer[b] = e;
             }
-            else
+
+            // 3b. Add entries for granted slots the form doesn't already declare (so wolf/spider can show a
+            //     full bar). Existence-checked, so a repeat apply never stacks duplicates.
+            int injected = 0;
+            var renderedSlots = new List<int>();
+            foreach (var slot in sortedSlots)
             {
-                // Fallback (form had no discoverable slots): inject at the player's chosen slots (legacy).
-                // v0.86.0: idempotent — strip any Priority-99 BuffTarget overrides we added on a prior
-                // apply of this same buff before re-adding, so a repeat call can't stack duplicates.
-                for (int b = buffer.Length - 1; b >= 0; b--)
-                    if (buffer[b].Priority == 99 && buffer[b].Target == ReplaceAbilityTarget.BuffTarget)
-                        buffer.RemoveAt(b);
-                foreach (var slot in sortedSlots)
+                if (slot < 0 || slot > 7 || perSlot[slot] == 0) continue;
+                injected++;
+                renderedSlots.Add(slot);
+                bool exists = false;
+                for (int b = 0; b < buffer.Length; b++) if (buffer[b].Slot == slot) { exists = true; break; }
+                if (exists) continue;
+                buffer.Add(new ReplaceAbilityOnSlotBuff
                 {
-                    if (slot < 0 || slot > 7 || perSlot[slot] == 0) continue;
-                    buffer.Add(new ReplaceAbilityOnSlotBuff
-                    {
-                        Target = ReplaceAbilityTarget.BuffTarget,
-                        Slot = slot,
-                        NewGroupId = new PrefabGUID(perSlot[slot]),
-                        Priority = 99,
-                        CopyCooldown = true,
-                        CastBlockType = GroupSlotModificationCastBlockType.WholeCast,
-                    });
-                    injected++;
-                }
+                    Target = ReplaceAbilityTarget.BuffTarget,
+                    Slot = slot,
+                    NewGroupId = new PrefabGUID(perSlot[slot]),
+                    Priority = 99,
+                    CopyCooldown = true,
+                    CastBlockType = GroupSlotModificationCastBlockType.WholeCast,
+                });
             }
 
             // v0.89.0: when called from INSIDE ReplaceAbilityOnSlotSystem.OnUpdate (the form buff is
@@ -384,9 +376,7 @@ internal static class ShapeshiftAbilityService
             // immediately, which is the correct client-visible timing. The heartbeat path passes
             // triggerUpdate=true (post-resolution) as a fallback.
             if (triggerUpdate && Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
-            string slotMap = formSlots.Count > 0 ? $" onto form slots [{string.Join(",", formSlots)}]" : "";
-            Core.Log.LogInfo($"[Beelz FORM] {steamId} → {new PrefabGUID(formBuffGuid).GetPrefabName()} ({form}): injected {injected} ability(ies){slotMap} [{(fromFormBucket ? "per-form set" : "universal fallback")}{(triggerUpdate ? "" : ", in-resolve")}], stripped break-on-cast"
-                + (playerAbilities.Count > formSlots.Count && formSlots.Count > 0 ? $". NOTE: {form} form has only {formSlots.Count} ability slot(s); {playerAbilities.Count - formSlots.Count} extra didn't fit." : "."));
+            Core.Log.LogInfo($"[Beelz FORM] {steamId} → {new PrefabGUID(formBuffGuid).GetPrefabName()} ({form}): injected {injected} ability(ies) on slot(s) [{string.Join(",", renderedSlots)}] [{(fromFormBucket ? "per-form set" : "universal fallback")}{(triggerUpdate ? "" : ", in-resolve")}], replaced native bar.");
         }
         catch (Exception ex)
         {

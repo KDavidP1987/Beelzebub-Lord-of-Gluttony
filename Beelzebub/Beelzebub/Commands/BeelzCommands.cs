@@ -22,7 +22,7 @@ internal static class BeelzCommands
         ctx.Reply("   For a weapon-specific loadout: .beelz weapon-grant <weapon|auto> <slot> <index>");
         ctx.Reply("   Wielding that weapon overrides your universal slots with the weapon-specific ones.");
         ctx.Reply("4. RARE jackpot = DEVOUR: learn ALL of a unit's abilities in one kill (vs one at a time).");
-        ctx.Reply("   Dracula & Morgana also unlock a true TRANSFORM (.beelz transforms / transform / revert). Other unit forms are a postponed phase-two feature.");
+        ctx.Reply("   Some bosses unlock a true TRANSFORM (.beelz transforms / transform / revert) — Dracula, Morgana, Werewolf, Golem, Gargoyle. Customize each form's kit with .beelz tform.");
         ctx.Reply("5. .beelz verbosity <silent|summary|verbose> — tune chat noise.");
         ctx.Reply("Full command list: .beelz commands. Group detail: .beelz admin help · .beelz api help · .beelz hotkey help.");
     }
@@ -35,7 +35,7 @@ internal static class BeelzCommands
         ctx.Reply(".beelz list [vblood|shard|regular] [page] — your captured abilities + slot binds");
         ctx.Reply(".beelz transforms [filter] — your transform unlocks");
         ctx.Reply(".beelz bestiary [page] / .beelz bestiary unit <name> — collection book, per unit");
-        ctx.Reply(".beelz catalog [page] — curated boss-kit reference (transformation is Dracula/Morgana only; collect others as abilities)");
+        ctx.Reply(".beelz catalog [page] — curated boss-kit reference (only player-renderable forms transform; collect other units as abilities)");
         ctx.Reply(".beelz search <term> — search your captures · .beelz info <index|name> — full ability detail");
         ctx.Reply(".beelz progress — your collection-completion %");
         ctx.Reply("-- SLOTS / LOADOUT --");
@@ -46,10 +46,11 @@ internal static class BeelzCommands
         ctx.Reply(".beelz preset save|load|list|delete <name> — slot loadout presets");
         ctx.Reply(".beelz cast <hotkey|index> — cast a capture on demand (extra hotkeys: .beelz hotkey help)");
         ctx.Reply(".beelz active / .beelz current — what's effectively on your bar right now");
-        ctx.Reply(".beelz resetbar — reset action bar to vanilla (keeps captures) · .beelz refresh — re-apply your bar");
-        ctx.Reply("-- TRANSFORM (Dracula & Morgana only; every other unit's kit is learned as abilities / Devoured) --");
+        ctx.Reply(".beelz clearbar [all|universal|<weapon>|<form>] — clear bound slots (no confirm) · .beelz resetbar CONFIRM — full reset to vanilla · .beelz refresh — re-apply your bar");
+        ctx.Reply("-- TRANSFORM (player-renderable forms: Dracula, Morgana, Werewolf, Golem, Gargoyle; other units' kits are learned as abilities / Devoured) --");
         ctx.Reply(".beelz transforms / .beelz transform <name> / .beelz revert — your unlocked transformations");
-        ctx.Reply(".beelz preview <name> — a transform's abilities · .beelz phase [n] — switch a boss form's phase loadout");
+        ctx.Reply(".beelz preview <name> — a transform's abilities · .beelz phase [n] — switch a form's phase kit");
+        ctx.Reply(".beelz tform <unit> abilities|set <phase> <slot> <index>|clear|defaults — customize a transform's ability loadout");
         ctx.Reply(".beelz summon [n] / .beelz detonate — fire your transform's signature summon / AoE");
         ctx.Reply(".beelz summons [stash|restore|clear|status] / .beelz tp — manage summons (works for captured summon abilities too, not just transforms; waygate-safe)");
         ctx.Reply("-- MANAGE --");
@@ -75,14 +76,21 @@ internal static class BeelzCommands
 
         var byWeapon = Core.AbilityRegistry.AllWeaponSlots(steamId);
         if (byWeapon.Count == 0)
-        {
             ctx.Reply("No per-weapon loadouts yet. Build one: .beelz weapon-grant <weapon|auto> <slot 1-6> <index>");
-            return;
-        }
-        foreach (var (fam, slots) in byWeapon.OrderBy(kv => kv.Key.ToString()))
+        else
+            foreach (var (fam, slots) in byWeapon.OrderBy(kv => kv.Key.ToString()))
+            {
+                bool active = fam == weapon;
+                EmitLoadoutBucket(ctx, active ? $"{fam} (ACTIVE — currently wielded)" : fam.ToString(), slots);
+            }
+
+        // v0.100.0: per-FORM loadouts (apply inside a shapeshift form; requires Forms_CustomAbilities_Enabled).
+        var byForm = Core.AbilityRegistry.AllFormSlots(steamId);
+        if (byForm.Count > 0)
         {
-            bool active = fam == weapon;
-            EmitLoadoutBucket(ctx, active ? $"{fam} (ACTIVE — currently wielded)" : fam.ToString(), slots);
+            var activeForm = ShapeshiftAbilityService.GetCurrentForm(character);
+            foreach (var (form, slots) in byForm.OrderBy(kv => kv.Key.ToString()))
+                EmitLoadoutBucket(ctx, form == activeForm ? $"FORM {form} (ACTIVE)" : $"FORM {form}", slots);
         }
     }
 
@@ -620,10 +628,11 @@ internal static class BeelzCommands
         }
     }
 
-    [Command("unslot", description: "Remove your universal-bucket assignment from a spell slot. Usage: .beelz unslot <slot>.")]
-    public static void Unslot(ChatCommandContext ctx, int slot)
+    [Command("unslot", description: "Remove your universal-bucket assignment from a spell slot. Usage: .beelz unslot <slot> (1-6, or 'primary' / 'ultimate').")]
+    public static void Unslot(ChatCommandContext ctx, string slotToken)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        if (!TryParseSlotToken(slotToken, out int slot, out string slotErr)) { ctx.Reply(slotErr); return; }   // v0.100.0: accept primary/ultimate
         ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
         Core.AbilityRegistry.ClearSlot(steamId, slot);
         Core.Persistence.RequestSave();
@@ -810,10 +819,11 @@ internal static class BeelzCommands
             $"[BEELZ:event] type=weapon-slot-granted weapon={weapon} slot={slot} a={ability._Value} an={ability.GetPrefabName()}");
     }
 
-    [Command("weapon-unslot", description: "Clear a weapon-family-specific slot bind. Usage: .beelz weapon-unslot <weapon|auto> <slot>.")]
-    public static void WeaponUnslot(ChatCommandContext ctx, string weaponStr, int slot)
+    [Command("weapon-unslot", description: "Clear a weapon-family-specific slot bind. Usage: .beelz weapon-unslot <weapon|auto> <slot> (1-6, or 'primary' / 'ultimate').")]
+    public static void WeaponUnslot(ChatCommandContext ctx, string weaponStr, string slotToken)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        if (!TryParseSlotToken(slotToken, out int slot, out string slotErr)) { ctx.Reply(slotErr); return; }   // v0.100.0: accept primary/ultimate
         ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
         Entity character = ctx.Event.SenderCharacterEntity;
 
@@ -911,10 +921,11 @@ internal static class BeelzCommands
             $"[BEELZ:event] type=form-slot-granted form={form} slot={slot} a={ability._Value} an={abilityName}");
     }
 
-    [Command("form-unslot", description: "Clear a form-specific slot bind. Usage: .beelz form-unslot <form|auto> <slot>.")]
-    public static void FormUnslot(ChatCommandContext ctx, string formStr, int slot)
+    [Command("form-unslot", description: "Clear a form-specific slot bind. Usage: .beelz form-unslot <form|auto> <slot> (1-6, or 'primary' / 'ultimate').")]
+    public static void FormUnslot(ChatCommandContext ctx, string formStr, string slotToken)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        if (!TryParseSlotToken(slotToken, out int slot, out string slotErr)) { ctx.Reply(slotErr); return; }   // v0.100.0: accept primary/ultimate
         ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
         Entity character = ctx.Event.SenderCharacterEntity;
 
@@ -985,6 +996,11 @@ internal static class BeelzCommands
             return;
         }
         var entry = unlocks[index];
+        // v0.100.0: if the player is CURRENTLY transformed into the unit they're forgetting, revert first —
+        // otherwise they're left in an orphaned form whose unlock no longer exists (relies on logout to clear).
+        var activeNow = Core.AbilityRegistry.GetActiveTransform(steamId);
+        if (activeNow != null && activeNow.UnitPrefabGuid == entry.UnitPrefabGuid)
+            Core.Transforms.Revert(steamId, "forget-transform");
         bool ok = Core.AbilityRegistry.ForgetTransform(steamId, entry.UnitPrefabGuid);
         if (ok)
         {

@@ -18,8 +18,56 @@
 > in the BCH workspace.
 >
 > **Canonical source of truth for the wire API:**
-> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 20`). If this doc
+> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 21`). If this doc
 > and that file ever disagree, the file wins — and this doc should be corrected.
+>
+> ## 📥 PENDING BCH REQUESTS — implement in Beelzebub
+>
+> *(Added 2026-05-31 from the BCH session. The BCH client is already coded to CONSUME everything
+> below — these need the server-side EMIT/behavior. Implement in this Beelzebub session, then fold
+> each into the dated callouts above and tick it off here. Priority order.)*
+>
+> 1. **✅ DONE (v0.100.0, ApiVersion 21): `catalog-ability` now emits `a=<guid>`, `unit=<name>`, `unitguid=<int>`.**
+>    `a=` is the ability's PrefabGUID; `unit=` is the primary source-NPC name **SafeToken-encoded like
+>    `desc=`/`notes=`** (decode with the same reverse), `-` when unknown; `unitguid=` is the source-NPC
+>    PrefabGUID, `0` when unknown. From `ability_metadata.json` SourceNpcs. BCH can now fill the Unit column +
+>    ID + search-by-GUID for UNCAPTURED abilities from the single existing scan (graceful when `-`/`0`).
+>
+> 2. **✅ ADDRESSED (v0.100.0).** Two scopes now exist: **`api catalog abilities`** (player/default) streams
+>    the COLLECTIBLE set — abilities actually capturable under the active allow/deny/difficulty rules (honest
+>    count/% regardless of `Capture_InclusiveMode`); **`api catalog abilities-all`** (admin-only) streams
+>    EVERY real ability group regardless of enable/deny/difficulty for config. Both carry `enabled=` per row,
+>    so a client can also filter the admin list to the enabled set. (`[BEELZ:end]` cmd is `catalog-abilities`
+>    vs `catalog-abilities-all` respectively.)
+>
+> 3. **Ability name/description metadata coverage.** The "No name / no description" abilities are gaps in
+>    `ability_metadata.json` (desc ~26%, school ~9% as of v0.60). Filling more (or via
+>    `ability_metadata_overrides.json`) auto-populates BCH tooltips + Bestiary "Missing" rows — no wire change.
+>
+> 4. **Grant should refresh the action bar without needing a weapon swap (BCH "A2/T1").** v0.63 sets
+>    `AbilityGroupSlot.DirtyTag` + runs the slot system server-side, but the CLIENT HUD doesn't re-resolve
+>    until a trigger (weapon swap). Investigate a server-side nudge to re-resolve the bar / slot 0 on grant,
+>    or confirm it's an engine limitation — BCH can't safely force the client HUD (past crash class).
+>
+> 5. **✅ DONE (v0.100.0): `unslot` / `weapon-unslot` / `form-unslot` now accept the `primary` / `ultimate`
+>    slot tokens** (via `TryParseSlotToken`). BCH can clear a single primary/ultimate bind directly instead
+>    of routing through `.beelz clearbar <bucket>`.
+>
+> 6. **Optional / low priority: machine-readable SUMMON STASH STATE (token or event).** *(Added 2026-05-31.)*
+>    BCH v0.19 (player-feedback round 8) moved summon management out of the Transforms tab into the **Hotkeys
+>    tab** and added a new on-screen **Summons overlay** — a draggable panel whose primary button toggles
+>    **Stash ⟷ Restore** (plus Recall/Clear). Because `summons status` replies as **human text** and nothing
+>    is **pushed** on stash/restore, that toggle's stashed/restored state is currently **client-side
+>    optimistic** (it flips its own label on each press; it can drift if the server stashes/restores summons
+>    for another reason — e.g. mounted auto-stash, or another client/command). This is acceptable and BCH
+>    ships it that way. To make it authoritative, either:
+>    - add a parseable token to the `summons status` reply (e.g. `summons:live=<n>;stashed=<n>` alongside the
+>      human text — BCH already strips/parses that kind of tagged tail), **or**
+>    - emit a tiny `[BEELZ:event] type=summons state=<stashed|live> live=<n> stashed=<n>` on every
+>      stash/restore/clear/auto-stash so BCH can set the toggle from the authoritative state.
+>    BCH would consume whichever is easier; no change is also fine (overlay stays optimistic). No
+>    other recent BCH work (admin-tab gating, text-caret fixes, ID-from-captures) needs anything
+>    server-side — those are all client-only, and ID-from-captures is already covered by item #1.
 >
 > **⚠️ v0.44.0 — PER-ABILITY BASELINE.** Transformation is now **Dracula & Morgana
 > only**; every other unit's "jackpot" roll **Devours** the unit (grants its whole
@@ -93,6 +141,107 @@
 >   field** (that's the player's own dash/shield self-cancel; this is "an enemy hit breaks my cast").
 > Both server-wide baked edits (Abilities_ApplyConfig), cleared by `defaults`. A BCH ability-config panel
 > reads/writes them like the other `_override`/cast-tuning fields. Additive — older parsers ignore them.
+>
+> **⚠️ v0.100.0 — CATALOG: unit fields + admin/player scopes (ApiVersion 20 → 21, additive). ACTION FOR BCH.**
+> - **`catalog-ability` now emits `a=<guid>` `unit=<name>` `unitguid=<int>`** (PENDING #1 above) — `unit=` is
+>   SafeToken-encoded (decode like `desc=`/`notes=`), `-`/`0` when unknown. Fills Unit + ID + GUID-search for
+>   UNCAPTURED abilities, from the existing scan.
+> - **Two catalog scopes for the three realms you'll surface:**
+>   - **Captured abilities** → `api list` (the player's own captures) — unchanged.
+>   - **Total AVAILABLE (player progress)** → **`api catalog abilities`** = the collectible set (capturable
+>     under the active rules; honest %/count regardless of `Capture_InclusiveMode`). Filter to `enabled=1` if
+>     you want strictly the enabled subset. End marker `cmd=catalog-abilities`.
+>   - **ALL abilities (admin config)** → **`api catalog abilities-all`** (admin-only) = every real ability
+>     group regardless of enable/deny/difficulty, each with `enabled=`. End marker `cmd=catalog-abilities-all`
+>     (distinct so the two streams don't mix). Same `[BEELZ:catalog-ability]` line format + chunking as the
+>     player scope. Use this for the Admin-Abilities config table; filter `enabled=1` client-side to mirror
+>     the player view.
+>
+> **⚠️ v0.100.0 — CUSTOM TRANSFORM LOADOUTS + transform admin controls (new commands + config keys;
+> ApiVersion 20 → 21, additive).**
+> - **New PLAYER command `.beelz tform <unit|index> <abilities|set|clear|defaults> [phase] [slot] [index]`** —
+>   a per-player custom loadout for each transform: list the boss's full kit, then bind chosen abilities to
+>   phase slots (0 = primary, 7 = ultimate); a player can even define a phase 2. Persisted (new
+>   `TransformLoadouts` block in state.json, keyed `"unit:phase"`). `<unit>` accepts the index from
+>   `.beelz transforms`, a name, or the unit id. **No `[BEELZ:*]` line** — a BCH transform-loadout UI would
+>   drive it by relaying these chat commands (like the weapon/form loadout panels), reading the kit from the
+>   v0.99 full-catalog and the player's current binds from `api slots`-style data (a dedicated read may be
+>   added later if BCH wants one — ask).
+> - **New `api config`-streamed keys** (reflection, no parser change): **`Transform_Enabled`** (master
+>   on/off), **`Transform_CooldownScope`** (`Global` | `PerCategory` | `PerTransformation`). A BCH admin
+>   panel can toggle/select these via `.beelz admin set`.
+> - **`.beelz admin transform-set <unit>` gains `duration` + `cooldown`** (per-transformation overrides of
+>   the category defaults; `inherit` to clear). Same command surface BCH already relays for transform-set.
+> - Power scaling for transforms is unchanged and already complete (`Transform_PowerScalingMode` global +
+>   per-unit `scaling_mode`: PrefabAbsolute / PlayerScaled / PlayerLeveled / CuratedScales).
+> - **Also new admin commands (chat-only, no wire surface):** `.beelz admin broadcast-msg
+>   <complete|leaderboard> <list|add|remove|edit>` manages the announcement message pools individually (a BCH
+>   announcements panel could relay these; note `api config` SafeToken-mangles the two pooled `Broadcast_*_Messages`
+>   strings, so `broadcast-msg list` is the reliable read); `.beelz admin reset-loadouts <player>` clears a
+>   player's binds + custom loadouts + active transform while keeping their collection.
+>
+> **ℹ️ v0.99.1 — form phase-switching FIX (behavioral; no wire change, ApiVersion still 20).** `.beelz phase`
+> now works on the Werewolf/Golem/Gargoyle forms (phase 2 was silently failing — the native forms re-applied
+> async and raced; fixed by swapping the kit in place). `type=transform-phase-shift` now reliably fires for
+> phase 2 on those forms. The v0.98 Dracula "Wolf" 3rd phase was removed (Dracula = 2 phases again).
+>
+> **ℹ️ v0.99.0 — FULL CROSS-PHASE KITS + phase-switchable new forms (behavioral; no wire change, ApiVersion
+> still 20).** Capture + Devour now grant a boss's **complete cross-phase** ability set (base bar ∪ the
+> `ability_metadata.json` SourceNpcs reverse-map ∪ the curated transform-form sets), not just its base/phase-1
+> bar — so a unit's collectable ability pool is **larger** (e.g. devouring the Geomancer now yields the golem
+> kit, not just his human abilities). **BCH impact:** more `type=capture` / bigger `type=devour count=` per
+> unit, and a player can own more abilities per source — purely "more of the same" events, no parser change.
+> Also: the Werewolf/Golem/Gargoyle transforms are now multi-phase (2 kits each), so `type=transform-phase-shift`
+> fires for them too (a transform UI should expect >1 phase on those, not just Dracula/Morgana).
+>
+> **⚠️ v0.98.0 — TRANSFORM/DEVOUR/CAPTURE ROLLS SPLIT + more forms (behavioral + new config keys;
+> ApiVersion still 20).** The rare jackpot is now THREE independent rolls — per-ability capture, **Devour**
+> (whole kit), and **Transformation** (the form) — each with its own drop chance + pity. **BCH impact:**
+> - **`[BEELZ:event] type=devour` and `type=transform-unlock` can now BOTH occur for the same boss** (over
+>   different kills) — a transform boss is now also devourable, and the form is a separate rarer unlock. A
+>   BCH feed shouldn't treat them as mutually exclusive.
+> - **`transform-unlock` fires for more units now:** Dracula, Morgana, Werewolf Chieftain (`2079933370`),
+>   **Geomancer/Golem (`-1065970933`)**, **Tailor/Gargoyle (`-1942352521`)**, and a **Basic Werewolf from a
+>   regular NPC** (`s=R u=-951976780`). `BossFormRegistry.Count` / `api transforms` is now **up to 6**.
+>   (A v0.98 Dracula "Wolf" 3rd phase was reverted in v0.99.1 — Dracula is back to 2 phases.)
+> - **New `api config`-streamed keys** (reflection — a BCH config panel picks them up automatically, no
+>   parser change): `DropChance_TransformUnlock_VBlood`, `DropChance_TransformUnlock_Regular`,
+>   `Capture_PityIncrement_Transform`, `Capture_PityMax_Transform`. These are the transform-only dials,
+>   separate from the existing `DropChance_Devour_*` / `Capture_*_Devour` ones.
+>
+> **⚠️ v0.97.0 — GOLEM + GARGOYLE TRANSFORMS + form natural-fallback (behavioral; ApiVersion still 20).**
+> Two more player transforms join Werewolf: **Golem** (defeat **Terah the Geomancer**, `u=-1065970933`) and
+> **Gargoyle** (defeat **the Tailor**, `u=-1942352521`). Same deal as Werewolf — `transform-unlock` now also
+> fires for these, and `.beelz transforms` / `api transforms` / `BossFormRegistry.Count` (now **5**) include
+> them. Both are EXPERIMENTAL test forms (golem/gargoyle bars weren't built for players). **No new wire
+> line/field** — a transform browser that enumerates `transform-unlock` / `ListTransforms` picks them up.
+> Also (non-wire): per-form *loadout* slots a player doesn't grant now keep the form's NATURAL ability as a
+> fallback (was blanked) — no BCH impact, the `form-slot`/`bucket=` data is unchanged.
+>
+> **⚠️ v0.96.0 — WEREWOLF TRANSFORM (behavioral; no new line/field, ApiVersion still 20 — but a CONTRACT
+> CORRECTION for BCH).** Defeating the **Werewolf Chieftain (Willfred)** V-Blood now unlocks a third
+> player transform (after Dracula & Morgana): the cursed-forest **Werewolf** form, registered in
+> `BossFormRegistry`. **BCH-facing correction:** earlier notes (and the event table below) said
+> `[BEELZ:event] type=transform-unlock` fires "ONLY for Dracula & Morgana" — that is now **out of date**.
+> It also fires for the Werewolf Chieftain (`u=2079933370`), and `.beelz transforms` / `api transforms` /
+> the transform count (`BossFormRegistry.Count` = **3**) now include Werewolf. No new wire line or field —
+> a BCH transform browser that already enumerates `transform-unlock` / `ListTransforms` picks it up for
+> free; just don't hard-assume "exactly two." (Werewolf is shipped as a **test** — its bar is
+> CastOptions-based so some injected abilities may not render/fire yet; see
+> `docs/WEREWOLF_FORM_TRANSFORM_DESIGN.md`.)
+>
+> **ℹ️ v0.95.0 — FORM-SLOT FIX + WEREWOLF SCOPING + LOG CLEANUP (no wire/event/ApiVersion change, still 20).**
+> Behavior + internal only — **no BCH parser/contract change.**
+> - **Per-form loadouts now place each granted ability on its EXACT slot (0–7) and add slots the vanilla
+>   form doesn't natively declare**, so the form bar is purely the player's loadout instead of being capped
+>   at the form's few pre-populated slots (Wolf was 2, Bear 3 — even with room for 7 — Spider 1). The
+>   `[BEELZ:form-slot]` / `bucket=` data BCH already reads is unchanged — those binds simply now render
+>   in-game on the slots BCH shows. A BCH form-loadout UI that grids slots 0–7 will see all of them used.
+> - **The "Werewolf" form is a cosmetic wolf reskin, not the real werewolf-curse form** — a proper
+>   native-form/werewolf transform is scoped server-side (`docs/WEREWOLF_FORM_TRANSFORM_DESIGN.md`). If/when
+>   it ships with a config key or event, this handoff gets the wire note then; nothing for BCH today.
+> - Server-log cleanup only (toggling an ability `enabled` no longer re-runs cast tuning; `[Beelz TUNE]`
+>   detail is verbose-gated). These are server INFO logs BCH never parses.
 >
 > **🚨 v0.94.0 — CLEAR-BAR FIX + per-bucket clear (no wire/event/ApiVersion change, still 20). ACTION FOR BCH.**
 > **A BCH "clear bar" button that calls `.beelz resetbar` is broken** — v0.76 made `resetbar` require a
@@ -520,11 +669,38 @@
 
 ---
 
-## 0.0 — ⚡ SINCE YOUR LAST BUILD (BCH baseline v0.44.0 → now v0.94.0) — READ THIS FIRST
+## 0.0 — ⚡ SINCE YOUR LAST BUILD (BCH baseline v0.44.0 → now v0.100.0) — READ THIS FIRST
 
-**Context (updated 2026-05-30):** BCH began building against **v0.44.0** (ApiVersion 6). Beelzebub
-is now at **v0.94.0 / ApiVersion 20**. This is the *consolidated* delta so you can fold everything
+**Context (updated 2026-05-31):** BCH began building against **v0.44.0** (ApiVersion 6). Beelzebub
+is now at **v0.100.0 / ApiVersion 21**. This is the *consolidated* delta so you can fold everything
 into the UI in one pass — every per-version detail is in the dated callouts ABOVE this section.
+
+> **🆕 v0.95 → v0.100 (the 2026-05-31 session) — BCH ACTION SUMMARY (ApiVersion 20 → 21, all additive):**
+> - **ONE small wire add (ApiVersion 21):** `catalog-ability` now also carries **`a=<guid>` `unit=<name>`
+>   `unitguid=<int>`** (`unit=` SafeToken-encoded; `-`/`0` when unknown). Fill the Unit + ID columns + GUID
+>   search for UNCAPTURED abilities from the existing scan. Older parsers ignore them — no regression.
+> - **TWO catalog scopes (do this for the 3 realms):** `api list` = the player's captures;
+>   **`api catalog abilities`** = the COLLECTIBLE/available set (honest progress % regardless of
+>   InclusiveMode; filter `enabled=1` for the strict enabled subset); **`api catalog abilities-all`**
+>   (ADMIN) = EVERY ability for the config table (end marker `cmd=catalog-abilities-all`; each row still has
+>   `enabled=`). Use the admin scope for an Admin-Abilities panel, the player scope for the Bestiary.
+> - **Transforms are no longer "Dracula & Morgana only."** There are now **up to 6** renderable forms:
+>   Dracula, Morgana, **Werewolf Chieftain** (`2079933370`), **Geomancer/Golem** (`-1065970933`),
+>   **Tailor/Gargoyle** (`-1942352521`), **basic werewolf NPC** (`-951976780`, source `s=R`). `transform-unlock`
+>   fires for all of them; `api transforms` returns up to 6. **A transform UI must stop assuming exactly two**
+>   and expect **multi-phase** kits (`type=transform-phase-shift`) on the new forms too.
+> - **Capture / Devour / Transform are now THREE independent rolls** — `type=devour` AND `type=transform-unlock`
+>   can BOTH fire for the same boss (over different kills). Capture + Devour now grant a boss's **full
+>   cross-phase kit** (more `type=capture` events / larger `count=` per unit). New `api config` keys (reflection
+>   -streamed, settable via `admin set`): `DropChance_TransformUnlock_VBlood`/`_Regular`,
+>   `Capture_PityIncrement_Transform`/`_Max_Transform`, `Transform_Enabled` (master), `Transform_CooldownScope`.
+> - **PENDING #5 DONE:** `unslot` / `weapon-unslot` / `form-unslot` accept the `primary` / `ultimate` tokens —
+>   BCH can clear a single primary/ultimate bind directly (no more clearbar-the-whole-bucket workaround).
+> - **New chat-only admin commands a BCH panel can relay** (no `[BEELZ:*]` line): `.beelz tform <unit>
+>   abilities|set|clear|defaults` (per-player custom transform loadouts), `.beelz admin transform-set <unit>
+>   duration|cooldown <sec>`, `.beelz admin broadcast-msg <complete|leaderboard> <list|add|remove|edit>`
+>   (manage announcement pools; `api config` SafeToken-mangles the two pooled `_Messages` strings, so
+>   `broadcast-msg list` is the reliable read), `.beelz admin reset-loadouts <player>`.
 
 > **🔧 v0.89–v0.94 (all ApiVersion 20, mostly behavior; the items below are the BCH-relevant ones):**
 > **clear-bar button must move to `.beelz clearbar`** (bare `resetbar` no-ops since v0.76 — see §A/§4);
@@ -736,7 +912,7 @@ All under the `.beelz api` group. Verified against `ApiCommands.cs`.
 | `.beelz api version` | `[BEELZ:version]` | `api=<int> plugin=<ver> ready=0\|1` |
 | `.beelz api list` | `[BEELZ:list]` … `[BEELZ:end]` | Caller's captured abilities: `i= s=R\|V u=<unitGuid> un=<unitName> a=<abilityGuid> an=<abilityName> label=<friendlyAbilityName> ulabel=<friendlyUnitName> cat=<category-NAME> type=<unitType>`. **(v10 added `label=`/`ulabel=` — SafeToken-encoded friendly names; raw `an=`/`un=` unchanged.)** **`cat=` is the category NAME** (`Other\|Travel\|Aoe\|Projectile\|Summon\|Buff\|WeaponSpell\|Spell\|Melee`), not a number — treat unknown names as `Other`. |
 | `.beelz api slots` | `[BEELZ:slot]`, `[BEELZ:slot-current]`, `[BEELZ:end]` | Slot assignments per bucket: `bucket=any\|<WeaponFamily> slot=1-6 a= an=`; footer `weapon=<current>` |
-| `.beelz api transforms` | `[BEELZ:tx]` … `[BEELZ:end]` | Transform unlocks + matrix attrs: `i= s= u= un= enabled= difficulty= tier= damage_scale= cooldown_scale= health_scale= speed_scale= type= full_replace= scaling_mode=`. **(v6) Now 0–2 entries — Dracula/Morgana only.** |
+| `.beelz api transforms` | `[BEELZ:tx]` … `[BEELZ:end]` | Transform unlocks + matrix attrs: `i= s= u= un= enabled= difficulty= tier= damage_scale= cooldown_scale= health_scale= speed_scale= type= full_replace= scaling_mode=`. **(v0.98) Up to 6 entries — Dracula, Morgana, Werewolf Chieftain, Geomancer (Golem), Tailor (Gargoyle), Basic Werewolf (NPC).** |
 | `.beelz api active` | `[BEELZ:active]` | Active transform: `u= un= s= ttl=<sec>\|toggle` + phase info; or `none=1` |
 | `.beelz api info <index>` | `[BEELZ:info]` | One ability's COMPLETE tooltip + rule data (a tooltip can be built from this line alone). Fields: `i= s= u= un= a= an= label= desc=` (real description, %params% substituted) `cat=<NAME> category_override=<NAME\|->` (`-` = auto-classified, else admin override) `weapons= weapon_anim=<family\|None> school= cooldown_seconds= cast_time_seconds= range= behavior= forms= transform_only= enabled= difficulty= phase= allow_denied= interruptible=<on\|off\|auto> free_move=<0\|1> cast_speed=<0..1\|auto> damage_scale= cooldown_scale=`. **(v8 added cat, category_override, cast_time_seconds, range, behavior, phase, allow_denied, interruptible, free_move, cast_speed.)** |
 | `.beelz api progress` | `[BEELZ:progress]` | Collection %: `abilities_captured= abilities_total= abilities_pct= transforms_unlocked= transforms_total= transforms_pct=` + V-Blood breakdowns |
@@ -767,7 +943,7 @@ All under the `.beelz api` group. Verified against `ApiCommands.cs`.
   |---|---|---|
   | `capture` | `s=R\|V u= un= a= an=` | A new ability is captured from a kill |
   | `devour` | `s=R\|V u= un= count=` | **(v6)** Jackpot DEVOURED the unit — `count` abilities granted at once. Fires for every non-boss unit (replaces the old per-unit transform unlock). Re-fetch `api list`. |
-  | `transform-unlock` | `s=R\|V u= un=` | A transformation unlocked. **(v6) Now ONLY fires for Dracula & Morgana** — the only renderable forms. |
+  | `transform-unlock` | `s=R\|V u= un=` | A transformation unlocked. **Fires for renderable forms only — Dracula, Morgana, Werewolf Chieftain (`2079933370`), Geomancer/Golem (`-1065970933`), Tailor/Gargoyle (`-1942352521`), and Basic Werewolf (`s=R u=-951976780`).** Independent of `type=devour` (v0.98 — both can fire for the same boss). Don't hard-assume a fixed count. |
   | `slot-granted` / `slot-cleared` | `slot= [a= an=]` | Universal-bucket grant/clear |
   | `weapon-slot-granted` / `weapon-slot-cleared` | `weapon= slot= [a= an=]` | Weapon-bucket grant/clear |
   | `hotkey-set` / `hotkey-cleared` | `name= [a= an=]` | Named hotkey bind/clear |
@@ -940,7 +1116,7 @@ matched fuzzily; `<unitGuid>`/`<abilityGuid>` = integer PrefabGUIDs from `api li
 | Difficulty | `admin difficulty [basic\|brutal]` (no arg = show) |
 | Grant / revoke | `admin give <player> <unitGuid> <abilityGuid>` · `admin revoke <player> <unitGuid> <abilityGuid> [reason]` · `admin give-transform <player> <unitGuid>` · `admin revoke-transform <player> <unitGuid> [reason]` |
 | **Devour (v6)** | `admin devour <player> <unitGuid>` — grant the player ALL of a unit's eligible abilities at once (the admin alternative to transformation for non-renderable units) |
-| Force transform | `admin force-transform <player> <unitGuid>` (bypasses unlock+cooldown) · `admin clear-transform <player>`. **(v6) `give-transform`/`force-transform` accept ONLY Dracula & Morgana** — other units reply pointing to `admin devour`. |
+| Force transform | `admin force-transform <player> <unitGuid>` (bypasses unlock+cooldown) · `admin clear-transform <player>`. **`give-transform`/`force-transform` accept Dracula, Morgana & (v0.96) the Werewolf Chieftain (`2079933370`)** — other units reply pointing to `admin devour`. |
 | Remote slots | `admin set-slot <player> <slot 1-6> <abilityGuid>` · `admin clear-slot <player> <slot>` · `admin set-weapon-slot <player> <weapon> <slot> <abilityGuid>` · `admin clear-weapon-slot <player> <weapon> <slot>` (admin binds bypass the TransformOnly/Enabled guards — reply notes a `[WARNING]`) |
 | Inspect / recovery | `admin inspect <player>` · `admin progress <player>` · `admin snapshot` · `admin buffs [player]` (v0.43.9 diagnostic — dumps a player's live buffs, entity prefab, equipped-ability slots + override sources to the server log) · `admin respawn [player]` (v0.43.15 — respawn the character in place via the engine's RespawnCharacter; preserves inventory/progress) · `admin clearslotmods [player]` (v0.43.17 — clears orphaned ability-slot modifications) · `admin rebuildslots [player]` (v0.43.19 — safe re-sync of active ability slots to their base values) · `admin copy-collection <player>` / `admin paste-collection <player>` (v0.43.20 — back up a player's captures+transforms to an admin clipboard and paste onto another character; additive, skips dupes) · `admin reset-character <player> CONFIRM-RESET` (v0.43.21 — unbind Steam ID + kick → player creates a fresh character on next login; Beelzebub collection preserved; self-contained, no KindredCommands needed) |
 | Bulk / ops | `admin revert-all` · `admin freeze-captures <on\|off\|status>` · `admin scan-abilities` · `admin desummon <player>` · `admin desummon-all` · `admin wipe-all CONFIRM-WIPE` (destructive — literal token required) |
@@ -1061,7 +1237,7 @@ per tick) for on-screen ability rings — Beelzebub exposes static cooldown valu
   cooldown by its `CooldownScale` before enforcing it (floor 1s). For an accurate cooldown
   ring on a force-cast/hotkey button, use `cooldown_seconds × cooldown_scale` (both from
   `api info`). Native spell-bar slot cooldowns are unchanged (V Rising's own).
-- **Transform is Dracula/Morgana only (v0.44.0).** Don't build a generic "transform into any
+- **Transform is limited to renderable forms — Dracula, Morgana & Werewolf (v0.96).** Don't build a generic "transform into any
   unit" browser — `api transforms` returns at most those two. The collection/progression UI
   should center on **abilities** (`api list`/`api bestiary`/the `devour` event), with a small
   dedicated panel for the two boss transforms. Arbitrary-unit transformation is §7.1 (phase two).

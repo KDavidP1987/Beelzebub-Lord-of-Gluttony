@@ -31,6 +31,11 @@ internal static class Settings
     // old keys' values are migrated to these automatically on load (see Initialize).
     public static ConfigEntry<float> DropChance_Devour_Regular { get; private set; }
     public static ConfigEntry<float> DropChance_Devour_VBlood { get; private set; }
+    // v0.98.0: the TRANSFORMATION-unlock roll is now SEPARATE from Devour (it was the same jackpot
+    // before). Only registered transform bosses (BossFormRegistry) roll it; it grants the FORM, not
+    // abilities — so transformations are their own independently-gated prize. Defaults rarer than Devour.
+    public static ConfigEntry<float> DropChance_TransformUnlock_Regular { get; private set; }
+    public static ConfigEntry<float> DropChance_TransformUnlock_VBlood { get; private set; }
 
     // v0.38.0: escalating pity / bad-luck protection. (v0.64.0: this pair governs ABILITY-capture
     // pity; the Devour jackpot roll has its own pity pair below so admins can tune them apart.)
@@ -40,6 +45,9 @@ internal static class Settings
     // ability values, so existing balance is unchanged until an admin diverges them).
     public static ConfigEntry<float> Capture_PityIncrement_Devour { get; private set; }
     public static ConfigEntry<float> Capture_PityMax_Devour { get; private set; }
+    // v0.98.0: separate bad-luck protection for the TRANSFORMATION-unlock roll.
+    public static ConfigEntry<float> Capture_PityIncrement_Transform { get; private set; }
+    public static ConfigEntry<float> Capture_PityMax_Transform { get; private set; }
     public static ConfigEntry<bool> Capture_PitySessionBased { get; private set; }
 
     // Notifications (Phase 3)
@@ -67,6 +75,10 @@ internal static class Settings
     public static ConfigEntry<string> Transform_Mode_ShardBoss { get; private set; }
     public static ConfigEntry<float> Transform_DurationSeconds_ShardBoss { get; private set; }
     public static ConfigEntry<float> Transform_CooldownSeconds_ShardBoss { get; private set; }
+
+    // v0.100.0: master transform kill-switch + cooldown/duration SCOPE.
+    public static ConfigEntry<bool> Transform_Enabled { get; private set; }
+    public static ConfigEntry<string> Transform_CooldownScope { get; private set; }
 
     // Diagnostics
     public static ConfigEntry<bool> VerboseLogging { get; private set; }
@@ -316,8 +328,23 @@ internal static class Settings
             "(deprecated — renamed to DropChance_Devour_VBlood; value migrated automatically)");
         DropChance_Devour_VBlood = config.Bind(
             "Capture.DropChance", nameof(DropChance_Devour_VBlood), legacyDevourVBlood.Value,
-            "Per-kill DEVOUR chance (0.0-1.0) on a V-Blood. The Devour roll grants ALL of its eligible abilities at once; for Dracula & Morgana it unlocks their TRANSFORMATION instead.");
+            "Per-kill DEVOUR chance (0.0-1.0) on a V-Blood. The Devour roll grants ALL of its eligible abilities at once. (v0.98.0: this is now INDEPENDENT of the transformation roll — devouring a transform boss grants its abilities but NOT its form; the form has its own DropChance_TransformUnlock_VBlood.)");
         config.Remove(legacyDevourVBlood.Definition);
+
+        // v0.98.0: TRANSFORMATION-unlock roll — separate from Devour, only rolled for registered transform
+        // bosses (BossFormRegistry). Grants the FORM, not abilities. Rarer than Devour by default so the
+        // transformation is a prestige prize a player works toward, on top of devouring/capturing the kit.
+        DropChance_TransformUnlock_VBlood = config.Bind(
+            "Capture.DropChance", nameof(DropChance_TransformUnlock_VBlood), 0.0015f,
+            "Per-kill chance (0.0-1.0) to unlock a V-Blood transform boss's TRANSFORMATION (Dracula, Morgana, " +
+            "Werewolf Chieftain, Geomancer/Golem, Tailor/Gargoyle, …). Independent of the Devour/ability rolls. " +
+            "Default rarer than Devour — the form is the hardest prize. Only fires for units the game can render " +
+            "as a player form.");
+        DropChance_TransformUnlock_Regular = config.Bind(
+            "Capture.DropChance", nameof(DropChance_TransformUnlock_Regular), 0.005f,
+            "Per-kill chance (0.0-1.0) to unlock a non-V-Blood transform unit's TRANSFORMATION (e.g. the basic " +
+            "werewolf from the common werewolf NPC). Higher than the V-Blood transform default since these are " +
+            "common mobs. Independent of Devour/ability rolls.");
 
         Capture_PityIncrementPerKill = config.Bind(
             "Capture.Pity", nameof(Capture_PityIncrementPerKill), 0.0025f,
@@ -344,6 +371,16 @@ internal static class Settings
         Capture_PityMax_Devour = config.Bind(
             "Capture.Pity", nameof(Capture_PityMax_Devour), Capture_PityMaxBonus.Value,
             "Cap on the accumulated DEVOUR pity bonus. Defaults to the ability pity cap. 0 = uncapped.");
+
+        // v0.98.0: bad-luck protection for the TRANSFORMATION-unlock roll, independent of ability + Devour pity.
+        Capture_PityIncrement_Transform = config.Bind(
+            "Capture.Pity", nameof(Capture_PityIncrement_Transform), Capture_PityIncrementPerKill.Value,
+            "Bad-luck protection for the TRANSFORMATION-unlock roll (separate from ability + Devour pity). Each " +
+            "kill of a transform boss whose transform roll fails raises the next transform chance by this amount, " +
+            "reset when the transform unlocks. 0 = disabled.");
+        Capture_PityMax_Transform = config.Bind(
+            "Capture.Pity", nameof(Capture_PityMax_Transform), Capture_PityMaxBonus.Value,
+            "Cap on the accumulated TRANSFORMATION pity bonus. Defaults to the ability pity cap. 0 = uncapped.");
 
         Capture_PitySessionBased = config.Bind(
             "Capture.Pity", nameof(Capture_PitySessionBased), false,
@@ -434,6 +471,21 @@ internal static class Settings
             "Transformation", nameof(Transform_CooldownSeconds_ShardBoss), 0f,
             "v0.39.0: cooldown (seconds) after a shard-boss transform ends before another shard-boss transform can " +
             "start. Independent of the regular/V-Blood cooldown buckets. 0 = no cooldown.");
+
+        // v0.100.0: master kill-switch — turn ALL transformations off server-wide (captures/devour unaffected).
+        Transform_Enabled = config.Bind(
+            "Transformation", nameof(Transform_Enabled), true,
+            "Master switch for ALL transformations. false = no player can transform (the unlock still drops, but " +
+            ".beelz transform is refused). Ability capture + Devour are unaffected. Per-unit blocking is still " +
+            "'.beelz admin transform-set <unit> enabled false'.");
+        // v0.100.0: how the cooldown + duration BUDGET is shared.
+        Transform_CooldownScope = config.Bind(
+            "Transformation", nameof(Transform_CooldownScope), "PerCategory",
+            "How the transform cooldown budget is shared: 'PerCategory' (default — one cooldown bucket per " +
+            "Regular/V-Blood/Shard-Boss group, the legacy behavior), 'PerTransformation' (each unit has its OWN " +
+            "independent cooldown — e.g. 30 min/day PER form, so you can use every form), or 'Global' (a SINGLE " +
+            "cooldown across ALL transforms — e.g. 30 min/day total, one form at a time). Duration is per-unit when " +
+            "an override is set (.beelz admin transform-set <unit> duration <sec>), else the category default.");
 
         VerboseLogging = config.Bind(
             "Diagnostics", nameof(VerboseLogging), false,

@@ -158,10 +158,12 @@ internal static class DeathEventListenerSystemPatch
             // tallies so we can reset (on a new capture) or bump (on a dry kill) after.
             float pityAbility = Core.AbilityRegistry.GetPityBonus(steamId, CaptureSource.Regular, PityKind.Ability);
             int abilityRolls = 0, abilityWins = 0;
-            var slots = Core.EntityManager.GetBuffer<AbilityGroupSlotBuffer>(died);
-            for (int i = 0; i < slots.Length; i++)
+            // v0.99.0: roll against the unit's FULL cross-phase kit (base bar ∪ metadata reverse-map ∪
+            // curated transform-form sets) instead of only the dead entity's current bar — so phase-gated
+            // abilities are capturable from any kill. (The HasBuffer guard above still gates real ability units.)
+            foreach (int abilityVal in Services.UnitKitService.FullEligibleKit(unitGuid._Value))
             {
-                PrefabGUID ability = slots[i].BaseAbilityGroupOnSlot;
+                PrefabGUID ability = new PrefabGUID(abilityVal);
                 if (ability._Value == 0) continue;
 
                 string abilityName = ability.GetPrefabName();
@@ -213,32 +215,24 @@ internal static class DeathEventListenerSystemPatch
             }
         }
 
-        // v0.44.0 — the rare jackpot roll, once per kill, independent of the per-ability
-        // captures above. Per-ability baseline: instead of unlocking a (non-renderable)
-        // transform, the jackpot "DEVOURS" the unit — granting ALL of its eligible
-        // abilities at once into the player's pool. Real transformation is now reserved
-        // for Dracula & Morgana (the only units the client can render); arbitrary-unit
-        // forms are a postponed phase-two feature. No regular mob is a Tier-1 boss, so the
-        // regular path is always a Devour.
-        //
-        // AUDIT-7 (v0.20.1): gate-boss variants still skip the jackpot — their kit is a
-        // preview of the real boss, so a full-kit Devour off the easy variant would
-        // trivialize the main fight. (Per-ability captures off them still happen above.)
-        if (unitName.IndexOf("_GateBoss_", System.StringComparison.OrdinalIgnoreCase) >= 0)
-        {
-            if (Settings.VerboseLogging.Value)
-                Core.Log.LogInfo($"[Beelz] skip Devour jackpot for gate-boss variant {unitName} (per-ability capture still applies)");
-            return;
-        }
+        // v0.98.0 — independent DEVOUR + TRANSFORMATION rolls (mirrors the V-Blood path). Per-ability
+        // captures already happened above (Ability pity). Most regular mobs only roll Devour; a few are
+        // REGISTERED transform units (e.g. the basic werewolf NPC) and ALSO roll their own transform on a
+        // separate chance + pity track — so the transformation is its own hard-won prize, never bundled
+        // into the Devour. Real transformation is limited to units the game can render as a player form.
+        bool isTier1 = Services.BossFormRegistry.Has(unitGuid._Value);
+        bool isGateBoss = unitName.IndexOf("_GateBoss_", System.StringComparison.OrdinalIgnoreCase) >= 0;
+        float tierMult = died.ResolveTierMultiplier();
 
-        float devourChance = Settings.DropChance_Devour_Regular.Value * died.ResolveTierMultiplier();
-        if (devourChance > 0f)
+        // DEVOUR roll — skip gate-boss variants (their kit is a preview of the real boss; a full-kit Devour
+        // off the easy copy would trivialize the main fight). Per-ability captures off them still happened.
+        float devourChance = Settings.DropChance_Devour_Regular.Value * tierMult;
+        if (!isGateBoss && devourChance > 0f)
         {
-            // v0.38.0 pity carries over: the same bad-luck-protection bucket now feeds the Devour roll.
-            devourChance += Core.AbilityRegistry.GetPityBonus(steamId, CaptureSource.Regular, PityKind.Transform);
+            devourChance += Core.AbilityRegistry.GetPityBonus(steamId, CaptureSource.Regular, PityKind.Devour);
             if (System.Random.Shared.NextDouble() <= devourChance)
             {
-                Core.AbilityRegistry.ResetPity(steamId, CaptureSource.Regular, PityKind.Transform);
+                Core.AbilityRegistry.ResetPity(steamId, CaptureSource.Regular, PityKind.Devour);
                 int learned = Services.DevourService.Devour(steamId, unitGuid, CaptureSource.Regular);
                 agg.AnySave = true;
                 agg.Devoured.Add((unitDisplay, learned));
@@ -250,8 +244,46 @@ internal static class DeathEventListenerSystemPatch
             }
             else
             {
-                Core.AbilityRegistry.BumpPity(steamId, CaptureSource.Regular, PityKind.Transform,
+                Core.AbilityRegistry.BumpPity(steamId, CaptureSource.Regular, PityKind.Devour,
                     Settings.Capture_PityIncrement_Devour.Value, Settings.Capture_PityMax_Devour.Value);
+            }
+        }
+        else if (isGateBoss && Settings.VerboseLogging.Value)
+        {
+            Core.Log.LogInfo($"[Beelz] skip Devour jackpot for gate-boss variant {unitName} (per-ability capture still applies)");
+        }
+
+        // TRANSFORMATION roll — only registered transform units (e.g. the basic werewolf NPC). Own chance +
+        // pity; gate-boss naming does NOT block it (a transform unit's form is still wanted).
+        if (isTier1
+            && Core.AbilityRules.IsTransformUnitEnabled(unitGuid._Value)
+            && Beelzebub.Services.AbilityRules.IsDifficultyAllowed(
+                Core.AbilityRules.GetTransformDifficulty(unitGuid._Value),
+                Beelzebub.Services.AbilityRules.GetServerDifficulty()))
+        {
+            float txChance = Settings.DropChance_TransformUnlock_Regular.Value * tierMult;
+            if (txChance > 0f)
+            {
+                txChance += Core.AbilityRegistry.GetPityBonus(steamId, CaptureSource.Regular, PityKind.Transform);
+                if (System.Random.Shared.NextDouble() <= txChance)
+                {
+                    Core.AbilityRegistry.ResetPity(steamId, CaptureSource.Regular, PityKind.Transform);
+                    if (Core.AbilityRegistry.AddTransformUnlock(steamId, unitGuid._Value, CaptureSource.Regular))
+                    {
+                        agg.AnySave = true;
+                        Core.Log.LogInfo($"[Beelz] {steamId} unlocked TRANSFORMATION: {unitName} (Regular).");
+                        Core.Chat.Send(participant, Beelzebub.Services.Verbosity.Summary,
+                            $"⭐ Unlocked TRANSFORMATION: {unitDisplay}! Use .beelz transform {unitDisplay}.");
+                        Core.Chat.SendEvent(participant,
+                            $"[BEELZ:event] type=transform-unlock s=R u={unitGuid._Value} un={unitName}");
+                        Services.SummonRegistry.GrantAndNotify(participant, steamId, unitGuid, CaptureSource.Regular);
+                    }
+                }
+                else
+                {
+                    Core.AbilityRegistry.BumpPity(steamId, CaptureSource.Regular, PityKind.Transform,
+                        Settings.Capture_PityIncrement_Transform.Value, Settings.Capture_PityMax_Transform.Value);
+                }
             }
         }
     }

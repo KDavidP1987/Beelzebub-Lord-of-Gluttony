@@ -430,10 +430,16 @@ internal sealed class AbilityRules
                 { if (vl is "inherit" or "clear" or "none" or "null") { e.PowerScalingMode = null; break; }
                   if (!Enum.TryParse<PowerScalingMode>(v, ignoreCase: true, out var m)) return (false, "powerscalingmode expects CuratedScales|PrefabAbsolute|PlayerScaled|PlayerLeveled (or inherit).");
                   e.PowerScalingMode = m.ToString(); break; }
+            case "duration": case "durationseconds":
+                { if (vl is "inherit" or "clear" or "none" or "null") { e.DurationSeconds = null; break; }
+                  if (!TryParseFloat(v, out float du) || du < 0f) return (false, "duration expects seconds >= 0 (or 'inherit' to clear)."); e.DurationSeconds = du; break; }
+            case "cooldown": case "cooldownseconds":
+                { if (vl is "inherit" or "clear" or "none" or "null") { e.CooldownSeconds = null; break; }
+                  if (!TryParseFloat(v, out float cd) || cd < 0f) return (false, "cooldown expects seconds >= 0 (or 'inherit' to clear)."); e.CooldownSeconds = cd; break; }
             case "notes":
                 { e.Notes = v; break; }
             default:
-                return (false, "Unknown field. Valid: enabled, difficulty, tier, damagescale, cooldownscale, healthscale, speedscale, fullreplace, powerscalingmode, notes.");
+                return (false, "Unknown field. Valid: enabled, difficulty, tier, damagescale, cooldownscale, healthscale, speedscale, duration, cooldown, fullreplace, powerscalingmode, notes.");
         }
         bool saved = Save();
         return (true, Persisted(saved, $"Set transform {f}={v} for '{name}'."));
@@ -972,6 +978,14 @@ internal sealed class AbilityRules
             ? entry.Notes : null;
     }
 
+    /// <summary>v0.100.0: per-transformation duration override (seconds), or null to inherit the category default.</summary>
+    public float? GetTransformDurationOverride(int unitPrefabGuid) =>
+        TryGetTransformEntry(unitPrefabGuid, out var entry) ? entry.DurationSeconds : null;
+
+    /// <summary>v0.100.0: per-transformation cooldown override (seconds), or null to inherit the category default.</summary>
+    public float? GetTransformCooldownOverride(int unitPrefabGuid) =>
+        TryGetTransformEntry(unitPrefabGuid, out var entry) ? entry.CooldownSeconds : null;
+
     // ---- TX6 (v0.15.0): per-transformation stat scale getters ----
     // All return 1.0 when no TransformMap entry exists — preserves vanilla stats.
 
@@ -1236,6 +1250,12 @@ internal sealed class AbilityRules
         public float CooldownScale { get; set; } = 1.0f;
         public float HealthScale { get; set; } = 1.0f;
         public float MovementSpeedScale { get; set; } = 1.0f;
+        // v0.100.0: per-transformation duration + cooldown OVERRIDES (seconds). null = inherit the
+        // category default (Transform_DurationSeconds_* / Transform_CooldownSeconds_*). The cooldown only
+        // applies when Transform_CooldownScope is PerTransformation (or as that unit's contribution under
+        // PerCategory/Global). Duration applies whenever the active mode is Timed.
+        public float? DurationSeconds { get; set; }
+        public float? CooldownSeconds { get; set; }
         // TX3 (v0.16.0): FullReplace mode = "be the NPC". When true:
         //   - Force the native shapeshift visual on (Wolf/Bear/Rat/Spider/Toad
         //     when the unit matches), bypassing the global

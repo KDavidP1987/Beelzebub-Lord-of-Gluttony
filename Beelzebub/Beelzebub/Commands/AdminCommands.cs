@@ -54,7 +54,7 @@ internal static class AdminCommands
         ctx.Reply("-- PLAYER GRANTS --");
         ctx.Reply(".beelz admin give|revoke <player> <unitGuid> <abilityGuid> — grant / remove one captured ability");
         ctx.Reply(".beelz admin devour <player> <unitGuid> — grant ALL of a unit's abilities at once (alternative to transformation)");
-        ctx.Reply(".beelz admin give-transform|revoke-transform|force-transform|clear-transform <player> [unitGuid] — Dracula/Morgana transform only");
+        ctx.Reply(".beelz admin give-transform|revoke-transform|force-transform|clear-transform <player> [unitGuid] — renderable forms: Dracula, Morgana, Werewolf, Golem, Gargoyle (+ basic werewolf)");
         ctx.Reply(".beelz admin set-slot|clear-slot <player> <slot> [abilityGuid] — universal slot binds");
         ctx.Reply(".beelz admin set-weapon-slot|clear-weapon-slot <player> <weapon> <slot> [abilityGuid] — per-weapon binds");
         ctx.Reply("-- INSPECT --");
@@ -283,24 +283,39 @@ internal static class AdminCommands
         Audit(ctx, "tune", 0, name, $"{k}={v} applied={applied}");
     }
 
-    [Command("tune-list", description: "List abilities with cast-tuning set (interrupt / freemove / castspeed). Usage: .beelz admin tune-list", adminOnly: true)]
+    [Command("tune-list", description: "List every ability with ANY shaping/tuning set (cooldown, range, charges, aoe, projspeed, duration, healing, forcetimeout, summons, scales, interrupt, freemove/freelymove, castspeed). Usage: .beelz admin tune-list", adminOnly: true)]
     public static void TuneList(ChatCommandContext ctx)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
         var map = Core.AbilityRules.Current.AbilityMap;
         bool enabled = Beelzebub.Config.Settings.Abilities_ApplyConfig.Value;
-        ctx.Reply($"=== Ability cast-tuning === (Abilities_ApplyConfig={(enabled ? "ON" : "OFF")})");
+        ctx.Reply($"=== Ability shaping/tuning === (Abilities_ApplyConfig={(enabled ? "ON" : "OFF")})");
         int n = 0;
         foreach (var (name, e) in map.OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase))
         {
-            if (e.Interruptible == null && e.InterruptOnHit == null && !e.FreeMoveAfterCast
-                && e.CastMovementSpeed == null && e.FreeMoveAfterSeconds == null) continue;
             string parts = "";
+            // cast modifiers
             if (e.Interruptible.HasValue) parts += $" interrupt={(e.Interruptible.Value ? "on" : "off")}";
             if (e.InterruptOnHit.HasValue) parts += $" interruptonhit={(e.InterruptOnHit.Value ? "on" : "off")}";
             if (e.FreeMoveAfterCast) parts += " freemove=on";
             if (e.FreeMoveAfterSeconds.HasValue) parts += $" freelymove={e.FreeMoveAfterSeconds.Value:F2}s";
             if (e.CastMovementSpeed.HasValue) parts += $" castspeed={e.CastMovementSpeed.Value:F2}";
+            // baked overrides (v0.100.0: previously invisible to tune-list)
+            if (e.CooldownSeconds.HasValue) parts += $" cooldown={e.CooldownSeconds.Value:F1}s";
+            if (e.MaxRangeOverride.HasValue) parts += $" range={e.MaxRangeOverride.Value:F1}";
+            if (e.ChargesMax.HasValue) parts += $" charges={e.ChargesMax.Value}";
+            if (e.ChargeTimeSeconds.HasValue) parts += $" chargetime={e.ChargeTimeSeconds.Value:F1}s";
+            if (e.AoeRadius.HasValue) parts += $" aoe={e.AoeRadius.Value:F1}";
+            if (e.ProjectileSpeed.HasValue) parts += $" projspeed={e.ProjectileSpeed.Value:F1}";
+            if (e.EffectDurationSeconds.HasValue) parts += $" duration={e.EffectDurationSeconds.Value:F1}s";
+            if (e.HealingMultiplier.HasValue) parts += $" healing={e.HealingMultiplier.Value:F2}";
+            if (e.ForceTimeoutSeconds.HasValue) parts += $" forcetimeout={e.ForceTimeoutSeconds.Value:F1}s";
+            if (e.SummonCap.HasValue) parts += $" summoncap={e.SummonCap.Value}";
+            if (e.SummonTimeoutSeconds.HasValue) parts += $" summontimeout={e.SummonTimeoutSeconds.Value:F0}s";
+            if (e.SummonUnitsPerCast.HasValue) parts += $" summonunits={e.SummonUnitsPerCast.Value}";
+            if (Math.Abs(e.DamageScale - 1f) > 0.0001f) parts += $" damagescale={e.DamageScale:F2}";
+            if (Math.Abs(e.CooldownScale - 1f) > 0.0001f) parts += $" cooldownscale={e.CooldownScale:F2}";
+            if (parts.Length == 0) continue;
             ctx.Reply($"  {name}:{parts}");
             n++;
         }
@@ -355,6 +370,109 @@ internal static class AdminCommands
         }
         Audit(ctx, "broadcast", 0, s, v);
     }
+
+    // v0.100.1: manage the broadcast MESSAGE POOLS individually (add/remove/list/edit) instead of
+    // hand-editing the whole pipe-separated config string. Each pool rotates through its messages.
+    // v0.100.0: non-destructive per-player reset — clears bindings + custom loadouts + active transform,
+    // KEEPS captures + unlocks. Fills the recovery-ladder gap between "respawn" (keeps everything) and
+    // "reset-character"/"wipe" (nukes the collection).
+    [Command("reset-loadouts", description: "Reset a player's slot loadouts (universal + per-weapon + per-form) AND their custom transform loadouts, and end any active transform — KEEPS their captured abilities + transform unlocks. Usage: .beelz admin reset-loadouts <player>", adminOnly: true)]
+    public static void ResetLoadouts(ChatCommandContext ctx, string player)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        var character = EntityExtensions.FindCharacterByName(player, out ulong steamId, out string fullName);
+        if (character == Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
+
+        if (Core.AbilityRegistry.GetActiveTransform(steamId) != null)
+            Core.Transforms.Revert(steamId, "admin reset-loadouts");
+        int removed = Core.AbilityRegistry.ClearAllLoadouts(steamId);
+        // Clear the live bar too (online players) so it reverts to vanilla immediately.
+        if (character.Exists())
+            for (int slot = 0; slot <= 7; slot++) { try { Beelzebub.Services.SlotApply.ClearGrant(character, slot); } catch { } }
+        Core.Persistence.RequestSave();
+        ctx.Reply($"Reset {fullName}'s loadouts: removed {removed} slot bind(s) + all per-form & custom transform loadouts, ended any active transform. Captures + unlocks KEPT. (They may need to swap weapons or relog for the live bar to fully refresh.)");
+        Audit(ctx, "reset-loadouts", steamId, fullName, $"removed={removed}");
+    }
+
+    [Command("broadcast-msg", description: "Manage a broadcast message pool. Usage: .beelz admin broadcast-msg <complete|leaderboard> <list|add|remove|edit> [args]. add \"<text>\" · remove <n> · edit <n> \"<text>\" · list. WRAP multi-word messages in \"quotes\". Tokens: %player% (complete), %top%/%count% (leaderboard).", adminOnly: true)]
+    public static void BroadcastMsg(ChatCommandContext ctx, string pool, string action = "list", string arg1 = null, string arg2 = null)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        var entry = BroadcastPoolEntry(pool, out string label, out string tokenHint);
+        if (entry == null) { ctx.Reply("First arg = the pool: 'complete' (100%-collection, token %player%) or 'leaderboard' (tokens %top% / %count%)."); return; }
+
+        var msgs = SplitPool(entry.Value);
+        string act = (action ?? "list").Trim().ToLowerInvariant();
+        switch (act)
+        {
+            case "list":
+                if (msgs.Count == 0) { ctx.Reply($"{label}: no custom messages — the built-in default is used. Add one with: .beelz admin broadcast-msg {pool} add \"<text>\""); return; }
+                ctx.Reply($"=== {label} messages ({msgs.Count}) — tokens: {tokenHint} ===");
+                for (int i = 0; i < msgs.Count; i++) ctx.Reply($"  [{i + 1}] {msgs[i]}");
+                return;
+
+            case "add":
+                if (string.IsNullOrWhiteSpace(arg1)) { ctx.Reply($"Usage: .beelz admin broadcast-msg {pool} add \"<text>\"  (wrap the message in quotes)."); return; }
+                if (arg2 != null) { ctx.Reply("Too many arguments — wrap the WHOLE message in \"quotes\" so it's one argument."); return; }
+                if (arg1.Contains('|')) { ctx.Reply("A message can't contain '|' (it's the internal separator)."); return; }
+                msgs.Add(arg1.Trim());
+                WritePool(entry, msgs);
+                ctx.Reply($"Added to {label} (now {msgs.Count}): [{msgs.Count}] {arg1.Trim()}");
+                break;
+
+            case "remove": case "rem": case "delete": case "del":
+            {
+                if (!int.TryParse((arg1 ?? "").Trim(), out int idx) || idx < 1 || idx > msgs.Count) { ctx.Reply($"remove expects an index 1-{msgs.Count} (see 'list')."); return; }
+                string removed = msgs[idx - 1];
+                msgs.RemoveAt(idx - 1);
+                WritePool(entry, msgs);
+                ctx.Reply($"Removed [{idx}] from {label} (now {msgs.Count}): {removed}");
+                break;
+            }
+
+            case "edit": case "set":
+            {
+                if (!int.TryParse((arg1 ?? "").Trim(), out int idx) || idx < 1 || idx > msgs.Count) { ctx.Reply($"Usage: .beelz admin broadcast-msg {pool} edit <n> \"<text>\"  (n = 1-{msgs.Count}, see 'list')."); return; }
+                if (string.IsNullOrWhiteSpace(arg2)) { ctx.Reply("Edit needs new text — wrap it in \"quotes\": edit <n> \"<text>\"."); return; }
+                if (arg2.Contains('|')) { ctx.Reply("A message can't contain '|'."); return; }
+                msgs[idx - 1] = arg2.Trim();
+                WritePool(entry, msgs);
+                ctx.Reply($"Edited [{idx}] of {label}: {arg2.Trim()}");
+                break;
+            }
+
+            default:
+                ctx.Reply("Action must be: list | add \"<text>\" | remove <n> | edit <n> \"<text>\".");
+                return;
+        }
+        Audit(ctx, "broadcast-msg", 0, pool, act);
+    }
+
+    static BepInEx.Configuration.ConfigEntry<string> BroadcastPoolEntry(string pool, out string label, out string tokenHint)
+    {
+        switch ((pool ?? "").Trim().ToLowerInvariant())
+        {
+            case "complete": case "completion": case "collection":
+                label = "Collection-complete"; tokenHint = "%player%";
+                return Beelzebub.Config.Settings.Broadcast_CollectionComplete_Messages;
+            case "leaderboard": case "board": case "top":
+                label = "Leaderboard"; tokenHint = "%top%, %count%";
+                return Beelzebub.Config.Settings.Broadcast_Leaderboard_Messages;
+            default:
+                label = null; tokenHint = null; return null;
+        }
+    }
+
+    static System.Collections.Generic.List<string> SplitPool(string raw)
+    {
+        var list = new System.Collections.Generic.List<string>();
+        if (string.IsNullOrWhiteSpace(raw)) return list;
+        foreach (var p in raw.Split('|')) { var t = p.Trim(); if (t.Length > 0) list.Add(t); }
+        return list;
+    }
+
+    static void WritePool(BepInEx.Configuration.ConfigEntry<string> entry, System.Collections.Generic.List<string> msgs)
+        => entry.Value = string.Join(" | ", msgs);   // setting .Value persists to the .cfg (SaveOnConfigSet)
 
     // v0.89.1 DIAGNOSTIC: dump the ECS component list of an ability's prefab chain
     // (Group → Cast → spawned), or of the caster's active shapeshift form buff, to
@@ -507,8 +625,12 @@ internal static class AdminCommands
         var (ok, msg) = Core.AbilityRules.SetAbilityField(ability, field, value);
         ctx.Reply(msg);
         if (!ok) return;
-        // Re-apply cast tuning live if a tuning field may have changed and tuning is on.
-        if (Beelzebub.Config.Settings.Abilities_ApplyConfig.Value) AbilityTuningService.ApplyAll();
+        // v0.95.0: re-apply cast tuning live ONLY when a BAKED-tuning field changed. enabled/weapons/forms/
+        // transformonly/difficulty/phase/allowdenied/category/notes are capture-availability rules that
+        // ApplyAll doesn't touch — re-tuning every curated prefab on them was wasted work that also flooded
+        // the server log with [Beelz TUNE] lines on a simple enable/disable toggle.
+        if (Beelzebub.Config.Settings.Abilities_ApplyConfig.Value && IsBakedTuningField(f))
+            AbilityTuningService.ApplyAll();
         // v0.73.0: charges/chargetime only apply to abilities that already have a charge system — warn
         // rather than silently no-op (this bit a tester who set charges on a non-charge ability).
         if (f.Contains("charge") && !AbilityTuningService.AbilityChainHasCharges(ability))
@@ -520,6 +642,20 @@ internal static class AdminCommands
             ctx.Reply("NOTE: this ability is charge-based — its delay is the charge RECHARGE, not a cooldown, so 'cooldown' won't change what you feel. Use 'chargetime' (recharge seconds) and/or 'charges' instead.");
         Audit(ctx, "ability-set", 0, ability ?? "", $"{field}={value}");
     }
+
+    /// <summary>
+    /// v0.95.0: does this ability field produce a BAKED prefab edit that <see cref="AbilityTuningService.ApplyAll"/>
+    /// re-applies? Only these warrant a live re-tune; capture/availability rules (enabled/weapons/forms/…) and
+    /// scale fields applied at cast time do not — re-tuning on them is wasted work + log noise.
+    /// </summary>
+    static bool IsBakedTuningField(string f) => f switch
+    {
+        "cooldown" or "cd" or "range" or "charges" or "chargetime" or "aoe" or "projspeed"
+        or "duration" or "effectduration" or "healing" or "healmult" or "healingmultiplier"
+        or "forcetimeout" or "freelymove" or "interruptonhit" or "interruptible"
+        or "freemove" or "castspeed" => true,
+        _ => false,
+    };
 
     [Command("transform-set", description: "Set a per-unit transform rule live. Usage: .beelz admin transform-set <CHAR_unit> <field> <value>. Fields: enabled, difficulty, tier, damagescale, cooldownscale, healthscale, speedscale, fullreplace, powerscalingmode, notes. (SlotTemplate is edited in ability_rules.json.)", adminOnly: true)]
     public static void TransformSet(ChatCommandContext ctx, string unit, string field, string value)
@@ -674,7 +810,7 @@ internal static class AdminCommands
             : $"{fullName} already has that capture — no change.");
     }
 
-    [Command("give-transform", description: "Grant a TRANSFORMATION unlock to a player. Only Dracula & Morgana transform in this version — for any other unit use .beelz admin devour to grant its full ability kit. Usage: .beelz admin give-transform <player> <unitGuid>", adminOnly: true)]
+    [Command("give-transform", description: "Grant a TRANSFORMATION unlock to a player. Only units the game can render as a player form qualify (Dracula, Morgana, Werewolf Chieftain, Geomancer/Golem, Tailor/Gargoyle, basic werewolf) — for any other unit use .beelz admin devour to grant its full ability kit. Usage: .beelz admin give-transform <player> <unitGuid>", adminOnly: true)]
     public static void GiveTransform(ChatCommandContext ctx, string player, int unitGuid)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
@@ -682,7 +818,7 @@ internal static class AdminCommands
         // steer the admin to Devour (grant the kit as abilities).
         if (!Beelzebub.Services.BossFormRegistry.Has(unitGuid))
         {
-            ctx.Reply($"Only Dracula & Morgana support transformation in this version. To grant {UnitDisplay(unitGuid)}'s full kit, use .beelz admin devour {player} {unitGuid}. (Arbitrary-unit transformation is a postponed phase-two feature.)");
+            ctx.Reply($"{UnitDisplay(unitGuid)} has no player-renderable form, so it can't be a transformation (only units the game can render — Dracula, Morgana, Werewolf, Golem, Gargoyle, basic werewolf). To grant its full kit, use .beelz admin devour {player} {unitGuid}.");
             return;
         }
         var character = EntityExtensions.FindCharacterByName(player, out ulong steamId, out string fullName);
@@ -1350,14 +1486,14 @@ internal static class AdminCommands
 
     // --- AT4: force / clear transform on another player ---
 
-    [Command("force-transform", description: "Force a transformation on another player (bypasses unlock + cooldown). Only Dracula & Morgana transform in this version. Usage: .beelz admin force-transform <player> <unitGuid>", adminOnly: true)]
+    [Command("force-transform", description: "Force a transformation on another player (bypasses unlock + cooldown). Only player-renderable forms qualify (Dracula, Morgana, Werewolf, Golem, Gargoyle, basic werewolf). Usage: .beelz admin force-transform <player> <unitGuid>", adminOnly: true)]
     public static void ForceTransform(ChatCommandContext ctx, string player, int unitGuid)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
         // v0.44.0: only Dracula & Morgana render a real form — guard before creating an unlock.
         if (!Beelzebub.Services.BossFormRegistry.Has(unitGuid))
         {
-            ctx.Reply($"Only Dracula & Morgana can be transformed into in this version. To give {UnitDisplay(unitGuid)}'s kit, use .beelz admin devour. (Full unit transformation is a postponed phase-two feature.)");
+            ctx.Reply($"{UnitDisplay(unitGuid)} has no player-renderable form (only Dracula, Morgana, Werewolf, Golem, Gargoyle, basic werewolf can be transformed into). To give its kit, use .beelz admin devour.");
             return;
         }
         var character = EntityExtensions.FindCharacterByName(player, out ulong steamId, out string fullName);
@@ -1366,7 +1502,7 @@ internal static class AdminCommands
         // Ensure unlock exists and clear cooldown so TryActivate sails through.
         var source = new PrefabGUID(unitGuid).IsVBloodUnit() ? CaptureSource.VBlood : CaptureSource.Regular;
         Core.AbilityRegistry.AddTransformUnlock(steamId, unitGuid, source);
-        Core.AbilityRegistry.SetCooldownUntil(steamId, Core.Transforms.CategoryFor(source, unitGuid), DateTime.MinValue);
+        Core.AbilityRegistry.ClearTransformCooldowns(steamId);   // v0.100.0: clear any scope's cooldown
 
         var (ok, message) = Core.Transforms.TryActivate(steamId, unitGuid);
         Core.Persistence.RequestSave();
