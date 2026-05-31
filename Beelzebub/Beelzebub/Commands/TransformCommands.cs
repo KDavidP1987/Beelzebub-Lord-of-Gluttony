@@ -204,8 +204,9 @@ internal static class TransformCommands
         }
     }
 
-    /// <summary>v0.100.0: resolve a transform unit from an index into the player's unlocks, an unlocked GUID, or a name.</summary>
-    static bool TryResolveTransformUnit(ulong steamId, string unitOrIndex, out int unitGuid, out string err)
+    /// <summary>v0.100.0: resolve a transform unit from an index into the player's unlocks, an unlocked GUID, or a name.
+    /// internal (v0.100.x): also used by ApiCommands' tform-kit / tform-binds reads so BCH resolves <unit> identically.</summary>
+    internal static bool TryResolveTransformUnit(ulong steamId, string unitOrIndex, out int unitGuid, out string err)
     {
         unitGuid = 0; err = null;
         var unlocks = Core.AbilityRegistry.ListTransforms(steamId);

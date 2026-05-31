@@ -18,7 +18,7 @@
 > in the BCH workspace.
 >
 > **Canonical source of truth for the wire API:**
-> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 21`). If this doc
+> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 22`). If this doc
 > and that file ever disagree, the file wins — and this doc should be corrected.
 >
 > ## 📥 PENDING BCH REQUESTS — implement in Beelzebub
@@ -26,6 +26,16 @@
 > *(Added 2026-05-31 from the BCH session. The BCH client is already coded to CONSUME everything
 > below — these need the server-side EMIT/behavior. Implement in this Beelzebub session, then fold
 > each into the dated callouts above and tick it off here. Priority order.)*
+>
+> **✅ 2026-05-31 (BCH v0.20.0 round) — #7 + #8 are DONE (v0.100.0 re-release, ApiVersion 21→22).** Both
+> shipped exactly as proposed below: `api tform-kit <unit>` + `api tform-binds <unit>` (#7) and the admin
+> `api broadcast-msgs <complete|leaderboard>` (#8). All additive (new read commands + new `[BEELZ:*]`
+> lines); the plugin version stays **0.100.0** but **ApiVersion bumped to 22** so BCH can capability-detect
+> the new reads (`api>=22` ⇒ structured transform-loadout + broadcast-pool reads available). The emitted
+> shapes match the proposals below verbatim except: `an=` carries the **raw prefab name** (matching the
+> existing `[BEELZ:slot]` / `[BEELZ:form-slot]` convention BCH already humanizes), and `broadcast-msg`
+> `idx=` is **1-based** (so BCH can feed it straight into `admin broadcast-msg edit/remove <n>`). See the
+> dated "v0.100.0 — STRUCTURED TRANSFORM-LOADOUT + BROADCAST READS" callout below for the final contract.
 >
 > 1. **✅ DONE (v0.100.0, ApiVersion 21): `catalog-ability` now emits `a=<guid>`, `unit=<name>`, `unitguid=<int>`.**
 >    `a=` is the ability's PrefabGUID; `unit=` is the primary source-NPC name **SafeToken-encoded like
@@ -68,6 +78,45 @@
 >    BCH would consume whichever is easier; no change is also fine (overlay stays optimistic). No
 >    other recent BCH work (admin-tab gating, text-caret fixes, ID-from-captures) needs anything
 >    server-side — those are all client-only, and ID-from-captures is already covered by item #1.
+>
+> 7. **✅ DONE (v0.100.0, ApiVersion 22): STRUCTURED TRANSFORM-LOADOUT READS — kit + current binds.**
+>    Shipped as `api tform-kit <unit>` (→ `[BEELZ:tform-ability] unit= idx= a= an=` + `[BEELZ:end]
+>    cmd=tform-kit unit= count=`) and `api tform-binds <unit>` (→ `[BEELZ:tform-slot] unit= phase= slot= a=
+>    an=` + `[BEELZ:end] cmd=tform-binds unit= count= phases=<n>`). `<unit>` resolves exactly like
+>    `.beelz tform`. `an=` is the raw prefab name (humanize client-side like the slot lines); the `phases=`
+>    footer is the optional nicety (how many phases the form has, incl. player-defined custom). *(Original
+>    request preserved below.)* BCH 0.20.0's new transform-loadout editor (Transforms
+>    tab) drives `.beelz tform <unit> set|clear|defaults` fine, but it has to **parse the human-text
+>    `.beelz tform <unit> abilities` reply** for the kit, and it has **no way to read the player's CURRENT
+>    binds** — so today it's "build-and-apply" (it can't show what's already bound per phase/slot). Two small
+>    structured reads fix both. Suggested (mirrors the existing `[BEELZ:slot]` / `[BEELZ:form-slot]` +
+>    `api slots` pattern; both `unit` accepts the same index/name/guid `tform` already resolves):
+>    - **Kit read** — `.beelz api tform-kit <unit>` → one line per eligible ability:
+>      `[BEELZ:tform-ability] unit=<int> idx=<int> a=<int abilityGuid> an=<name SafeToken-encoded>`
+>      then `[BEELZ:end] cmd=tform-kit unit=<int>` (chunk with `part=k/n` if a line ever exceeds the reply
+>      cap, like `catalog-ability`). This is the same data as `UnitKitService.FullEligibleKit` — just emitted
+>      as `[BEELZ:*]` instead of `ctx.Reply` text.
+>    - **Current binds read** — `.beelz api tform-binds <unit>` (or `tform-loadout`) → one line per bound
+>      slot the player has customized: `[BEELZ:tform-slot] unit=<int> phase=<int> slot=<0-7> a=<int abilityGuid>
+>      an=<name SafeToken-encoded>` then `[BEELZ:end] cmd=tform-binds unit=<int>`. Empty (no custom binds) =
+>      just the end line. Sourced from the `TransformLoadouts` block (keyed `"unit:phase"`) you persist.
+>      *(Optional nicety: include `phases=<n>` on the end line so BCH knows how many phases the form actually
+>      has, instead of always offering 1/2.)*
+>    With these, BCH renders an 8-slot × per-phase grid showing the bound ability in each slot (and "empty →
+>    curated default" otherwise), exactly like the weapon/form loadout panels — no human-text parsing.
+>
+> 8. **✅ DONE (v0.100.0, ApiVersion 22): STRUCTURED `broadcast-msg list` READ.** Shipped as the admin
+>    `api broadcast-msgs <complete|leaderboard>` → one `[BEELZ:broadcast-msg] pool= idx= text=` per message
+>    (`idx` 1-based to match `admin broadcast-msg edit/remove <n>`; `text=` SafeToken-encoded, clamped 256)
+>    + `[BEELZ:end] cmd=broadcast-msgs pool= count=`. Empty pool = just the end line. *(Original request
+>    preserved below.)* BCH 0.20.0's announcements editor manages the pools via
+>    `.beelz admin broadcast-msg <pool> add|edit|remove`, but to show the current messages it has to **parse
+>    the human-text `... list` reply** (the `  [n] <text>` lines). A structured read makes that robust.
+>    Suggested: `.beelz api broadcast-msgs <complete|leaderboard>` → one line per message:
+>    `[BEELZ:broadcast-msg] pool=<complete|leaderboard> idx=<int> text=<SafeToken-encoded>` then
+>    `[BEELZ:end] cmd=broadcast-msgs pool=<...>`. SafeToken-encode `text=` exactly like `desc=`/`notes=`
+>    (messages contain spaces/`%player%`/punctuation). Empty pool = just the end line. BCH would read this
+>    instead of the chat-text `list` (the `add|edit|remove` write commands are already fine as-is).
 >
 > **⚠️ v0.44.0 — PER-ABILITY BASELINE.** Transformation is now **Dracula & Morgana
 > only**; every other unit's "jackpot" roll **Devours** the unit (grants its whole
@@ -141,6 +190,28 @@
 >   field** (that's the player's own dash/shield self-cancel; this is "an enemy hit breaks my cast").
 > Both server-wide baked edits (Abilities_ApplyConfig), cleared by `defaults`. A BCH ability-config panel
 > reads/writes them like the other `_override`/cast-tuning fields. Additive — older parsers ignore them.
+>
+> **✅ v0.100.0 — STRUCTURED TRANSFORM-LOADOUT + BROADCAST READS (ApiVersion 21 → 22, additive; plugin
+> stays 0.100.0). Resolves PENDING #7 + #8.** Three new BCH-readable `api` commands so the transform-loadout
+> and announcements editors read state structurally instead of parsing human chat text:
+> - **`api tform-kit <unit>`** — a transform unit's FULL eligible ability kit (the pool you bind from).
+>   Streams one **`[BEELZ:tform-ability] unit=<int> idx=<int> a=<int abilityGuid> an=<rawPrefabName>`** per
+>   ability, then **`[BEELZ:end] cmd=tform-kit unit=<int> count=<n>`**. Same data as
+>   `UnitKitService.FullEligibleKit`; `idx` is the index you pass to `.beelz tform <unit> set <phase> <slot>
+>   <idx>`.
+> - **`api tform-binds <unit>`** — the CALLER's CUSTOM per-phase binds for that unit. Streams one
+>   **`[BEELZ:tform-slot] unit=<int> phase=<int> slot=<0-7> a=<int abilityGuid> an=<rawPrefabName>`** per
+>   bound slot (none = just the end line), then **`[BEELZ:end] cmd=tform-binds unit=<int> count=<n>
+>   phases=<n>`** — `phases=` is how many phases the form has (incl. player-defined custom), so BCH offers
+>   the right phase count instead of guessing 1/2. Slots the player hasn't set are "empty → curated default".
+> - **`api broadcast-msgs <complete|leaderboard>`** (ADMIN) — a broadcast pool's current custom messages.
+>   Streams one **`[BEELZ:broadcast-msg] pool=<complete|leaderboard> idx=<1-based> text=<SafeToken>`** per
+>   message, then **`[BEELZ:end] cmd=broadcast-msgs pool=<...> count=<n>`**. `idx` is **1-based** so it feeds
+>   straight into `admin broadcast-msg edit/remove <n>`; empty pool = just the end line.
+> Both `tform-*` commands resolve `<unit>` exactly like `.beelz tform` (index into your unlocks / unlocked
+> GUID / name). `an=` is the raw prefab name — humanize client-side like the existing `[BEELZ:slot]` lines.
+> All additive: older parsers ignore the new commands/lines. **BCH should gate the structured reads on
+> `api>=22`** (and keep the human-text fallback for older servers if desired).
 >
 > **⚠️ v0.100.0 — CATALOG: unit fields + admin/player scopes (ApiVersion 20 → 21, additive). ACTION FOR BCH.**
 > - **`catalog-ability` now emits `a=<guid>` `unit=<name>` `unitguid=<int>`** (PENDING #1 above) — `unit=` is

@@ -46,6 +46,11 @@ history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebu
   owning unit + IDs (so uncaptured abilities show their source), and there are now two views: the normal list
   is what players can collect (for progress %), and admins get a full list of *every* ability regardless of
   whether it's enabled (for configuration).
+- **Companion-app transform-loadout & announcements editors (for BloodCraftHub).** Added read-only data
+  streams so BloodCraftHub's on-screen transform-loadout builder and announcement editor can show your
+  current setup directly instead of reading chat text: a transform's full ability kit, the abilities you've
+  bound to each phase slot, and (for admins) the current broadcast messages. No gameplay change — these just
+  let the companion UI display what's already there.
 
 ## [0.99.1] - 2026-05-31
 

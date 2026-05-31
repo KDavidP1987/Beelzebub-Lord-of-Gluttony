@@ -139,7 +139,23 @@ internal static class ApiCommands
     //   admin command `api catalog abilities-all` streams EVERY ability group regardless of enable/deny/
     //   difficulty (for config); the existing `api catalog abilities` stays the collectible/player set, and
     //   both carry `enabled=` so a client filters to the enabled set for progress tracking. All additive.
-    const int ApiVersion = 21;
+    // v22 (v0.100.x): structured transform-loadout + broadcast-pool reads for the BCH editors (additive —
+    //   older parsers ignore the new commands/lines). NEW reads:
+    //   • `api tform-kit <unit>` → one `[BEELZ:tform-ability] unit= idx= a= an=` per ability in a boss's
+    //     FULL eligible kit (UnitKitService.FullEligibleKit — the pool you bind from), then
+    //     `[BEELZ:end] cmd=tform-kit unit= count=`.
+    //   • `api tform-binds <unit>` → the caller's CUSTOM per-phase binds as
+    //     `[BEELZ:tform-slot] unit= phase= slot= a= an=` (one per bound slot; empty = just the end line),
+    //     then `[BEELZ:end] cmd=tform-binds unit= count= phases=<n>` (phases = how many phases the form
+    //     has, including any player-defined custom ones). Both resolve <unit> exactly like `.beelz tform`
+    //     (index into your unlocks / unlocked GUID / name).
+    //   • `api broadcast-msgs <complete|leaderboard>` (ADMIN) → one
+    //     `[BEELZ:broadcast-msg] pool= idx= text=` per message in that pool (idx is 1-based to match the
+    //     `admin broadcast-msg edit/remove <n>` write commands; text= SafeToken-encoded), then
+    //     `[BEELZ:end] cmd=broadcast-msgs pool= count=`.
+    //   These let BCH's transform-loadout + announcements editors read state structurally instead of
+    //   parsing human chat text.
+    const int ApiVersion = 22;
 
     [Command("help", description: "List the Beelzebub API/BCH read commands (machine-readable data streams).")]
     public static void Help(ChatCommandContext ctx)
@@ -151,6 +167,7 @@ internal static class ApiCommands
         ctx.Reply(".beelz api bestiary [page] — collection book · .beelz api verbosity — your verbosity setting");
         ctx.Reply(".beelz api catalog [units|abilities] [page] — curated-catalog streams");
         ctx.Reply(".beelz api rules / config / cooldowns / transform-config — server config + state streams");
+        ctx.Reply(".beelz api tform-kit <unit> / tform-binds <unit> — transform kit + your custom binds · api broadcast-msgs <pool> (admin)");
         ctx.Reply("These power BloodCraftHub's on-screen UI; most just stream data and don't change anything.");
     }
 
@@ -935,5 +952,78 @@ internal static class ApiCommands
             ctx.Reply($"[BEELZ:cooldown] category={cat.ToString().ToLowerInvariant()} remaining={rem:F0}");
         }
         ctx.Reply("[BEELZ:end] cmd=cooldowns count=3");
+    }
+
+    // --- v22 (v0.100.x): structured transform-loadout + broadcast-pool reads for the BCH editors ---
+
+    [Command("tform-kit", description: "Stream a transform unit's FULL eligible ability kit — the pool you bind from with .beelz tform <unit> set. One [BEELZ:tform-ability] line per ability. Usage: .beelz api tform-kit <unit|index> (same resolution as .beelz tform).")]
+    public static void TformKit(ChatCommandContext ctx, string unit)
+    {
+        if (!Core.IsReady) { ctx.Reply("[BEELZ:err] cmd=tform-kit code=not_ready msg=plugin_not_initialized"); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        if (!TransformCommands.TryResolveTransformUnit(steamId, unit, out int unitGuid, out string rerr))
+        { ctx.Reply($"[BEELZ:err] cmd=tform-kit code=bad_unit msg={SafeToken(rerr)}"); return; }
+        var kit = UnitKitService.FullEligibleKit(unitGuid);
+        for (int i = 0; i < kit.Count; i++)
+        {
+            int a = kit[i];
+            ctx.Reply($"[BEELZ:tform-ability] unit={unitGuid} idx={i} a={a} an={new PrefabGUID(a).GetPrefabName()}");
+        }
+        ctx.Reply($"[BEELZ:end] cmd=tform-kit unit={unitGuid} count={kit.Count}");
+    }
+
+    [Command("tform-binds", description: "Stream the caller's CUSTOM transform loadout for one unit — one [BEELZ:tform-slot] line per phase/slot the player has bound (empty = just the end line). The end line carries phases=<n> (how many phases the form has). Usage: .beelz api tform-binds <unit|index> (same resolution as .beelz tform).")]
+    public static void TformBinds(ChatCommandContext ctx, string unit)
+    {
+        if (!Core.IsReady) { ctx.Reply("[BEELZ:err] cmd=tform-binds code=not_ready msg=plugin_not_initialized"); return; }
+        ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+        if (!TransformCommands.TryResolveTransformUnit(steamId, unit, out int unitGuid, out string rerr))
+        { ctx.Reply($"[BEELZ:err] cmd=tform-binds code=bad_unit msg={SafeToken(rerr)}"); return; }
+        var pg = new PrefabGUID(unitGuid);
+        var phases = Core.Transforms.GetAvailablePhases(pg, steamId);
+        int n = 0;
+        foreach (int phase in phases)
+        {
+            var binds = Core.AbilityRegistry.GetTransformLoadout(steamId, unitGuid, phase);
+            foreach (var kv in binds.OrderBy(kv => kv.Key))
+            {
+                ctx.Reply($"[BEELZ:tform-slot] unit={unitGuid} phase={phase} slot={kv.Key}" +
+                          $" a={kv.Value} an={new PrefabGUID(kv.Value).GetPrefabName()}");
+                n++;
+            }
+        }
+        ctx.Reply($"[BEELZ:end] cmd=tform-binds unit={unitGuid} count={n} phases={phases.Count}");
+    }
+
+    [Command("broadcast-msgs", description: "ADMIN: stream a broadcast message pool's current custom messages. One [BEELZ:broadcast-msg] line per message (idx is 1-based to match .beelz admin broadcast-msg edit/remove <n>; text= SafeToken-encoded). Usage: .beelz api broadcast-msgs <complete|leaderboard>", adminOnly: true)]
+    public static void BroadcastMsgs(ChatCommandContext ctx, string pool)
+    {
+        if (!Core.IsReady) { ctx.Reply("[BEELZ:err] cmd=broadcast-msgs code=not_ready msg=plugin_not_initialized"); return; }
+        string p = (pool ?? "").Trim().ToLowerInvariant();
+        string poolName;
+        BepInEx.Configuration.ConfigEntry<string> entry;
+        switch (p)
+        {
+            case "complete": case "completion": case "collection":
+                poolName = "complete"; entry = Beelzebub.Config.Settings.Broadcast_CollectionComplete_Messages; break;
+            case "leaderboard": case "board": case "top":
+                poolName = "leaderboard"; entry = Beelzebub.Config.Settings.Broadcast_Leaderboard_Messages; break;
+            default:
+                ctx.Reply("[BEELZ:err] cmd=broadcast-msgs code=bad_pool msg=expected_complete_or_leaderboard"); return;
+        }
+        // Pool storage mirrors AdminCommands.SplitPool: `|`-separated, trimmed, empties dropped.
+        int n = 0;
+        var raw = entry.Value;
+        if (!string.IsNullOrWhiteSpace(raw))
+        {
+            foreach (var part in raw.Split('|'))
+            {
+                string t = part.Trim();
+                if (t.Length == 0) continue;
+                n++;
+                ctx.Reply($"[BEELZ:broadcast-msg] pool={poolName} idx={n} text={SafeToken(Clamp(t, 256))}");
+            }
+        }
+        ctx.Reply($"[BEELZ:end] cmd=broadcast-msgs pool={poolName} count={n}");
     }
 }
