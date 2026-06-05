@@ -30,6 +30,21 @@
 > arg to remove the known culprits. Pure chat command BCH already relays — a BCH "fix stuck player" escalation can
 > add it (ladder: `cleanse` for stuck states → `purge` for a stuck bar → `respawn`). No `[BEELZ:*]`/parser impact.
 >
+> **⚠️ BCH ACTION — do NOT probe admin-only `api` endpoints for non-admin players (login `[vcf] [denied]` noise).**
+> VCF gates every `adminOnly` command on V Rising admin status and, when a non-admin calls one, replies in chat with
+> `[vcf] [denied] <command>` (red/gold). If BCH auto-queries an admin-only read endpoint on connect to populate an
+> editor, **every non-admin player sees that denial in chat on login.** The reported case is **`api broadcast-msgs`**
+> (the announcements-editor read): a player logged in and got `[vcf] [denied] broadcast-msgs`.
+> - **Important:** the broadcast/announcement FEATURE itself is **100% server-side** and does NOT depend on BCH —
+>   leaderboard broadcasts run off the server heartbeat (`BroadcastService.Tick`) and the 100%-collection shout fires
+>   from the death-event milestone; both go out via `Core.Chat.Announce`. `api broadcast-msgs` only *reads the message
+>   pool* so a BCH editor can display/edit it. Denying it does not disable any broadcast.
+> - **Fix on the BCH side:** gate every admin-only probe behind the caller's admin state — only call `api broadcast-msgs`
+>   (and any other `adminOnly` endpoint, e.g. `catalog abilities-all`) once BCH knows the local player is a server admin.
+>   A clean signal is `api version` / the admin command surface; or simply don't fire admin editors for non-admins.
+> - **Admin-only `api` read endpoints to guard:** `broadcast-msgs`, `catalog abilities-all`. (The denial is harmless
+>   chat noise, not a broken feature — this is purely about not spamming non-admins on login.)
+>
 > **🆕 v0.127-0.130 (ApiVersion still 28, NO wire change — the only BCH action is a catalog re-read):**
 > - **(v0.130) Catalog data enriched** — mined the prefab dump to fill `type` (+1120), `name` (the 39 blanks),
 >   and `categories` (+250). New per-ability METADATA fields exist server-side (`mechanic`, `baseCooldown`,
