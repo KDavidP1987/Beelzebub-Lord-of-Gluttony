@@ -52,11 +52,21 @@ stays buildable. If a change is purely internal (no contract impact), no doc
 update is needed.
 
 A `PostToolUse` hook (`.claude/hooks/bch-relevance-reminder.ps1`, wired in
-`settings.local.json`) fires on edits to `Commands/*.cs` and `Config/Settings.cs`
-and surfaces a reminder. The hook is a backstop covering the most common surface
+`settings.local.json`) fires on edits to `Commands/*.cs`, `Config/Settings.cs`,
+and the BCH-facing wire-schema/roster Services
+(`Services/{AbilityRules,ShapeshiftAbilityService,Categorization,WeaponFamily}.cs`
+— the `AbilityEntry` fields emitted in `catalog-ability`, the `forms`/`weapons`
+allow-/`!`block syntax, the `ShapeshiftForm` roster, the `cat=` categories), and
+surfaces a reminder. The hook is a backstop covering the most common surface
 files — BCH relevance can be broader, so use judgment: this CLAUDE.md rule is
 authoritative, the hook is just the net. Canonical wire-API source is
 `Commands/ApiCommands.cs` (`ApiVersion`); bump it there and reflect it in the doc.
+
+**When you DO bump `ApiVersion` or touch a BCH-facing surface, the handoff update
+must include, at minimum:** the new/changed command or `[BEELZ:*]` line with its
+exact token shape, whether it's additive or wire-breaking, the `api>=N`
+capability gate BCH should check, and a one-line "what BCH should do to consume
+it." Keep the handoff's top banner (`ApiVersion = N`) in sync with the file.
 
 ## Reference-only paths (do NOT edit)
 
@@ -191,6 +201,69 @@ entry will come from the POC attempt.
   patch first before picking which system to patch. Hooking the wrong
   system can fire too early (before loot/XP/etc.), too late (entity already
   destroyed), or duplicate-fire for multi-hit kills.
+
+## Cross-ability impact discipline — solve the class, not the instance
+
+Beelzebub's ability changes are **rarely one-offs**, so treat every ability
+behaviour change as a change to a **class** until proven otherwise. The structural
+reasons (grounded in the code):
+
+- **Global prefab edits are shared.** `AbilityTuningService.ApplyAll` mutates an
+  ability's group/cast prefab — which **is the source NPC/boss's prefab** — and its
+  downstream walker writes onto **spawn prefabs that other ability chains can also
+  reference.** So a per-ability tweak can change a boss fight or a sibling spell.
+- **Heuristics are class-wide.** A `Categorization`/`WeaponFamily`/`AbilityFilter`
+  change re-buckets hundreds of abilities at once (one change moved 716 out of `Other`).
+- **Injection sources collide.** Slot, weapon, form, and mounted bars all write
+  `ReplaceAbilityOnSlotBuff` on the same `AbilityGroupSlot`; two writers on one slot is
+  the Burst `AppendRemovedComponentRecordError` crash (the Mountup bug).
+
+**Rule:** whenever you change how an ability behaves, work the checklist in
+`Beelzebub/Beelzebub/docs/ABILITY_CHANGE_IMPACT.md` — find the mechanism *class*, fix
+the class, prefer a scalable class-level fix (or an explicit per-ability override) over a
+widened heuristic, and **prove you didn't touch neighbours you didn't mean to** (shared
+spawn prefab? boss fight? sibling bucket? slot collision?). Every global prefab edit must
+`CaptureOriginal` so `defaults`/restart can undo it. A single mechanism fix often closes
+several `TESTER_FEEDBACK_TRIAGE.md` reports at once — note which.
+
+A `PostToolUse` hook (`.claude/hooks/ability-impact-reminder.ps1`, wired in
+`settings.local.json`) fires on edits to the ability-mutation surfaces (the
+`AbilityTuningService`/`AbilityRules`/`Categorization`/`SlotApply`/`ShapeshiftAbilityService`/
+`MountRecovery`/… Services + the `ReplaceAbilityOnSlotSystemPatch`/`AbilityCastStartedSystemPatch`
+Patches) and surfaces the checklist. The hook is a backstop (and `.claude/` is gitignored,
+so it's local-only); **this CLAUDE.md rule + the impact doc are the authoritative, shared process.**
+
+## Ability-data sync discipline — one source per file; the DLL is built from it
+
+The mod's shipped ability data lives in TWO hand-editable files, and they ARE the single source of
+truth — there is **no separate "integrated" copy to maintain alongside them.** The DLL **embeds them
+at build**, so editing the Resources file + rebuilding makes "what ships in the DLL" identical to
+"what you edit." A change is made in **one** place, not duplicated into two.
+
+- `Beelzebub/Beelzebub/Resources/ability_metadata.json` — descriptive (name / description / type /
+  categories / `condition` / `incompatible`), keyed by GUID.
+- `Beelzebub/Beelzebub/Resources/ability_rules.default.json` — policy/config (`Enabled` / `Weapons` /
+  `Forms` with `!`blacklist / shaping), keyed by prefab name; seeded onto a fresh server.
+
+**Rules when curating the DEFAULT / shipped version:**
+1. **Edit the Resources source file — never only an in-game command.** A `.beelz admin` command changes
+   a LIVE server's per-server `ability_rules.json`; that does NOT flow back to the shipped default. A
+   curation decision meant for the package MUST be written into `ability_rules.default.json`.
+2. **When changing ability data on the user's behalf, make the change in the Resources source file**
+   (which is simultaneously the editable file AND the embedded/shipped data — one edit covers both),
+   then rebuild so the embedded copy isn't stale. Do NOT leave a curation change applied only at runtime.
+3. **Conflict → ASK.** If the change would overwrite an existing shipped value (the default already sets
+   `Enabled`/`Weapons`/`Forms`/a `condition` differently than the new request), surface the current
+   value and ask before overwriting.
+4. **Metadata is partly GENERATED** (the `tools/` scrape → process → merge → conditions pipeline).
+   Freehand edits to descriptive fields can be overwritten by a pipeline re-run; durable per-server
+   curation goes via `ability_metadata_overrides.json`, and a hand-set `condition` should carry
+   `conditionSource: "confirmed"` so `merge_conditions_into_metadata.py` preserves it on re-merge.
+
+A `PostToolUse` hook (`.claude/hooks/ability-data-sync-reminder.ps1`, wired in `settings.local.json`)
+fires on edits to those Resources files (and the condition pipeline) and surfaces this checklist +
+the rebuild reminder. The hook is a backstop (`.claude/` is gitignored, local-only); this CLAUDE.md
+rule + `Beelzebub/Beelzebub/docs/ABILITY_DATA_EDITING.md` are the authoritative, shared process.
 
 ## Git workflow
 

@@ -1,0 +1,386 @@
+{
+ "642767950": {
+  "variant": "AB_Bandit_Deadeye_Chaosbarrage_Hard_Group",
+  "base": "AB_Bandit_Deadeye_Chaosbarrage_Group",
+  "baseGuid": 1996370390,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-836774616": {
+  "variant": "AB_Bandit_Deadeye_Chaosstorm_Hard_Group",
+  "base": "AB_Bandit_Deadeye_Chaosstorm_Group",
+  "baseGuid": -1230681995,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-405467076": {
+  "variant": "AB_Bandit_Fisherman_SerpentFeed_Hard_AbilityGroup",
+  "base": "AB_Bandit_Fisherman_SerpentFeed_AbilityGroup",
+  "baseGuid": 571532506,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-1696612225": {
+  "variant": "AB_Bandit_Foreman_RapidShot_Hard_AbilityGroup",
+  "base": "AB_Bandit_Foreman_RapidShot_AbilityGroup",
+  "baseGuid": -1326540020,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-1568783706": {
+  "variant": "AB_Bandit_Foreman_RapidShot_Init_Hard_AbilityGroup",
+  "base": "AB_Bandit_Foreman_RapidShot_Init_AbilityGroup",
+  "baseGuid": -871701576,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-328617085": {
+  "variant": "AB_Bandit_FrostArrow_RainOfArrows_Hard_AbilityGroup",
+  "base": "AB_Bandit_FrostArrow_RainOfArrows_AbilityGroup",
+  "baseGuid": 766284586,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-1871956083": {
+  "variant": "AB_Bandit_FrosttArrow_MultiShot_Hard_Group",
+  "base": "AB_Bandit_FrosttArrow_MultiShot_Group",
+  "baseGuid": 2134585360,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-1865487078": {
+  "variant": "AB_Bandit_Stalker_VBlood_Projectile_Hard_Group",
+  "base": "AB_Bandit_Stalker_VBlood_Projectile_Group",
+  "baseGuid": 226929260,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-609538743": {
+  "variant": "AB_Bandit_Stalker_VBlood_SpinAttack_Hard_Group",
+  "base": "AB_Bandit_Stalker_VBlood_SpinAttack_Group",
+  "baseGuid": -2121210997,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-1272535312": {
+  "variant": "AB_CastleMan_FlameWhip_Hard_AbilityGroup",
+  "base": "AB_CastleMan_FlameWhip_AbilityGroup",
+  "baseGuid": -1736553762,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "583436571": {
+  "variant": "AB_CastleMan_HolyBeam_Hard_AbilityGroup",
+  "base": "AB_CastleMan_HolyBeam_AbilityGroup",
+  "baseGuid": 906463896,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "626219559": {
+  "variant": "AB_CastleMan_Whip_Hard_AbilityGroup",
+  "base": "AB_CastleMan_Whip_AbilityGroup",
+  "baseGuid": -499397494,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-1172099204": {
+  "variant": "AB_ChurchOfLight_Paladin_Hard_Dash_AbilityGroup",
+  "base": "AB_ChurchOfLight_Paladin_Dash_AbilityGroup",
+  "baseGuid": -1720407974,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "699013677": {
+  "variant": "AB_ChurchOfLight_Paladin_HolyFlackCannon_Hard_AbilityGroup",
+  "base": "AB_ChurchOfLight_Paladin_HolyFlackCannon_AbilityGroup",
+  "baseGuid": 834886466,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "1379672205": {
+  "variant": "AB_Gloomrot_TheProfessor_ManyBeams_Hard_Group",
+  "base": "AB_Gloomrot_TheProfessor_ManyBeams_Group",
+  "baseGuid": -841469184,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "922412053": {
+  "variant": "AB_Gloomrot_TheProfessor_MultiLazer_Hard_AbilityGroup",
+  "base": "AB_Gloomrot_TheProfessor_MultiLazer_AbilityGroup",
+  "baseGuid": -2097618568,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "475860611": {
+  "variant": "AB_Manticore_Dash_Hard_AbilityGroup",
+  "base": "AB_Manticore_Dash_AbilityGroup",
+  "baseGuid": -298983941,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-88118341": {
+  "variant": "AB_Militia_BishopOfDunley_Projectile_Hard_Group",
+  "base": "AB_Militia_BishopOfDunley_Projectile_Group",
+  "baseGuid": 368122726,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "317399990": {
+  "variant": "AB_Militia_Glassblower_Cyclone_Hard_AbilityGroup",
+  "base": "AB_Militia_Glassblower_Cyclone_AbilityGroup",
+  "baseGuid": -29584300,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-1174644772": {
+  "variant": "AB_Militia_Glassblower_DeepBreath_Hard_AbilityGroup",
+  "base": "AB_Militia_Glassblower_DeepBreath_AbilityGroup",
+  "baseGuid": 800186323,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-1634136571": {
+  "variant": "AB_Militia_Guard_VBlood_IceBoltsThrow_Hard_Group",
+  "base": "AB_Militia_Guard_VBlood_IceBoltsThrow_Group",
+  "baseGuid": -1110188840,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-2003945269": {
+  "variant": "AB_Militia_Leader_LeapAttack_Hard_AbilityGroup",
+  "base": "AB_Militia_Leader_LeapAttack_AbilityGroup",
+  "baseGuid": -930424159,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "976341724": {
+  "variant": "AB_Militia_MeleeHorizontal_Hard_AbilityGroup",
+  "base": "AB_Militia_MeleeHorizontal_AbilityGroup",
+  "baseGuid": -241312231,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-746972983": {
+  "variant": "AB_Militia_MeleeStraight_Hard_AbilityGroup",
+  "base": "AB_Militia_MeleeStraight_AbilityGroup",
+  "baseGuid": 2142000031,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-595482115": {
+  "variant": "AB_Poloma_Hard_Projectile_Group",
+  "base": "AB_Poloma_Projectile_Group",
+  "baseGuid": -914903899,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-938355432": {
+  "variant": "AB_SeaSerpent_MeleeAttack_Hard_AbilityGroup",
+  "base": "AB_SeaSerpent_MeleeAttack_AbilityGroup",
+  "baseGuid": 1115346958,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "1129782597": {
+  "variant": "AB_Sommelier_HorizontalBarrel_Hard_AbilityGroup",
+  "base": "AB_Sommelier_HorizontalBarrel_AbilityGroup",
+  "baseGuid": 22199616,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-1448118517": {
+  "variant": "AB_Spider_Queen_SpawnAdds_GateBoss_AbilityGroup",
+  "base": "AB_Spider_Queen_SpawnAdds_AbilityGroup",
+  "baseGuid": -1779071085,
+  "kind": "gateboss",
+  "baseInMeta": true,
+  "recommend": "gate-boss variant — usually hide (encounter-specific)"
+ },
+ "-184530068": {
+  "variant": "AB_Undead_BishopOfDeath_CorpseParty_Hard_AbilityGroup",
+  "base": "AB_Undead_BishopOfDeath_CorpseParty_AbilityGroup",
+  "baseGuid": 622287046,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "651637774": {
+  "variant": "AB_Undead_BishopOfShadows_Projectile_Hard_AbilityGroup",
+  "base": "AB_Undead_BishopOfShadows_Projectile_AbilityGroup",
+  "baseGuid": 787702249,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-39228843": {
+  "variant": "AB_Undead_Infiltrator_KnifeThrow_Hard_AbilityGroup",
+  "base": "AB_Undead_Infiltrator_KnifeThrow_AbilityGroup",
+  "baseGuid": 1621601748,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "1837385563": {
+  "variant": "AB_Undead_Priest_Elite_Projectile_Hard_Group",
+  "base": "AB_Undead_Priest_Elite_Projectile_Group",
+  "baseGuid": 14728131,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "1619461812": {
+  "variant": "AB_Undead_Priest_Elite_ProjectileNova_Hard_AbilityGroup",
+  "base": "AB_Undead_Priest_Elite_ProjectileNova_AbilityGroup",
+  "baseGuid": 1988754598,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-200440242": {
+  "variant": "AB_Undead_ShadowSoldier_GateBoss_ShadowStrike_Dash_AbilityGroup",
+  "base": "AB_Undead_ShadowSoldier_ShadowStrike_Dash_AbilityGroup",
+  "baseGuid": 1478784055,
+  "kind": "gateboss",
+  "baseInMeta": true,
+  "recommend": "gate-boss variant — usually hide (encounter-specific)"
+ },
+ "-660542965": {
+  "variant": "AB_Undead_ShadowSoldier_GateBoss_ShadowStrike_Strike_AbilityGroup",
+  "base": "AB_Undead_ShadowSoldier_ShadowStrike_Strike_AbilityGroup",
+  "baseGuid": 1435233272,
+  "kind": "gateboss",
+  "baseInMeta": true,
+  "recommend": "gate-boss variant — usually hide (encounter-specific)"
+ },
+ "-818533945": {
+  "variant": "AB_Undead_SkeletonApprentice_Minion_Projectile_AbilityGroup",
+  "base": "AB_Undead_SkeletonApprentice_Projectile_AbilityGroup",
+  "baseGuid": -20539715,
+  "kind": "minion",
+  "baseInMeta": true,
+  "recommend": "minion/servant variant — usually hide"
+ },
+ "1372353064": {
+  "variant": "AB_VHunter_Jade_Caltrops_Hard_Group",
+  "base": "AB_VHunter_Jade_Caltrops_Group",
+  "baseGuid": -1294182358,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-1030552412": {
+  "variant": "AB_VHunter_Jade_Snipe_Hard_Group",
+  "base": "AB_VHunter_Jade_Snipe_Group",
+  "baseGuid": -1884688827,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-1330984343": {
+  "variant": "AB_VHunter_Leader_Crossbow_Group_Hard",
+  "base": "AB_VHunter_Leader_Crossbow_Group",
+  "baseGuid": -737556373,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-1417141477": {
+  "variant": "AB_VHunter_Leader_MeleeHorizontal_Hard_Group",
+  "base": "AB_VHunter_Leader_MeleeHorizontal_Group",
+  "baseGuid": 1552780633,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-1853889696": {
+  "variant": "AB_Voltage_LeapAttack_Hard_AbilityGroup",
+  "base": "AB_Voltage_LeapAttack_AbilityGroup",
+  "baseGuid": 2016544872,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "929369353": {
+  "variant": "AB_Wendigo_IceDash_Strike_Hard_AbilityGroup",
+  "base": "AB_Wendigo_IceDash_Strike_AbilityGroup",
+  "baseGuid": 203761859,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-2029387940": {
+  "variant": "AB_Wendigo_IceDash_Travel_Hard_AbilityGroup",
+  "base": "AB_Wendigo_IceDash_Travel_AbilityGroup",
+  "baseGuid": -496233120,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "149010586": {
+  "variant": "AB_WerewolfChieftain_MultiBiteBuff_Hard_AbilityGroup",
+  "base": "AB_WerewolfChieftain_MultiBiteBuff_AbilityGroup",
+  "baseGuid": -67893977,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-1568811754": {
+  "variant": "AB_Winter_Yeti_AntarcticLeap_Hard_AbilityGroup",
+  "base": "AB_Winter_Yeti_AntarcticLeap_AbilityGroup",
+  "baseGuid": 1205896854,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "-1126887871": {
+  "variant": "AB_Winter_Yeti_GrabIcicle_Hard_AbilityGroup",
+  "base": "AB_Winter_Yeti_GrabIcicle_AbilityGroup",
+  "baseGuid": 1253708985,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ },
+ "1846642290": {
+  "variant": "AB_Blackfang_Alchemist_Throw_Servant_AbilityGroup",
+  "base": "AB_Blackfang_Alchemist_Throw_AbilityGroup",
+  "baseGuid": 516384057,
+  "kind": "minion",
+  "baseInMeta": true,
+  "recommend": "minion/servant variant — usually hide"
+ },
+ "1971375367": {
+  "variant": "AB_Undead_BishopOfDeath_CorpseExplosion_Hard_AbilityGroup",
+  "base": "AB_Undead_BishopOfDeath_CorpseExplosion_AbilityGroup",
+  "baseGuid": -1272200774,
+  "kind": "hard",
+  "baseInMeta": true,
+  "recommend": "brutal variant — compare unique attrs vs base; collapse or keep-both"
+ }
+}

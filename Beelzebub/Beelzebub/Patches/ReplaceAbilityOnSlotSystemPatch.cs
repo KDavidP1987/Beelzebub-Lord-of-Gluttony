@@ -65,6 +65,17 @@ internal static class ReplaceAbilityOnSlotSystemPatch
             return;
         }
 
+        // v0.101.0: the SAME in-resolve injection for the MOUNTED form. The horse's mount-control buff
+        // carries ReplaceAbilityOnSlotBuff, so it flows through THIS system's query the moment the player
+        // mounts — inject the saddle loadout onto its free slots (3/6/7) here, at resolve time, so it
+        // actually renders (the heartbeat path set the data AFTER resolve, so the abilities never showed).
+        if (Services.ShapeshiftAbilityService.IsMountBuff(prefabId, entity.GetPrefabGuid().GetPrefabName())
+            && entity.TryGetComponent<Buff>(out var mountBuff) && mountBuff.Target.IsPlayer())
+        {
+            Services.ShapeshiftAbilityService.ApplyMountedLoadout(entity, mountBuff.Target, triggerUpdate: false);
+            return;
+        }
+
         if (!entity.TryGetComponent<EntityOwner>(out var entityOwner)) return;
         Entity owner = entityOwner.Owner;
         if (!owner.IsPlayer()) return;

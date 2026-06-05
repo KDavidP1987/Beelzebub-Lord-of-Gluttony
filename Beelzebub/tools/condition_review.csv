@@ -1,0 +1,1147 @@
+﻿guid,name,unit,tier,condition,modifiers,descriptor
+377778793,A Thousand Spears,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+1420346034,Aerial Whip Twirl,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1575317901,Aftershock,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+1966330719,Arctic Leap,(no source unit),-,Movement,,Mobility / travel — no target needed
+-809284772,Arctic Leap,(no source unit),-,Summon,Channel,Summons units/allies — no aim needed
+-1781779733,Army of the Dead,(no source unit),-,Summon,,Summons units/allies — no aim needed
+-1754787506,Attaque principale,(no source unit),-,Movement,Channel,Mobility / travel — no target needed
+1249925269,Ball Lightning,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-440373841,Ball Lightning,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1176933244,Barrel Roll,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1756745786,Bear Corrupted Area Attack,(no source unit),-,CloseRange,Channel,Needs enemies next to / in front of you
+-1573201851,Blackfang Alchemist Roll,(no source unit),-,Movement,,Mobility / travel — no target needed
+516384057,Blackfang Alchemist Throw,(no source unit),-,Aimed,Combo,Aim at a target or direction — fires downrange
+1846642290,Blackfang Alchemist Throw Servant,(no source unit),-,Aimed,Combo,Aim at a target or direction — fires downrange
+1798105602,Blackfang Carver Boss Body Slam,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+74226303,Blackfang Carver Boss Chop Chop,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1796211602,Blackfang Carver Boss Chop Leap,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+964878669,Blackfang Carver Boss Coat Weapon,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1147924409,Blackfang Carver Boss Mega Chop Leap,(no source unit),-,Movement,,Mobility / travel — no target needed
+2102431676,Blackfang Carver Boss Mega Cleave,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+-68142483,Blackfang Carver Boss Single Throw,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-1592003626,Blackfang Carver Boss Summon Carvers,(no source unit),-,Summon,,Summons units/allies — no aim needed
+1290253258,Blackfang Carver Boss Throw Corruption,(no source unit),-,CloseRange,Channel,Needs enemies next to / in front of you
+-1808411682,Blackfang Carver Boss Ultra Mega Chop Leap,(no source unit),-,Movement,,Mobility / travel — no target needed
+-1193077056,Blackfang Carver Boss Weapon Throw,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+1705726981,Blackfang Carver Boss Weapon Throw Intense,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-1457510412,Blackfang Carver Boss Wild Swings,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+-1167502816,Blackfang Dartflinger Fling,(no source unit),-,Aimed,Combo,Aim at a target or direction — fires downrange
+-941466362,Blackfang Livith Aggro Players,(no source unit),-,SelfCast,,Self/ally effect — works on press
+-315621824,Blackfang Livith Cutting Wind,(no source unit),-,Aimed,Combo,Aim at a target or direction — fires downrange
+1318543111,Blackfang Livith Dash,(no source unit),-,Movement,,Mobility / travel — no target needed
+139802405,Blackfang Livith Melee Attack,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+-385314771,Blackfang Livith Round Kick,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+168833229,Blackfang Livith Shadow Dance,(no source unit),-,Summon,,Summons units/allies — no aim needed
+-407341422,Blackfang Livith Slicing Dash,(no source unit),-,Aimed,Channel,Aim at a target or direction — fires downrange
+1261373899,Blackfang Livith Slicing Dash Single,(no source unit),-,Aimed,Channel,Aim at a target or direction — fires downrange
+1920281924,Blackfang Livith Stealth,(no source unit),-,SelfCast,,Self/ally effect — works on press
+-1372642162,Blackfang Livith Stealth Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1115417829,Blackfang Lurker Melee,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+1298623256,Blackfang Morgana Corruption Fountain,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+325438116,Blackfang Morgana Corruption Fountain Far,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+846291757,Blackfang Morgana Cross Wind Slash,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-63677606,Blackfang Morgana Down Horizontal Slash Left,(no source unit),-,CloseRange,Channel,Needs enemies next to / in front of you
+-1736482208,Blackfang Morgana Down Horizontal Slash Right,(no source unit),-,CloseRange,Channel,Needs enemies next to / in front of you
+734658196,Blackfang Morgana Eye Of The Corruption Setup,(no source unit),-,CloseRange,Channel,Needs enemies next to / in front of you
+-668068170,Blackfang Morgana Ground Piercer,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+1684080967,Blackfang Morgana Looming Mists Combat Tag,(no source unit),-,Summon,,Summons units/allies — no aim needed
+2134120100,Blackfang Morgana Melee Attack,(no source unit),-,CloseRange,Channel,Needs enemies next to / in front of you
+2099754785,Blackfang Morgana Spectral Beam,(no source unit),-,Aimed,Combo,Aim at a target or direction — fires downrange
+-1241930020,Blackfang Morgana Spectral Beam Emerge,(no source unit),-,Aimed,Combo,Aim at a target or direction — fires downrange
+898624706,Blackfang Morgana Spectral Beam Slow,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+1173842428,Blackfang Morgana Spectral Blast,(no source unit),-,CloseRange,Channel,Needs enemies next to / in front of you
+-1681336728,Blackfang Morgana Spectral Blast Humanoid,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1185642044,Blackfang Morgana Spectral Hell,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-135866689,Blackfang Morgana Spectral Hell Far,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+1680946425,Blackfang Morgana Summon Corrupted Vines,(no source unit),-,Summon,Channel,Summons units/allies — no aim needed
+-195933675,Blackfang Morgana Summon Tail,(no source unit),-,Summon,,Summons units/allies — no aim needed
+-690426342,Blackfang Morgana Transformation,(no source unit),-,CloseRange,Channel,Needs enemies next to / in front of you
+-918633640,Blackfang Morgana Travel To Position,(no source unit),-,Movement,,Mobility / travel — no target needed
+1673956324,Blackfang Morgana Travel To Position Emerge,(no source unit),-,Movement,Channel,Mobility / travel — no target needed
+1059128,Blackfang Morgana Travel To Position Hidden,(no source unit),-,Movement,,Mobility / travel — no target needed
+-1980019894,Blackfang Morgana Travel To Position Swarm,(no source unit),-,Movement,Channel,Mobility / travel — no target needed
+690549364,Blackfang Morgana Travel To Position Tail,(no source unit),-,Movement,,Mobility / travel — no target needed
+438919203,Blackfang Morgana Travel To Position Tail Emerge,(no source unit),-,Movement,,Mobility / travel — no target needed
+1242557903,Blackfang Morgana Traveling Orb Barrage,(no source unit),-,Movement,,Mobility / travel — no target needed
+-2140645618,Blackfang Morganas Tail Dive,(no source unit),-,SelfCast,,Self/ally effect — works on press
+-1859321594,Blackfang Morganas Tail Stinger,(no source unit),-,Aimed,Combo,Aim at a target or direction — fires downrange
+29969582,Blackfang Morganas Tail Stinger Single,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+62301155,Blackfang Morganas Tail Tail Slam,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+596395337,Blackfang Peon Carrying Barrel Melee,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1869018808,Blackfang Peon Carrying Barrel Throw Barrel,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+936609695,Blackfang Peon Log Carryer Melee,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+2107551739,Blackfang Peon Melee,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-459395643,Blackfang Peon Mining Melee Attack,(no source unit),-,CloseRange,Channel,Needs enemies next to / in front of you
+651647554,Blackfang Peon Wood Chopping Melee Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-637041016,Blackfang Sentinel Counter Attack Kick,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+170206690,Blackfang Sentinel Counter Attack Strike,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-100357751,Blackfang Sentinel Heavy Swing,(no source unit),-,CloseRange,Channel,Needs enemies next to / in front of you
+-2067963108,Blackfang Sentinel Normal Swing,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1138991224,Blackfang Sentinel Ram,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+481790231,Blackfang Sentinel Shockwave,(no source unit),-,CloseRange,Channel,Needs enemies next to / in front of you
+1213228171,Blackfang Striker Charge Attack,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+1125833271,Blackfang Striker Defend Ally,(no source unit),-,SelfCast,,Self/ally effect — works on press
+-2096054164,Blackfang Striker Fist Block,(no source unit),-,SelfCast,,Self/ally effect — works on press
+1105771640,Blackfang Striker Power Punch,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1126476370,Blackfang Striker Smash,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+-1329409686,Blackfang Valyr Phase Dual Bomber Duel Quake,(no source unit),-,SelfCast,,Self/ally effect — works on press
+68363809,Blackfang Valyr Phase Dual Melee Attack,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+-9078612,Blackfang Valyr Phase Dual Seismic Jump,(no source unit),-,Aimed,Combo,Aim at a target or direction — fires downrange
+140047325,Blackfang Valyr Phase Dual Tackle,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-98135680,Blackfang Valyr Phase Single Bomber Quake,(no source unit),-,SelfCast,,Self/ally effect — works on press
+-845442935,Blackfang Valyr Phase Single Charge,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+1633132226,Blackfang Valyr Phase Single Melee Attack,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+1590188261,Blackfang Valyr Phase Single Smack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-405003450,Blackfang Valyr Phase Single Vault Attack,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-1574580061,Blackfang Valyr Walk To Pos,(no source unit),-,SelfCast,,Self/ally effect — works on press
+1797731340,Blackfang Venomblade Leap,(no source unit),-,Movement,,Mobility / travel — no target needed
+323806214,Blackfang Venomblade Melee,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+1944086996,Blackfang Venomblade Sprint,(no source unit),-,Movement,,Mobility / travel — no target needed
+940071564,Blackfang Venomblade Venomstrike,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+381862924,Blackfang Viper Javelin Rain,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-317345251,Blackfang Viper Javelin Throw,(no source unit),-,Aimed,Channel,Aim at a target or direction — fires downrange
+1142040823,Blackfang Viper Step Throw,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+1074626555,Blackfang Wood Carver Melee,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+-1869894099,Blood Buff Corrupted Angel Dash,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-2064327511,Blood Buff Corrupted Harpy Dash,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-1380116221,Blood Carrion Swarm,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+2067760264,Blood Fountain,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1401133170,Blood Fountain,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+651613264,Blood Rage,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1284243288,Blood Storm,(no source unit),-,CloseRange,Channel,Needs enemies next to / in front of you
+481411985,Bone Explosion,(no source unit),-,Summon,,Summons units/allies — no aim needed
+1224470698,Burrow,(no source unit),-,SelfCast,,Self/ally effect — works on press
+-13231823,Camouflage,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+2037106453,Cancel Raging Tempest,(no source unit),-,Movement,,Mobility / travel — no target needed
+-1109386231,Carver Boss Whirlwind,(no source unit),-,SelfCast,,Self/ally effect — works on press
+-1016145613,Chaos Barrier,(no source unit),-,SelfCast,,Self/ally effect — works on press
+2070140125,Chaos Barrier,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+2012523607,Chaos Rain Of Chaos,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+116066962,Church Of Light Cardinal Aide Block,(no source unit),-,SelfCast,,Self/ally effect — works on press
+100549683,Church Of Light Cleric Block,(no source unit),-,SelfCast,,Self/ally effect — works on press
+-1637210619,Church Of Light Enchanted Cross Beam Hard,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+896963123,Church Of Light Overseer Ice Rink,(no source unit),-,Summon,,Summons units/allies — no aim needed
+-1684687653,Church Of Light Slave Master AoEBuff,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1000260252,Cold Snap,(no source unit),-,SelfCast,,Self/ally effect — works on press
+-1095356108,Corrupted Crow Fly End,(no source unit),-,CloseRange,Channel,Needs enemies next to / in front of you
+-1698500590,Corrupted Crow Fly Start,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+61265236,Corrupted Crow Fly Start,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+304685414,Corrupted Crow Idle Fly Start,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1204819086,Corrupted Skull,(no source unit),-,Summon,,Summons units/allies — no aim needed
+-1720952746,Corrupted Wolf Slavering Bite,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1262003451,Crushing Blow,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+295045820,Crystal Lance,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-356990326,Cyclone,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1961570821,Death Knight,(no source unit),-,Summon,,Summons units/allies — no aim needed
+-2095151729,Death from Above,(no source unit),-,Movement,,Mobility / travel — no target needed
+-1563062700,Debug Nuke All,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+162388614,Degallop,(no source unit),-,Movement,,Mobility / travel — no target needed
+1952703098,Discharge,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1816495876,Discharge,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+172828642,Dismount,(no source unit),-,Movement,,Mobility / travel — no target needed
+472850370,Dismount,(no source unit),-,Movement,,Mobility / travel — no target needed
+-1552626046,Dracula Spell Stone Orbiting Blood,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1130363778,Earthshatter,(no source unit),-,Aimed,Channel,Aim at a target or direction — fires downrange
+-1545438316,Elusive Strike,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+488481150,Emery Elemental Leap,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+1903010945,Emery Elemental Melee Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1262525269,Emery Elemental Rollout,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+107764414,Emery Golem Ground Slam,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-705534828,Emery Golem Melee Attack,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+-1882115765,Emery Golem Rock Slam,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-401259144,Enchanted Cross Light Wave,(no source unit),-,Aimed,Channel,Aim at a target or direction — fires downrange
+-313732628,Entangling Whip,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1870875931,Eye of the Storm,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-2068632541,Feed,(no source unit),-,SelfCast,,Self/ally effect — works on press
+1548379114,Feed,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1393329717,Feed,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1365570044,Feed,(no source unit),-,SelfCast,,Self/ally effect — works on press
+-578672354,Feed,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1278121774,Feed,(no source unit),-,SelfCast,,Self/ally effect — works on press
+117247654,Feed,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1586616867,Feed,(no source unit),-,SelfCast,,Self/ally effect — works on press
+2072201164,Feed,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+2122998237,Fishing,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1968364229,Frenzy,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1293609465,Frost Barrier,(no source unit),-,SelfCast,,Self/ally effect — works on press
+-1198075389,Frost Barrier,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+78384915,Frost Bat,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+1119012588,Frost Cone,(no source unit),-,SelfCast,,Self/ally effect — works on press
+-1360906203,Gallop,(no source unit),-,Movement,,Mobility / travel — no target needed
+1529659981,Gargoyle Wing Shield Emerge Spawn,(no source unit),-,SelfCast,,Self/ally effect — works on press
+-149514613,Gelenkter Pfeil,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-1977998485,General Healing Orb,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1589627808,Giant Crow Corrupted Dash,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-1884419467,Giant Crow Corrupted Peck,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+288608511,Gloomrot Pyro Flame Strafer,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-645101263,Gold Golem Enrage Fist Slam,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+1770841962,Gold Golem Melee Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+92820140,Gold Golem Rock Slam,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-1181502209,Great Cleaver,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+830123499,Harpoon,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-325952371,Harpy AoE,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1850037222,Harpy Dash,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+1629100793,Harpy Dive,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1432604486,Heart Strike,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-948311829,Hold to Extract Blood,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1491658671,Hold to Extract Blood,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1695763915,Hold to Extract Blood,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-842785205,Horse Vampire Leap Travel Blackfang,(no source unit),-,Movement,,Mobility / travel — no target needed
+1461754263,Howling Reaper,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+91249849,Ice Nova,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1473095785,Ice Nova,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-286223348,Illusion Serpent,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+1250277114,Impale,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-247423777,Iva Burn,(no source unit),-,CloseRange,Channel,Needs enemies next to / in front of you
+-1175617299,Knight 2 H Back Roll,(no source unit),-,Movement,,Mobility / travel — no target needed
+349423116,Knight 2 H Forward Roll,(no source unit),-,Movement,,Mobility / travel — no target needed
+-1449279362,Knight 2 H Forward Roll Accurate,(no source unit),-,Movement,,Mobility / travel — no target needed
+1675917968,Leap,(no source unit),-,Movement,,Mobility / travel — no target needed
+-914344112,Lightning Typhoon,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1617880256,Lucie Alchemic Madness Channel,(no source unit),-,SelfCast,Channel,Self/ally effect — works on press
+550876706,Lucie Alchemic Madness Walk To Pos,(no source unit),-,SelfCast,,Self/ally effect — works on press
+1310557060,Lucie Clarity Potion,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+1501543883,Lucie Crippling Goo,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+973975627,Lucie Deadly Injection,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+466462408,Lucie Healing Brew,(no source unit),-,CloseRange,Channel,Needs enemies next to / in front of you
+846507754,Lucie Liquid Fire,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+2041625587,Lucie Panic Shot,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+385165207,Lucie Pick Up Potion Walk To Potion,(no source unit),-,SelfCast,,Self/ally effect — works on press
+-933544131,Lucie Player Ability Clarity Potion Throw,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-984481115,Lucie Player Ability Liquid Fire Potion Drink,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1738354598,Lucie Player Ability Liquid Fire Potion Throw,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+362512593,Lucie Player Ability Liquid Luck Potion Throw,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+211300082,Lucie Player Ability Polymorph Potion Throw,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1364843731,Lucie Player Ability Potion Base Throw,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1111373807,Lucie Player Ability Wondrous Healing Potion Throw,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1358113706,Lucie Roll,(no source unit),-,Movement,,Mobility / travel — no target needed
+2053056011,Lucie Toxin Bolt,(no source unit),-,Aimed,Combo,Aim at a target or direction — fires downrange
+-2029137394,Lucie Wake Golem Potion,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+998806487,Man Trap Corrupted Melee Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+544237275,Man Trap Corrupted Projectile,(no source unit),-,Aimed,Channel,Aim at a target or direction — fires downrange
+1033948100,Man Trap Corrupted Tripple Projectile,(no source unit),-,Aimed,Combo,Aim at a target or direction — fires downrange
+1690919489,Manticore Jump Back,(no source unit),-,Movement,,Mobility / travel — no target needed
+1026449575,Mantrap Corrupted Spawn Saplings,(no source unit),-,Summon,,Summons units/allies — no aim needed
+-267258900,Mantrap Sapling Corrupted Melee Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-581209791,Mantrap Sapling Corrupted Projectile,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+245173408,Merciless Charge,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-409778117,Militia Fabian Call Lightning,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1631838527,Militia Fabian Lightning Orb,(no source unit),-,Aimed,Combo,Aim at a target or direction — fires downrange
+-1379598377,Militia Fabian Mounted Swing Left,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-618550771,Militia Fabian Mounted Swing Right,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1246326726,Militia Fabians Steed Charge,(no source unit),-,Aimed,Channel,Aim at a target or direction — fires downrange
+1220301459,Militia Fabians Steed Leap,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+975866147,Militia Fabians Steed Leap Movement,(no source unit),-,Movement,,Mobility / travel — no target needed
+325658714,Militia Fabians Steed Multi Charge,(no source unit),-,Aimed,Channel,Aim at a target or direction — fires downrange
+890007919,Militia Glassblower Mirror Shield,(no source unit),-,SelfCast,,Self/ally effect — works on press
+-1077139800,Militia Horseman,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-1843850355,Militia Horseman Attack Chain,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1660777757,Militia Horseman Attack Chain Left,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+262116525,Militia Horseman Attack Chain Right,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1630648333,Militia Horseman Mount Charge,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-342380924,Militia Horseman Step Attack,(no source unit),-,CloseRange,Channel,Needs enemies next to / in front of you
+-1280459867,Militia Hound Hound Mark,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1689067072,Militia Light Arrow Basic Shot,(no source unit),-,Aimed,Channel,Aim at a target or direction — fires downrange
+761268127,Militia Light Arrow Snipe,(no source unit),-,Aimed,Channel,Aim at a target or direction — fires downrange
+-866526980,Militia Light Arrow Throw,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-708850140,Militia Light Arrow Unsteady Quick Shot,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+617823552,Militia Light Arrow Unsteady Shot,(no source unit),-,Aimed,Channel,Aim at a target or direction — fires downrange
+-891060764,Militia Light Arrow Unsteady Throw,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1418783710,Militia Rider Crossbow,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+110097606,Mist Trance,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+268059675,Mosquito,(no source unit),-,Summon,,Summons units/allies — no aim needed
+-822790233,Mutant Rat Scratch Mutant Blood,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-2053450457,Phantom Aegis,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1852992863,Phantom Aegis,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-987810170,Polarity Shift,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+1576686583,Power Surge,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1365760673,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1484849310,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1112631726,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+88026855,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-947518364,Primary Attack,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+1721154667,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-317399619,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1108325193,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-56422536,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-350642638,Primary Attack,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+-321918794,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1989618782,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1077498120,Primary Attack,(no source unit),-,SelfCast,,Self/ally effect — works on press
+257418700,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1145923288,Primary Attack,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+1913579080,Primary Attack,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-413053555,Primary Attack,(no source unit),-,Aimed,Combo,Aim at a target or direction — fires downrange
+992487676,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+452849117,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1262842180,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-366103191,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-843384411,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1294567037,Primary Attack,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+-1108274345,Primary Attack,(no source unit),-,CloseRange,Channel,Needs enemies next to / in front of you
+-660542965,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1435233272,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1691491221,Primary Attack,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+-1439531953,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1070827786,Primary Attack,(no source unit),-,Summon,,Summons units/allies — no aim needed
+-187744612,Primary Attack,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+174655882,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1428882023,Primary Attack,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+-8479990,Primary Attack,(no source unit),-,Summon,Channel,Summons units/allies — no aim needed
+815729526,Primary Attack,(no source unit),-,Summon,Channel,Summons units/allies — no aim needed
+-1874296899,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+784360484,Primary Attack,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+-1360812741,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1470213751,Primary Attack,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+-1315478418,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-208121356,Primary Attack,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+409165231,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-2097352908,Primary Attack,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+1612184116,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-57462538,Primary Attack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1752758196,Primary Attack,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+722599012,Primärangriff,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+128007572,Primärangriff,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+2111431121,Raging Tempest,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1760359784,Rain of Bolts,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1428855842,Rat Hole,(no source unit),-,SelfCast,,Self/ally effect — works on press
+1479612756,Recall & Revive Companion,(no source unit),-,SelfCast,Channel,Self/ally effect — works on press
+-223453383,Roar,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1191439206,Rytuał Krwi,(no source unit),-,SelfCast,,Self/ally effect — works on press
+189403977,Sanguine Coil,(no source unit),-,Aimed,Combo,Aim at a target or direction — fires downrange
+1239155316,Sea Serpent Acid Puke,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+436038744,Shadow Leap,(no source unit),-,Movement,,Mobility / travel — no target needed
+445289088,Shadow Leap,(no source unit),-,Movement,,Mobility / travel — no target needed
+-20922272,Shadow Leap,(no source unit),-,Movement,,Mobility / travel — no target needed
+817680188,Shadow Meld,(no source unit),-,SelfCast,,Self/ally effect — works on press
+-880131926,Shadowbolt,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+1873182450,Shapeshift Bear Dash,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+833416928,Shapeshift Wolf Leap Travel Blackfang,(no source unit),-,Movement,,Mobility / travel — no target needed
+1335008684,Shockwave,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-1951127647,Shriek,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1193297071,Siege Golem,(no source unit),-,SelfCast,Channel,Self/ally effect — works on press
+-1712538598,Sit,(no source unit),-,SelfCast,,Self/ally effect — works on press
+-91023537,Sit,(no source unit),-,SelfCast,,Self/ally effect — works on press
+1651864139,Sit,(no source unit),-,SelfCast,,Self/ally effect — works on press
+935984304,Sit,(no source unit),-,SelfCast,,Self/ally effect — works on press
+1121958763,Smack,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1259884575,Smash,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+477749225,Snapshot,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+2138402840,Soulburn,(no source unit),-,Summon,,Summons units/allies — no aim needed
+1650878435,Spectral Guardian,(no source unit),-,Summon,,Summons units/allies — no aim needed
+-781549505,Spectral Leap,(no source unit),-,Movement,,Mobility / travel — no target needed
+1660492999,Spectral Strike,(no source unit),-,CloseRange,Channel,Needs enemies next to / in front of you
+-290102537,Spectral Strike,(no source unit),-,Movement,,Mobility / travel — no target needed
+1714996121,Spectral Strike,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+247896794,Spectral Wolf,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+1216522353,Stomp,(no source unit),-,CloseRange,Channel,Needs enemies next to / in front of you
+-1355723507,Storm Eye Of The Storm Recast,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+965421878,Subdue Mount,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+1297311521,Summon Fallen Angel,(no source unit),-,Summon,,Summons units/allies — no aim needed
+-27840697,Swing,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1637511208,Tailor Shapeshift,(no source unit),-,CloseRange,Channel,Needs enemies next to / in front of you
+1550864188,Teleport,(no source unit),-,Movement,,Mobility / travel — no target needed
+98022305,Teleport,(no source unit),-,Movement,,Mobility / travel — no target needed
+1088859718,Teleport,(no source unit),-,Movement,,Mobility / travel — no target needed
+-345652149,Tendon Swing,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1428039996,Toad Leap,(no source unit),-,Movement,,Mobility / travel — no target needed
+680554094,Treant Corrupted Melee Attack,(no source unit),-,CloseRange,Channel,Needs enemies next to / in front of you
+-802865471,Treant Mantrap Corrupted Spit,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+1734337277,Undead Arena Champion Awake Sequence,(no source unit),-,CloseRange,Channel,Needs enemies next to / in front of you
+-782050236,Undead Arena Champion Chains Of Death,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1810214745,Undead Arena Champion Charge,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-1175912131,Undead Arena Champion Disengage,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1756717462,Undead Arena Champion Kick,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+2136656017,Undead Arena Champion Leap Strike,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-1781725233,Undead Arena Champion Sweep Attacks,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+1322698651,Undead Arena Champion Twinblade Throw,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-2023636973,Undead Arena Champion Windslash,(no source unit),-,Aimed,Combo,Aim at a target or direction — fires downrange
+-1966260928,Undead Banshee Morgana Dash Dash,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-1942495608,Undead Banshee Morgana Dash Strike,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1272200774,Undead Bishop Of Death Corpse Explosion,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1971375367,Undead Bishop Of Death Corpse Explosion Hard,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+852659329,Undead Bishop Of Death Small Explosion,(no source unit),-,Aimed,Combo,Aim at a target or direction — fires downrange
+-200440242,Undead Shadow Soldier Gate Boss Shadow Strike Dash,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+1478784055,Undead Shadow Soldier Shadow Strike Dash,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-818533945,Undead Skeleton Apprentice Minion Projectile,(no source unit),-,Aimed,Combo,Aim at a target or direction — fires downrange
+-552245952,Undead Zealous Cultist Raise Dead,(no source unit),-,Summon,Channel,Summons units/allies — no aim needed
+-1845982676,Unholy Chains Of Death,(no source unit),-,Summon,,Summons units/allies — no aim needed
+1351498027,Unholy Unstable Arachnid Recast,(no source unit),-,Summon,,Summons units/allies — no aim needed
+401668748,Vampire Blood Knight Dash,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1180130515,Vampire Claws Primary Melee Attack,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+2094399595,Vampire Claws Primary Melee Attack Unholy,(no source unit),-,Summon,Combo,Summons units/allies — no aim needed
+-2092012453,Vampire Claws Primary Mounted,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-621324159,Vampire Claws Skewering Leap,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+1957381608,Vampire Claws Skewering Leap Unholy,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-496335760,Vampire Claws Vault Slash,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1217790595,Vampire Claws Vault Slash Unholy,(no source unit),-,Summon,,Summons units/allies — no aim needed
+-999342671,Vampire Cliff Leap Travel,(no source unit),-,Movement,,Mobility / travel — no target needed
+1398187000,Vampire Daggers Call Daggers,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1239800293,Vampire Daggers Primary,(no source unit),-,Summon,,Summons units/allies — no aim needed
+873699859,Vampire Daggers Primary Mounted,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+367876187,Vampire Dual Hammers Primary Melee Attack,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+-1612983976,Vampire Dual Hammers Storm Mace,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+859877682,Vampire Leap Attack Travel,(no source unit),-,Movement,,Mobility / travel — no target needed
+-127510613,Vampire Leap Travel Recast,(no source unit),-,Movement,,Mobility / travel — no target needed
+986693563,Vampire Mount Athletic Dismount Travel,(no source unit),-,Movement,,Mobility / travel — no target needed
+131953285,Vampire Pollaxe Lunge,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1209038175,Vampire Pollaxe Lunge Dash,(no source unit),-,Movement,,Mobility / travel — no target needed
+-655343218,Vampire Pollaxe Primary Attack,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+578807372,Vampire Pollaxe Sweep And Smash,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-768614933,Vampire Pollaxe Sweep And Smash Recast,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+89236731,Vampire Twin Blades Javelin,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+210529811,Vampire Twin Blades Javelin Recast,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+298784800,Vampire Twin Blades Primary Melee Attack,(no source unit),-,CloseRange,Combo,Needs enemies next to / in front of you
+1364381862,Vampire Twin Blades Primary Mounted,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+305230608,Veil of Blood,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-498302954,Veil of Bones,(no source unit),-,Summon,,Summons units/allies — no aim needed
+711231628,Veil of Chaos,(no source unit),-,Movement,,Mobility / travel — no target needed
+1711943933,Veil of Chaos,(no source unit),-,Movement,,Mobility / travel — no target needed
+1709284795,Veil of Frost,(no source unit),-,Movement,,Mobility / travel — no target needed
+-935015750,Veil of Illusion,(no source unit),-,Summon,,Summons units/allies — no aim needed
+1994950191,Veil of Illusion,(no source unit),-,Summon,,Summons units/allies — no aim needed
+-84816111,Veil of Storm,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-358319417,Void,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-859352730,Volatile Arachnid,(no source unit),-,Summon,,Summons units/allies — no aim needed
+-1136860480,Ward of the Damned,(no source unit),-,SelfCast,,Self/ally effect — works on press
+318813926,Ward of the Damned,(no source unit),-,Summon,,Summons units/allies — no aim needed
+2096535189,Werewolf Chieftain Shadow Dash Clone,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-689229573,Winter Wolf Howl,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-1745021468,Wisp Dance,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+1910899893,Wolf Cursed Howl,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-242769430,Wraith Spear,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-898001858,X-Strike,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-326374250,Вампирское проклятье,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-1490887838,Основная атака,(no source unit),-,Summon,Combo,Summons units/allies — no aim needed
+-107743040,Подчинение людей,(no source unit),-,Aimed,,Aim at a target or direction — fires downrange
+-2138455533,粉碎,(no source unit),-,CloseRange,Channel,Needs enemies next to / in front of you
+1790847128,長押しして血を採る,(no source unit),-,CloseRange,,Needs enemies next to / in front of you
+-297165667,Gloomrot Ace Incinerator Flame Shot,Ace Incinerator,T4,Aimed,Channel,Aim at a target or direction — fires downrange
+-1462866563,Gloomrot Ace Incinerator Flame Spreader,Ace Incinerator,T4,CloseRange,Channel,Needs enemies next to / in front of you
+-1954926268,Primary Attack,Ace Incinerator,T4,Aimed,,Aim at a target or direction — fires downrange
+1492585365,Arctic Leap,Adam the Firstborn,T4,Aimed,,Aim at a target or direction — fires downrange
+1795073911,Arctic Leap,Adam the Firstborn,T4,Aimed,,Aim at a target or direction — fires downrange
+-2054557525,Arctic Leap,Adam the Firstborn,T4,Aimed,,Aim at a target or direction — fires downrange
+-820078889,Eye of the Storm,Adam the Firstborn,T4,CloseRange,Channel,Needs enemies next to / in front of you
+-741006712,Monster Final Projectile,Adam the Firstborn,T4,Aimed,,Aim at a target or direction — fires downrange
+-1503327574,Primary Attack,Adam the Firstborn,T4,CloseRange,Channel,Needs enemies next to / in front of you
+-1659620404,Primary Attack,Adam the Firstborn,T4,Aimed,Combo,Aim at a target or direction — fires downrange
+723715376,Primary Attack,Adam the Firstborn,T4,CloseRange,,Needs enemies next to / in front of you
+1853611622,Primary Attack,Adam the Firstborn,T4,CloseRange,Combo,Needs enemies next to / in front of you
+164595507,Primary Attack,Adam the Firstborn,T4,CloseRange,,Needs enemies next to / in front of you
+764489448,Primary Attack,Adam the Firstborn,T4,CloseRange,Channel,Needs enemies next to / in front of you
+-570933441,Spectral Strike,Adam the Firstborn,T4,Aimed,,Aim at a target or direction — fires downrange
+1808542763,Spectral Strike,Adam the Firstborn,T4,Aimed,,Aim at a target or direction — fires downrange
+927872126,Golpe Espectral,"Adam, o Primogênito",T4,Aimed,,Aim at a target or direction — fires downrange
+1808492070,Arctic Leap,Albert the Duke of Balaton,T4,Summon,,Summons units/allies — no aim needed
+1790744720,Arctic Leap,Albert the Duke of Balaton,T4,Aimed,,Aim at a target or direction — fires downrange
+1421967280,Cursed Toad King Frog Vomit,Albert the Duke of Balaton,T4,Summon,,Summons units/allies — no aim needed
+-1864096491,Cursed Toad King Poison Rain,Albert the Duke of Balaton,T4,CloseRange,Channel,Needs enemies next to / in front of you
+1718898538,Primary Attack,Albert the Duke of Balaton,T4,CloseRange,Combo,Needs enemies next to / in front of you
+1292896032,Primary Attack,Albert the Duke of Balaton,T4,CloseRange,,Needs enemies next to / in front of you
+-514415940,Primary Attack,Albert the Duke of Balaton,T4,CloseRange,,Needs enemies next to / in front of you
+1583944483,Caminhada de Névoa,Alma de Sangue Primordial,T4,CloseRange,Channel,Needs enemies next to / in front of you
+1558429115,Primary Attack,Alpha the White Wolf,T1,CloseRange,,Needs enemies next to / in front of you
+-1654954396,Primary Attack,Alpha the White Wolf,T1,CloseRange,,Needs enemies next to / in front of you
+-821573025,Spectral Strike,Alpha the White Wolf,T1,Aimed,,Aim at a target or direction — fires downrange
+920051497,Wolf Boss Dash Attack Single,Alpha the White Wolf,T1,CloseRange,Channel,Needs enemies next to / in front of you
+247740796,Wolf Boss Howl,Alpha the White Wolf,T1,Summon,,Summons units/allies — no aim needed
+2145136774,Wolf Boss Maul Hard,Alpha the White Wolf,T1,CloseRange,,Needs enemies next to / in front of you
+-1161539168,Wolf Boss Dash Attack Tripple,"Alpha, der weiße Wolf",T1,CloseRange,Combo|Channel,Needs enemies next to / in front of you
+-751119210,Archer Projectile,Archer,T3,Aimed,,Aim at a target or direction — fires downrange
+-1385141321,Primary Attack,Arctic Bear,T3,CloseRange,Channel,Needs enemies next to / in front of you
+-1041059859,Primary Attack,Arctic Bear,T3,CloseRange,,Needs enemies next to / in front of you
+138513891,Primary Attack,Armoured Skeleton,T2,CloseRange,Combo,Needs enemies next to / in front of you
+537620937,Primary Attack,Armoured Skeleton,T1,CloseRange,Combo,Needs enemies next to / in front of you
+114484622,Cardinal Light Nova,Azariel the Sunbringer,T4,Aimed,Channel,Aim at a target or direction — fires downrange
+194868388,Cardinal Light Wave,Azariel the Sunbringer,T4,Aimed,Channel,Aim at a target or direction — fires downrange
+-1381729810,Cardinal Summon Aide,Azariel the Sunbringer,T4,Summon,,Summons units/allies — no aim needed
+-16930230,Cardinal Summon Orb,Azariel the Sunbringer,T4,Summon,,Summons units/allies — no aim needed
+-744145902,Wolf Shared Dash Attack,Bandit Wolf,T1,CloseRange,,Needs enemies next to / in front of you
+-1160883278,Primary Attack,Banshee,T3,CloseRange,,Needs enemies next to / in front of you
+633696135,Primary Attack,Banshee,T3,CloseRange,Channel,Needs enemies next to / in front of you
+-1398375841,Primary Attack,Banshee,T3,Aimed,,Aim at a target or direction — fires downrange
+-1912093062,Primary Attack,Banshee,T3,CloseRange,Channel,Needs enemies next to / in front of you
+-930815588,Undead Banshee Projectile,Banshee,T3,Aimed,,Aim at a target or direction — fires downrange
+1168210403,Primary Attack,Baron du Bouchon the Sommelier,T4,CloseRange,Channel,Needs enemies next to / in front of you
+1078822594,Primary Attack,Baron du Bouchon the Sommelier,T4,CloseRange,,Needs enemies next to / in front of you
+-1157907958,Primary Attack,Baron du Bouchon the Sommelier,T4,CloseRange,,Needs enemies next to / in front of you
+215933642,Sanguine Coil,Baron du Bouchon the Sommelier,T4,Aimed,Channel,Aim at a target or direction — fires downrange
+-1252510507,Barrel Roll,Barrel Disguise,T3,CloseRange,,Needs enemies next to / in front of you
+1311267272,Primary Attack,Batoon,T3,CloseRange,Combo,Needs enemies next to / in front of you
+1741189817,Arctic Leap,Beatrice the Tailor,T2,Movement,,Mobility / travel — no target needed
+88850785,Gargoyle Wing Shield Emerge,Beatrice the Tailor,T2,CloseRange,,Needs enemies next to / in front of you
+183752077,Legion Gargoyle Relocate Forward Init Apply Targetbuff,Beatrice the Tailor,T2,CloseRange,,Needs enemies next to / in front of you
+-915929892,Primary Attack,Beatrice the Tailor,T2,CloseRange,Combo,Needs enemies next to / in front of you
+701450949,Spectral Strike,Beatrice the Tailor,T2,Aimed,,Aim at a target or direction — fires downrange
+1166812757,Salto ártico,Bestia asesina,T4,Movement,,Mobility / travel — no target needed
+1749064378,Primary Attack,Blood Golem,T4,CloseRange,Channel,Needs enemies next to / in front of you
+-2060534730,Primary Attack,Blood Golem,T4,CloseRange,Combo,Needs enemies next to / in front of you
+-1660458588,Primary Attack,Blood Golem,T4,Aimed,,Aim at a target or direction — fires downrange
+-1717961213,Legion Blood Prophet Blood Burn,Blood Prophet,T3,CloseRange,Channel,Needs enemies next to / in front of you
+-347082762,Legion Blood Prophet Projectile AOE,Blood Prophet,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+-1768784526,Dracula Blood Soul Absorb,Blood Soul,T4,Summon,Channel,Summons units/allies — no aim needed
+1671419025,Primary Attack,Blood Treant,T3,CloseRange,Channel,Needs enemies next to / in front of you
+-1743551272,Bandit Bomb Throw,Bomber,T2,CloseRange,,Needs enemies next to / in front of you
+-1416105872,Dash,Boyo,T3,Movement,,Mobility / travel — no target needed
+-91811178,Militia Hound Master Command,Boyo,T3,CloseRange,,Needs enemies next to / in front of you
+-1449494345,Militia Hound Master Heal,Boyo,T3,CloseRange,,Needs enemies next to / in front of you
+1219885177,Militia Hound Master Quick Shot,Boyo,T3,Aimed,Combo,Aim at a target or direction — fires downrange
+1648996357,Militia Hound Master Tackel,Boyo,T3,CloseRange,,Needs enemies next to / in front of you
+2031950279,Militia Hound Quick Dash,Brutus the Watcher,T3,CloseRange,,Needs enemies next to / in front of you
+1707593926,Militia Hound Request Aid,Brutus the Watcher,T3,CloseRange,,Needs enemies next to / in front of you
+340577476,Primary Attack,Brutus the Watcher,T3,CloseRange,,Needs enemies next to / in front of you
+-1378417368,Church Of Light Cardinal Aide Projectile,Cardinal Aide,T4,Aimed,Channel,Aim at a target or direction — fires downrange
+2108112601,Primary Attack,Cardinal Aide,T4,CloseRange,Combo,Needs enemies next to / in front of you
+-1581417695,Nun Holy Projectile,Christina the Sun Priestess,T2,Aimed,Channel,Aim at a target or direction — fires downrange
+-1754021382,Nun VBlood Spawn Minions,Christina the Sun Priestess,T2,Summon,,Summons units/allies — no aim needed
+607644390,Primary Attack,Christina the Sun Priestess,T2,CloseRange,,Needs enemies next to / in front of you
+1817985064,Church Of Light Cleric Intervene,Cleric,T4,CloseRange,,Needs enemies next to / in front of you
+-587604072,Church Of Light Cleric Projectile,Cleric,T4,Aimed,,Aim at a target or direction — fires downrange
+-819795639,Primary Attack,Cleric,T4,CloseRange,,Needs enemies next to / in front of you
+-444905742,Bandit Cluster Bomb Throw,Clive the Firestarter,T2,CloseRange,,Needs enemies next to / in front of you
+192866635,Dash,Clive the Firestarter,T2,CloseRange,,Needs enemies next to / in front of you
+1479036818,Explosive Bullet,Clive the Firestarter,T2,Aimed,,Aim at a target or direction — fires downrange
+-1104043123,Primary Attack,Corpse Pile,T2,CloseRange,Channel,Needs enemies next to / in front of you
+937561987,Primary Attack,Corpse Pile,T2,Aimed,,Aim at a target or direction — fires downrange
+2015521421,Attaque principale,Crapaud visqueux maudit,T3,CloseRange,,Needs enemies next to / in front of you
+1636251764,Primary Attack,Crimson Maiden,T4,CloseRange,,Needs enemies next to / in front of you
+898033701,Primary Attack,Crow,T1,CloseRange,,Needs enemies next to / in front of you
+-730437928,Bear Cursed Dash,Cursed Bear,T3,CloseRange,,Needs enemies next to / in front of you
+160063059,Primary Attack,Cursed Bear,T3,CloseRange,Channel,Needs enemies next to / in front of you
+1745337333,Primary Attack,Cursed Bear,T3,CloseRange,,Needs enemies next to / in front of you
+-1684997624,Arctic Leap,Cursed Slime Toad,T3,Aimed,,Aim at a target or direction — fires downrange
+750606882,Primary Attack,Cursed Slime Toad,T3,CloseRange,,Needs enemies next to / in front of you
+736733073,Primary Attack,Cursed Slime Toad,T3,CloseRange,,Needs enemies next to / in front of you
+-2117925151,Cursed Toad Spitter Projectile,Cursed Spitter Toad,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+-1317017789,Wolf Cursed Dash Attack,Cursed Wolf,T3,CloseRange,,Needs enemies next to / in front of you
+847476786,Arctic Leap,Cyril the Cursed Smith,T4,Aimed,,Aim at a target or direction — fires downrange
+-1889094547,Arctic Leap,Cyril the Cursed Smith,T4,Summon,Channel,Summons units/allies — no aim needed
+546685538,Arctic Leap,Cyril the Cursed Smith,T4,Summon,Channel,Summons units/allies — no aim needed
+151173850,Arctic Leap,Cyril the Cursed Smith,T4,Summon,Channel,Summons units/allies — no aim needed
+1162725480,Arctic Leap,Cyril the Cursed Smith,T4,Summon,Channel,Summons units/allies — no aim needed
+-332863103,Arctic Leap,Cyril the Cursed Smith,T4,Summon,Channel,Summons units/allies — no aim needed
+-668888775,Frenzy,Cyril the Cursed Smith,T4,CloseRange,Channel,Needs enemies next to / in front of you
+-329078808,Undead Cursed Smith Multi Dash,Cyril the Cursed Smith,T4,CloseRange,Channel,Needs enemies next to / in front of you
+340003308,Undead Cursed Smith Multi Dash Charge,Cyril the Cursed Smith,T4,CloseRange,,Needs enemies next to / in front of you
+-943061757,Undead Cursed Smith Spear Thrust,Cyril the Cursed Smith,T4,Aimed,Channel,Aim at a target or direction — fires downrange
+-1498306516,Legion Night Maiden Seduce,Dark Temptress,T4,CloseRange,Channel,Needs enemies next to / in front of you
+1336193986,Bandit Deadeye Ranged Attack,Deadeye,T1,Aimed,Channel,Aim at a target or direction — fires downrange
+-1772111618,Primary Attack,Deer,-,CloseRange,Combo,Needs enemies next to / in front of you
+-433204738,Veil of Shadow,Deer,-,Movement,,Mobility / travel — no target needed
+2034438314,Primary Attack,Devoted,T3,CloseRange,,Needs enemies next to / in front of you
+474075607,Primary Attack,Devoted,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+124285667,Paladin Divine Angel Dash,Divine Angel,T4,Aimed,,Aim at a target or direction — fires downrange
+-105601189,Primary Attack,Divine Angel,T4,CloseRange,Combo|Channel,Needs enemies next to / in front of you
+1878838878,Primary Attack,Domina the Blade Dancer,T3,CloseRange,Combo,Needs enemies next to / in front of you
+1851411882,Primary Attack,Domina the Blade Dancer,T3,CloseRange,,Needs enemies next to / in front of you
+788963695,Primary Attack,Domina the Blade Dancer,T3,CloseRange,,Needs enemies next to / in front of you
+-1143650386,Primary Attack,Domina the Blade Dancer,T3,CloseRange,,Needs enemies next to / in front of you
+-1372140488,Primary Attack,Domina the Blade Dancer,T3,CloseRange,,Needs enemies next to / in front of you
+1191517048,Primary Attack,Domina the Blade Dancer,T3,CloseRange,,Needs enemies next to / in front of you
+-1548349308,Voltage Electric Rod,Domina the Blade Dancer,T3,CloseRange,Channel,Needs enemies next to / in front of you
+-177268000,Voltage Electric Sprint,Domina the Blade Dancer,T3,CloseRange,,Needs enemies next to / in front of you
+2016544872,Voltage Leap Attack,Domina the Blade Dancer,T3,Movement,,Mobility / travel — no target needed
+-1853889696,Voltage Leap Attack Hard,Domina the Blade Dancer,T3,Aimed,,Aim at a target or direction — fires downrange
+2079740557,Dracula Spell Stone Circling Blood,Dracula Spell Stone Large Blood,T4,CloseRange,,Needs enemies next to / in front of you
+-2005193286,Arctic Leap,Dracula the Immortal King,T4,SelfCast,,Self/ally effect — works on press
+1128466169,Arctic Leap,Dracula the Immortal King,T4,Summon,,Summons units/allies — no aim needed
+-1940289109,Arctic Leap,Dracula the Immortal King,T4,Aimed,,Aim at a target or direction — fires downrange
+-1589312992,Arctic Leap,Dracula the Immortal King,T4,Aimed,,Aim at a target or direction — fires downrange
+-703291679,Arctic Leap,Dracula the Immortal King,T4,CloseRange,,Needs enemies next to / in front of you
+-1031474651,Arctic Leap,Dracula the Immortal King,T4,Movement,,Mobility / travel — no target needed
+-847327302,Primary Attack,Dracula the Immortal King,T4,CloseRange,Combo,Needs enemies next to / in front of you
+-1362190512,Primary Attack,Dracula the Immortal King,T4,CloseRange,,Needs enemies next to / in front of you
+-1473399128,Shockwave,Dracula the Immortal King,T4,Aimed,Combo,Aim at a target or direction — fires downrange
+364141768,Shockwave,Dracula the Immortal King,T4,Aimed,Combo,Aim at a target or direction — fires downrange
+837193552,Spectral Leap,Dracula the Immortal King,T4,Movement,,Mobility / travel — no target needed
+-2103202975,Spectral Leap,Dracula the Immortal King,T4,Movement,,Mobility / travel — no target needed
+2121218473,Spectral Strike,Dracula the Immortal King,T4,Summon,Channel,Summons units/allies — no aim needed
+-1765846328,Vampire Dracula Blood Shower,Dracula the Immortal King,T4,Aimed,,Aim at a target or direction — fires downrange
+-412600077,Vampire Dracula Dash Left,Dracula the Immortal King,T4,CloseRange,,Needs enemies next to / in front of you
+411852610,Vampire Dracula Dash Right,Dracula the Immortal King,T4,CloseRange,,Needs enemies next to / in front of you
+-618038480,Vampire Dracula Side Step Left,Dracula the Immortal King,T4,CloseRange,,Needs enemies next to / in front of you
+1915068828,Vampire Dracula Side Step Right,Dracula the Immortal King,T4,CloseRange,,Needs enemies next to / in front of you
+1270706044,Veil of Blood,Dracula the Immortal King,T4,Movement,Channel,Mobility / travel — no target needed
+-1924032736,Primary Attack,Dreadhorn,T3,CloseRange,Channel,Needs enemies next to / in front of you
+-1362226779,Primary Attack,Dreadhorn,T3,CloseRange,Combo,Needs enemies next to / in front of you
+-2081714952,Primary Attack,Dreadhorn,T3,CloseRange,,Needs enemies next to / in front of you
+1267543813,Bandit Stone Breaker VBlood Reinforcement,Errol the Stonebreaker,T1,Summon,,Summons units/allies — no aim needed
+1688748795,Primary Attack,Errol the Stonebreaker,T1,CloseRange,Channel,Needs enemies next to / in front of you
+2078583785,Primary Attack,Errol the Stonebreaker,T1,Aimed,,Aim at a target or direction — fires downrange
+1684865572,Primary Attack,Errol the Stonebreaker,T1,CloseRange,,Needs enemies next to / in front of you
+593979922,Primary Attack,Errol the Stonebreaker,T1,CloseRange,Channel,Needs enemies next to / in front of you
+-96620724,Primary Attack,Errol the Stonebreaker,T1,Aimed,,Aim at a target or direction — fires downrange
+-331113507,Primary Attack,Errol the Stonebreaker,T1,CloseRange,,Needs enemies next to / in front of you
+352570759,Legion Assassin Throw,Exsanguinator,T4,Aimed,,Aim at a target or direction — fires downrange
+329043640,Primary Attack,Exsanguinator,T4,CloseRange,Combo,Needs enemies next to / in front of you
+2138222166,Primary Attack,Exsanguinator,T4,CloseRange,,Needs enemies next to / in front of you
+-2049927912,Primary Attack,Exsanguinator,T4,CloseRange,,Needs enemies next to / in front of you
+-1762655324,Primary Attack,Exsanguinator,T4,CloseRange,,Needs enemies next to / in front of you
+-55735320,Primary Attack,Exsanguinator,T4,CloseRange,,Needs enemies next to / in front of you
+-1401138411,Spectral Strike,Exsanguinator,T4,Movement,,Mobility / travel — no target needed
+-53726244,Spectral Strike,Exsanguinator,T4,Movement,,Mobility / travel — no target needed
+-294731102,Spectral Strike,Exsanguinator,T4,Movement,,Mobility / travel — no target needed
+1309712000,Paladin Fallen Angel Bubble Popper,Fallen Angel,T4,Aimed,Channel,Aim at a target or direction — fires downrange
+-1364891068,Paladin Fallen Angel Dash,Fallen Angel,T4,Aimed,,Aim at a target or direction — fires downrange
+-8655403,Primary Attack,Fallen Angel,T4,CloseRange,Combo|Channel,Needs enemies next to / in front of you
+-1629569043,Primary Attack,Fallen Angel,T1,Summon,Combo|Channel,Summons units/allies — no aim needed
+-1643450845,Unholy Fallen Angel Dash,Fallen Angel,T1,Summon,,Summons units/allies — no aim needed
+1850515789,Primary Attack,Farmer,T2,CloseRange,,Needs enemies next to / in front of you
+-1601441951,Bandit Fisherman Feed Serpent Lineup,Finn the Fisherman,T2,SelfCast,,Self/ally effect — works on press
+-1657698157,Bandit Fisherman Feed Serpent Lineup,Finn the Fisherman,T2,SelfCast,,Self/ally effect — works on press
+-228936316,Bandit Fisherman Feed Serpent Lineup,Finn the Fisherman,T2,SelfCast,,Self/ally effect — works on press
+514628041,Bandit Fisherman Feed Serpent Lineup Hard,Finn the Fisherman,T2,SelfCast,,Self/ally effect — works on press
+-2096565232,Bandit Fisherman Fishing Blowfish,Finn the Fisherman,T2,SelfCast,,Self/ally effect — works on press
+-82547339,Bandit Fisherman Fishing Lineup,Finn the Fisherman,T2,SelfCast,,Self/ally effect — works on press
+396802528,Bandit Fisherman Fishing Old Boot,Finn the Fisherman,T2,SelfCast,,Self/ally effect — works on press
+647582679,Bandit Fisherman Fishing Piranhas,Finn the Fisherman,T2,SelfCast,,Self/ally effect — works on press
+571532506,Bandit Fisherman Serpent Feed,Finn the Fisherman,T2,CloseRange,Channel,Needs enemies next to / in front of you
+-405467076,Bandit Fisherman Serpent Feed Hard,Finn the Fisherman,T2,CloseRange,Channel,Needs enemies next to / in front of you
+1516349451,Primary Attack,Finn the Fisherman,T2,CloseRange,Combo,Needs enemies next to / in front of you
+1238091894,Cultist Projectile,Flame Fanatic,T3,Aimed,,Aim at a target or direction — fires downrange
+14947666,Shriek,Flame Fanatic,T3,CloseRange,,Needs enemies next to / in front of you
+340686786,Mutant Flesh Golem Bulldoze,Flesh Golem,T4,CloseRange,Channel,Needs enemies next to / in front of you
+-79098693,Primary Attack,Flesh Golem,T4,CloseRange,Channel,Needs enemies next to / in front of you
+1459248190,Primary Attack,Flesh Golem,T4,CloseRange,,Needs enemies next to / in front of you
+-1485105952,Primary Attack,Flesh Golem,T4,CloseRange,,Needs enemies next to / in front of you
+-736079997,Primary Attack,Flesh Golem,T4,CloseRange,Channel,Needs enemies next to / in front of you
+979394873,Primary Attack,Footman,T4,CloseRange,,Needs enemies next to / in front of you
+-1425167877,Primary Attack,Forest Dweller,T1,Summon,Channel,Summons units/allies — no aim needed
+1841930998,Primary Attack,Forest Dweller,T1,CloseRange,,Needs enemies next to / in front of you
+1713280509,Spider Forest Webbing,Forest Dweller,T1,CloseRange,,Needs enemies next to / in front of you
+-292254536,Primary Attack,Forest Spawnling,T1,CloseRange,,Needs enemies next to / in front of you
+-597391921,Primary Attack,Foulrot the Soultaker,T3,CloseRange,,Needs enemies next to / in front of you
+-281508142,Shadow Meld,Foulrot the Soultaker,T3,SelfCast,,Self/ally effect — works on press
+-1267641072,Primary Attack,Frost Wolf,T3,CloseRange,Combo,Needs enemies next to / in front of you
+-83187650,Wolf Winter Dash Attack,Frost Wolf,T3,CloseRange,,Needs enemies next to / in front of you
+54541608,Primary Attack,Frostmaw the Mountain Terror,T3,Movement,,Mobility / travel — no target needed
+203761859,Primary Attack,Frostmaw the Mountain Terror,T3,CloseRange,,Needs enemies next to / in front of you
+929369353,Primary Attack,Frostmaw the Mountain Terror,T3,CloseRange,,Needs enemies next to / in front of you
+-496233120,Primary Attack,Frostmaw the Mountain Terror,T3,Movement,,Mobility / travel — no target needed
+-2029387940,Primary Attack,Frostmaw the Mountain Terror,T3,Movement,,Mobility / travel — no target needed
+-1683730497,Primary Attack,Frostmaw the Mountain Terror,T3,Aimed,Combo,Aim at a target or direction — fires downrange
+1568904735,Primary Attack,Frostmaw the Mountain Terror,T3,CloseRange,Combo,Needs enemies next to / in front of you
+-2090815764,Primary Attack,Frostmaw the Mountain Terror,T3,CloseRange,Channel,Needs enemies next to / in front of you
+495259674,Wendigo Ice Beam First,Frostmaw the Mountain Terror,T3,CloseRange,,Needs enemies next to / in front of you
+-1986179833,Wendigo Leap Attack,Frostmaw the Mountain Terror,T3,Movement,,Mobility / travel — no target needed
+-1826323796,Primary Attack,Gatherer,T1,CloseRange,Combo,Needs enemies next to / in front of you
+257841890,Gloomrot Spider Tank Gattler Bomb Hatch,Gattler,T4,CloseRange,,Needs enemies next to / in front of you
+-633982282,Gloomrot Spider Tank Gattler Minigun,Gattler,T4,Aimed,Channel,Aim at a target or direction — fires downrange
+938684260,Arctic Leap,General Cassius the Betrayer,T3,Movement,,Mobility / travel — no target needed
+-604910466,Arctic Leap,General Cassius the Betrayer,T3,Aimed,,Aim at a target or direction — fires downrange
+-1139777657,Blood Rage,General Cassius the Betrayer,T3,CloseRange,,Needs enemies next to / in front of you
+-1298764600,Corrupted Skull,General Cassius the Betrayer,T3,Summon,,Summons units/allies — no aim needed
+-2126197617,Great Cleaver,General Cassius the Betrayer,T3,CloseRange,,Needs enemies next to / in front of you
+416744805,High Lord Raise Dead,General Cassius the Betrayer,T3,Summon,,Summons units/allies — no aim needed
+-328302080,Primary Attack,General Cassius the Betrayer,T3,CloseRange,Combo,Needs enemies next to / in front of you
+851287157,Whirlwind,General Cassius the Betrayer,T3,CloseRange,,Needs enemies next to / in front of you
+-926355648,Cold Snap,General Elena the Hollow,T3,SelfCast,,Self/ally effect — works on press
+953519927,Ice Nova,General Elena the Hollow,T3,CloseRange,,Needs enemies next to / in front of you
+1691254929,Ice Nova,General Elena the Hollow,T3,CloseRange,,Needs enemies next to / in front of you
+1064969109,Ice Ranger Jump Down,General Elena the Hollow,T3,Movement,,Mobility / travel — no target needed
+1431473799,Ice Ranger Tower Of Frost,General Elena the Hollow,T3,CloseRange,Channel,Needs enemies next to / in front of you
+2057952818,Ice Ranger Tower Of Frost Low Health,General Elena the Hollow,T3,CloseRange,Channel,Needs enemies next to / in front of you
+1766924388,Primary Attack,General Elena the Hollow,T3,Aimed,,Aim at a target or direction — fires downrange
+-808864212,Primary Attack,General Elena the Hollow,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+-1770479364,Primary Attack,General Elena the Hollow,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+-336633586,Primary Attack,General Elena the Hollow,T3,Aimed,,Aim at a target or direction — fires downrange
+765386506,Rain of Bolts,General Elena the Hollow,T3,CloseRange,,Needs enemies next to / in front of you
+-354379679,Veil of Frost,General Elena the Hollow,T3,Movement,,Mobility / travel — no target needed
+1826128809,Arctic Leap,General Valencia the Depraved,T4,Aimed,,Aim at a target or direction — fires downrange
+-1759227484,Arctic Leap,General Valencia the Depraved,T4,Movement,,Mobility / travel — no target needed
+992015964,Primary Attack,General Valencia the Depraved,T4,CloseRange,Combo,Needs enemies next to / in front of you
+-1730693034,Primary Attack,General Valencia the Depraved,T4,Aimed,,Aim at a target or direction — fires downrange
+-1069881409,Primary Attack,General Valencia the Depraved,T4,Movement,,Mobility / travel — no target needed
+-503137581,Vampire Blood Knight Maiden Lineup,General Valencia the Depraved,T4,SelfCast,,Self/ally effect — works on press
+-1920828971,Vampire Blood Knight Summon Crimson Maiden,General Valencia the Depraved,T4,Summon,,Summons units/allies — no aim needed
+-1058201566,Frenzy,Ghost Assassin,T3,CloseRange,Channel,Needs enemies next to / in front of you
+558343424,Primary Attack,Ghost Assassin,T3,CloseRange,Combo,Needs enemies next to / in front of you
+-544864084,Primary Attack,Ghost Assassin,T3,CloseRange,Channel,Needs enemies next to / in front of you
+793860757,Primary Attack,Ghost Assassin,T3,CloseRange,Combo,Needs enemies next to / in front of you
+1323999965,Primary Attack,Ghost Assassin,T3,CloseRange,Combo,Needs enemies next to / in front of you
+1700777111,Primary Attack,Ghost Assassin,T3,CloseRange,Combo,Needs enemies next to / in front of you
+575048784,Primary Attack,Ghost Assassin,T3,CloseRange,Combo,Needs enemies next to / in front of you
+57588514,Primary Attack,Ghost Assassin,T3,CloseRange,,Needs enemies next to / in front of you
+1791635791,Primary Attack,Ghost Assassin,T3,CloseRange,,Needs enemies next to / in front of you
+236831977,Primary Attack,Ghost Assassin,T3,CloseRange,,Needs enemies next to / in front of you
+-923762386,Primary Attack,Ghost Assassin,T3,CloseRange,,Needs enemies next to / in front of you
+1166337981,Undead Cursed Smith Floating Spear Spear Thrust,Ghost Assassin,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+1835500377,X-Strike,Ghost Assassin,T3,Aimed,,Aim at a target or direction — fires downrange
+-1802963726,Militia Crossbow,Ghost Crossbowman,T3,Aimed,,Aim at a target or direction — fires downrange
+-932485064,Undead Ghost Militia Crossbow,Ghost Crossbowman,T3,Aimed,,Aim at a target or direction — fires downrange
+-2092537748,Primary Attack,Ghost Guardian,T3,CloseRange,Combo,Needs enemies next to / in front of you
+955484879,Primary Attack,Ghost Guardian,T3,CloseRange,,Needs enemies next to / in front of you
+1059734295,Primary Attack,Ghost Guardian,T3,CloseRange,,Needs enemies next to / in front of you
+-1967657578,Primary Attack,Ghost Warrior,T3,CloseRange,Combo,Needs enemies next to / in front of you
+-1099406988,Dracula Shadow Bat Swarm Dash,Giant Bat,T4,Aimed,,Aim at a target or direction — fires downrange
+5164221,Primary Attack,Giant Bat,T3,CloseRange,,Needs enemies next to / in front of you
+1854645901,Giant Crow Dash,Giant Crow,T3,Aimed,,Aim at a target or direction — fires downrange
+-1007898441,Primary Attack,Giant Rat,T1,CloseRange,,Needs enemies next to / in front of you
+1439273397,Arctic Leap,Gorecrusher the Behemoth,T4,Aimed,,Aim at a target or direction — fires downrange
+-1574537639,Arctic Leap,Gorecrusher the Behemoth,T4,CloseRange,,Needs enemies next to / in front of you
+-130931989,Arctic Leap,Gorecrusher the Behemoth,T4,Aimed,,Aim at a target or direction — fires downrange
+-430375110,Arctic Leap,Gorecrusher the Behemoth,T4,Summon,,Summons units/allies — no aim needed
+556335075,Cursed Mountain Beast Dash Attack,Gorecrusher the Behemoth,T4,Aimed,,Aim at a target or direction — fires downrange
+2067796423,Primary Attack,Gorecrusher the Behemoth,T4,CloseRange,Channel,Needs enemies next to / in front of you
+-1771783202,Primary Attack,Gorecrusher the Behemoth,T4,CloseRange,Combo,Needs enemies next to / in front of you
+1221980502,Primary Attack,Gorecrusher the Behemoth,T4,CloseRange,Combo,Needs enemies next to / in front of you
+-749389155,Secondary Attack,Gorecrusher the Behemoth,T4,CloseRange,,Needs enemies next to / in front of you
+-453331838,Secondary Attack,Gorecrusher the Behemoth,T4,CloseRange,,Needs enemies next to / in front of you
+-1749428209,Bandit Stalker VBlood Reinforcement,Grayson the Armourer,T1,Summon,,Summons units/allies — no aim needed
+65616384,Primary Attack,Grayson the Armourer,T1,CloseRange,Channel,Needs enemies next to / in front of you
+-66951019,Primary Attack,Grayson the Armourer,T1,CloseRange,Channel,Needs enemies next to / in front of you
+-225237355,Arctic Leap,Grethel the Glassblower,T3,CloseRange,Channel,Needs enemies next to / in front of you
+800186323,Militia Glassblower Deep Breath,Grethel the Glassblower,T3,CloseRange,Channel,Needs enemies next to / in front of you
+-1174644772,Militia Glassblower Deep Breath Hard,Grethel the Glassblower,T3,CloseRange,Channel,Needs enemies next to / in front of you
+437523703,Dasher Dash,Harpy Dasher,T4,Aimed,,Aim at a target or direction — fires downrange
+705089395,Dasher Dive,Harpy Dasher,T4,CloseRange,,Needs enemies next to / in front of you
+191219781,Primary Attack,Harpy Dasher,T4,CloseRange,,Needs enemies next to / in front of you
+1524767753,Primary Attack,Harpy Dasher,T4,CloseRange,,Needs enemies next to / in front of you
+1245308829,Primary Attack,Harpy Scratcher,T4,CloseRange,,Needs enemies next to / in front of you
+769558056,Primary Attack,Harpy Scratcher,T4,CloseRange,,Needs enemies next to / in front of you
+725170243,Sorceress AoE,Harpy Sorceress,T4,CloseRange,,Needs enemies next to / in front of you
+1075000607,Sorceress Projectile,Harpy Sorceress,T4,Aimed,,Aim at a target or direction — fires downrange
+-559662270,Discharge,Henry Blackbrew the Doctor,T4,Movement,,Mobility / travel — no target needed
+98352404,Gloomrot The Professor Discharge,Henry Blackbrew the Doctor,T4,SelfCast,,Self/ally effect — works on press
+-506564570,Gloomrot The Professor Imploding Orb,Henry Blackbrew the Doctor,T4,CloseRange,Channel,Needs enemies next to / in front of you
+-2097618568,Gloomrot The Professor Multi Lazer,Henry Blackbrew the Doctor,T4,Aimed,Channel,Aim at a target or direction — fires downrange
+922412053,Gloomrot The Professor Multi Lazer Hard,Henry Blackbrew the Doctor,T4,Aimed,Channel,Aim at a target or direction — fires downrange
+-367310449,Ataque Primário,Homem,T3,CloseRange,,Needs enemies next to / in front of you
+-117718548,Primary Attack,Ink Demon,T2,CloseRange,,Needs enemies next to / in front of you
+-1294182358,VHunter Jade Caltrops,Jade the Vampire Hunter,T3,Aimed,,Aim at a target or direction — fires downrange
+1372353064,VHunter Jade Caltrops Hard,Jade the Vampire Hunter,T3,Aimed,,Aim at a target or direction — fires downrange
+-526118698,VHunter Jade Disabling Shot,Jade the Vampire Hunter,T3,Aimed,,Aim at a target or direction — fires downrange
+-2013216961,VHunter Jade Revolvers,Jade the Vampire Hunter,T3,Aimed,Combo,Aim at a target or direction — fires downrange
+1196517991,VHunter Jade Revolvers,Jade the Vampire Hunter,T3,Aimed,Combo,Aim at a target or direction — fires downrange
+688350142,VHunter Jade Revolvers,Jade the Vampire Hunter,T3,Aimed,Combo,Aim at a target or direction — fires downrange
+-1783782358,VHunter Jade Revolvers,Jade the Vampire Hunter,T3,Aimed,Combo,Aim at a target or direction — fires downrange
+-1884688827,VHunter Jade Snipe,Jade the Vampire Hunter,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+-1030552412,VHunter Jade Snipe Hard,Jade the Vampire Hunter,T3,Aimed,,Aim at a target or direction — fires downrange
+-1871956083,Bandit Frostt Arrow Multi Shot Hard,Keely the Frost Archer,T1,Aimed,Channel,Aim at a target or direction — fires downrange
+-557111974,Primary Attack,Knight,T4,CloseRange,Combo,Needs enemies next to / in front of you
+-1462154593,Primary Attack,Knight,T4,CloseRange,,Needs enemies next to / in front of you
+-1330909978,Primary Attack,Knight,T4,CloseRange,Channel,Needs enemies next to / in front of you
+-1900214847,Primary Attack,Knight,T4,CloseRange,Combo,Needs enemies next to / in front of you
+377144854,Primary Attack,Knight,T4,CloseRange,,Needs enemies next to / in front of you
+-1709055711,Bear Dire Dash,Kodia the Ferocious Bear,T2,CloseRange,,Needs enemies next to / in front of you
+-1972594588,Primary Attack,Kodia the Ferocious Bear,T2,CloseRange,Channel,Needs enemies next to / in front of you
+-1559349374,Primary Attack,Kodia the Ferocious Bear,T2,Summon,Channel,Summons units/allies — no aim needed
+234226418,Undead Leader Chain Hook Projectile,Kriig il generale dei non morti,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+948587795,Arctic Leap,Kriig the Undead General,T3,CloseRange,Channel,Needs enemies next to / in front of you
+211628325,Primary Attack,Kriig the Undead General,T3,CloseRange,Channel,Needs enemies next to / in front of you
+-749335766,Primary Attack,Labworker,T3,CloseRange,Combo,Needs enemies next to / in front of you
+-2010697707,Bandit Foreman Crossbow,Lesser Blood Soul,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+-1100933071,Bandit Foreman Crossbow Blood Rage,Lesser Blood Soul,T3,Aimed,,Aim at a target or direction — fires downrange
+46962343,Bandit Foreman Crossbow Hard,Lesser Blood Soul,T3,Aimed,,Aim at a target or direction — fires downrange
+-1326540020,Bandit Foreman Rapid Shot,Lesser Blood Soul,T3,Aimed,,Aim at a target or direction — fires downrange
+-1696612225,Bandit Foreman Rapid Shot Hard,Lesser Blood Soul,T3,Aimed,,Aim at a target or direction — fires downrange
+1914101495,Bandit Foreman Reinforcement,Lesser Blood Soul,T3,Summon,Channel,Summons units/allies — no aim needed
+2130985273,Bandit Foreman Throw Net,Lesser Blood Soul,T3,CloseRange,,Needs enemies next to / in front of you
+-892431821,Blood Rage,Lesser Blood Soul,T3,CloseRange,,Needs enemies next to / in front of you
+-1773431654,Dash,Lesser Blood Soul,T3,Movement,,Mobility / travel — no target needed
+2145809434,Mist Walk,Lesser Blood Soul,T3,Movement,,Mobility / travel — no target needed
+-1036943907,Poloma Pixie,Lesser Blood Soul,T3,Summon,,Summons units/allies — no aim needed
+-321651703,Poloma Wolf,Lesser Blood Soul,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+-939006306,Primary Attack,Lesser Blood Soul,T3,CloseRange,Channel,Needs enemies next to / in front of you
+1187864883,Rain of Bolts,Lesser Blood Soul,T3,CloseRange,Channel,Needs enemies next to / in front of you
+-323939446,Undead Bishop Of Death Chain Bolt Hard,Lesser Blood Soul,T3,Aimed,,Aim at a target or direction — fires downrange
+622287046,Undead Bishop Of Death Corpse Party,Lesser Blood Soul,T3,CloseRange,,Needs enemies next to / in front of you
+-184530068,Undead Bishop Of Death Corpse Party Hard,Lesser Blood Soul,T3,CloseRange,,Needs enemies next to / in front of you
+780432315,Undead Bishop Of Death Projectile,Lesser Blood Soul,T3,Aimed,,Aim at a target or direction — fires downrange
+-1181691042,Bandit Deadeye Chaos Nuke Hard,Lidia the Chaos Archer,T2,Aimed,,Aim at a target or direction — fires downrange
+642767950,Bandit Deadeye Chaosbarrage Hard,Lidia the Chaos Archer,T2,Aimed,Channel,Aim at a target or direction — fires downrange
+-836774616,Bandit Deadeye Chaosstorm Hard,Lidia the Chaos Archer,T2,Aimed,,Aim at a target or direction — fires downrange
+-912372242,Dash,Lidia the Chaos Archer,T2,Movement,,Mobility / travel — no target needed
+574933909,Gloomrot Spider Tank Lightning Rod Heavy Beam,Lightning Protector,T4,CloseRange,Channel,Needs enemies next to / in front of you
+-1537394790,Gloomrot Spider Tank Lightning Rod Light Shot,Lightning Protector,T4,Aimed,Channel,Aim at a target or direction — fires downrange
+1761660947,Lightweaver Holy Bolt,Lightweaver,T4,Aimed,,Aim at a target or direction — fires downrange
+-284360089,Spectral Strike,Lightweaver,T4,Movement,,Mobility / travel — no target needed
+1891756809,Spectral Strike,Lightweaver,T4,Movement,,Mobility / travel — no target needed
+1450902136,Arctic Leap,Lord Styx the Night Champion,T4,Aimed,,Aim at a target or direction — fires downrange
+-66831677,Arctic Leap,Lord Styx the Night Champion,T4,Aimed,,Aim at a target or direction — fires downrange
+1146467217,Arctic Leap,Lord Styx the Night Champion,T4,Aimed,,Aim at a target or direction — fires downrange
+-597709516,Arctic Leap,Lord Styx the Night Champion,T4,Summon,Channel,Summons units/allies — no aim needed
+-254080557,Bat Vampire Bat Storm,Lord Styx the Night Champion,T4,CloseRange,Channel,Needs enemies next to / in front of you
+716346677,Bat Vampire Bat Swarm,Lord Styx the Night Champion,T4,Aimed,Channel,Aim at a target or direction — fires downrange
+1416508240,Bat Vampire Night Dash,Lord Styx the Night Champion,T4,Movement,,Mobility / travel — no target needed
+-1648920159,Bat Vampire Night Dash Dash,Lord Styx the Night Champion,T4,CloseRange,,Needs enemies next to / in front of you
+-1965562520,Primary Attack,Lord Styx the Night Champion,T4,CloseRange,Combo,Needs enemies next to / in front of you
+-1698981316,Primary Attack,Lord Styx the Night Champion,T4,SelfCast,Channel,Self/ally effect — works on press
+-1232816408,Arch Mage Lightning Arc,Mairwyn az Elementalista,T4,Aimed,,Aim at a target or direction — fires downrange
+1520734123,Arch Mage Crystal Lance,Mairwyn the Elementalist,T4,Aimed,Combo,Aim at a target or direction — fires downrange
+1187623532,Arch Mage Crystal Lance Charged,Mairwyn the Elementalist,T4,Aimed,Channel,Aim at a target or direction — fires downrange
+1217615468,Arch Mage Fire Spinner,Mairwyn the Elementalist,T4,Aimed,Channel,Aim at a target or direction — fires downrange
+1365358996,Arch Mage Lightning Curse,Mairwyn the Elementalist,T4,Aimed,,Aim at a target or direction — fires downrange
+-2025881745,Primary Attack,Mairwyn the Elementalist,T4,Summon,Channel,Summons units/allies — no aim needed
+-1008562275,Arctic Leap,Maja the Dark Savant,T3,CloseRange,Channel,Needs enemies next to / in front of you
+-198012170,Militia Scribe Cutting Parchment,Maja the Dark Savant,T3,Aimed,,Aim at a target or direction — fires downrange
+-1104025162,Militia Scribe Quick Attack,Maja the Dark Savant,T3,Aimed,Combo|Channel,Aim at a target or direction — fires downrange
+-186690512,Militia Scribe Ranged Attack,Maja the Dark Savant,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+2019689688,Militia Scribe Razor Parchment,Maja the Dark Savant,T3,Aimed,Combo,Aim at a target or direction — fires downrange
+-592301846,Primary Attack,Maja the Dark Savant,T3,Summon,Channel,Summons units/allies — no aim needed
+-1922948406,Primary Attack,Maja the Dark Savant,T3,CloseRange,,Needs enemies next to / in front of you
+780372716,Man Trap Projectile,Mantrap,T1,Aimed,Channel,Aim at a target or direction — fires downrange
+-359326766,Man Trap Tripple Projectile,Mantrap,T2,Aimed,Combo,Aim at a target or direction — fires downrange
+105274396,Primary Attack,Mantrap,T1,CloseRange,Channel,Needs enemies next to / in front of you
+1238529741,Primary Attack,Mantrap,T2,CloseRange,Channel,Needs enemies next to / in front of you
+-1729075022,Cursed Witch Explode Mosquito,Matka the Curse Weaver,T4,CloseRange,,Needs enemies next to / in front of you
+1511001063,Cursed Witch Witch Bolt,Matka the Curse Weaver,T4,Aimed,,Aim at a target or direction — fires downrange
+1860769470,Shriek,Matka the Curse Weaver,T4,CloseRange,Channel,Needs enemies next to / in front of you
+1898980277,Cursed Witch Corrupted Ghouls,"Matka, die Fluchweberin",T4,Summon,,Summons units/allies — no aim needed
+764619540,Militia Light Arrow Basic Shot,Meredith the Bright Archer,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+1181965808,Militia Light Arrow Hard Guided Arrow,Meredith the Bright Archer,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+-1509483896,Militia Light Arrow Heal Shot,Meredith the Bright Archer,T3,Aimed,,Aim at a target or direction — fires downrange
+-1282136902,Militia Light Arrow Quick Shot,Meredith the Bright Archer,T3,Aimed,,Aim at a target or direction — fires downrange
+-1286987800,Militia Light Arrow Snipe,Meredith the Bright Archer,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+336380612,Militia Light Arrow Spawn Minions,Meredith the Bright Archer,T3,Summon,,Summons units/allies — no aim needed
+-494771621,Militia Light Arrow Throw,Meredith the Bright Archer,T3,CloseRange,,Needs enemies next to / in front of you
+-202704002,Spectral Strike,Meredith the Bright Archer,T3,CloseRange,,Needs enemies next to / in front of you
+2005435470,Birincil Saldırı,Milis Tüfekçisi,T4,CloseRange,,Needs enemies next to / in front of you
+1870073064,Militia Call Adds,Milis Yüzbaşısı Octavian,T3,Summon,Channel,Summons units/allies — no aim needed
+-1102042167,Militia Longbow Fire Arrow,Militia Archer,T2,Aimed,Channel,Aim at a target or direction — fires downrange
+-351745987,Militia Longbowman Ranged Attack,Militia Archer,T2,Aimed,,Aim at a target or direction — fires downrange
+-893194478,Primary Attack,Militia Constraining Pole,T4,CloseRange,,Needs enemies next to / in front of you
+931534835,Primary Attack,Militia Guard,T2,CloseRange,Combo,Needs enemies next to / in front of you
+-668603830,Primary Attack,Militia Guard,T2,CloseRange,,Needs enemies next to / in front of you
+994921501,Primary Attack,Militia Guard,T2,CloseRange,Combo,Needs enemies next to / in front of you
+-1298478938,Spectral Wolf,Militia Guard,T3,Aimed,,Aim at a target or direction — fires downrange
+-116877786,Militia Torch Throw,Militia Torchbearer,T2,CloseRange,,Needs enemies next to / in front of you
+471046053,Primary Attack,Militia Torchbearer,T2,CloseRange,Combo,Needs enemies next to / in front of you
+892342913,Militia Heavy Dash,Militia Veteran,T3,CloseRange,,Needs enemies next to / in front of you
+-1528770669,Primary Attack,Militia Veteran,T3,CloseRange,,Needs enemies next to / in front of you
+951831242,Primary Attack,Militia Veteran,T3,CloseRange,,Needs enemies next to / in front of you
+900927411,Primary Attack,Miner,T1,CloseRange,,Needs enemies next to / in front of you
+2039677643,Primary Attack,Miner,T1,CloseRange,Combo,Needs enemies next to / in front of you
+1599972576,Primary Attack,Miner,T2,CloseRange,,Needs enemies next to / in front of you
+1883230955,Moose Charge,Moose,T1,CloseRange,Channel,Needs enemies next to / in front of you
+250913160,Moose Charge Winter,Moose,T3,CloseRange,Channel,Needs enemies next to / in front of you
+-764767694,Primary Attack,Moose,T3,CloseRange,Channel,Needs enemies next to / in front of you
+-424388071,Matriarch AoE,Morian the Stormwing Matriarch,T4,CloseRange,,Needs enemies next to / in front of you
+-12917778,Matriarch Dash,Morian the Stormwing Matriarch,T4,Aimed,,Aim at a target or direction — fires downrange
+1088363798,Matriarch Dash HARD,Morian the Stormwing Matriarch,T4,Aimed,,Aim at a target or direction — fires downrange
+-514516956,Matriarch Projectile,Morian the Stormwing Matriarch,T4,Aimed,,Aim at a target or direction — fires downrange
+1212947823,Matriarch Soar Travel,Morian the Stormwing Matriarch,T4,Summon,,Summons units/allies — no aim needed
+341041700,Primary Attack,Morian the Stormwing Matriarch,T4,CloseRange,,Needs enemies next to / in front of you
+-1389186216,Primary Attack,Morian the Stormwing Matriarch,T4,CloseRange,,Needs enemies next to / in front of you
+-1979483677,Primary Attack,Mosquito,T3,CloseRange,,Needs enemies next to / in front of you
+1451199905,Primary Attack,Mosquito,T3,CloseRange,,Needs enemies next to / in front of you
+1281316565,Primary Attack,Mugger,T1,CloseRange,Combo,Needs enemies next to / in front of you
+1271143604,Mutant Spitter Projectile,Mutant Spitter,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+1771061239,Primary Attack,Mutant Spitter,T3,CloseRange,,Needs enemies next to / in front of you
+616732424,Primary Attack,Mutated Bear,T4,CloseRange,,Needs enemies next to / in front of you
+-44955695,Primary Attack,Mutated Bear,T4,CloseRange,Channel,Needs enemies next to / in front of you
+-77977745,Primary Attack,Mutated Bear,T4,CloseRange,,Needs enemies next to / in front of you
+-1869011274,Primary Attack,Mutated Wolf,T4,CloseRange,Combo,Needs enemies next to / in front of you
+2000340068,Wolf Mutant Dash Attack,Mutated Wolf,T4,CloseRange,,Needs enemies next to / in front of you
+-265839081,Scratcher Dash,Mutilatrice harpie,T4,Aimed,,Aim at a target or direction — fires downrange
+-70575944,Primary Attack,Nibbles the Putrid Rat,T2,CloseRange,,Needs enemies next to / in front of you
+1450204157,Primary Attack,Nibbles the Putrid Rat,T2,CloseRange,,Needs enemies next to / in front of you
+-1024883556,Primary Attack,Nibbles the Putrid Rat,T2,CloseRange,Channel,Needs enemies next to / in front of you
+830495620,Vermin Dire Rat Rat Vanguard,Nibbles the Putrid Rat,T2,Summon,Channel,Summons units/allies — no aim needed
+-1125894381,Mist Walk,Nicholaus the Fallen,T2,Movement,,Mobility / travel — no target needed
+1837385563,Undead Priest Elite Projectile Hard,Nicholaus the Fallen,T2,Aimed,,Aim at a target or direction — fires downrange
+1414167161,Undead Priest Elite Raise Horde,Nicholaus the Fallen,T2,Summon,Channel,Summons units/allies — no aim needed
+14728131,Undead Priest Elite Projectile,"Nicholaus, el Caído",T2,Aimed,Channel,Aim at a target or direction — fires downrange
+-14207169,Primary Attack,Night Lurker,T3,CloseRange,,Needs enemies next to / in front of you
+-195118922,Primary Attack,Night Lurker,T3,CloseRange,,Needs enemies next to / in front of you
+1708209167,Primary Attack,Night Lurker,T3,CloseRange,,Needs enemies next to / in front of you
+-2036638378,Arctic Leap,Night Maiden,T3,Aimed,,Aim at a target or direction — fires downrange
+1941093851,Legion Night Maiden Seduce Lesser,Night Maiden,T3,CloseRange,Channel,Needs enemies next to / in front of you
+-1262881470,Primary Attack,Night Maiden,T3,CloseRange,,Needs enemies next to / in front of you
+-324538848,Primary Attack,Night Maiden,T3,CloseRange,Channel,Needs enemies next to / in front of you
+175670852,Primary Attack,Night Maiden,T3,CloseRange,,Needs enemies next to / in front of you
+951198708,Spectral Strike,Night Maiden,T3,Aimed,,Aim at a target or direction — fires downrange
+-1430256354,Corrupted Skull,Nightfall Edge,T3,Aimed,,Aim at a target or direction — fires downrange
+1115425417,Heart Strike,Nightfall Edge,T3,Aimed,,Aim at a target or direction — fires downrange
+-1526010521,Primary Attack,Nightmare,T4,CloseRange,Combo,Needs enemies next to / in front of you
+-1199987827,Nun Projectile,Nun,T2,Aimed,,Aim at a target or direction — fires downrange
+22263894,Primary Attack,Nun,T2,CloseRange,,Needs enemies next to / in front of you
+-1843696472,Arctic Leap,Octavian the Militia Captain,T3,Movement,,Mobility / travel — no target needed
+1946568656,Arctic Leap,Octavian the Militia Captain,T3,Movement,,Mobility / travel — no target needed
+-930424159,Militia Leader Leap Attack,Octavian the Militia Captain,T3,Movement,,Mobility / travel — no target needed
+-2003945269,Militia Leader Leap Attack Hard,Octavian the Militia Captain,T3,Aimed,,Aim at a target or direction — fires downrange
+-2015856259,Primary Attack,Octavian the Militia Captain,T3,CloseRange,,Needs enemies next to / in front of you
+-213757827,Primary Attack,Octavian the Militia Captain,T3,SelfCast,Channel,Self/ally effect — works on press
+-241312231,Primary Attack,Octavian the Militia Captain,T3,CloseRange,,Needs enemies next to / in front of you
+976341724,Primary Attack,Octavian the Militia Captain,T3,CloseRange,,Needs enemies next to / in front of you
+-1228302737,Primary Attack,Octavian the Militia Captain,T3,CloseRange,,Needs enemies next to / in front of you
+2142000031,Primary Attack,Octavian the Militia Captain,T3,Aimed,,Aim at a target or direction — fires downrange
+-746972983,Primary Attack,Octavian the Militia Captain,T3,Aimed,,Aim at a target or direction — fires downrange
+-735966107,Primary Attack,Octavian the Militia Captain,T3,Aimed,,Aim at a target or direction — fires downrange
+413176017,Paladin Dash,Paladin,T4,Aimed,,Aim at a target or direction — fires downrange
+-448018551,Primary Attack,Paladin,T4,CloseRange,,Needs enemies next to / in front of you
+1926314891,Primary Attack,Paladin,T4,CloseRange,Channel,Needs enemies next to / in front of you
+1212343160,Primary Attack,Paladin,T4,CloseRange,,Needs enemies next to / in front of you
+-626021308,Primary Attack,Paladin,T4,CloseRange,,Needs enemies next to / in front of you
+922419960,Birincil Saldırı,Pirüpak Solarus,T4,CloseRange,,Needs enemies next to / in front of you
+-259433272,Pixie Projectile,Pixie,T2,Aimed,,Aim at a target or direction — fires downrange
+-39311902,Bandit Hunter Bow,Poacher,T1,Aimed,Channel,Aim at a target or direction — fires downrange
+564244811,Dash,Poacher,T1,Movement,,Mobility / travel — no target needed
+-1282606238,Church Of Light Priest Heal Bomb,Priest,T4,CloseRange,,Needs enemies next to / in front of you
+-292542362,Church Of Light Priest Projectile,Priest,T4,Aimed,Channel,Aim at a target or direction — fires downrange
+943885425,Church Of Light Priest Summon Pillar,Priest,T4,Summon,,Summons units/allies — no aim needed
+1244670975,Militia Call Adds Legion,Primal Blood Soul,T4,Summon,Channel,Summons units/allies — no aim needed
+1325722355,Mist Walk,Primal Blood Soul,T4,Summon,,Summons units/allies — no aim needed
+-127603789,Primary Attack,Primal Blood Soul,T4,CloseRange,,Needs enemies next to / in front of you
+1922493152,Primary Attack,Primal Blood Soul,T4,CloseRange,Channel,Needs enemies next to / in front of you
+698366326,Primary Attack,Primal Blood Soul,T4,CloseRange,,Needs enemies next to / in front of you
+936625846,Primary Attack,Primal Blood Soul,T4,CloseRange,,Needs enemies next to / in front of you
+-825962514,Primary Attack,Primal Blood Soul,T4,CloseRange,,Needs enemies next to / in front of you
+1343651850,Primary Attack,Primal Blood Soul,T4,CloseRange,,Needs enemies next to / in front of you
+2130811227,Primary Attack,Primal Blood Soul,T4,Summon,,Summons units/allies — no aim needed
+1274762079,Primary Attack,Primal Blood Soul,T4,CloseRange,,Needs enemies next to / in front of you
+-1532726733,Primary Attack,Primal Blood Soul,T4,CloseRange,,Needs enemies next to / in front of you
+1986068244,Primary Attack,Primal Blood Soul,T4,CloseRange,Channel,Needs enemies next to / in front of you
+1456136938,Primary Attack,Primal Blood Soul,T4,CloseRange,Combo,Needs enemies next to / in front of you
+-1422240708,Primary Attack,Primal Blood Soul,T4,CloseRange,,Needs enemies next to / in front of you
+94933870,Primary Attack,Primal Blood Soul,T4,CloseRange,Channel,Needs enemies next to / in front of you
+1573712465,Spider Queen AoE,Primal Blood Soul,T4,CloseRange,Channel,Needs enemies next to / in front of you
+-2109003637,Spider Queen PBAoE,Primal Blood Soul,T4,CloseRange,Channel,Needs enemies next to / in front of you
+-1448118517,Spider Queen Spawn Adds Gate Boss,Primal Blood Soul,T4,Summon,,Summons units/allies — no aim needed
+1499629710,Spider Queen Web Hook,Primal Blood Soul,T4,Aimed,,Aim at a target or direction — fires downrange
+193592408,Spider Queen Web Projectile,Primal Blood Soul,T4,Aimed,,Aim at a target or direction — fires downrange
+787702249,Undead Bishop Of Shadows Projectile,Primal Blood Soul,T4,Aimed,,Aim at a target or direction — fires downrange
+651637774,Undead Bishop Of Shadows Projectile Hard,Primal Blood Soul,T4,Aimed,,Aim at a target or direction — fires downrange
+461701172,Undead Bishop Of Shadows Shadow Soldier,Primal Blood Soul,T4,Summon,,Summons units/allies — no aim needed
+1621601748,Undead Infiltrator Knife Throw,Primal Blood Soul,T4,Aimed,Combo,Aim at a target or direction — fires downrange
+-39228843,Undead Infiltrator Knife Throw Hard,Primal Blood Soul,T4,Aimed,Combo,Aim at a target or direction — fires downrange
+-1601666166,Atak podstawowy,Przeklęty wilk,T3,CloseRange,,Needs enemies next to / in front of you
+-635085409,Gloomrot Pyro Flame Line,Pyro,T3,Aimed,,Aim at a target or direction — fires downrange
+-3835897,Bandit Tourok VBlood Call Reinforcements,Quincey the Bandit King,T2,Summon,,Summons units/allies — no aim needed
+840159262,Bandit Tourok VBlood Chaos Charge,Quincey the Bandit King,T2,CloseRange,,Needs enemies next to / in front of you
+82350674,Bandit Tourok VBlood Rage Of Chaos Charge,Quincey the Bandit King,T2,CloseRange,,Needs enemies next to / in front of you
+358187796,Bandit Tourok Weapon Throw Hard,Quincey the Bandit King,T2,Aimed,,Aim at a target or direction — fires downrange
+2003603501,Primary Attack,Quincey the Bandit King,T2,CloseRange,Channel,Needs enemies next to / in front of you
+-1854347593,Bandit Leader Call Wolf,Quincey the Marauder,T2,Summon,Channel,Summons units/allies — no aim needed
+920868547,Bandit Leader Strafe,Quincey the Marauder,T2,Aimed,,Aim at a target or direction — fires downrange
+1550497814,Bandit Leader Throw Net,Quincey the Marauder,T2,CloseRange,,Needs enemies next to / in front of you
+138056981,Dash,Quincey the Marauder,T2,Movement,,Mobility / travel — no target needed
+-1031367685,Attacco primario,Ragno instabile,T3,Summon,,Summons units/allies — no aim needed
+1779758273,Gloomrot Railgunner Snipe,Railgunner,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+286182923,Primary Attack,Railgunner,T3,CloseRange,,Needs enemies next to / in front of you
+-1970983747,Primary Attack,Rascal,T1,CloseRange,Combo,Needs enemies next to / in front of you
+-650383304,Primary Attack,Rat Horror,T3,CloseRange,,Needs enemies next to / in front of you
+1611191665,Militia Bishop Of Dunley Holy Beam,Raziel the Shepherd,T3,CloseRange,,Needs enemies next to / in front of you
+-1957047297,Militia Bishop Of Dunley Holy Beam Target Buff,Raziel the Shepherd,T3,CloseRange,,Needs enemies next to / in front of you
+368122726,Militia Bishop Of Dunley Projectile,Raziel the Shepherd,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+1674395967,Militia Bishop Of Dunley Summon Eye Of God,Raziel the Shepherd,T3,Summon,,Summons units/allies — no aim needed
+296313928,Militia Bishop Of Dunley Summon Pillar,Raziel the Shepherd,T3,Summon,,Summons units/allies — no aim needed
+1622839653,Rifleman Projectile,Rifleman,T4,Aimed,,Aim at a target or direction — fires downrange
+294532069,Arctic Leap,Rock Elemental,T3,Aimed,,Aim at a target or direction — fires downrange
+-560639220,Primary Attack,Rock Elemental,T3,CloseRange,,Needs enemies next to / in front of you
+-150520781,Rock Elemental Rollout,Rock Elemental,T3,CloseRange,,Needs enemies next to / in front of you
+32629003,Primary Attack,Rotting Ghoul,T1,CloseRange,Channel,Needs enemies next to / in front of you
+2122592609,Primary Attack,Ruffian,T3,CloseRange,,Needs enemies next to / in front of you
+-1436929556,Primary Attack,Scarecrow,T3,CloseRange,Combo,Needs enemies next to / in front of you
+382761265,Primary Attack,Scarecrow,T3,CloseRange,Channel,Needs enemies next to / in front of you
+594778109,Scarecrow Projectile,Scarecrow,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+741783094,Shadow Meld,Scarecrow,T3,SelfCast,,Self/ally effect — works on press
+2052063970,Gloomrot Sentry Officer Place Turret,Sentry Officer,T3,Summon,,Summons units/allies — no aim needed
+-466422619,Gloomrot Sentry Officer Shock Grenade,Sentry Officer,T3,Aimed,,Aim at a target or direction — fires downrange
+1971068020,Primary Attack,Sentry Officer,T3,CloseRange,Combo,Needs enemies next to / in front of you
+1024156492,Gloomrot Sentry Turret Ranged Attack,Sentry Turret,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+342417296,Gloomrot Sentry Turret Shock Field,Sentry Turret,T3,CloseRange,Channel,Needs enemies next to / in front of you
+530484088,Chaos Volley,Shadowkin,T3,Aimed,,Aim at a target or direction — fires downrange
+1617928948,Primary Attack,Shadowkin,T3,CloseRange,,Needs enemies next to / in front of you
+1487412876,Primary Attack,Shady Gem Dealer,T2,CloseRange,,Needs enemies next to / in front of you
+1110054537,Primary Attack,Shady Gem Dealer,T2,CloseRange,,Needs enemies next to / in front of you
+787005490,Primary Attack,Shady Goods Dealer,T2,CloseRange,,Needs enemies next to / in front of you
+-1844993528,Primary Attack,Shady Goods Dealer,T2,CloseRange,,Needs enemies next to / in front of you
+1022054621,Castle Man Axe Throw,Simon Belmont the Vampire Hunter,T4,Aimed,,Aim at a target or direction — fires downrange
+1302295192,Castle Man Dagger Projectile,Simon Belmont the Vampire Hunter,T4,Aimed,,Aim at a target or direction — fires downrange
+906463896,Castle Man Holy Beam,Simon Belmont the Vampire Hunter,T4,Aimed,Channel,Aim at a target or direction — fires downrange
+583436571,Castle Man Holy Beam Hard,Simon Belmont the Vampire Hunter,T4,Aimed,Channel,Aim at a target or direction — fires downrange
+-650079140,Castle Man Lasting Holy Water,Simon Belmont the Vampire Hunter,T4,CloseRange,,Needs enemies next to / in front of you
+761680482,Castle Man Spinning Cross,Simon Belmont the Vampire Hunter,T4,CloseRange,,Needs enemies next to / in front of you
+-296227812,Castle Man Tackle,Simon Belmont the Vampire Hunter,T4,CloseRange,,Needs enemies next to / in front of you
+874909393,Castle Man Tripple Spinning Cross,Simon Belmont the Vampire Hunter,T4,CloseRange,Combo|Channel,Needs enemies next to / in front of you
+-1736553762,Primary Attack,Simon Belmont the Vampire Hunter,T4,CloseRange,Combo,Needs enemies next to / in front of you
+-1272535312,Primary Attack,Simon Belmont the Vampire Hunter,T4,CloseRange,Combo,Needs enemies next to / in front of you
+-653938456,Primary Attack,Simon Belmont the Vampire Hunter,T4,CloseRange,,Needs enemies next to / in front of you
+-460221305,Primary Attack,Simon Belmont the Vampire Hunter,T4,CloseRange,,Needs enemies next to / in front of you
+-499397494,Primary Attack,Simon Belmont the Vampire Hunter,T4,CloseRange,Combo,Needs enemies next to / in front of you
+626219559,Primary Attack,Simon Belmont the Vampire Hunter,T4,CloseRange,Combo,Needs enemies next to / in front of you
+207057426,Spectral Strike,Simon Belmont the Vampire Hunter,T4,Aimed,,Aim at a target or direction — fires downrange
+1122774146,Spectral Strike,Simon Belmont the Vampire Hunter,T4,Aimed,,Aim at a target or direction — fires downrange
+-1068854418,VHunter Castle Man Chase Target Buff,Simon Belmont the Vampire Hunter,T4,CloseRange,,Needs enemies next to / in front of you
+-64218175,VHunter Castle Man Knockback Whip,Simon Belmont the Vampire Hunter,T4,CloseRange,Channel,Needs enemies next to / in front of you
+504586218,VHunter Castle Man Knockback Whip Fire,Simon Belmont the Vampire Hunter,T4,CloseRange,Channel,Needs enemies next to / in front of you
+109607953,VHunter Castle Man Whip AoEChange Phase,Simon Belmont the Vampire Hunter,T4,CloseRange,Channel,Needs enemies next to / in front of you
+1541929232,Church Of Light Overseer Hard Snow Lob,Sir Magnus the Overseer,T4,CloseRange,,Needs enemies next to / in front of you
+1823825002,Church Of Light Overseer Reinforcement,Sir Magnus the Overseer,T4,Summon,,Summons units/allies — no aim needed
+-1973550282,Merciless Charge,Sir Magnus the Overseer,T4,CloseRange,,Needs enemies next to / in front of you
+1792964134,Primary Attack,Sir Magnus the Overseer,T4,CloseRange,Channel,Needs enemies next to / in front of you
+1964067196,Primary Attack,Sir Magnus the Overseer,T4,Aimed,,Aim at a target or direction — fires downrange
+613355091,Primary Attack,Sir Magnus the Overseer,T4,CloseRange,Combo,Needs enemies next to / in front of you
+1772194590,Primary Attack,Skeleton,T1,CloseRange,Combo,Needs enemies next to / in front of you
+2021815703,Undead Necromancer Projectile,Skeleton Bishop,T2,Aimed,,Aim at a target or direction — fires downrange
+1687310776,Undead Necromancer Raise Dead,Skeleton Bishop,T2,Summon,,Summons units/allies — no aim needed
+1601771862,Skeleton Crossbow Shared Crossbow,Skeleton Crossbow,T2,Aimed,Channel,Aim at a target or direction — fires downrange
+379001645,Shriek,Skeleton Mage,T2,CloseRange,,Needs enemies next to / in front of you
+-20539715,Undead Skeleton Apprentice Projectile,Skeleton Mage,T1,Aimed,Combo,Aim at a target or direction — fires downrange
+822633768,Undead Skeleton Mage Projectile,Skeleton Mage,T2,Aimed,Channel,Aim at a target or direction — fires downrange
+604882732,Unholy Skeleton Apprentice Projectile,Skeleton Mage,T1,Aimed,Combo,Aim at a target or direction — fires downrange
+-1047491293,Undead Priest Projectile,Skeleton Priest,T1,Aimed,,Aim at a target or direction — fires downrange
+-1742500275,Undead Priest Raise Dead,Skeleton Priest,T1,Summon,Channel,Summons units/allies — no aim needed
+-1229087512,Arctic Leap,Slaughterbeast,T4,Movement,,Mobility / travel — no target needed
+523087989,Primary Attack,Slaughterbeast,T4,CloseRange,Combo,Needs enemies next to / in front of you
+86533405,Spectral Strike,Slaughterbeast,T4,Aimed,,Aim at a target or direction — fires downrange
+-1879864480,Church Of Light Slave Master Knockback Whip,Slave Master,T4,CloseRange,,Needs enemies next to / in front of you
+-1276648449,Church Of Light Slave Master Visual Slave Whip,Slave Master,T4,CloseRange,,Needs enemies next to / in front of you
+-1255881274,Dash,Slave Master,T4,Movement,,Mobility / travel — no target needed
+1423169435,Primary Attack,Slave Master,T4,CloseRange,,Needs enemies next to / in front of you
+-725150213,Primary Attack,Slave Master,T4,CloseRange,,Needs enemies next to / in front of you
+-1969627539,Primary Attack,Slave Master,T4,CloseRange,,Needs enemies next to / in front of you
+401195214,Slave Master Charge Attack,Slave Master,T4,CloseRange,,Needs enemies next to / in front of you
+80712753,Slave Master Ranged Attack,Slave Master,T4,Aimed,,Aim at a target or direction — fires downrange
+1145861576,Church Of Light Paladin Centre Travel,Solarus the Immaculate,T4,Movement,,Mobility / travel — no target needed
+-1172099204,Church Of Light Paladin Hard Dash,Solarus the Immaculate,T4,Aimed,,Aim at a target or direction — fires downrange
+-552723816,Church Of Light Paladin Heal Angel,Solarus the Immaculate,T4,CloseRange,,Needs enemies next to / in front of you
+1673497547,Primary Attack,Solarus the Immaculate,T4,Aimed,Combo,Aim at a target or direction — fires downrange
+1825130923,Primary Attack,Solarus the Immaculate,T4,Summon,Channel,Summons units/allies — no aim needed
+-1720407974,Church Of Light Paladin Dash,"Solarus, o Imaculado",T4,Aimed,Channel,Aim at a target or direction — fires downrange
+1130939687,Primary Attack,Spectral Guardian,T1,CloseRange,,Needs enemies next to / in front of you
+1693120911,Primary Attack,Spider Melee Gate Boss Summon,T3,CloseRange,,Needs enemies next to / in front of you
+1820645555,Primary Attack,Spider Melee Gate Boss Summon,T3,CloseRange,,Needs enemies next to / in front of you
+-1655641312,Primary Attack,Spiderling,T3,CloseRange,,Needs enemies next to / in front of you
+-1997657671,Bandit Stalker Projectile,Stalker,T2,Aimed,Channel,Aim at a target or direction — fires downrange
+-1250624804,Primary Attack,Stalker,T2,CloseRange,,Needs enemies next to / in front of you
+-1969189808,Primary Attack,Stalker,T2,CloseRange,,Needs enemies next to / in front of you
+-1045581646,Primary Attack,Stone Golem,T2,CloseRange,Channel,Needs enemies next to / in front of you
+1272395899,Primary Attack,Stone Golem,T3,CloseRange,,Needs enemies next to / in front of you
+418002062,Primary Attack,Stone Golem,T2,Aimed,,Aim at a target or direction — fires downrange
+-500071289,Manticore Air Dash,Talzur the Winged Horror,T4,Aimed,,Aim at a target or direction — fires downrange
+-298983941,Manticore Dash,Talzur the Winged Horror,T4,Aimed,Channel,Aim at a target or direction — fires downrange
+475860611,Manticore Dash Hard,Talzur the Winged Horror,T4,Aimed,Channel,Aim at a target or direction — fires downrange
+2115527946,Primary Attack,Talzur the Winged Horror,T4,CloseRange,Channel,Needs enemies next to / in front of you
+-1744671763,Primary Attack,Talzur the Winged Horror,T4,CloseRange,,Needs enemies next to / in front of you
+-1547108554,Primary Attack,Talzur the Winged Horror,T4,CloseRange,,Needs enemies next to / in front of you
+1373056433,Primary Attack,Talzur the Winged Horror,T4,CloseRange,,Needs enemies next to / in front of you
+45443379,Primary Attack,Talzur the Winged Horror,T4,CloseRange,,Needs enemies next to / in front of you
+73467714,Gloomrot Tazer Ranged Attack,Tazer,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+-598112885,Geomancer Golem Raise Guardians,Terah the Geomancer,T3,Summon,,Summons units/allies — no aim needed
+-1635892700,Geomancer Human Projectile,Terah the Geomancer,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+2106422510,Primary Attack,Terah the Geomancer,T3,CloseRange,Channel,Needs enemies next to / in front of you
+1500843923,Primary Attack,Terah the Geomancer,T3,CloseRange,Channel,Needs enemies next to / in front of you
+-221719333,Primary Attack,Terah the Geomancer,T3,CloseRange,,Needs enemies next to / in front of you
+1205896854,Arctic Leap,Terrorclaw the Ogre,T4,Aimed,,Aim at a target or direction — fires downrange
+-1568811754,Arctic Leap,Terrorclaw the Ogre,T4,Aimed,,Aim at a target or direction — fires downrange
+-252663641,Arctic Leap,Terrorclaw the Ogre,T4,Aimed,,Aim at a target or direction — fires downrange
+430166804,Arctic Leap,Terrorclaw the Ogre,T4,SelfCast,,Self/ally effect — works on press
+320434570,Arctic Leap,Terrorclaw the Ogre,T4,CloseRange,,Needs enemies next to / in front of you
+151283351,Primary Attack,Terrorclaw the Ogre,T4,Aimed,,Aim at a target or direction — fires downrange
+1910986910,Primary Attack,Terrorclaw the Ogre,T4,Aimed,,Aim at a target or direction — fires downrange
+-905574209,Primary Attack,Terrorclaw the Ogre,T4,CloseRange,Combo,Needs enemies next to / in front of you
+-1321161639,Secondary Attack,Terrorclaw the Ogre,T4,CloseRange,,Needs enemies next to / in front of you
+1253708985,Secondary Attack,Terrorclaw the Ogre,T4,CloseRange,,Needs enemies next to / in front of you
+-1126887871,Secondary Attack,Terrorclaw the Ogre,T4,CloseRange,,Needs enemies next to / in front of you
+-1571128781,Secondary Attack,Terrorclaw the Ogre,T4,Aimed,,Aim at a target or direction — fires downrange
+-281576382,Colpo spettrale,Tessitrice di luce,T4,Movement,,Mobility / travel — no target needed
+-691814641,Primary Attack,Thief,T1,CloseRange,,Needs enemies next to / in front of you
+1734839687,Primary Attack,Thief,T1,CloseRange,,Needs enemies next to / in front of you
+-2106739571,Primary Attack,Thief,T1,CloseRange,,Needs enemies next to / in front of you
+-607666302,Primary Attack,Tractor Beamer,T3,CloseRange,,Needs enemies next to / in front of you
+-349738324,Primary Attack,Tractor Beamer,T3,CloseRange,,Needs enemies next to / in front of you
+1653116246,Primary Attack,Tractor Beamer,T3,CloseRange,Channel,Needs enemies next to / in front of you
+-309308308,Bandit Trapper Net Throw,Trapper,T1,CloseRange,,Needs enemies next to / in front of you
+1400073690,Primary Attack,Trapper,T1,CloseRange,Combo,Needs enemies next to / in front of you
+922686381,Primary Attack,Treasure Hunter,T4,CloseRange,,Needs enemies next to / in front of you
+1552780633,Primary Attack,Tristan the Vampire Hunter,T2,CloseRange,,Needs enemies next to / in front of you
+-1417141477,Primary Attack,Tristan the Vampire Hunter,T2,CloseRange,,Needs enemies next to / in front of you
+224496996,Primary Attack,Tristan the Vampire Hunter,T2,CloseRange,,Needs enemies next to / in front of you
+-737556373,VHunter Leader Crossbow,Tristan the Vampire Hunter,T2,Aimed,Channel,Aim at a target or direction — fires downrange
+1501188283,VHunter Leader Leap Thrust,Tristan the Vampire Hunter,T2,Movement,,Mobility / travel — no target needed
+-175257190,VHunter Leader Roll,Tristan the Vampire Hunter,T2,CloseRange,,Needs enemies next to / in front of you
+1805214524,Primary Attack,Undead Assassin,T2,CloseRange,Combo,Needs enemies next to / in front of you
+-1553594984,Primary Attack,Undead Assassin,T2,CloseRange,,Needs enemies next to / in front of you
+561623729,Primary Attack,Undead Assassin,T2,CloseRange,,Needs enemies next to / in front of you
+-1651089042,Primary Attack,Undead Assassin,T2,CloseRange,,Needs enemies next to / in front of you
+-163679409,Primary Attack,Undead Assassin,T2,CloseRange,,Needs enemies next to / in front of you
+1254118139,Primary Attack,Undead Guardian,T2,CloseRange,Combo,Needs enemies next to / in front of you
+-955554663,Primary Attack,Undead Guardian,T2,CloseRange,,Needs enemies next to / in front of you
+124368471,Primary Attack,Undead Guardian,T2,CloseRange,,Needs enemies next to / in front of you
+1382585346,Primary Attack,Undying Ghoul,T2,CloseRange,Combo|Channel,Needs enemies next to / in front of you
+-1779071085,Spider Queen Spawn Adds,Ungora the Spider Queen,T3,Summon,Combo,Summons units/allies — no aim needed
+684476797,Primary Attack,Unholy Death Knight,T3,Summon,Combo,Summons units/allies — no aim needed
+483769006,Primary Attack,Unholy Death Knight,T3,Summon,,Summons units/allies — no aim needed
+-891106318,Primary Attack,Unstable Spider,T3,CloseRange,,Needs enemies next to / in front of you
+-1356470853,Primary Attack,Unstable Spider,T3,Summon,,Summons units/allies — no aim needed
+-839386508,Primary Attack,Vampire Cultist,T3,CloseRange,Combo,Needs enemies next to / in front of you
+-1981491221,Shadow Bolt,Vampire Merchant,T3,Aimed,,Aim at a target or direction — fires downrange
+1850527627,Hostile Villager Torch Throw,Villager,T1,CloseRange,,Needs enemies next to / in front of you
+-1691591896,Primary Attack,Villager,T1,CloseRange,Combo,Needs enemies next to / in front of you
+664138263,Primary Attack,Villager,T1,CloseRange,Combo,Needs enemies next to / in front of you
+-650192545,Primary Attack,Villager,T1,CloseRange,,Needs enemies next to / in front of you
+477397109,Primary Attack,Villager,T1,CloseRange,,Needs enemies next to / in front of you
+2136688539,Primary Attack,Villager,T1,CloseRange,Combo,Needs enemies next to / in front of you
+446999227,Primary Attack,Villager,T1,CloseRange,Combo,Needs enemies next to / in front of you
+1397338806,Primary Attack,Villager,T3,CloseRange,,Needs enemies next to / in front of you
+-1617717290,Primary Attack,Villager,T3,CloseRange,,Needs enemies next to / in front of you
+-1789525825,Primary Attack,Villager,T3,CloseRange,,Needs enemies next to / in front of you
+-831562637,Primary Attack,Villager,T3,CloseRange,Combo,Needs enemies next to / in front of you
+1063690361,Werewolf Dash,Villager,T3,CloseRange,,Needs enemies next to / in front of you
+-743963442,Primary Attack,Vincent the Frostbringer,T2,CloseRange,,Needs enemies next to / in front of you
+-841402173,Primary Attack,Vincent the Frostbringer,T2,CloseRange,Combo,Needs enemies next to / in front of you
+-948735477,Gloomrot Railgun Sergeant Call Adds,Voltatia the Power Master,T4,Summon,Channel,Summons units/allies — no aim needed
+-1187406748,Gloomrot Railgun Sergeant Energy Burst,Voltatia the Power Master,T4,Aimed,Channel,Aim at a target or direction — fires downrange
+-1733128159,Gloomrot Railgun Sergeant Homing Orb,Voltatia the Power Master,T4,CloseRange,Channel,Needs enemies next to / in front of you
+1623874343,Primary Attack,Voltatia the Power Master,T4,CloseRange,Channel,Needs enemies next to / in front of you
+-900859351,Primary Attack,Voltatia the Power Master,T4,CloseRange,,Needs enemies next to / in front of you
+-1717533555,Spectral Strike,Voltatia the Power Master,T4,Aimed,,Aim at a target or direction — fires downrange
+-1220318405,Golpe Espectral,"Voltatia, a Mestre da Energia",T4,Summon,Channel,Summons units/allies — no aim needed
+-1694480301,Primary Attack,Weaver,T3,CloseRange,,Needs enemies next to / in front of you
+464665677,Spider Range Poison Projectile,Weaver,T3,Aimed,,Aim at a target or direction — fires downrange
+797495975,Atak podstawowy,Wieśniak,T3,CloseRange,,Needs enemies next to / in front of you
+-192549213,Camouflage,Willfred the Village Elder,T4,Summon,,Summons units/allies — no aim needed
+1001804923,Primary Attack,Willfred the Village Elder,T4,SelfCast,,Self/ally effect — works on press
+1916767891,Primary Attack,Willfred the Village Elder,T4,CloseRange,Combo|Channel,Needs enemies next to / in front of you
+-988264305,Primary Attack,Willfred the Village Elder,T4,CloseRange,Combo,Needs enemies next to / in front of you
+-174926399,Primary Attack,Willfred the Village Elder,T4,CloseRange,Combo,Needs enemies next to / in front of you
+1445822330,Werewolf Chieftain Knockdown,Willfred the Village Elder,T4,Aimed,,Aim at a target or direction — fires downrange
+-566065717,Werewolf Chieftain Shadow Dash,Willfred the Village Elder,T4,CloseRange,,Needs enemies next to / in front of you
+1915605718,Cursed Witch Projectile,Witch,T4,Aimed,,Aim at a target or direction — fires downrange
+429807295,Shriek,Witch,T4,CloseRange,,Needs enemies next to / in front of you
+-593875444,Primary Attack,Withered Vampire,T3,CloseRange,,Needs enemies next to / in front of you
+556902791,Primary Attack,Wolf,T1,CloseRange,,Needs enemies next to / in front of you
+1938535864,Arctic Leap,Worm Terror,T3,Movement,,Mobility / travel — no target needed
+1105185654,Primary Attack,Worm Terror,T3,CloseRange,Channel,Needs enemies next to / in front of you
+-1789897775,Worm Terror Acid Puke,Worm Terror,T3,CloseRange,,Needs enemies next to / in front of you
+1115346958,Primary Attack,Young Sea Serpent,T1,CloseRange,Channel,Needs enemies next to / in front of you
+-938355432,Primary Attack,Young Sea Serpent,T1,CloseRange,Channel,Needs enemies next to / in front of you
+-1470096516,Primary Attack,Young Sea Serpent,T1,CloseRange,Channel,Needs enemies next to / in front of you
+163224625,Primary Attack,Young Sea Serpent,T1,CloseRange,Channel,Needs enemies next to / in front of you
+-1126624947,Gloomrot Spider Tank Zapper Bomb Hatch,Zapper,T4,CloseRange,,Needs enemies next to / in front of you
+-730217983,Gloomrot Spider Tank Zapper Heavy Shot,Zapper,T4,Aimed,Channel,Aim at a target or direction — fires downrange
+-568845499,Gloomrot Spider Tank Zapper Incineration Bomb,Zapper,T4,CloseRange,,Needs enemies next to / in front of you
+-1081890077,Gloomrot Spider Tank Zapper Rapid Shot,Zapper,T4,Aimed,Combo|Channel,Aim at a target or direction — fires downrange
+-580940152,Iva Autofire,Ziva the Engineer,T3,Aimed,,Aim at a target or direction — fires downrange
+1524772628,Iva BFGLightning Fire,Ziva the Engineer,T3,Aimed,,Aim at a target or direction — fires downrange
+1517447626,Iva Burning Ring Of Fire,Ziva the Engineer,T3,CloseRange,Channel,Needs enemies next to / in front of you
+891644945,Iva Tazer,Ziva the Engineer,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+2013545793,Iva Weapon Malfunction BFG,Ziva the Engineer,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+1149489416,Iva Weapon Malfunction Tazer,Ziva the Engineer,T3,Aimed,Channel,Aim at a target or direction — fires downrange
+870237772,Primary Attack,Ziva the Engineer,T3,CloseRange,Channel,Needs enemies next to / in front of you
+-786900742,Primary Attack,Ziva the Engineer,T3,CloseRange,Channel,Needs enemies next to / in front of you
+-639593760,Primary Attack,Ziva the Engineer,T3,CloseRange,,Needs enemies next to / in front of you
+-983491078,Elsődleges támadás,Útonálló,T3,CloseRange,,Needs enemies next to / in front of you
+-7407393,Vampire Dracula Ring Of Blood,"Дракула, Бессмертный Король",T4,Aimed,Channel,Aim at a target or direction — fires downrange
+886063983,Спектральный удар,Мэйрвин Повелительница Стихий,T4,Movement,,Mobility / travel — no target needed
+1814567660,Основная атака,Свирепая медведица Кодиа,T2,CloseRange,,Needs enemies next to / in front of you
+346834991,การโจมตีหลัก,ครีก ผู้บัญชาการเหล่าอันเดด,T3,CloseRange,Combo,Needs enemies next to / in front of you
+-215712550,Militia Hound Dash Attack,บรูตัส หมาเฝ้ายาม,T3,CloseRange,Combo,Needs enemies next to / in front of you
+-325335847,Gloomrot Sentry Turret Bunker Down,ยามป้อมปืน,T3,Aimed,,Aim at a target or direction — fires downrange
+-545560531,Militia Bishop Of Dunley Holy Circles,ราเซียล พระนักเทศน์,T3,CloseRange,,Needs enemies next to / in front of you
+1079488801,普通攻击,地卜师泰拉,T3,Aimed,,Aim at a target or direction — fires downrange
+-309871879,主要攻擊,工程師齊瓦,T3,CloseRange,,Needs enemies next to / in front of you
+-1432555386,Bandit Foreman Crossbow Hard Blood Rage,弱い血魂,T3,Aimed,,Aim at a target or direction — fires downrange
+486569900,Manticore Frost Breath,恐怖翼獸塔爾祖爾,T4,CloseRange,Channel,Needs enemies next to / in front of you
+1625958933,主要攻擊,恐怖翼獸塔爾祖爾,T4,CloseRange,,Needs enemies next to / in front of you
+1113171592,プライマリー攻撃,村の長老ウィルフレッド,T4,CloseRange,,Needs enemies next to / in front of you
+643209588,Bandit Fisherman Fish Hook,渔夫芬恩,T2,Aimed,,Aim at a target or direction — fires downrange
+-190598145,普通攻击,熊,T4,CloseRange,Channel,Needs enemies next to / in front of you
+280173050,Wolf Boss Dash Attack Double,白色头狼,T1,CloseRange,Combo|Channel,Needs enemies next to / in front of you
+-634705694,Legion Vargulf Maul Knockdown,도살 괴물,T4,CloseRange,,Needs enemies next to / in front of you
+1390611238,Wendigo Ice Beam Second,산맥의 공포 서리 아귀,T3,CloseRange,,Needs enemies next to / in front of you
+-1199198217,기본 공격,썩은 쥐 니버스,T2,CloseRange,,Needs enemies next to / in front of you

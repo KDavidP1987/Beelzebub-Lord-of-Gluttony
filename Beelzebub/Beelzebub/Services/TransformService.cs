@@ -185,12 +185,17 @@ internal sealed class TransformService
             return (false, $"On cooldown. {remaining:F0}s remaining.");
         }
 
-        // If already transformed, revert first (cleanly destroys the carrier buff).
+        // v0.120.0: do NOT switch transforms in place. Going from one transform directly into another
+        // with no intervening revert left the action bar broken on the next revert — the carrier-buff
+        // teardown raced the new form's async bar resolve (same async-form hazard as the v0.49 crash
+        // fix above). Require an explicit revert first; the player re-issues .beelz transform after.
         var current = Core.AbilityRegistry.GetActiveTransform(steamId);
         if (current is not null)
         {
-            // restoreBar:false — a new transform is applied below; skip the base-loadout restore.
-            Revert(steamId, "Switching transformation.", restoreBar: false);
+            if (current.UnitPrefabGuid == unitPrefabGuid)
+                return (false, "You're already transformed as that unit. Use .beelz revert to return to normal.");
+            var curPg = new PrefabGUID(current.UnitPrefabGuid);
+            return (false, $"You're already transformed as {curPg.GetPrefabName()}. Use .beelz revert first, then transform again.");
         }
 
         // Verify we can read the unit's ability list.

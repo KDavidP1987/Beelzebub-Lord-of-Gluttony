@@ -207,6 +207,17 @@ internal static class BeelzCommands
             return;
         }
 
+        // v0.117.0: OWNERSHIP re-check — a hotkey bound to an ability you later .beelz forgot must NOT still
+        // fire. (The index path already guarantees ownership; the hotkey path can point at a forgotten ability.)
+        bool owns = false;
+        foreach (var c in Core.AbilityRegistry.ListFor(steamId))
+            if (c.AbilityPrefabGuid == abilityGuid) { owns = true; break; }
+        if (!owns)
+        {
+            ctx.Reply($"You no longer have that ability captured — the hotkey may point at a forgotten ability. Rebind it (.beelz hotkey set) or re-capture the ability.");
+            return;
+        }
+
         var ability = new PrefabGUID(abilityGuid);
         string abilityName = ability.GetPrefabName();
         if (!Core.AbilityRules.IsEnabled(abilityName, abilityGuid)) { ctx.Reply($"'{abilityName}' is currently disabled by the server admin."); return; }
@@ -343,17 +354,17 @@ internal static class BeelzCommands
 
         ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
 
-        // Try numeric index against the player's captured list first.
+        // Try numeric index OR a captured ability's stable ID against the player's list first (v0.117.0).
         if (int.TryParse(arg.Trim(), out int idx))
         {
             var captured = Core.AbilityRegistry.ListFor(steamId);
-            if (idx >= 0 && idx < captured.Count)
+            int resolved = ResolveCapturedSelector(captured, idx, out _);
+            if (resolved >= 0)
             {
-                int guid = captured[idx].AbilityPrefabGuid;
-                RenderAbilityInfo(ctx, guid);
+                RenderAbilityInfo(ctx, captured[resolved].AbilityPrefabGuid);
                 return;
             }
-            // numeric but out of range — fall through to name search using the digits as a query
+            // not a captured index/id — fall through to name search using the digits as a query
         }
 
         // Substring name search.
@@ -411,6 +422,17 @@ internal static class BeelzCommands
                 ? $" ({info.IncompatibleReason})"
                 : "";
             ctx.Reply($"⚠ This ability is known to misbehave when cast by a player{reason}. The cast animates but the effect doesn't complete. See the V-Blood audit doc for the chain-failure class.");
+        }
+
+        // v0.107.0: activation-condition hint — tells the player HOW to use the ability so a
+        // working-but-conditional ability (e.g. Call Lightning needs adjacent enemies) isn't mistaken
+        // for broken. Informational only; never disables. `auto` = unconfirmed classifier candidate.
+        if (!string.IsNullOrEmpty(info.Condition) && info.Condition != "Unclassified")
+        {
+            string mods = info.ConditionModifiers is { Count: > 0 } ? $" +{string.Join("/", info.ConditionModifiers)}" : "";
+            string desc = !string.IsNullOrEmpty(info.ConditionDescriptor) ? $" — {info.ConditionDescriptor}" : "";
+            string src = info.ConditionSource == "auto" ? " (auto, unconfirmed)" : "";
+            ctx.Reply($"◆ Activation: {info.Condition}{mods}{desc}{src}.");
         }
 
         // Description (multi-line — split into chat-sized chunks).
@@ -478,7 +500,7 @@ internal static class BeelzCommands
     /// against the captured abilities' PrefabGUIDs (so a player can pass the stable ability ID instead
     /// of a shifting index). Returns the index, or -1 with a message in <paramref name="error"/>.
     /// </summary>
-    private static int ResolveCapturedSelector(System.Collections.Generic.IReadOnlyList<Beelzebub.Services.CapturedAbility> captured, int indexOrId, out string error)
+    internal static int ResolveCapturedSelector(System.Collections.Generic.IReadOnlyList<Beelzebub.Services.CapturedAbility> captured, int indexOrId, out string error)
     {
         error = null;
         if (captured.Count == 0) { error = "You have no captured abilities yet. Defeat units to capture their abilities, then .beelz list."; return -1; }
@@ -628,7 +650,7 @@ internal static class BeelzCommands
         }
     }
 
-    [Command("unslot", description: "Remove your universal-bucket assignment from a spell slot. Usage: .beelz unslot <slot> (1-6, or 'primary' / 'ultimate').")]
+    [Command("unslot", shortHand: "clear-slot", description: "Remove your universal-bucket assignment from a spell slot. Usage: .beelz unslot <slot> (1-6, or 'primary' / 'ultimate'). Alias: .beelz clear-slot.")]
     public static void Unslot(ChatCommandContext ctx, string slotToken)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
@@ -682,15 +704,23 @@ internal static class BeelzCommands
         //    still injecting abilities and freezing the bar (invisible to the BuffBuffer sweep).
         int orphanSources = Beelzebub.Services.TransformBuffService.DestroyOwnedAbilitySlotOrphans(character);
 
-        // Re-resolve the bar to vanilla now that grants + override buffs/sources are gone.
+        // 6) v0.120.0 AUTHORITATIVE CLEAR: even with every override SOURCE gone, V Rising can keep a slot's
+        //    CACHED resolved value (AbilityGroupSlot.StateEntity) pinned to the form ability — so the bar
+        //    stays stuck on a creature kit and SURVIVES RELOG (the "nothing reset my bar after chaining
+        //    transforms" report). Push every slot to Empty via the engine's own ModifyAbilityGroupOnSlot:
+        //    that clears the cached value and forces a clean re-resolve from equipment + spellbook. Engine
+        //    path, NO slot-entity destruction (the dangling-ref crash only came from destroying entities).
+        Beelzebub.Services.TransformBuffService.ForceResetAbilitySlots(character);
+
+        // Re-resolve the bar to vanilla + re-apply saved grants now that the cache + override sources are gone.
         Beelzebub.Services.SlotApply.RestoreResolvedGrants(character);
 
         Core.Persistence.RequestSave();
 
         string buffNote = (buffsKilled + orphanSources) > 0 ? $", removed {buffsKilled + orphanSources} override source(s)" : "";
         ctx.Reply(reverted
-            ? $"Transformation ended and your action bar is reset to vanilla ({cleared} binding(s){buffNote}). Your captures + unlocks are intact — re-grant with .beelz grant. (If your bar is stuck on a creature kit from a previous shapeshift, an admin can run .beelz admin respawn to fully rebuild it.)"
-            : $"Action bar reset to vanilla ({cleared} binding(s) removed{buffNote}). Your captures + unlocks are intact — re-grant with .beelz grant. (If your bar is stuck on a creature kit from a previous shapeshift, an admin can run .beelz admin respawn to fully rebuild it.)");
+            ? $"Transformation ended and your action bar is force-reset to vanilla ({cleared} binding(s){buffNote}). Your captures + unlocks are intact — re-grant with .beelz grant. (Still stuck on a creature kit? Ask an admin to run .beelz admin respawn — it rebuilds your character on the spot and KEEPS your gear, blood & progress. A relog alone will NOT clear it.)"
+            : $"Action bar force-reset to vanilla ({cleared} binding(s) removed{buffNote}). Your captures + unlocks are intact — re-grant with .beelz grant. (Still stuck on a creature kit? Ask an admin to run .beelz admin respawn — it rebuilds your character on the spot and KEEPS your gear, blood & progress. A relog alone will NOT clear it.)");
 
         // Reuse the existing slot-cleared event per previously-bound slot so BCH refreshes
         // its loadout view (no new event type → no wire-API change).
@@ -798,6 +828,12 @@ internal static class BeelzCommands
             ctx.Reply($"'{abilityName}' is reserved for .beelz transform — cannot be granted to a slot.");
             return;
         }
+        // v0.101.0: respect a weapon blacklist ("!<weapon>" in the ability's Weapons list).
+        if (Core.AbilityRules.IsWeaponBlocked(abilityName, weapon))
+        {
+            ctx.Reply($"'{abilityName}' is blacklisted on {weapon} (admin set it as not usable with that weapon). Pick a different slot/weapon.");
+            return;
+        }
 
         Core.AbilityRegistry.SetSlot(steamId, weapon, slot, ability._Value);
         Core.Persistence.RequestSave();
@@ -819,7 +855,7 @@ internal static class BeelzCommands
             $"[BEELZ:event] type=weapon-slot-granted weapon={weapon} slot={slot} a={ability._Value} an={ability.GetPrefabName()}");
     }
 
-    [Command("weapon-unslot", description: "Clear a weapon-family-specific slot bind. Usage: .beelz weapon-unslot <weapon|auto> <slot> (1-6, or 'primary' / 'ultimate').")]
+    [Command("weapon-unslot", shortHand: "clear-weapon-slot", description: "Clear a weapon-family-specific slot bind. Usage: .beelz weapon-unslot <weapon|auto> <slot> (1-6, or 'primary' / 'ultimate'). Alias: .beelz clear-weapon-slot.")]
     public static void WeaponUnslot(ChatCommandContext ctx, string weaponStr, string slotToken)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
@@ -872,7 +908,7 @@ internal static class BeelzCommands
             form = Beelzebub.Services.ShapeshiftAbilityService.GetCurrentForm(character);
             if (form == Beelzebub.Services.ShapeshiftForm.None)
             {
-                ctx.Reply("You're not in a shapeshift form right now. Name it explicitly: .beelz form-grant <wolf|bear|rat|spider|toad|werewolf|gargoyle> <slot> <index>.");
+                ctx.Reply("You're not in a shapeshift form right now. Name it explicitly: .beelz form-grant <wolf|bear|rat|spider|toad|werewolf|gargoyle|mounted> <slot> <index>.");
                 return false;
             }
             return true;
@@ -880,7 +916,7 @@ internal static class BeelzCommands
         if (!System.Enum.TryParse<Beelzebub.Services.ShapeshiftForm>(formStr, ignoreCase: true, out form)
             || form == Beelzebub.Services.ShapeshiftForm.None)
         {
-            ctx.Reply($"Unknown form '{formStr}'. Valid: Wolf, Bear, Rat, Spider, Toad, Werewolf, Gargoyle.");
+            ctx.Reply($"Unknown form '{formStr}'. Valid: Wolf, Bear, Rat, Spider, Toad, Werewolf, Gargoyle, Mounted (mounted uses slots 3/6/7 only — R/C/ultimate; the rest are riding controls).");
             return false;
         }
         return true;
@@ -896,6 +932,15 @@ internal static class BeelzCommands
 
         if (!TryParseForm(ctx, formStr, character, out var form)) return;
 
+        // v0.104.0: the Mounted form can only inject onto a few free saddle slots; the rest are riding
+        // controls (Q/E/space). Binding to one of those silently never renders (it's filtered at injection),
+        // which looked like a bug. Reject it up front with the valid set instead.
+        if (form == ShapeshiftForm.Mounted && !Services.ShapeshiftAbilityService.IsValidMountedSlot(slot))
+        {
+            ctx.Reply($"Mounted form only uses slots {Services.ShapeshiftAbilityService.MountedSlotsHint} — the other slots are riding controls (Q/E/space) and can't hold a saddle ability. Re-grant this to slot 3, 6, or 7.");
+            return;
+        }
+
         var captured = Core.AbilityRegistry.ListFor(steamId);
         int selIdx = ResolveCapturedSelector(captured, index, out string selErr);   // v0.76.0: index OR ability ID
         if (selIdx < 0) { ctx.Reply(selErr); return; }
@@ -906,6 +951,13 @@ internal static class BeelzCommands
         if (!Core.AbilityRules.IsEnabled(abilityName, ability._Value))
         {
             ctx.Reply($"'{abilityName}' is currently disabled by the server admin.");
+            return;
+        }
+        // v0.101.0: respect per-ability form-locks — refuse to bind an ability the admin marked as not
+        // usable in this form (e.g. a boss ability that demounts in Mounted form).
+        if (!Core.AbilityRules.IsUsableInForm(abilityName, form))
+        {
+            ctx.Reply($"'{abilityName}' is form-locked out of {form} (it doesn't work there). Pick a different ability for this slot.");
             return;
         }
 
@@ -954,26 +1006,27 @@ internal static class BeelzCommands
         ctx.Reply($"Chat verbosity set to {v}.");
     }
 
-    [Command("forget", description: "Delete one captured ability by index. Usage: .beelz forget <index>")]
-    public static void Forget(ChatCommandContext ctx, int index)
+    [Command("forget", description: "Delete one captured ability. Usage: .beelz forget <index|ability ID> (the number is a .beelz list index when in range, otherwise the ability's ID). Also clears any hotkeys bound to it.")]
+    public static void Forget(ChatCommandContext ctx, int indexOrId)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
         ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
         var captured = Core.AbilityRegistry.ListFor(steamId);
-        if (index < 0 || index >= captured.Count)
-        {
-            ctx.Reply($"Index {index} out of range (valid: 0-{captured.Count - 1}). Use .beelz list to see indices.");
-            return;
-        }
+        int index = ResolveCapturedSelector(captured, indexOrId, out string selErr);   // v0.117.0: index OR stable ability ID
+        if (index < 0) { ctx.Reply(selErr); return; }
         var entry = captured[index];
         bool ok = Core.AbilityRegistry.Forget(steamId, entry.UnitPrefabGuid, entry.AbilityPrefabGuid);
         if (ok)
         {
+            // v0.117.0: clear any hotkeys that pointed at the now-forgotten ability (no dangling binds).
+            int clearedHotkeys = 0;
+            foreach (var hk in new System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<string, int>>(Core.AbilityRegistry.ListHotkeys(steamId)))
+                if (hk.Value == entry.AbilityPrefabGuid && Core.AbilityRegistry.ClearHotkey(steamId, hk.Key)) clearedHotkeys++;
             Core.Persistence.RequestSave();
             var fInfo = Core.AbilityMetadata?.Resolve(entry.AbilityPrefabGuid);
             string fAbility = (fInfo != null && !string.IsNullOrEmpty(fInfo.Name)) ? fInfo.Name : new Stunlock.Core.PrefabGUID(entry.AbilityPrefabGuid).GetPrefabName();
             string fUnit = Core.AbilityMetadata?.ResolveUnitName(entry.UnitPrefabGuid) ?? new Stunlock.Core.PrefabGUID(entry.UnitPrefabGuid).GetPrefabName();
-            ctx.Reply($"Forgot {fAbility} (from {fUnit}).");
+            ctx.Reply($"Forgot {fAbility} (from {fUnit}).{(clearedHotkeys > 0 ? $" Cleared {clearedHotkeys} hotkey(s) that pointed at it." : "")}");
             // v0.35.0: BCH event so the client refreshes its collection view.
             Core.Chat.SendEvent(ctx.Event.SenderCharacterEntity,
                 $"[BEELZ:event] type=forget a={entry.AbilityPrefabGuid} u={entry.UnitPrefabGuid}");
@@ -1178,7 +1231,7 @@ internal static class BeelzCommands
           .Append(" (").Append(abilityPct.ToString("F1")).Append("%)")
           .Append("   V-Blood ").Append(vbloodCaptures).Append(" • Regular ").Append(captured.Count - vbloodCaptures).AppendLine();
         sb.Append("  Transformations: ").Append(transforms.Count).Append(" / ").Append(totalTransforms)
-          .Append(" (Dracula/Morgana)").AppendLine();
+          .Append(" forms").AppendLine();
         sb.Append("  Slots bound: ").Append(Core.AbilityRegistry.GetSlots(steamId).Count)
           .Append(" universal");
         int weaponBindings = Core.AbilityRegistry.AllWeaponSlots(steamId).Sum(kv => kv.Value.Count);

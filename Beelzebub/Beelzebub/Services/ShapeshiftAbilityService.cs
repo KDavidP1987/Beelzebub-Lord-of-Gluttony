@@ -273,7 +273,8 @@ internal static class ShapeshiftAbilityService
         var perSlot = new Dictionary<int, int>();
         if (form != ShapeshiftForm.None)
             foreach (var (slot, ability) in Core.AbilityRegistry.GetFormSlots(steamId, form))
-                if (ability != 0) perSlot[slot] = ability;
+                if (ability != 0 && Core.AbilityRules.IsUsableInForm(new PrefabGUID(ability).GetPrefabName(), form))
+                    perSlot[slot] = ability;   // v0.101.0: skip abilities form-locked out of this form
 
         bool fromFormBucket = perSlot.Count > 0;
         if (!fromFormBucket)
@@ -382,5 +383,207 @@ internal static class ShapeshiftAbilityService
         {
             Core.Log.LogWarning($"[Beelz FORM] ApplyFormLoadout failed for {steamId} ({new PrefabGUID(formBuffGuid).GetPrefabName()}): {ex.Message}");
         }
+    }
+
+    // ───────────────────────────────────────────────────────────────────────────────
+    // v0.101.0 — MOUNTED form. Riding a horse is treated as a form whose saddle bar has FREE slots
+    // (3/6/7 — slot 2 excluded; it carries the vampire horse's leap) we inject the player's Mounted loadout into, while protecting the horse's own
+    // leap(1)/gallop(4)/thrust(5) and the dismount. The mount-control buff (AB_Interact_Mount_Owner_Buff_*)
+    // is applied to the RIDER, so it lives in the player's BuffBuffer just like a shapeshift form buff —
+    // but mounting fires no EnterShapeshiftEvent, so entry is detected by the heartbeat scan below.
+    // ───────────────────────────────────────────────────────────────────────────────
+
+    // The mount-control (rider) buffs that put a player in the saddle — one per horse skin. All share
+    // the saddle bar layout: slot1=Leap, slot4=Gallop, slot5=Thrust, slots 2/3/6/7 blank.
+    static readonly HashSet<int> _mountBuffs = new()
+    {
+        854656674,    // AB_Interact_Mount_Owner_Buff_Horse
+        -978792376,   // AB_Interact_Mount_Owner_Buff_Horse_Vampire
+        -2000859158,  // ..._Vampire_Blackfang
+        -1936451181,  // ..._Vampire_Gloomrot
+        -1627838818,  // ..._Vampire_PMKSkeleton
+        2112789321,   // AB_Interact_Mount_Owner_Buff (generic)
+    };
+
+    // The only saddle slots we inject into. BLOCKED: 0(primary), 1(leap), 2(spacebar/dodge — the
+    // vampire horse's AB_Horse_Vampire_Leap_Travel lives here; blank on the basic horse), 4(gallop),
+    // 5(thrust). That leaves slots 3, 6, 7 (≈ R / C / Ultimate-T) free on ANY horse, preserving every
+    // riding key + the dismount (KDPen-confirmed by comparing the basic vs vampire mount-buff layouts).
+    static readonly int[] _mountedSlots = { 3, 6, 7 };
+
+    /// <summary>The only ability-bar slots the Mounted form can inject onto — the rest of the saddle bar
+    /// is taken by riding controls (Q/E movement, space leap). Used by form-grant to reject a bind to a
+    /// riding slot up front (otherwise it silently never renders, as it's filtered out at injection).</summary>
+    public static bool IsValidMountedSlot(int slot) => Array.IndexOf(_mountedSlots, slot) >= 0;
+    public static string MountedSlotsHint => "3, 6, 7 (the R, C, and Ultimate keys)";
+
+    /// <summary>True if this player currently has a Mounted-form saddle loadout injected (i.e. is riding
+    /// with Beelz abilities). Used to open the chain-trace for mounted casts (mounting isn't an
+    /// ActiveTransform, so the transformed-cast trace path misses it).</summary>
+    public static bool IsMounted(ulong steamId) => _mountedInjected.Contains(steamId);
+
+    // Players whose saddle loadout is already injected for their current mount (cleared on dismount).
+    static readonly HashSet<ulong> _mountedInjected = new();
+    static EntityQuery _playerQuery;
+    static bool _playerQueryReady;
+
+    /// <summary>Is this buff one of the mount-control (rider) buffs that marks the Mounted form?</summary>
+    public static bool IsMountBuff(int buffGuid, string name)
+        => _mountBuffs.Contains(buffGuid)
+           || (!string.IsNullOrEmpty(name) && name.IndexOf("Interact_Mount_Owner_Buff", StringComparison.OrdinalIgnoreCase) >= 0);
+
+    /// <summary>
+    /// v0.101.0: heartbeat-driven entry/exit detection for the Mounted form (mounting fires no
+    /// EnterShapeshiftEvent, so we can't piggyback on TickPendingForms). For each online player: if
+    /// they just got on a horse and have a Mounted loadout, inject it onto the free saddle slots; when
+    /// they dismount (the control buff is gone), forget them so the next mount re-injects. Cheap — a
+    /// cached player query + a small BuffBuffer scan, throttled to the 1s heartbeat. Gated by the same
+    /// Forms_CustomAbilities_Enabled switch as the shapeshift forms.
+    /// </summary>
+    public static void TickMountedForms()
+    {
+        if (!Beelzebub.Config.Settings.Forms_CustomAbilities_Enabled.Value) return;
+        try
+        {
+            if (!_playerQueryReady)
+            {
+                _playerQuery = Core.EntityManager.CreateEntityQuery(
+                    ComponentType.ReadOnly<PlayerCharacter>(),
+                    ComponentType.ReadOnly<BuffBuffer>());
+                _playerQueryReady = true;
+            }
+
+            var players = _playerQuery.ToEntityArray(Unity.Collections.Allocator.Temp);
+            try
+            {
+                var stillMounted = new HashSet<ulong>();
+                for (int p = 0; p < players.Length; p++)
+                {
+                    Entity character = players[p];
+                    if (!character.Exists()) continue;
+                    ulong steamId = character.GetSteamId();
+                    if (steamId == 0) continue;
+
+                    var buffs = Core.EntityManager.GetBuffer<BuffBuffer>(character);
+                    Entity mountBuffEntity = Entity.Null;
+                    for (int i = 0; i < buffs.Length; i++)
+                    {
+                        if (IsMountBuff(buffs[i].PrefabGuid._Value, buffs[i].PrefabGuid.GetPrefabName()))
+                        { mountBuffEntity = buffs[i].Entity; break; }
+                    }
+                    if (mountBuffEntity == Entity.Null) continue;   // not mounted
+
+                    stillMounted.Add(steamId);
+                    if (_mountedInjected.Contains(steamId)) continue;   // already injected this mount
+                    if (mountBuffEntity.Exists())
+                    {
+                        ApplyMountedLoadout(mountBuffEntity, character);
+                        _mountedInjected.Add(steamId);
+                    }
+                }
+                // Forget anyone no longer mounted, so re-mounting re-injects a fresh saddle bar.
+                // (v0.109.0: demount-trace log gated behind VerboseLogging — was a v0.104 diagnostic.)
+                if (_mountedInjected.Count > 0)
+                    _mountedInjected.RemoveWhere(id =>
+                    {
+                        bool gone = !stillMounted.Contains(id);
+                        if (gone && Beelzebub.Config.Settings.VerboseLogging.Value)
+                            Core.Log.LogInfo($"[Beelz MOUNT] {id} dismounted (control buff gone) — saddle bar forgotten.");
+                        return gone;
+                    });
+            }
+            finally { players.Dispose(); }
+        }
+        catch (Exception ex) { Core.Log.LogWarning($"[Beelz MOUNT] TickMountedForms failed: {ex.Message}"); }
+    }
+
+    /// <summary>
+    /// Inject the player's Mounted loadout onto the saddle bar's free slots (3/6/7) and strip the
+    /// cast-triggered dismount so using a saddle ability doesn't drop the player off the horse. The
+    /// horse's own leap/gallop/thrust and the dash-roll dismount are left intact. Idempotent. All edits
+    /// live on the (per-mount) control-buff INSTANCE, so dismounting reverts everything automatically.
+    /// </summary>
+    public static void ApplyMountedLoadout(Entity buffEntity, Entity character, bool triggerUpdate = true)
+    {
+        if (!Beelzebub.Config.Settings.Forms_CustomAbilities_Enabled.Value) return;
+        if (!buffEntity.Exists() || !character.Exists()) return;
+        ulong steamId = character.GetSteamId();
+        if (steamId == 0) return;
+
+        // Saddle loadout = ONLY the player's Mounted-form binds, restricted to the free slots AND to
+        // abilities the admin hasn't form-locked OUT of Mounted (e.g. boss abilities that demount).
+        var perSlot = new Dictionary<int, int>();
+        foreach (var (slot, ability) in Core.AbilityRegistry.GetFormSlots(steamId, ShapeshiftForm.Mounted))
+            if (ability != 0 && Array.IndexOf(_mountedSlots, slot) >= 0
+                && Core.AbilityRules.IsUsableInForm(new PrefabGUID(ability).GetPrefabName(), ShapeshiftForm.Mounted))
+                perSlot[slot] = ability;
+        if (perSlot.Count == 0) return;   // empty default — player hasn't set a saddle loadout
+
+        try
+        {
+            // 1. Stop a saddle-ability cast from auto-dismounting. The control buff dismounts the rider
+            //    when they Cast/Use a bar ability (CreateGameplayEventsOnAbilityTrigger → Destroy
+            //    listeners); removing that trigger makes saddle casts HOLD the mount.
+            if (buffEntity.Has<CreateGameplayEventsOnAbilityTrigger>())
+                Core.EntityManager.RemoveComponent<CreateGameplayEventsOnAbilityTrigger>(buffEntity);
+
+            // 2. v0.103.0 — stop the mount's DAMAGE-demount path. The cast-trigger strip above is not enough:
+            //    the control buff ALSO runs Script_Demount_DataServer, which dismounts the rider the moment
+            //    they take >= DemountMinDamageFactor damage (shipped 0.02 = 2%). A saddle ability whose own
+            //    AoE clips the caster (Erwin's Call Lightning is the witnessed case — Adam's Lightning Storm
+            //    does NOT self-hit, which is why it worked and Call Lightning didn't) trips that path and
+            //    throws the player off. This was the TRUE root cause — the prior CastImpair→Unit_Mount strip
+            //    (v0.101/0.102) targeted the wrong component (proven: it ran yet the demount persisted).
+            //    Raising the factor sky-high neuters the DAMAGE-demount while LEAVING the deliberate dash-roll
+            //    dismount (DemountSpellType) intact, so the player can still hop off normally. This is the
+            //    SCALABLE class fix: it makes EVERY self-damaging saddle ability mount-safe, not just Erwin's.
+            //    Per-mount-instance edit → reverts automatically when the player dismounts.
+            // (v0.104 instrumentation removed v0.109.0 — the damage-demount edit is confirmed working; the
+            //  before/after diag logging is no longer needed.) Kept as a DEFENSIVE measure: in the combat-
+            //  mount form you shouldn't get bucked off by chip damage either.
+            if (buffEntity.Has<ProjectM.Gameplay.Scripting.Script_Demount_DataServer>())
+                buffEntity.With((ref ProjectM.Gameplay.Scripting.Script_Demount_DataServer s) => s.DemountMinDamageFactor = 1_000_000f);
+
+            if (!buffEntity.Has<ReplaceAbilityOnSlotData>()) Core.EntityManager.AddComponent<ReplaceAbilityOnSlotData>(buffEntity);
+            DynamicBuffer<ReplaceAbilityOnSlotBuff> buffer = Core.EntityManager.HasBuffer<ReplaceAbilityOnSlotBuff>(buffEntity)
+                ? Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(buffEntity)
+                : Core.EntityManager.AddBuffer<ReplaceAbilityOnSlotBuff>(buffEntity);
+
+            // Override the saddle's blank entries for our slots (priority 100 beats the mount's pri-10),
+            // and add entries for any free slot it doesn't already declare.
+            for (int b = 0; b < buffer.Length; b++)
+            {
+                if (!perSlot.TryGetValue(buffer[b].Slot, out int ab) || ab == 0) continue;
+                var e = buffer[b];
+                e.Target = ReplaceAbilityTarget.BuffTarget;
+                e.NewGroupId = new PrefabGUID(ab);
+                e.Priority = 100;
+                e.CopyCooldown = true;
+                e.CastBlockType = GroupSlotModificationCastBlockType.WholeCast;
+                buffer[b] = e;
+            }
+            var rendered = new List<int>();
+            foreach (var slot in _mountedSlots)
+            {
+                if (!perSlot.TryGetValue(slot, out int ab) || ab == 0) continue;
+                rendered.Add(slot);
+                bool exists = false;
+                for (int b = 0; b < buffer.Length; b++) if (buffer[b].Slot == slot) { exists = true; break; }
+                if (exists) continue;
+                buffer.Add(new ReplaceAbilityOnSlotBuff
+                {
+                    Target = ReplaceAbilityTarget.BuffTarget,
+                    Slot = slot,
+                    NewGroupId = new PrefabGUID(ab),
+                    Priority = 100,
+                    CopyCooldown = true,
+                    CastBlockType = GroupSlotModificationCastBlockType.WholeCast,
+                });
+            }
+
+            if (triggerUpdate && Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+            Core.Log.LogInfo($"[Beelz MOUNT] {steamId} → saddle loadout injected on slot(s) [{string.Join(",", rendered)}] (cast-dismount disabled{(triggerUpdate ? "" : ", in-resolve")}).");
+        }
+        catch (Exception ex) { Core.Log.LogWarning($"[Beelz MOUNT] ApplyMountedLoadout failed for {steamId}: {ex.Message}"); }
     }
 }

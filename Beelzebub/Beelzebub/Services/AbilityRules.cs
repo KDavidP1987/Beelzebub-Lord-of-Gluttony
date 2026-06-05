@@ -26,9 +26,13 @@ internal sealed class AbilityRules
     {
         if (!File.Exists(RulesFilePath))
         {
-            Current = DefaultRules();
+            // v0.110.0: a fresh server seeds the SHIPPED, dev-curated default (Resources/ability_rules.default.json,
+            // embedded) instead of the bare built-in deny-list — so curated enabled/weapons/forms/shaping config
+            // ships ready and admins can still override it afterward. Falls back to DefaultRules() if absent/bad.
+            Current = LoadEmbeddedDefaultRules();
             Save();
-            Core.Log.LogInfo($"Created default ability rules at {RulesFilePath} ({Current.DenyPatterns.Count} deny patterns).");
+            Core.Log.LogInfo($"Created ability rules at {RulesFilePath} from shipped default "
+                + $"({Current.DenyPatterns.Count} deny patterns, {Current.AbilityMap.Count} curated ability(ies)).");
             return;
         }
 
@@ -143,6 +147,43 @@ internal sealed class AbilityRules
         return null;
     }
 
+    /// <summary>v0.114.0: resolve an ability name-or-id to its PrefabGUID int (0 if unresolved). Inverse of
+    /// <see cref="ResolveAbilityKey"/> — parses a numeric id directly, else reverse-scans the prefab-name map.</summary>
+    public static int ResolveAbilityGuid(string nameOrId)
+    {
+        string s = (nameOrId ?? "").Trim();
+        if (s.Length == 0) return 0;
+        if (int.TryParse(s, out int guid)) return guid;
+        if (Core.PrefabNames != null)
+            foreach (var kv in Core.PrefabNames)
+                if (string.Equals(kv.Value, s, StringComparison.OrdinalIgnoreCase)) return kv.Key;
+        return 0;
+    }
+
+    // v0.111.0 (prep-roadmap A1): the curation-process states a ReviewStatus may hold, in workflow order.
+    // Unreviewed = not yet looked at; Reviewed = examined, no decision committed; Approved = vetted FOR ship;
+    // Blocked = deliberately kept OUT (broken/unwanted) but still listed; Hidden = junk/noise, suppressed from
+    // collections entirely. Canonical casing lives here; the CSV-export + lint tools mirror this list.
+    public static readonly string[] ReviewStatuses = { "Unreviewed", "Reviewed", "Approved", "Blocked", "Hidden" };
+
+    /// <summary>v0.111.0: normalize a free-typed review-status token to its canonical casing, or null if invalid.</summary>
+    public static string NormalizeReviewStatus(string raw)
+    {
+        string s = (raw ?? "").Trim();
+        foreach (var v in ReviewStatuses)
+            if (string.Equals(v, s, StringComparison.OrdinalIgnoreCase)) return v;
+        return null;
+    }
+
+    // v0.112.0 (prep-roadmap B1): canonical audit TYPE tags. Free-text is allowed (so new use-case groups
+    // can be coined), but these are the audit-assigned set the B1 pass emits + the tooling groups by.
+    public static readonly string[] ReviewTags =
+        { "emote", "feed", "idle_flee", "variant_hard", "variant_gateboss", "variant_minion",
+          "basic_attack", "reaction", "combo", "summon", "lifecycle", "dev",
+          // v0.118.0 (tester-feedback categories): crash=game/server crash · stuck=character stuck ·
+          // broken=casts-but-nothing/non-functional · exploit=invuln/balance-breaking.
+          "crash", "stuck", "broken", "exploit" };
+
     /// <summary>
     /// v0.69.0: heal AbilityMap entries that an earlier command keyed by GUID instead of prefab name
     /// (pre-fix `.beelz admin ability &lt;guid&gt; ...`). Re-keys each numeric key to its prefab name so
@@ -173,17 +214,21 @@ internal sealed class AbilityRules
                 if (e.ChargeTimeSeconds.HasValue) existing.ChargeTimeSeconds = e.ChargeTimeSeconds;
                 if (e.AoeRadius.HasValue) existing.AoeRadius = e.AoeRadius;
                 if (e.ProjectileSpeed.HasValue) existing.ProjectileSpeed = e.ProjectileSpeed;
+                if (e.LeapHeight.HasValue) existing.LeapHeight = e.LeapHeight;
                 if (e.EffectDurationSeconds.HasValue) existing.EffectDurationSeconds = e.EffectDurationSeconds;
                 if (e.HealingMultiplier.HasValue) existing.HealingMultiplier = e.HealingMultiplier;
                 if (e.SummonCap.HasValue) existing.SummonCap = e.SummonCap;
                 if (e.SummonTimeoutSeconds.HasValue) existing.SummonTimeoutSeconds = e.SummonTimeoutSeconds;
                 if (e.SummonUnitsPerCast.HasValue) existing.SummonUnitsPerCast = e.SummonUnitsPerCast;
                 if (e.ForceTimeoutSeconds.HasValue) existing.ForceTimeoutSeconds = e.ForceTimeoutSeconds;
+                if (e.PowerWindowSeconds.HasValue) existing.PowerWindowSeconds = e.PowerWindowSeconds;   // v0.120.0
                 if (e.Interruptible.HasValue) existing.Interruptible = e.Interruptible;
                 if (e.CastMovementSpeed.HasValue) existing.CastMovementSpeed = e.CastMovementSpeed;
                 if (e.FreeMoveAfterCast) existing.FreeMoveAfterCast = true;
                 if (e.FreeMoveAfterSeconds.HasValue) existing.FreeMoveAfterSeconds = e.FreeMoveAfterSeconds;   // v0.87.0
                 if (e.InterruptOnHit.HasValue) existing.InterruptOnHit = e.InterruptOnHit;                      // v0.87.0
+                if (!string.IsNullOrWhiteSpace(e.ReviewStatus) && !string.Equals(e.ReviewStatus, "Unreviewed", StringComparison.OrdinalIgnoreCase)) existing.ReviewStatus = e.ReviewStatus;  // v0.111.0
+                if (!string.IsNullOrWhiteSpace(e.ReviewTag)) existing.ReviewTag = e.ReviewTag;  // v0.112.0
             }
             else map[name] = e;
             map.Remove(k);
@@ -198,7 +243,7 @@ internal sealed class AbilityRules
     /// v0.72.0: clear an entry's SHAPING fields back to "leave baked / baseline" — the ability-function
     /// tuning an admin sets (cooldown/range/charges/aoe/projspeed/duration/healing/interrupt/freemove/
     /// castspeed + damage/cooldown scale). Leaves identity/availability (Enabled, Weapons, Forms,
-    /// Difficulty, Phase, AllowDenied, TransformOnly, Category, Notes) untouched.
+    /// Difficulty, Phase, AllowDenied, TransformOnly, Category, ReviewStatus, ReviewTag, Notes) untouched.
     /// </summary>
     static void ClearShapingFields(AbilityEntry e)
     {
@@ -208,12 +253,14 @@ internal sealed class AbilityRules
         e.ChargeTimeSeconds = null;
         e.AoeRadius = null;
         e.ProjectileSpeed = null;
+        e.LeapHeight = null;
         e.EffectDurationSeconds = null;
         e.HealingMultiplier = null;
         e.SummonCap = null;
         e.SummonTimeoutSeconds = null;
         e.SummonUnitsPerCast = null;
         e.ForceTimeoutSeconds = null;
+        e.PowerWindowSeconds = null;   // v0.120.0
         e.Interruptible = null;
         e.FreeMoveAfterCast = false;
         e.CastMovementSpeed = null;
@@ -248,6 +295,14 @@ internal sealed class AbilityRules
         if (n > 0) Save();
         return n;
     }
+
+    /// <summary>v0.112.0: review-process getters (default Unreviewed / empty when no entry). Used by the API emit + tooling.</summary>
+    public string GetReviewStatus(string abilityName)
+        => Current?.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) && e != null
+           && !string.IsNullOrEmpty(e.ReviewStatus) ? e.ReviewStatus : "Unreviewed";
+    public string GetReviewTag(string abilityName)
+        => Current?.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) && e != null
+           ? (e.ReviewTag ?? "") : "";
 
     public (bool ok, string message) SetAbilityField(string abilityName, string field, string rawValue)
     {
@@ -323,6 +378,10 @@ internal sealed class AbilityRules
                 { if (vl is "clear" or "none" or "null") { e.ProjectileSpeed = null; break; }
                   if (!TryParseFloat(v, out float ps) || ps < 0f) return (false, "projspeed expects a projectile speed >= 0, or clear. (Needs Abilities_ApplyConfig; the edit is GLOBAL.)");
                   e.ProjectileSpeed = ps; break; }
+            case "leapheight": case "travelheight":
+                { if (vl is "clear" or "none" or "null") { e.LeapHeight = null; break; }
+                  if (!TryParseFloat(v, out float lh) || lh < 0f) return (false, "leapheight expects a leap/travel height >= 0 (vanilla boss leaps are ~250; try ~20-40 to keep the caster grounded), or clear. (Needs Abilities_ApplyConfig; the edit is GLOBAL.)");
+                  e.LeapHeight = lh; break; }
             case "duration": case "effectduration":
                 { if (vl is "clear" or "none" or "null") { e.EffectDurationSeconds = null; break; }
                   if (!TryParseFloat(v, out float ed) || ed < 0f) return (false, "duration expects the buff/debuff duration in seconds >= 0, or clear. (Needs Abilities_ApplyConfig; the edit is GLOBAL.)");
@@ -347,6 +406,10 @@ internal sealed class AbilityRules
                 { if (vl is "clear" or "none" or "null") { e.ForceTimeoutSeconds = null; break; }
                   if (!TryParseFloat(v, out float fto) || fto < 0f) return (false, "forcetimeout expects seconds >= 0 (force this ability's otherwise-INDEFINITE spawned effects/buffs to expire after this long — adds a lifetime where there is none), or clear. (Needs Abilities_ApplyConfig; GLOBAL baked edit.)");
                   e.ForceTimeoutSeconds = fto; break; }
+            case "powerwindow": case "powerwindowseconds": case "dmgwindow":
+                { if (vl is "clear" or "none" or "null") { e.PowerWindowSeconds = null; break; }
+                  if (!TryParseFloat(v, out float pw) || pw < 0f) return (false, "powerwindow expects seconds >= 0 — how long the granted-cast power buff lasts, so a power-scaled DoT/AoE that ticks AFTER the cast is still boosted (0/clear = default 1.5s). NOTE: only affects power-scaled damage; flat boss DoTs (fixed per-tick values) cannot be scaled by any power buff.");
+                  e.PowerWindowSeconds = pw; break; }
             case "category":
                 { if (vl is "clear" or "none" or "null" or "auto") { e.Category = null; break; }
                   if (!Enum.TryParse<AbilityCategory>(v, ignoreCase: true, out var cat)) return (false, "category expects one of: Travel, Aoe, Projectile, Melee, Summon, Buff, WeaponSpell, Spell, Other (or clear).");
@@ -355,39 +418,53 @@ internal sealed class AbilityRules
                 { e.Weapons = ParseWeaponList(vl, out string err); if (err != null) return (false, err); break; }
             case "forms":
                 { e.Forms = ParseFormList(vl, out string err); if (err != null) return (false, err); break; }
+            case "reviewstatus": case "review": case "status":
+                { string rs = NormalizeReviewStatus(v); if (rs == null) return (false, "reviewstatus expects one of: Unreviewed, Reviewed, Approved, Blocked, Hidden."); e.ReviewStatus = rs; break; }
+            case "reviewtag": case "tag": case "audittag":
+                { if (vl is "clear" or "none" or "null") { e.ReviewTag = ""; break; }
+                  e.ReviewTag = v; break; }   // free-text; canonical set in ReviewTags (emote/feed/variant_hard/basic_attack/reaction/combo/...)
             case "notes":
                 { e.Notes = v; break; }
             default:
-                return (false, "Unknown field. Valid: enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, damagescale, cooldownscale, cooldown, range, charges, chargetime, aoe, projspeed, duration, healing, category, interruptible, interruptonhit, freemove, freelymove, castspeed, notes.");
+                return (false, "Unknown field. Valid: enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, damagescale, cooldownscale, cooldown, range, charges, chargetime, aoe, projspeed, leapheight, duration, healing, forcetimeout, powerwindow, summoncap, summontimeout, summonunits, category, reviewstatus, reviewtag, interruptible, interruptonhit, freemove, freelymove, castspeed, notes.");
         }
         bool saved = Save();
         return (true, Persisted(saved, $"Set {f}={v} for '{name}'. (.beelz admin reload re-applies cast tuning if changed.)"));
     }
 
+    // v0.101.0: a token is a plain weapon family (ALLOW-list: usable ONLY on these) or a "!"-prefixed
+    // family (BLOCK-list: usable on every weapon EXCEPT these). Empty = universal. Mirrors ParseFormList.
     static List<string> ParseWeaponList(string csv, out string error)
     {
         error = null;
         var list = new List<string>();
         if (csv is "" or "none" or "any" or "clear" or "universal") return list; // empty = universal
-        foreach (var tok in csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        foreach (var raw in csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
+            bool block = raw.StartsWith("!");
+            string tok = block ? raw.Substring(1).Trim() : raw;
             if (!Enum.TryParse<WeaponFamily>(tok, ignoreCase: true, out var fam) || fam == WeaponFamily.None)
-            { error = $"Unknown weapon family '{tok}'. Valid: Sword, GreatSword, Axe, Mace, Spear, Daggers, Crossbow, Longbow, Pistols, Reaper, Whip, Claws, Pollaxe, Slashers, TwinBlades, Unarmed, FishingPole, Magic (or 'any' to clear)."; return list; }
-            list.Add(fam.ToString());
+            { error = $"Unknown weapon family '{raw}'. Valid: Sword, GreatSword, Axe, Mace, Spear, Daggers, Crossbow, Longbow, Pistols, Reaper, Whip, Claws, Pollaxe, Slashers, TwinBlades, Unarmed, FishingPole, Magic — prefix with '!' to BLOCK a weapon (e.g. !Sword), or 'any' to clear."; return list; }
+            list.Add((block ? "!" : "") + fam.ToString());
         }
         return list;
     }
 
+    // v0.101.0: a token is either a plain form name (ALLOW-list: usable ONLY in these forms) or a
+    // "!"-prefixed name (BLOCK-list: usable everywhere EXCEPT these forms). Mixing is allowed. This lets
+    // admins curate which captured abilities work per form/mounted (e.g. boss abilities that demount).
     static List<string> ParseFormList(string csv, out string error)
     {
         error = null;
         var list = new List<string>();
         if (csv is "" or "none" or "any" or "clear") return list;
-        foreach (var tok in csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        foreach (var raw in csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
+            bool block = raw.StartsWith("!");
+            string tok = block ? raw.Substring(1).Trim() : raw;
             if (!Enum.TryParse<ShapeshiftForm>(tok, ignoreCase: true, out var fm) || fm == ShapeshiftForm.None)
-            { error = $"Unknown form '{tok}'. Valid: Wolf, Bear, Rat, Spider, Toad (or 'any' to clear)."; return list; }
-            list.Add(fm.ToString());
+            { error = $"Unknown form '{raw}'. Valid: Wolf, Bear, Rat, Spider, Toad, Werewolf, Gargoyle, Mounted — prefix with '!' to BLOCK a form (e.g. !Mounted), or 'any' to clear."; return list; }
+            list.Add((block ? "!" : "") + fm.ToString());
         }
         return list;
     }
@@ -618,17 +695,51 @@ internal sealed class AbilityRules
                 ChargeTimeSeconds = entry.ChargeTimeSeconds,
                 AoeRadius = entry.AoeRadius,
                 ProjectileSpeed = entry.ProjectileSpeed,
+                LeapHeight = entry.LeapHeight,
                 EffectDurationSeconds = entry.EffectDurationSeconds,
                 HealingMultiplier = entry.HealingMultiplier,
                 SummonCap = entry.SummonCap,                          // v0.79.0 — preserve across reload
                 SummonTimeoutSeconds = entry.SummonTimeoutSeconds,    // v0.79.0
                 SummonUnitsPerCast = entry.SummonUnitsPerCast,        // v0.80.0
                 ForceTimeoutSeconds = entry.ForceTimeoutSeconds,      // v0.85.0
+                PowerWindowSeconds = entry.PowerWindowSeconds,        // v0.120.0 — preserve across reload
                 Category = NormalizeCategoryName(entry.Category),
+                // v0.112.0–0.114.0 curation fields — MUST be copied here too, or a reload/restart silently
+                // drops the review tags (same class as the v0.65 shaping-fields bug warned about above).
+                ReviewStatus = string.IsNullOrWhiteSpace(entry.ReviewStatus) ? "Unreviewed" : entry.ReviewStatus.Trim(),
+                ReviewTag = entry.ReviewTag ?? "",
                 Notes = entry.Notes ?? "",
             };
         }
         return result;
+    }
+
+    /// <summary>
+    /// v0.110.0: load the SHIPPED, dev-curated default rules from the embedded
+    /// <c>Resources/ability_rules.default.json</c> — the file devs hand-edit and that ships in the DLL.
+    /// Seeded onto a fresh server (no config file yet). Falls back to the built-in <see cref="DefaultRules"/>
+    /// if the embedded resource is missing or unparseable. Existing servers keep their own config (Load only
+    /// calls this when the on-disk file is absent).
+    /// </summary>
+    static RulesDto LoadEmbeddedDefaultRules()
+    {
+        try
+        {
+            var asm = System.Reflection.Assembly.GetExecutingAssembly();
+            using var stream = asm.GetManifestResourceStream("Beelzebub.Resources.ability_rules.default.json");
+            if (stream != null)
+            {
+                using var reader = new StreamReader(stream);
+                var dto = JsonSerializer.Deserialize<RulesDto>(reader.ReadToEnd(), _json);
+                if (dto != null) return NormalizeNulls(dto);
+            }
+            Core.Log?.LogWarning("[Beelz] embedded ability_rules.default.json not found — using built-in deny-list default.");
+        }
+        catch (Exception ex)
+        {
+            Core.Log?.LogWarning($"[Beelz] embedded ability_rules.default.json load failed: {ex.Message} — using built-in deny-list default.");
+        }
+        return DefaultRules();
     }
 
     static RulesDto DefaultRules() => new()
@@ -678,6 +789,7 @@ internal sealed class AbilityRules
             var parsed = new List<WeaponFamily>(entry.Weapons.Count);
             foreach (var w in entry.Weapons)
             {
+                if (w.StartsWith("!")) continue;   // v0.101.0: "!weapon" is a BLOCK entry, not part of the allow-list
                 if (Enum.TryParse(w, ignoreCase: true, out WeaponFamily fam))
                     parsed.Add(fam);
             }
@@ -731,9 +843,101 @@ internal sealed class AbilityRules
         var parsed = new List<ShapeshiftForm>(entry.Forms.Count);
         foreach (var f in entry.Forms)
         {
-            if (Enum.TryParse(f, ignoreCase: true, out ShapeshiftForm sf)) parsed.Add(sf);
+            string name = f.StartsWith("!") ? f.Substring(1) : f;
+            if (Enum.TryParse(name, ignoreCase: true, out ShapeshiftForm sf)) parsed.Add(sf);
         }
         return parsed;
+    }
+
+    /// <summary>
+    /// v0.101.0: per-ability form gating for the shapeshift/Mounted bars. The ability's <c>Forms</c> list
+    /// may hold plain form names (ALLOW-list: usable ONLY in those) and/or "!"-prefixed names (BLOCK-list:
+    /// usable everywhere EXCEPT those). Empty = usable in any form. Checked by the form + mounted injection
+    /// so admins can curate which captured abilities are valid per form (e.g. boss abilities that misfire or
+    /// demount). Does NOT affect the normal (un-transformed) weapon bar.
+    /// </summary>
+    public bool IsUsableInForm(string abilityName, ShapeshiftForm form)
+    {
+        if (form == ShapeshiftForm.None) return true;
+        if (Current.AbilityMap == null
+            || !Current.AbilityMap.TryGetValue(abilityName ?? "", out var entry)
+            || entry.Forms is null || entry.Forms.Count == 0) return true;
+
+        bool hasAllow = false, onAllow = false;
+        foreach (var f in entry.Forms)
+        {
+            bool block = f.StartsWith("!");
+            string name = block ? f.Substring(1) : f;
+            if (!Enum.TryParse(name, ignoreCase: true, out ShapeshiftForm sf)) continue;
+            if (block) { if (sf == form) return false; }       // explicitly blocked from this form
+            else { hasAllow = true; if (sf == form) onAllow = true; }
+        }
+        return !hasAllow || onAllow;   // if an allow-list exists, the form must be on it
+    }
+
+    /// <summary>
+    /// v0.101.0: is this ability explicitly BLOCKED on the given weapon (a "!weapon" entry in its
+    /// Weapons list)? Lets admins blacklist a weapon while leaving the ability universal elsewhere
+    /// (e.g. Weapons = "!Sword" → usable on every weapon except sword). Checked by the grant resolver.
+    /// The plain (non-"!") entries remain the allow-list via <see cref="ClassifyWeaponFamilies"/>.
+    /// </summary>
+    public bool IsWeaponBlocked(string abilityName, WeaponFamily weapon)
+    {
+        if (weapon == WeaponFamily.None) return false;
+        if (Current.AbilityMap == null
+            || !Current.AbilityMap.TryGetValue(abilityName ?? "", out var entry)
+            || entry.Weapons is null) return false;
+        foreach (var w in entry.Weapons)
+        {
+            if (!w.StartsWith("!")) continue;
+            if (Enum.TryParse(w.Substring(1), ignoreCase: true, out WeaponFamily fam) && fam == weapon) return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// v0.101.0: a compact human-readable dump of EVERY configured field on an ability — for
+    /// `.beelz admin ability <id>` with no field. Lists only non-default values; returns a
+    /// "all defaults" note when nothing custom is set. Keeps the AbilityEntry shape encapsulated.
+    /// </summary>
+    public string DescribeAbilityConfig(string abilityName)
+    {
+        if (Current.AbilityMap == null || !Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) || e == null)
+            return "(all defaults — no custom config)";
+        var p = new List<string>();
+        if (!e.Enabled) p.Add("enabled=false");
+        if (e.Weapons is { Count: > 0 }) p.Add("weapons=" + string.Join(",", e.Weapons));
+        if (e.Forms is { Count: > 0 }) p.Add("forms=" + string.Join(",", e.Forms));
+        if (e.TransformOnly) p.Add("transformonly=true");
+        if (e.AllowDenied) p.Add("allowdenied=true");
+        if (!string.Equals(e.Difficulty, "Basic", StringComparison.OrdinalIgnoreCase)) p.Add("difficulty=" + e.Difficulty);
+        if (e.Phase > 1) p.Add("phase=" + e.Phase);
+        if (Math.Abs(e.DamageScale - 1f) > 0.001f) p.Add($"damagescale={e.DamageScale:0.##}");
+        if (Math.Abs(e.CooldownScale - 1f) > 0.001f) p.Add($"cooldownscale={e.CooldownScale:0.##}");
+        if (e.CooldownSeconds.HasValue) p.Add($"cooldown={e.CooldownSeconds.Value:0.##}");
+        if (e.MaxRangeOverride.HasValue) p.Add($"range={e.MaxRangeOverride.Value:0.##}");
+        if (e.ChargesMax.HasValue) p.Add($"charges={e.ChargesMax.Value}");
+        if (e.ChargeTimeSeconds.HasValue) p.Add($"chargetime={e.ChargeTimeSeconds.Value:0.##}");
+        if (e.AoeRadius.HasValue) p.Add($"aoe={e.AoeRadius.Value:0.##}");
+        if (e.ProjectileSpeed.HasValue) p.Add($"projspeed={e.ProjectileSpeed.Value:0.##}");
+        if (e.LeapHeight.HasValue) p.Add($"leapheight={e.LeapHeight.Value:0.##}");
+        if (e.EffectDurationSeconds.HasValue) p.Add($"duration={e.EffectDurationSeconds.Value:0.##}");
+        if (e.HealingMultiplier.HasValue) p.Add($"healing={e.HealingMultiplier.Value:0.##}");
+        if (e.ForceTimeoutSeconds.HasValue) p.Add($"forcetimeout={e.ForceTimeoutSeconds.Value:0.##}");
+        if (e.PowerWindowSeconds.HasValue) p.Add($"powerwindow={e.PowerWindowSeconds.Value:0.##}");
+        if (e.SummonCap.HasValue) p.Add($"summoncap={e.SummonCap.Value}");
+        if (e.SummonTimeoutSeconds.HasValue) p.Add($"summontimeout={e.SummonTimeoutSeconds.Value:0.##}");
+        if (e.SummonUnitsPerCast.HasValue) p.Add($"summonunits={e.SummonUnitsPerCast.Value}");
+        if (e.Interruptible.HasValue) p.Add($"interruptible={e.Interruptible.Value}");
+        if (e.InterruptOnHit.HasValue) p.Add($"interruptonhit={e.InterruptOnHit.Value}");
+        if (e.FreeMoveAfterCast) p.Add("freemove=true");
+        if (e.FreeMoveAfterSeconds.HasValue) p.Add($"freelymove={e.FreeMoveAfterSeconds.Value:0.##}");
+        if (e.CastMovementSpeed.HasValue) p.Add($"castspeed={e.CastMovementSpeed.Value:0.##}");
+        if (!string.IsNullOrWhiteSpace(e.Category)) p.Add("category=" + e.Category);
+        if (!string.IsNullOrWhiteSpace(e.ReviewStatus) && !string.Equals(e.ReviewStatus, "Unreviewed", StringComparison.OrdinalIgnoreCase)) p.Add("reviewstatus=" + e.ReviewStatus);
+        if (!string.IsNullOrWhiteSpace(e.ReviewTag)) p.Add("reviewtag=" + e.ReviewTag);
+        if (!string.IsNullOrWhiteSpace(e.Notes)) p.Add("notes=\"" + e.Notes + "\"");
+        return p.Count == 0 ? "(all defaults — no custom config)" : string.Join("  ", p);
     }
 
     /// <summary>
@@ -743,11 +947,58 @@ internal sealed class AbilityRules
     /// Default true when no entry exists. GUID-based bulk disable lives in
     /// <see cref="RulesDto.DenyGuids"/>; this is the per-ability switch.
     /// </summary>
+    // v0.101.0: hardcoded HARD-BLOCK for confirmed server-crashing abilities. Honored even in
+    // Capture_InclusiveMode (where the admin DenyGuids list is bypassed), so it blocks capture,
+    // `.beelz grant`, and transform/form spell-bar pickup. Extend as the tester crash list is confirmed.
+    static readonly HashSet<int> _hardBlockedGuids = new()
+    {
+        -1623080868,   // AB_Militia_Fabian_Mountup_AbilityGroup (Sir Erwin) — spawns the steed + rider scripts that CRASH the dedicated server (TEST 3 confirmed)
+        // v0.118.0 — confirmed crash / permanent-character-break abilities from the v0.100 tester CRITICAL list.
+        // Honored even in Capture_InclusiveMode (which testers run). Recoverable-stuck ones are data-blocked
+        // (Enabled=false in ability_rules.default.json) instead, so they can be un-blocked for fix-research.
+        // v0.129.0 — UN-hard-blocked (tester could not reproduce on the current build; now data-enabled):
+        //   Dracula Bolt Spray 1957691133, Morgana Swarm -1980019894 + Orb Barrage 1242557903,
+        //   Leandra ShadowStep 1325722355 + TrippleBolt -1795148379. Kept below: still-confirmed crashers.
+        1485838951,    // AB_Gloomrot_Technician_Fiddle — GAME crash (vanilla sword-E while bound)
+        1322698651,    // AB_Undead_ArenaChampion_TwinbladeThrow (Gaius) — GAME crash
+        -485230865,    // Undead_ArenaChampion_CorpseBuff (Gaius) — locks in place, aggro off
+        938684260,     // AB_HighLord_LeapStrike (Cassius) — permanent T-pose (must self-kill)
+        -891106318,    // AB_Spider_Baneling_Explode_Poison — permanent invisibility on respawn
+        // v0.127.0 — gaps found in the 2026-06-05 crash/break re-audit (the baseline had blocked the
+        // applied BUFF, not the capturable ABILITY a player actually grabs):
+        -89125940,     // AB_Undead_AreanaChampion_CorpseBuff_AbilityGroup (Gaius) — the CAPTURABLE ability that applies the permanent locked/phased/invisible CorpseBuff (-485230865 above is only the buff, not captured)
+    };
+
+    /// <summary>v0.101.0: is this a confirmed server-crashing ability we hard-block everywhere?</summary>
+    public bool IsHardBlocked(int abilityGuid) => _hardBlockedGuids.Contains(abilityGuid);
+
+    // v0.115.0: ReviewStatus values that act as a hard CURATION GATE (block capture/grant + hide from the
+    // player catalog) when Curation_EnforceReviewStatus is on. Blocked = incompatible/unwanted; Hidden = junk.
+    static bool IsGatingReviewStatus(string reviewStatus)
+        => string.Equals(reviewStatus, "Blocked", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(reviewStatus, "Hidden", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>v0.115.0: is this ability curation-gated (ReviewStatus Blocked/Hidden) with enforcement on?
+    /// A gated ability is not collectible and is filtered from the player catalog. Distinct from Enabled
+    /// (admin kill-switch) and the hard-block list (crashers) — this is the curation decision lever.</summary>
+    public bool IsReviewGated(string abilityName, int abilityGuid)
+        => Beelzebub.Config.Settings.Curation_EnforceReviewStatus.Value
+           && Current.AbilityMap != null
+           && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) && e != null
+           && IsGatingReviewStatus(e.ReviewStatus);
+
     public bool IsEnabled(string abilityName, int abilityGuid)
     {
+        if (_hardBlockedGuids.Contains(abilityGuid)) return false;   // confirmed crasher — never allow
         if (Current.AbilityMap != null
             && Current.AbilityMap.TryGetValue(abilityName ?? "", out var entry)
-            && !entry.Enabled) return false;
+            && entry != null)
+        {
+            if (!entry.Enabled) return false;
+            // v0.115.0: ReviewStatus=Blocked/Hidden is a hard curation gate (when enforcement is on).
+            if (Beelzebub.Config.Settings.Curation_EnforceReviewStatus.Value
+                && IsGatingReviewStatus(entry.ReviewStatus)) return false;
+        }
         return true;
     }
 
@@ -834,6 +1085,9 @@ internal sealed class AbilityRules
         => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.SummonUnitsPerCast : null;
     public float? GetForceTimeoutSeconds(string abilityName)
         => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.ForceTimeoutSeconds : null;
+    /// <summary>v0.120.0: per-ability granted-cast power-window seconds (null = default window).</summary>
+    public float? GetPowerWindowSeconds(string abilityName)
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.PowerWindowSeconds : null;
     /// <summary>v0.80.0: per-ability max units per cast (0/none = the ability's natural count).</summary>
     public int ResolveSummonUnitsPerCast(string abilityName, int fallback)
         => GetSummonUnitsPerCast(abilityName) ?? fallback;
@@ -1391,6 +1645,10 @@ internal sealed class AbilityRules
         public float? ChargeTimeSeconds { get; set; }
         public float? AoeRadius { get; set; }
         public float? ProjectileSpeed { get; set; }
+        // v0.125.0: leap/travel apex height (TravelBuff.Height on a leap ability's phase/travel buff —
+        // vanilla boss leaps are ~250, which flings a player caster sky-high; lower it to keep grounded).
+        // Edited on the spawned phase buff during ApplyAll, capture/restore-safe like the fields above.
+        public float? LeapHeight { get; set; }
         // v0.68.0 (Stage 2b): downstream effect shaping (walked from Group→Cast→SpawnPrefab).
         // - EffectDurationSeconds: ABSOLUTE override of the duration of buffs/debuffs this ability
         //   applies (ApplyBuffOnGameplayEvent.OverrideDuration). Idempotent (set, not multiplied).
@@ -1414,10 +1672,30 @@ internal sealed class AbilityRules
         // many seconds (adds a LifeTime+Destroy where the buff has none; the case EffectDurationSeconds
         // can't reach). null/0 = leave indefinite. Baked, applied when Abilities_ApplyConfig.
         public float? ForceTimeoutSeconds { get; set; }
+        // v0.120.0: POWER-WINDOW seconds — per-ability override of how long the granted-cast power buff
+        // (GrantPowerScalingService) stays on the caster. The default window (1.5s) under-scales DoT/AoE
+        // ticks that resolve LATER than the cast (a lingering power-scaled area/debuff). Set this near the
+        // ability's effect duration so those later ticks are boosted too. null/0 = the default 1.5s window.
+        // IMPORTANT: this only affects damage that scales off the caster's Physical/Spell Power. Flat boss
+        // DoTs (fixed per-tick values with no power coefficient) cannot be scaled by ANY power buff — their
+        // damage lives in a blob asset that's not editable. See docs/ABILITY_CHANGE_IMPACT.md.
+        public float? PowerWindowSeconds { get; set; }
         // v0.51.0: admin override for the wire `cat=` badge. One of the AbilityCategory names
         // (Travel/Aoe/Projectile/Melee/Summon/Buff/WeaponSpell/Spell/Other). Empty/null = use
         // the name heuristic (Categorization.ClassifyAbility). Highest precedence.
         public string Category { get; set; }
+        // v0.111.0 (prep-roadmap A1): CURATION-PROCESS status, orthogonal to what the ability IS.
+        // Tracks where this ability sits in our review workflow so we can answer "how many left?"
+        // and drive the shippable-set rule. One of ReviewStatuses (Unreviewed/Reviewed/Approved/
+        // Blocked/Hidden). NOT a runtime gate — Enabled is the kill-switch; this is bookkeeping the
+        // CSV export + lint + shippable-set tooling read. Default "Unreviewed".
+        public string ReviewStatus { get; set; } = "Unreviewed";
+        // v0.112.0 (prep-roadmap B1): the audit-assigned TYPE tag — what KIND of ability this is for
+        // grouped follow-up/testing (emote/feed/idle_flee/variant_hard/basic_attack/reaction/combo/...).
+        // Free-text but canonical values live in ReviewTags; paired with ReviewStatus=Reviewed it forms
+        // the "test log" backlog (pull a whole group through the API to evaluate in-game). NOT a runtime
+        // gate. Empty = untagged.
+        public string ReviewTag { get; set; } = "";
         public string Notes { get; set; } = "";
     }
 

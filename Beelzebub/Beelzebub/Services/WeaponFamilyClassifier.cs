@@ -22,6 +22,20 @@ internal static class WeaponFamilyClassifier
     // and stay usable on any bar rather than being gated to a weapon nobody can equip.
     static readonly (string Token, WeaponFamily Family)[] _heuristics =
     {
+        // v0.112.0 (B6 audit): the three newest player weapons were MISSING here — their abilities
+        // mis-gated (Pollaxe -> Axe via the "axe" substring in "Pollaxe"; Slashers/TwinBlades fell
+        // through to Magic). Must precede the generic Axe / _Slash_ / Sword tokens so they win.
+        // COUPLING NOTE: "Slashers" (unbounded) also matches the Cursed Blacksmith boss spells
+        // AB_Undead_CursedSmith_FloatingSlashers_* / _Summon_WeaponSlashers_*. Those are intentionally
+        // pinned to Weapons:["Magic"] in ability_rules.default.json (a rules pin wins before this
+        // heuristic runs), so they stay universal. If those pins are ever removed, these rows would
+        // re-gate the CursedSmith spells to the Slashers weapon — keep the pins.
+        ("_Pollaxe_",    WeaponFamily.Pollaxe),
+        ("Pollaxe",      WeaponFamily.Pollaxe),
+        ("_TwinBlades_", WeaponFamily.TwinBlades),
+        ("TwinBlades",   WeaponFamily.TwinBlades),
+        ("_Slashers_",   WeaponFamily.Slashers),
+        ("Slashers",     WeaponFamily.Slashers),
         ("_GreatSword_", WeaponFamily.GreatSword),
         ("GreatSword",   WeaponFamily.GreatSword),
         ("_Crossbow_",   WeaponFamily.Crossbow),

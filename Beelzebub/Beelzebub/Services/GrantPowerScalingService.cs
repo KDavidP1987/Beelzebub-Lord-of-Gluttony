@@ -38,7 +38,9 @@ internal static class GrantPowerScalingService
     // so immediate-instantiate works and we can repurpose its stat buffer.
     static readonly PrefabGUID PowerCarrierBuff = new(-1591883586); // AB_Consumable_PhysicalPowerPotion_T02_Buff
 
-    const float BuffLifeSeconds = 1.5f;
+    // v0.120.0: default window length. A per-ability `powerwindow` override (AbilityMap) widens this for
+    // abilities whose POWER-SCALED DoT/AoE ticks land after the cast (the default 1.5s under-scales them).
+    const float DefaultWindowSeconds = 1.5f;
 
     // Single-active guard: one scaling buff per player at a time (prevents stacking on
     // rapid casts). Maps steamId → UTC time the current window ends.
@@ -62,14 +64,19 @@ internal static class GrantPowerScalingService
         float scale = ComputeEffectiveScale(abilityGroup);
         if (Math.Abs(scale - 1f) < 0.001f) return; // PlayerScaled / no per-ability tweak → vanilla handles it
 
+        // v0.120.0: per-ability window override — set `powerwindow <sec>` near the ability's effect duration
+        // so a power-scaled lingering DoT/AoE keeps the boost while it ticks. Default 1.5s otherwise.
+        float windowSec = Core.AbilityRules.GetPowerWindowSeconds(abilityGroup.GetPrefabName()) is float w && w > 0f
+            ? w : DefaultWindowSeconds;
+
         var now = DateTime.UtcNow;
         if (_windowEnds.TryGetValue(steamId, out var until) && until > now) return; // a window is already live
 
-        if (ApplyPowerWindow(caster, scale))
+        if (ApplyPowerWindow(caster, scale, windowSec))
         {
-            _windowEnds[steamId] = now.AddSeconds(BuffLifeSeconds);
+            _windowEnds[steamId] = now.AddSeconds(windowSec);
             if (Beelzebub.Config.Settings.VerboseLogging.Value)
-                Core.Log.LogInfo($"[Beelz] grant power-scale x{scale:F2} for {steamId} on {abilityGroup.GetPrefabName()}.");
+                Core.Log.LogInfo($"[Beelz] grant power-scale x{scale:F2} ({windowSec:F1}s) for {steamId} on {abilityGroup.GetPrefabName()}.");
         }
     }
 
@@ -89,7 +96,7 @@ internal static class GrantPowerScalingService
         return s;
     }
 
-    static bool ApplyPowerWindow(Entity caster, float scale)
+    static bool ApplyPowerWindow(Entity caster, float scale, float windowSec)
     {
         try
         {
@@ -97,10 +104,10 @@ internal static class GrantPowerScalingService
                 || !buff.Exists())
                 return false;
 
-            // Short, self-destroying window.
+            // Self-destroying window (length = per-ability override, else the default).
             if (!Core.EntityManager.HasComponent<LifeTime>(buff))
                 Core.EntityManager.AddComponent<LifeTime>(buff);
-            buff.With((ref LifeTime lt) => { lt.Duration = BuffLifeSeconds; lt.EndAction = LifeTimeEndAction.Destroy; });
+            buff.With((ref LifeTime lt) => { lt.Duration = windowSec; lt.EndAction = LifeTimeEndAction.Destroy; });
 
             // Auto-clear on disconnect (defensive — it's short-lived anyway).
             if (Core.EntityManager.HasComponent<BuffCategory>(buff))

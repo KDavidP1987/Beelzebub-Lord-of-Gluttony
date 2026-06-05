@@ -38,3 +38,8 @@ Desktop.ini
 .DS_Store
 *.swp
 *.tmp
+
+# transient/build junk
+~$*
+__pycache__/
+*.pyc

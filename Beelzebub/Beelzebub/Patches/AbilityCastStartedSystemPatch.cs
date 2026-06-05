@@ -26,10 +26,14 @@ internal static class AbilityCastStartedSystemPatch
 {
     /// <summary>Substring patterns identifying a summon-class ability (case-insensitive).</summary>
     static readonly string[] SummonNamePatterns = {
-        "_Summon_", "_Summoning_", "_Reinforcement_", "_CallReinforcements_",
+        // v0.125.0: broadened from "_Summon_" to bare "_Summon" so EVERY "_SummonX" boss ability is
+        // recognized — _SummonMinions / _SummonTail / _SummonAide / _SummonOrb / _SummonAngel /
+        // _SummonEyeOfGod / _SummonGhosts / _SummonBats / _Summoning_ all match this single token.
+        // (Unmapped summons still produce nothing on their own — the natural chain spawns ownerless
+        // minions — so a manual-spawn SummonTargets entry is what actually makes one work.)
+        "_Summon",
+        "_Reinforcement_", "_CallReinforcements_",
         "_RaiseDead_", "_RaiseHorde_",
-        // v0.30.0: Dracula's SummonBats has no trailing underscore after "Summon".
-        "_SummonBats",
     };
 
     /// <summary>
@@ -84,6 +88,48 @@ internal static class AbilityCastStartedSystemPatch
             // without a valid spell target) → produces nothing. Manual-spawn it.
             { "AB_Vampire_Dracula_BloodStones_Summon_AbilityGroup", (32692466, 1) }, // CHAR_Dracula_SpellStone_LargeBlood
             { "AB_Vampire_Dracula_BloodStones_Summon_Group",        (32692466, 1) },
+
+            // v0.125.0 — tester-reported boss summons that produced nothing for a player caster. Their
+            // natural chain spawns the unit UNOWNED (SpawnMinionOnGameplayEvent InheritOwner:False), so
+            // LinkMinion can't claim it — manual-spawn an owned ally instead. Target units are name-matched
+            // from the prefab dump (the exact unit GUID is sealed in a binary blob), so a pick may need a
+            // tweak after live testing, but each now spawns a player-allied unit on cast.
+            { "AB_Bandit_Tourok_VBlood_CallReinforcements_AbilityGroup", (-301730941, 2) }, // CHAR_Bandit_Thug
+            { "AB_Bandit_Tourok_VBlood_CallReinforcements_Group",        (-301730941, 2) },
+            { "AB_Bandit_Stalker_VBlood_Reinforcement_AbilityGroup", (-309264723, 2) }, // CHAR_Bandit_Stalker
+            { "AB_Bandit_Stalker_VBlood_Reinforcement_Group",        (-309264723, 2) },
+            { "AB_BatVampire_SummonMinions_AbilityGroup", (593505050, 3) }, // CHAR_Legion_BatSwarm
+            { "AB_BatVampire_SummonMinions_Group",        (593505050, 3) },
+            { "AB_Blackfang_Morgana_SummonTail_AbilityGroup", (-1075824048, 1) }, // CHAR_Blackfang_MorganasTail
+            { "AB_Blackfang_Morgana_SummonTail_Group",        (-1075824048, 1) },
+            { "AB_Cardinal_SummonAide_AbilityGroup", (1745498602, 1) }, // CHAR_ChurchOfLight_CardinalAide
+            { "AB_Cardinal_SummonAide_Group",        (1745498602, 1) },
+            { "AB_Cardinal_SummonOrb_AbilityGroup", (1917502536, 1) }, // CHAR_ChurchOfLight_SmiteOrb
+            { "AB_Cardinal_SummonOrb_Group",        (1917502536, 1) },
+            { "AB_ChurchOfLight_Paladin_SummonAngel_AbilityGroup", (-1737346940, 1) }, // CHAR_Paladin_DivineAngel
+            { "AB_ChurchOfLight_Paladin_SummonAngel_Group",        (-1737346940, 1) },
+            { "AB_HighLord_RaiseDead_AbilityGroup", (-603934060, 3) }, // CHAR_Undead_SkeletonSoldier_Base
+            { "AB_HighLord_RaiseDead_Group",        (-603934060, 3) },
+            { "AB_Militia_BishopOfDunley_SummonEyeOfGod_AbilityGroup", (-1254618756, 1) }, // CHAR_Militia_EyeOfGod
+            { "AB_Militia_BishopOfDunley_SummonEyeOfGod_Group",        (-1254618756, 1) },
+            { "AB_Undead_ZealousCultist_SummonGhosts_AbilityGroup", (128488545, 3) }, // CHAR_Undead_ZealousCultist_Ghost
+            { "AB_Undead_ZealousCultist_SummonGhosts_Group",        (128488545, 3) },
+
+            // v0.126.0 — second tester pass. More boss summons name-matched from the prefab dump.
+            { "AB_Blackfang_CarverBoss_SummonCarvers_AbilityGroup", (-1508046438, 2) }, // CHAR_Blackfang_WoodCarver
+            { "AB_Blackfang_CarverBoss_SummonCarvers_Group",        (-1508046438, 2) },
+            // Bishop of Dunley "holy pillar" — no CHAR_*Pillar exists; the spawn unit is blob-locked, so this
+            // is a best-guess to the stationary holy hazard (the Dunley enchanted cross). May need a tweak.
+            { "AB_Militia_BishopOfDunley_SummonPillar_AbilityGroup", (-1449314709, 1) }, // CHAR_ChurchOfLight_EnchantedCross (best-guess)
+            { "AB_Militia_BishopOfDunley_SummonPillar_Group",        (-1449314709, 1) },
+            // Lightning Pillars — now mapped per tester request (it's a STATIONARY damage turret). Still
+            // flagged "too OP": admins can tame it with `.beelz admin tune <id> damagescale/cooldown/summoncap`.
+            { "AB_Monster_SummonLightningPillars_AbilityGroup", (-1977168943, 1) }, // CHAR_Monster_LightningPillar
+            { "AB_Monster_SummonLightningPillars_Group",        (-1977168943, 1) },
+            // NOTE: AB_Blackfang_Morgana_SummonTail spawns CHAR_Blackfang_MorganasTail (mapped above) but it is
+            // an IMMOBILE boss-PART (BehaviourTreeInstance.Immobile=true) — it appears but its boss behaviour
+            // tree doesn't drive combat standalone, so it won't actively attack. Left mapped (it spawns); making
+            // a boss appendage fight for the player would need bespoke AI work, deferred.
         };
 
     /// <summary>
@@ -234,7 +280,10 @@ internal static class AbilityCastStartedSystemPatch
         // (not just summons) so the runtime audit can see what each ability's
         // chain actually spawns. See ChainTraceService. v0.45.0: transform-era
         // boss-kit diagnostic only — skip for untransformed casts.
-        if (transformed)
+        // v0.106.0: also trace MOUNTED casts (mounting isn't an ActiveTransform, so it misses the
+        // `transformed` path above). Diagnosing why boss saddle abilities (Erwin's lightning) fire
+        // only partially — the trace shows what their effect chain spawns + each entity's team.
+        if (transformed || Services.ShapeshiftAbilityService.IsMounted(steamId))
             Services.ChainTraceService.BeginTrace(steamId, abilityPrefab.GetPrefabName() ?? "?");
 
         // v0.23.12: auto-stash on waygate cast. Fires BEFORE we check

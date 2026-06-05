@@ -4,6 +4,480 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.131.0] - 2026-06-05
+
+### New recovery command: cleanse stuck states
+
+- **`.beelz admin cleanse <player> [buffNameOrGuid]`** — strips stuck STATE buffs from a player. Fixes a
+  character left **invisible / phased / immaterial** after casting an ability that won't clear with respawn
+  or relog. With no buff argument it removes the known culprits (HideCorpse / Corpse / Invisible / Immaterial
+  / Camouflage / Stealth); pass a buff name-substring or ID to strip a specific one. Pair with
+  `.beelz admin buffs <player>` to identify the exact buff first.
+
+## [0.130.0] - 2026-06-05
+
+### Ability database enrichment (mined from prefab data)
+
+- **Filled in a lot of missing ability info** by mining the game's prefab data: ability **type** for ~1,120
+  more abilities, **categories** for ~250 more, and the **39 unnamed** abilities now have names. Added new
+  factual fields shown in tools/exports: **mechanic** (summon/heal/projectile/AoE/movement/etc.),
+  **base cooldown**, **base cast time**, and **spell tier**.
+- Real **descriptions** for NPC abilities aren't in the game data (only ~425 player-facing ones exist), so
+  those remain blank for the team to fill — everything mineable is now prepopulated.
+
+## [0.129.0] - 2026-06-05
+
+### Unblocked abilities, tamed the "launch to space" ones, blocked two exploits
+
+- **Un-blocked 5 abilities that testers couldn't reproduce as crashes:** Dracula Bolt Spray, Morgana
+  Swarm + Orb Barrage, Leandra ShadowStep + TrippleBolt. They're capturable again.
+- **The "flings you into the sky" abilities are now usable instead of blocked** — Elena's Tower of Frost
+  (×2), Ziva's Jetpack, Toad King's Swallow/Poison Leap/Spit, and Gargoyle Fly now ship with a **height
+  limit + a cooldown** so they function without launching you off the map. (Tunable per ability with
+  `leapheight` / `cooldown`.)
+- **Blocked two exploits:** Gargoyle Wing Shield (immortality + heal) and Rat Vanguard (infinite-invuln
+  summons).
+- **Tuning a name that isn't a real ability now warns you** instead of silently doing nothing — fixes the
+  "it said applied but nothing changed" trap (use the ability's ID or exact prefab name).
+
+## [0.128.0] - 2026-06-05
+
+### Transformations now unlock reliably from their boss (test default)
+
+- **Transform-unlock drop chance raised to 100% by default** (was 0.15% for V-Blood bosses, 0.5% for the
+  basic werewolf) so defeating a transform boss reliably unlocks its form. The transform roll is still
+  separate from the ability/Devour rolls. This is a **test-friendly default — lower it for a balanced
+  release.** (Existing servers keep their config value until set with `.beelz admin set
+  DropChance_TransformUnlock_VBlood 1.0` / `_Regular 1.0`.)
+
+## [0.127.0] - 2026-06-05
+
+### Closed two crash/break gaps from a safety re-audit
+
+- **Re-audited the full crash/character-break list against the shipped block data.** All previously-known
+  server-crash and game-crash abilities are still blocked. Two gaps were found and closed: **Gaius's
+  "Corpse Buff"** (the capturable ability — a permanent locked/phased/invisible state that survived relog;
+  the baseline had only blocked the underlying buff, not the ability you actually grab) and **Toad King's
+  "Spit"** (a launch-to-space whose siblings Swallow and Poison Leap were already blocked). Both are now
+  hard/data-blocked from capture.
+
+## [0.126.0] - 2026-06-05
+
+### More summons, fewer mislabels, transforms kept out of the kit
+
+- **More boss summons now spawn allies:** Carver Boss's Summon Carvers, Bishop of Dunley's Summon Pillar,
+  and Monster's Lightning Pillars (the pillar/cross ones are stationary turrets; Lightning Pillars is
+  still strong — admins can tame it with `tune … damagescale/cooldown/summoncap`). Morgana's Tail spawns
+  but is an immobile boss-part, so it won't actively chase/attack.
+- **Fixed ~308 abilities mislabeled "Primary Attack"/"Secondary Attack"** that aren't basic attacks
+  (summons, roars, dashes, special attacks, AI behaviours). They now show their real names. Genuine
+  primary/melee attacks are unchanged.
+- **Transform-into abilities are no longer offered as bindable abilities.** The Geomancer's "Transform To
+  Golem/Human" (and all shapeshift form-triggers) can't be captured or slotted into a transform phase —
+  becoming a form stays separate from the abilities you bind to it.
+
+## [0.125.0] - 2026-06-05
+
+### Boss summon abilities now actually summon (for the caster)
+
+- **Ten tester-reported boss summons that did nothing now spawn allied units when you cast them** —
+  Bandit Tourok's Call Reinforcements, Bandit Stalker's Reinforcement, Bat Vampire's Summon Minions,
+  Morgana's Summon Tail, Cardinal's Summon Aide & Summon Orb, Paladin's Summon Angel, High Lord's Raise
+  Dead, Bishop of Dunley's Eye of God, and Zealous Cultist's Summon Ghosts. (V Rising spawns these
+  ownerless by default, so they never fought for you; we now spawn them as your allies on cast.) Their
+  summoned units are best-matched and may be fine-tuned after more testing.
+- **New tuning knob `leapheight`** (`.beelz admin tune <ability> leapheight <n>`) — lowers a leap/travel
+  ability's apex so a boss leap (e.g. Bat Vampire's) doesn't fling the caster sky-high. Vanilla boss
+  leaps are ~250; try ~20-40. Reversible via `defaults`.
+- Lightning Pillars is intentionally still disabled as a player summon pending a balance pass (it was
+  flagged "too OP").
+
+## [0.124.0] - 2026-06-05
+
+### Fixed 52 abilities mislabeled "Arctic Leap"
+
+- **A scrape glitch had named 52 different abilities "Arctic Leap"** (all sharing the frost-leap
+  description) — including every Cursed Smith weapon-summon, Bat Vampire's summon/leaps, Mountain Beast
+  ghost-calls, and a pile of boss leaps/teleports/dashes. They now show their correct names (e.g.
+  "Cursed Smith Summon Weapon Sword", "Bat Vampire Summon Minions") and the wrong frost description is
+  removed. The one genuine Arctic Leap is unchanged. (Re-scan in any companion overlay to refresh names.)
+
+## [0.123.0] - 2026-06-05
+
+### `purge` polish
+
+- **`.beelz admin purge` no longer throws on its success message.** The confirmation reply exceeded the
+  chat framework's length limit; it's now shorter and split in two. (The purge itself already worked in
+  0.122.0 — this only fixes the noisy error that printed *after* it finished.)
+
+## [0.122.0] - 2026-06-05
+
+### `purge` now actually clears the stuck bar
+
+- **Fixed `.beelz admin purge` so it removes the leaked modifications it was only reporting before.** The
+  first cut read the engine's modification dump but its id-parser missed the real format, so it cleared
+  nothing. It now correctly pops each leaked ability-slot override by id, and — as a guaranteed
+  backstop — destroys the lingering modification *source* entities, which makes the game engine
+  auto-revert each slot to its base ability. After running it, **equip/swap a weapon (or relog)** to let
+  the engine finish patching, then re-slot with `.beelz slot`.
+
+## [0.121.0] - 2026-06-05
+
+### The nuclear option for a truly stuck action bar
+
+- **New admin command: `.beelz admin purge <player> CONFIRM`.** When a bar is jammed on a creature's
+  kit and *nothing* fixes it — not `resetbar`, not `rebuildslots`, not `respawn`, and it even survives
+  a relog — this wipes ALL of Beelzebub's action-bar integration back to vanilla in one shot. It ends
+  and un-parks any transformation (so it can't quietly come back on reconnect), clears every slot,
+  form, weapon and hotkey binding, and — the key new piece — reaches into the game engine's own
+  modification registry to remove the leaked, orphaned ability-slot modifications that earlier tools
+  couldn't see. **Your captured abilities and transform unlocks are kept.** After a purge, equip/swap
+  a weapon to refresh and re-slot with `.beelz slot`.
+
+## [0.120.0] - 2026-06-05
+
+### Transforms: no more stuck action bars
+
+- **You can't transform straight into another transform anymore — revert first.** Chaining one
+  transformation directly into the next was what left your action bar stuck on a creature's kit.
+  `.beelz transform` now asks you to `.beelz revert` first. (Admins: `force-transform` likewise wants
+  `clear-transform` first.)
+- **Recovering a stuck bar actually works now.** `.beelz resetbar` (and the admin `.beelz admin
+  rebuildslots`) now authoritatively clear the engine's cached slot values and re-apply your saved
+  grants — so a bar stuck on a creature kit (even one that survived a relog) resets without a full
+  character reset. Your captures and unlocks are kept.
+
+### Ability curation
+
+- **Units' basic primary/auto-attacks are no longer collectible by default** (~106 abilities). They're
+  *soft*-disabled (ReviewStatus = Blocked), not hard-blocked — an admin can re-enable any of them with
+  `.beelz admin ability <id> reviewstatus Reviewed`, or all curation gating with the
+  `Curation_EnforceReviewStatus` config.
+- **Transform/shapeshift abilities can no longer be captured or devoured onto your bar** — the form
+  itself stays a separate transformation reward, not a slottable spell.
+- **Fixed foreign-language ability names/descriptions.** Some abilities showed up in Russian, Chinese,
+  German, French, etc. (bad data in the shipped ability list); they now display their proper English
+  names everywhere, including the companion-UI scan.
+
+### Admin ability tuning
+
+- **`.beelz admin reload` now applies lowered/cleared values immediately** — no server restart needed.
+  Previously, reducing or clearing a tuned value (cooldown, etc.) only took effect after a restart.
+- **Healing tuning now also scales AoE / aura / channel heals** (e.g. the Nun's area heal), not just
+  instant single-target heals.
+- **New `powerwindow` knob** (`.beelz admin ability <id> powerwindow <sec>`): widens the granted-cast
+  power window so a *power-scaled* lingering DoT/AoE keeps its damage bonus while it ticks. (Note: flat
+  fixed-damage boss DoTs can't be scaled by any power buff — engine limitation.)
+
+### Running alongside Bloodcraft
+
+- **New `Interop_SlotInjectionPriority` config** to make spell-bar slot ownership deterministic when
+  Beelzebub and Bloodcraft both write the same slot. Default `0` (unchanged behavior); set `1` so
+  Beelzebub's bind wins. See the in-repo Bloodcraft coexistence notes.
+
+## [0.119.0] - 2026-06-04
+
+### Ability cards: real names for the companion UI
+
+- **Captured abilities now expose their real name per slot** so the companion UI can show a proper hover
+  card instead of the game's "No Name" tooltip. `api slots` now includes `label=<friendly ability name>` on
+  every slot row (ApiVersion 28). The "No Name" you see in-game is a V Rising client-localization limitation
+  for NPC abilities the server can't fix natively — but it now hands the UI everything it needs to draw the
+  card itself (name here; full description/stats via `api info-guid`). Only Beelz-bound slots are listed, so
+  the companion UI leaves vanilla abilities' native tooltips untouched.
+
+## [0.118.0] - 2026-06-04
+
+### Tester-feedback functional baseline + critical blocks
+
+- **Blocked the confirmed game/server-breaking & character-stuck abilities** from the v0.100 test round
+  (~26 abilities): the Gaius pair, the Morgana crash-combo, Dracula Bolt Spray, Gloomrot Fiddle, Leandra's
+  two self-kill spells, Cassius's T-pose leap, the Spider Baneling invisibility bug, Elena's "to-the-moon"
+  frost towers, the Toad King stuck moves, Gargoyle out-of-bounds flight, Ziva's jetpack clip, and the
+  Treant/Golem "fall asleep" family. The worst ones are also hard-blocked in code (can't be re-enabled by
+  config). Sir Erwin's Mountup was already blocked.
+- **Established a functional baseline from tester verdicts:** ~290 reviewed abilities were tagged
+  Approved (works) / Reviewed (needs tuning) / Blocked (broken) so the curated set reflects real testing.
+- **Corrected two mislabeled abilities** that testers confirmed work fine (Bane's Shadow Step, Nicholaus's
+  teleport) — they were wrongly flagged incompatible.
+- For maintainers: feedback triaged in `docs/TESTER_BASELINE_v0100.md` + `docs/TESTER_ABILITY_BASELINE.md`;
+  a large share of the old v0.100 admin-config bugs are already fixed in v0.101–0.117 (see Part B).
+
+## [0.117.0] - 2026-06-04
+
+### Command safety & consistency fixes
+
+- **Hotkeys can no longer fire an ability you forgot.** `.beelz cast` now re-checks that you still own the
+  ability, and `.beelz forget` clears any hotkeys bound to the dropped ability.
+- **Stable ability IDs work everywhere.** `forget`, `info`, and `hotkey set` now accept an ability's stable
+  ID (not just its shifting list index), matching `grant` — so a command can't silently hit the wrong
+  ability after you capture more.
+- **Admins can bind a player's primary (0) and ultimate (7) slots**, matching what players can self-bind
+  (was 1–6 only).
+- **`give` rejects garbage** — it now validates the ability GUID resolves to a real ability before adding it.
+- **`reset-loadouts` now requires CONFIRM** (it wipes a player's loadouts). Reversible recovery commands
+  (ending transforms) intentionally stay friction-free.
+- **Unified slot-clear naming:** `.beelz clear-slot` / `clear-weapon-slot` now work as aliases of
+  `unslot` / `weapon-unslot` (and vice-versa for the admin verbs), so either name works.
+
+## [0.116.1] - 2026-06-04
+
+### Command help & documentation cleanup
+
+- In-game help is now complete and accurate: `.beelz admin help` lists the bulk `ability-set`, the new
+  curation fields, and the previously-missing `unmount` / `testmount` / `reset-loadouts` / `dump` /
+  `broadcast` commands; `.beelz api help` lists `info-guid`, the admin `catalog abilities-all`, and the
+  catalog filters. Removed stale "Dracula & Morgana only" wording and internal version/ticket codes that
+  were leaking into player-visible command help. Added a full written command reference (`docs/COMMANDS.md`).
+
+## [0.116.0] - 2026-06-03
+
+### Faster catalog search + one-shot bulk config
+
+- **Filter the ability catalog by curation/source.** The catalog stream now accepts `tag`, `reviewstatus`,
+  `tier`, and `vblood` filters in addition to the existing `weapon`/`cat`/`unit`/`form`/`search` — so you can
+  pull just one group (e.g. every `tag emote`, or `tier T4`, or `vblood 1`) server-side instead of streaming
+  all ~1,700 rows, which makes the companion UI's search far faster. (ApiVersion 27.)
+- **Set many ability fields in ONE command.** New `.beelz admin ability-set <id> "(field=value)(field2=value2)…"`
+  applies any number of configurations at once, each group in its own parentheses (or separated by `;`) so
+  values with spaces or commas (weapon lists, notes) parse cleanly — e.g.
+  `.beelz admin ability-set 123 "(cooldown=30)(weapons=sword,axe)(reviewstatus=Approved)(notes=big strong nuke)"`.
+  No more chaining separate commands. (The original `.beelz admin ability <id> <field> <value> …` up to 5
+  pairs still works for quick edits.)
+
+## [0.115.0] - 2026-06-03
+
+### Review status is now a real curation gate
+
+- **Blocking an ability actually blocks it.** Setting an ability's review status to **Blocked**
+  (incompatible / unwanted) or **Hidden** (junk) now makes it un-capturable and removes it from the
+  player ability catalog and collection total — so curating the list is a one-step decision instead of
+  needing a separate on/off switch. Controlled by the new `Curation_EnforceReviewStatus` config (default
+  ON); turn it off to test a blocked ability without un-blocking it. Unreviewed / Reviewed / Approved
+  abilities stay collectible. (Only Sir Erwin's crash-prone "Mountup" is gated this way today, so nothing
+  players can currently collect changes.)
+
+## [0.114.1] - 2026-06-03
+
+### Fixes
+
+- **Fixed: ability review tags survived only until the next reload.** The new `reviewStatus`/`reviewTag`
+  curation fields were dropped when the rules file was (re)loaded, so the shipped tags reset on every
+  server start. They now persist correctly. (Found by a full-session audit.)
+
+## [0.114.0] - 2026-06-03
+
+### Curation dashboard + in-game condition confirmation
+
+- **Admins/testers can confirm an ability's activation condition in-game:** `.beelz admin ability
+  <id> condition <Aimed|CloseRange|Summon|SelfCast|Movement>` marks it verified (promotes the
+  auto-classified guess to confirmed), saved to the server's override file. `condition clear` reverts.
+- For maintainers: a coverage/progress **dashboard** (`tools/dashboard.py` → `ABILITY_DASHBOARD.md`)
+  reporting descriptive-coverage gaps, curation progress (reviewStatus / tags), the condition
+  confirmation count, and the **shippable-set size** (currently 1,616 / 1,813 collectible); plus a
+  tester checklist of the 1,146 unconfirmed conditions grouped by source unit
+  (`tools/export_condition_review.py`).
+
+## [0.113.0] - 2026-06-03
+
+### Weapon-family fix + source-tier info + refinement audits
+
+- **Fixed: Pollaxe / Twin Blades / Slashers abilities now bind to the right weapon.** These three
+  weapons were missing from the ability→weapon classifier, so their captured abilities were
+  mis-assigned (Pollaxe abilities landed on the Axe bar; Twin Blades / Slashers fell back to
+  "universal"). They now correctly gate to their own weapon, like every other weapon family.
+- **The Cursed Blacksmith's summoned weapons are now usable as spells** (not gated to a weapon bar),
+  since the boss conjures them rather than wielding them.
+- **Abilities now know their source tier.** Each ability carries its source unit's level, a difficulty
+  tier (T1–T4), and whether that unit is a VBlood — streamed over the API (`source_level` /
+  `source_tier` / `is_vblood`, ApiVersion 26) so the companion UI can show "captured from X (T3 VBlood)"
+  and filter by tier.
+- For maintainers: three refinement audits added — source-unit + difficulty-tier mapping
+  (`tools/audit_source_tier.py` + `merge_tier_into_metadata.py`), the weapon-family review that caught
+  the bug above (`tools/audit_weapon_family.py`), and a duplicate/variant pass (`tools/audit_variants.py`).
+
+## [0.112.0] - 2026-06-03
+
+### Ability triage audits + review tagging
+
+- **Every ability is now triaged by type.** A full pass over the ~1,800-ability set sorted out the
+  real player-collectibles (1,596) from the noise (emotes, AI idles, feed steps, brutal-difficulty
+  duplicates, generic auto-attacks, reactions). 217 of those were tagged by type and flagged for an
+  in-game usability check — nothing was disabled; they all remain capturable while we evaluate them
+  (e.g. emotes are kept pending a "do they work for a player?" test, since more emotes are wanted).
+- **The tags are visible in-game.** Abilities now carry a `reviewTag` (type) and `reviewStatus`
+  (where it is in our review), and both are streamed over the API (`review_tag=` / `review_status=`,
+  ApiVersion 25) so the companion UI can pull and walk a whole group (all emotes, all hard variants…).
+- **Combos mapped:** 146 multi-cast combo abilities identified for future ability-chaining work.
+- For maintainers: new audit tools (`tools/audit_collectibility.py`, `audit_incompatible.py`,
+  `audit_combos.py`, `apply_reviewstatus.py`) and a grouped test backlog at `docs/ABILITY_TEST_LOG.md`.
+
+## [0.111.0] - 2026-06-03
+
+### Curation groundwork (maintainer-facing)
+
+- **Ability review tracking.** Each ability can now carry a `reviewStatus`
+  (`Unreviewed/Reviewed/Approved/Blocked/Hidden`) so the curated set's progress is trackable — set it
+  in `ability_rules.default.json` or in-game with `.beelz admin ability <id> reviewstatus <val>`. It's
+  bookkeeping only (not a runtime gate; `Enabled` remains the kill-switch).
+- **Review tooling for maintainers.** Two new dev scripts: `tools/export_review_csv.py` joins the
+  descriptive + policy data into one spreadsheet (`ability_review.csv`) with a computed
+  Working/Conditional/Broken/Combo/Junk view, and `tools/lint_ability_data.py` validates the ability
+  data before packaging (catches typos, invalid weapon/form tokens, orphan rules, duplicate keys). No
+  player-facing or gameplay change.
+
+## [0.110.0] - 2026-06-03
+
+### Shipped, curatable ability config
+
+- **The mod can now ship a curated ability config.** Per-ability policy (which abilities are enabled,
+  weapon/form whitelists & blacklists, shaping) previously couldn't be pre-set — every server started
+  blank. Now a fresh server seeds a shipped default the first time it runs, so abilities arrive
+  ready-configured. Existing servers keep their own config untouched; admins can still change anything.
+- For maintainers: that default lives in an editable `ability_rules.default.json` next to
+  `ability_metadata.json`; edit either by hand, rebuild, and the data is baked into the DLL. See
+  `docs/ABILITY_DATA_EDITING.md`.
+
+## [0.109.0] - 2026-06-02
+
+### Audit fixes (gaps found in a code review)
+
+- **Ability condition labels now appear in the bulk ability list, not just single-ability info.** The new
+  activation-condition tags were only wired into `.beelz info`; the catalog/list that mod UIs read was
+  missing them. Now consistent.
+- **`.beelz admin ability <id> defaults` now fully reverts deep AoE edits.** A live-reset could leave a
+  deep AoE heal/radius tweak applied until the next restart; it now restores those too.
+- Quieted leftover mounted-form diagnostic logging (now behind verbose logging) and corrected stale
+  code comments.
+
+## [0.108.0] - 2026-06-02
+
+### Ability-shaping fixes for AoE effects + force-timeout
+
+- **AoE-delivered healing and AoE radius can now be tuned.** Some abilities (e.g. the Nun's healing
+  pool) deliver their effect several steps down a "lands → spawns a zone → heals" chain that the shaper
+  never reached, so `healing`/`aoe` silently did nothing. The shaper now follows that deeper chain — but
+  **only into the ability's own effect prefabs**, never into shared buffs, so tuning one ability can't
+  affect another. Single-target heals and projectile abilities are unchanged.
+- **`forcetimeout` now cleanly cancels instead of compressing.** It used to shorten a buff that already
+  had its own timer, which sped the ability up. Now it only adds an expiry to effects that are otherwise
+  *endless* (the case it's meant for); for an effect that already times out, use `duration` to change its
+  length. (Tester-reported.)
+
+## [0.107.0] - 2026-06-02
+
+### Abilities now tell you HOW to use them (activation conditions)
+
+- **Every ability can now show its activation condition** so a working ability isn't mistaken for a broken
+  one. `.beelz info <ability>` now adds a line like `◆ Activation: CloseRange — Needs enemies next to / in
+  front of you`. Categories: **Aimed** (aim it), **CloseRange** (be next to/among enemies — this is why
+  Call Lightning "did nothing" in the open), **Summon** (summons allies), **SelfCast** (works on press),
+  **Movement** (mobility), plus **Combo/Charged/Channel** notes.
+- These were auto-classified from the game's own ability data across ~1,750 abilities (1,146 labeled; the
+  genuinely-ambiguous ones are left unlabeled rather than guessed). Each label is marked **unconfirmed**
+  until verified in-game — and a condition label **never disables anything**, it's purely a usage hint.
+- For mod integrations: `api info` / `catalog-ability` now emit `condition`/`condition_mods`/`condition_source`
+  (ApiVersion 24, additive).
+
+## [0.106.0] - 2026-06-02
+
+### Diagnostics for mounted ability effects
+
+- Added chain-tracing for abilities cast while mounted (it previously only traced abilities cast while
+  shapeshifted). This is to diagnose why some boss saddle abilities fire only partially. No gameplay change.
+
+## [0.105.0] - 2026-06-02
+
+### Erwin's lightning no longer throws you off your horse (actually fixed this time)
+
+- **Casting Erwin's Call Lightning (and his other mounted casts) from the saddle now keeps you mounted.**
+  The instrumented test pinned the real culprit: those casts drop a short "cast-impair" debuff on you, and
+  one of its flags was breaking the mount and bucking you off — it was never the damage-throw or the
+  cast-trigger the earlier builds chased. That debuff is now neutralized, so the whole of Erwin's lightning
+  kit is finally mount-usable.
+- Fix targets the shared cast-impair buff itself, so it covers every Erwin/Fabian saddle cast at once.
+
+## [0.104.0] - 2026-06-02
+
+### Mounted form: clearer slot rules + dismount diagnostics
+
+- **Binding a saddle ability to a riding slot now tells you instead of silently failing.** The Mounted
+  form can only use slots **3, 6, 7** (R / C / Ultimate); the other slots are your horse's riding controls
+  (Q/E/space). Granting to one of those used to look like it "didn't show up" — now `form-grant` rejects it
+  with the valid slots.
+- Added diagnostics around the still-being-chased "some boss abilities throw you off when cast mounted"
+  issue, so the next test pins down exactly what's dismounting you. (No effect on normal play.)
+
+## [0.103.0] - 2026-06-02
+
+### Mounted abilities that hit you no longer buck you off (the real fix)
+
+- **Casting a saddle ability whose own attack clips you no longer dismounts you.** Erwin's Call Lightning
+  (and his mounted swings) kept throwing riders off even after 0.101/0.102 — because the dismount wasn't
+  coming from the ability at all. Your horse is wired to throw you off the instant you **take damage**, and
+  those abilities' AoE catches the caster. While you're in the Mounted form, that damage-throw is now
+  disabled, so self-hitting saddle abilities keep you mounted.
+- This is a **general** fix: *any* mounted ability that happens to graze you is now mount-safe, not just
+  Erwin's. You can still hop off normally — only the damage-throw is suppressed, your deliberate dismount
+  is untouched.
+
+## [0.102.0] - 2026-06-01
+
+### Mounted-form internals (no player-visible change on its own)
+
+- Reworked how mount-disrupting boss casts are handled (pattern-based instead of a fixed list, covering
+  Erwin's lightning *and* mounted swings). This turned out **not** to be what was dismounting riders — see
+  0.103 for the actual fix — but the cleanup is kept as it's harmless and removes a stray "freeze the
+  horse" effect from those casts.
+
+## [0.101.0] - 2026-06-01
+
+### Mount-crash recovery (Sir Erwin "Militia Fabian Mountup")
+
+- **New admin recovery command `.beelz admin unmount [player]`.** Frees a character left stuck on a
+  summoned mount — strips the mount/rider buffs, despawns the orphaned steed near them, and re-applies
+  their granted abilities. Use it if a player gets stuck riding a horse/steed after a mount-type ability
+  (the Sir Erwin "Militia Fabian Mountup" case). If the bar still looks frozen afterward, follow with
+  `.beelz admin respawn`.
+- Groundwork toward turning that ability into a proper, controllable summoned mount that vanishes when you
+  cast something unrelated — more to come.
+
+### Fight from horseback — the Mounted form (experimental)
+
+- **Riding a horse is now a loadout "form."** Assign captured abilities to the **free saddle slots (3, 6, 7 —
+  R / C / ultimate)** with `.beelz form-grant mounted <slot> <ability>` — they appear on your bar while mounted and revert
+  when you dismount, exactly like the shapeshift forms. The horse's own leap / gallop / thrust and the
+  dismount are protected (you can't bind over them), so riding + getting off still work.
+- Casting a saddle ability **holds the mount** instead of throwing you off.
+- **Erwin's lightning works from the saddle.** Sir Erwin / Fabian's lightning abilities (Call Lightning, Lightning
+  Orb) used to throw you off the horse — they carry a "pause the horse while casting" effect meant for the boss.
+  That's now stripped, so you can sling them from horseback like the mounted boss does.
+- **Mountup blocked.** The "Militia Fabian Mountup" ability crashes the dedicated server, so it's now hard-blocked
+  from capture/grant everywhere (even in inclusive test mode).
+- **Form-locking (admins).** Not every captured ability behaves on every form — some boss abilities demount or
+  misfire mounted. Admins can now curate this per ability: `.beelz admin ability <id> forms !mounted` blocks an
+  ability from the Mounted form (works everywhere else); a plain list like `forms wolf,bear` locks it to ONLY
+  those forms. Locked abilities are skipped on injection and refused by `form-grant`. Applies to every
+  shapeshift form, not just Mounted.
+- Requires the server's `Forms_CustomAbilities_Enabled` to be on. Empty by default — you choose what goes on
+  the saddle. (Experimental — feedback welcome.)
+
+### Faster ability browsing (BCH)
+
+- The ability catalog can now be **loaded in filtered chunks** instead of all ~1700 at once (which took testers
+  several minutes). BCH can request just one weapon's abilities, one category (summons/spells/…), one source
+  unit, a form-tagged set, or a name search. (Needs a BCH update to expose the filter UI.)
+
+### Ability-config admin tools
+
+- **Read every setting at once:** `.beelz admin ability <id>` (no field) prints all configured values for that
+  ability.
+- **Set several at once:** `.beelz admin ability <id> cooldown 10 forms !mounted damagescale 1.5` applies up to
+  five field/value pairs in one command.
+- **Whitelist / blacklist for weapons too** (it already worked for forms): the `weapons` field takes a
+  whitelist (`sword,axe` = only those) or a `!`-blacklist (`!sword` = every weapon except sword). Enforced on
+  the bar and refused by `weapon-grant`.
+
 ## [0.100.0] - 2026-05-31
 
 ### Build your own transformation loadouts + full transform admin controls

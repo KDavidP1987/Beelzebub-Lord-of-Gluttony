@@ -28,6 +28,29 @@ internal sealed class AbilityFilter
         return false;
     }
 
+    // v0.120.0: name fragments identifying a TRANSFORM / shapeshift TRIGGER ability — the thing that
+    // turns the caster INTO a form (AB_Shapeshift_Wolf_Group, AB_Shapeshift_Bat_Group, the boss
+    // exoform shifts, …). These are RESERVED for the transformation-unlock system (.beelz transform)
+    // and must never be capturable/devourable as normal action-bar abilities — the form is kept
+    // separate from the player's captured kit by design. A boss's normal COMBAT abilities
+    // (AB_Vampire_Dracula_*, AB_Blackfang_Morgana_*, …) do NOT contain "_Shapeshift_", so they remain
+    // fully capturable; only the form trigger itself is blocked. NOT folded into MatchesAlwaysJunk so
+    // the admin "all abilities" catalog still lists them.
+    // v0.126.0: also reserve the boss "transform-INTO-a-form" triggers that do NOT use the _Shapeshift_
+    // token — the Geomancer's AB_Geomancer_Transform_ToGolem / _ToHuman group abilities. These are the
+    // "become the form" action, not a usable combat ability, so they must never be captured OR offered in
+    // a transform's bindable kit (FullEligibleKit routes through ShouldCapture) — otherwise a player could
+    // bind "Transform To Golem" into a transform phase slot. "_Transform_To" is specific enough not to
+    // catch normal combat abilities (only the form-change triggers match it).
+    static readonly string[] _transformTriggers = { "_Shapeshift_", "_Transform_To" };
+
+    static bool MatchesTransformTrigger(string abilityName)
+    {
+        foreach (var t in _transformTriggers)
+            if (abilityName.Contains(t, StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
+    }
+
     public bool ShouldCapture(string abilityName, out string reason) => ShouldCapture(abilityName, 0, out reason);
 
     public bool ShouldCapture(string abilityName, int abilityGuid, out string reason)
@@ -62,6 +85,19 @@ internal sealed class AbilityFilter
                 reason = "not in allow-pattern list";
                 return false;
             }
+        }
+
+        // v0.120.0: transform / shapeshift TRIGGER abilities are reserved for the transformation
+        // system — never captured/devoured onto the action bar (the form comes from the transform-unlock
+        // path, kept separate from the captured kit). Enforced in BOTH inclusive and curated modes. An
+        // explicit admin allow-list (AllowGuids/AllowPatterns above, already passed if we're here) or a
+        // per-ability allow-denied override still wins, for the rare admin who wants one capturable.
+        if (MatchesTransformTrigger(abilityName)
+            && rules.AllowGuids.Count == 0 && rules.AllowPatterns.Count == 0
+            && !Core.AbilityRules.IsAllowDenied(abilityName, abilityGuid))
+        {
+            reason = "transformation/shapeshift trigger (reserved for the transform system)";
+            return false;
         }
 
         // v0.50.0 INCLUSIVE TESTING MODE (Capture_InclusiveMode, default on for this alpha):

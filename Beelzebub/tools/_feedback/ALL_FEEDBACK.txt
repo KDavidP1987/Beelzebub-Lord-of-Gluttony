@@ -1,0 +1,2295 @@
+================================================================================
+CHANNEL: Admin Ability Config Settings tests Work-In-Progress
+SOURCE FILE: Admin Ability Config Settings tests Work-In-Progress.json
+
+[Bradley (Admin) 2026-06-01] ## Cooldown:
+Spider Queen Ao E | 1573712465 ✅ 
+Undead Bishop Of Death Chain Bolt Hard | -323939446 ❌ 
+
+## Range
+- Spider Queen Ao E | 1573712465 ❌ 
+Shoots 3 tiles away from player.  No changes.
+- Undead Bishop Of Death Chain Bolt Hard | -323939446 ✅
+projectile.
+
+## Projectile Speed
+Undead Bishop Of Death Chain Bolt Hard | -323939446 ✅
+Spider Queen Ao E | 1573712465 ❌
+
+## Healing x
+- Church Of Light Priest Heal Bomb | -1282606238  ✅
+7 health per tick given 10x became 66.  The 7 health per tick must have rounded up from 6.6. 
+- Church Of Light Cleric Heal | -923957888  ✅
+I was able to boost the healing ticks from 20 to 60 with 3x.
+- Nun Ao E | 919394375  ❌
+18 health per tick stayed at 18 when setting was set to 5.  
+- Nun Ao E  [V-Blood] | 1267698255  ❌
+Healing was 57 then 113 on 2nd hit.  Couldn't even find this one within 🇧 🇨 🇭  and changed setting using this command ".beelz admin ability 1267698255 healing 2", but still no effect. 
+
+Summary: Targeted healing is working, while AoE heals are not being affected.
+
+## Force Timeout ❌ ♻️ 
+- This one seems to function incorrectly.  It is supposed to cancel or end the ability after a certain amount of seconds, but it alters the speed of the ability to achieve this.  Great feature to have, but it needs to be a separate setting and this needs to simply cancel the ability. Cursed Toad King Poison Leap Travel | 1790744720
+
+## Cast Speed ❌ ♻️ 
+- It doesn't do anything.  But on the bright side, I think the Force Timeout is serving this setting's intended purpose, so it is functioning somewhere else.
+
+[Bradley (Admin) 2026-06-01] ## Summon Stacks
+- Undead Priest Raise Dead | -174250027 🔧   
+Stacks limited to 3 for test.  This one spawns 6 enemies at the moment (probably not correct value).  3 spawn with unholy circles below and 3 without.  Once the 3rd ability is cast, it will warn you that you have reach the limit, but it will still spawn the 3 with green unholy circles (probably the original units intended from the spawn rather than the custom ones).
+
+## Summon Timeout
+- Undead Priest Raise Dead | -1742500275 ✅  
+This did timeout all 6 skeletons after 10 sec.  They just disappeared unlike the unholy spell skeleton's which triggers their bone collapsing death animation, but it does the job.
+
+## Summon Units
+- Undead Priest Raise Dead | -1742500275  🔧 
+Picked 1 or 2, it spawns 3.  Pick 3-6, they spawn correct amount.  7+ is just stuck at 6.   By default is spawns 6 skeletons, 3 with intended unholy circle underneath and 3 without.  3 and under have no unholy circle.  For 4-6, the 4th, 5th, and 6th additional unit have the unholy circle bellow.  I know this effect doesn't matter much, but it should help identify the issue since the unholy effect is from the originals and the ones without are custom ones.
+-Undead Cursed Smith Summon Weapon All  | 847476786 🔧
+Could decrease amount from 5 down, but not increase beyond 5.
+
+## Damage x
+- Cursed Toad King Double Tongue Slap | 1718898538  ✅  
+Functions correctly.  This is a 2-part attack that requires manually activation for eat hit.  Damage went from43 43 to 87 87 when value was set to 2.
+- Cursed Toad King Tongue Grab | -514415940 🔧 
+Does not function correctly.  This is a 2-part attack that triggers with a single button press. The damage sequence goes from 14 48 to 72 48 when set to 5.  Only affecting first value.
+- Cursed Toad King Poison Rain | -1864096491 ❌
+Does 29 damage per rain drop and then poison does 9 damage per tick for 4 ticks.  Neither is affected.
+## Cooldown x
+- Cursed Toad King Frog Vomit | 1421967280 ❌
+
+[Bradley (Admin) 2026-06-01] Changed the channel name: Admin Ability Config Settings tests Work-In-Progress
+
+[Bradley (Admin) 2026-06-02] # Not Currently Functional
+## Charges  ❌
+
+## Charge Time  ❌
+
+## AoE Radius  ❌
+
+# Options to Add
+## Summon Health Modifier
+## Summon Level Modifier
+
+[Bradley (Admin) 2026-06-02] ## Interrupt on hit
+Bandit Stone Breaker Mountain Rumbler Hard  [V-Blood] | 1688748795 ❌
+- I was struggling to get BCH to work, so I tried a chat command.  It seems That I did type the command correctly, but it is not accepting "on" as a correct value, and then it proceeds to tell me to use either on, off, or clear.
+
+ Bradley: .beelz admin ability 1688748795 interruptonhit on
+01:01  [Global] Bradley: .beelz admin reload
+01:01  [System] Set interruptonhit=off for 'AB_Bandit_StoneBreaker_MountainRumbler_Hard_AbilityGroup'. (.beelz admin reload re-applies cast tuning if changed.)
+01:01  [System] interruptonhit expects on|off|clear.
+01:01  [System] Set interruptonhit=off for 'AB_Bandit_StoneBreaker_MountainRumbler_Hard_AbilityGroup'. (.beelz admin reload re-applies cast tuning if changed.)
+01:01  [System] Rules reloaded from D:\home\sid_2021275\vRisingLaunch\BepInEx\config\kdpen.Beelzebub\ability_rules.json. Ability tuning re-applied to 10 cast prefab(s).
+01:01  [System] Reset 'AB_Bandit_StoneBreaker_MountainRumbler_Hard_AbilityGroup' shaping config to shipped defaults
+
+[Bradley (Admin) 2026-06-02] BCH 0.20.0
+Beelzebub 0.100.0
+
+[Bradley (Admin) 2026-06-02] ## Effect Duration
+- Church Of Light Cleric Heal | -923957888  ✅ 
+- Monster Electric Field | -1503327574 ❌ 
+- Bandit Tourok V Blood Chaos Parry | 1452056926 ✅
+ - Arch Mage Arcane Imprisonment | 91941562 ❓
+Didn't think this one would work.  The initial wave is unaffected, but the time enemies are frozen in mid-air is.
+- Treant Projectile | -968756307 ❓
+This one, the cast duration was able to increase to a 30 sec cast, but the entangle effect duration was unaffected.  This is probably functioning correctly, but the previous one could be reworked into a separate setting.  We could have a duration for abilities and a separate one for effects applied on the ground or on a target.
+- Vampire Blood Knight Thousand Spears | 1295370119 🔧 
+Duration worked, but the spear visual disappeared early.
+
+## Free-move (s)
+- Bandit Stone Breaker Mountain Rumbler Hard | 1688748795 ❌
+- Arch Mage Arcane Imprisonment | 91941562 ❌
+
+## Interruptible
+- Bandit Stone Breaker Mountain Rumbler Hard  [V-Blood] | 1688748795 ❌
+It was interruptible by default and I was unable to turn it off.
+- Arch Mage Arcane Imprisonment | 91941562 ❌
+Could not make interruptible
+
+## Free move (on/off)
+- Bandit Stone Breaker Mountain Rumbler Hard | 1688748795 ❌
+
+================================================================================
+CHANNEL: Albert the Duke of Balaton -203043163
+SOURCE FILE: Albert the Duke of Balaton -203043163.json
+
+[Bradley (Admin) 2026-05-30] Cursed Toad King Double Tongue Slap | 1718898538 ✅ ❓ 
+- Does a tongue slap left and another right if pressed again.  cast time and **locked in place** for 2 sec with one slap, 3 sec with 2 slaps.  It says 0.9 cast time between each cast and there is no cooldown overall, but I think that is acceptable for the primary attacks.  **Just make it not lock in place.**
+
+Cursed Toad King Frog Split Travel | 1808492070 🔧 
+- This one launches you straight up in the air and has you landing back down over the course of 12 sec.  I went from 5 to 75 height.  Since 5 is about a tile, I went about 14 tiles high.  You slam down for some physical damage in an aoe and a level 62 Cursed Slime Toad spawns at the start of your ascent.  It also has an 8 sec cooldown that start before you even reach full height, so it is over by the time you land.  **Needs a lot of changes.**
+
+Cursed Toad King Frog Vomit | 1421967280 ✅ ❓ 
+- Cast time and **locked in place** for 2.5 sec.  20 sec cooldown.  Spawns a level 61 Cursed Spitter Toad that lands with physical aoe damage similar to you landing with the last ability.  **Fix locked in place and spawn more than one frog and it is solid.**
+
+Cursed Toad King Poison Leap Travel | 1790744720✅ ❓ 
+- 0.6 sec cast time to leap forward and up a tile.  8 sec cooldown on landing.  You are **locked in place** for about 5.5 sec after landing as well as your character model being stuck in a crouch position (still an issue in frog form too).  Upon landing, you spawn 6 acid puddles that last 30 sec. ** Fix being locked in place and character animation at the end and you're good.**
+
+Cursed Toad King Poison Rain | -1864096491 ✅ ❓ 
+- 4 sec cast time and **locked in place**.  16 sec cooldown.  Rains down a bunch of acid projectiles from above (too many to count) in a wide area.  They do not leave acid pools behind, but they do damage over time to hit enemies.  **Fix being locked in place**.
+
+[Bradley (Admin) 2026-05-30] Cursed Toad King Tongue Grab | -514415940 ✅ ❓ 
+- This one has the tongue extend straight outward.  It does an initial very weak hit and then immediately a 2nd one for more standard damage.  This feels similar to the Double Tongue slap in terms of usability.  It's like another form of a primary attack.  It **needs that initial hit to be boosted to the same as the 2nd one** to even compare to the double slap.  It should probably also keep the no cooldown and just have its cast time since it is a weak primary style attack.  You are also **locked in place** for about 2 sec.
+
+Cursed Toad King Swallow | 1292896032 ✅ 🙏 
+Cursed Toad King Spit | -1238687119 ✅ 🙏 
+- These 2 actually function as a pair.  The primary move is Swallow.  You eat a standard enemy and hold it in your belly.  It takes about 2 sec to cast and you are locked in place.  It remains in your belly for about 14 sec, however, it can be release early using the Spit ability.  It does not work on V Bloods ( I think this is because they have innate crowd control immunity).  The target takes damage on Swallow and I think a little again on landing.  Target is stunned briefly after landing.  There is an aoe.  It only damages structures, not enemies.  I also noticed a problem, if you can feed on a target while it is in your bellow, it shoots you into the stratosphere.  **Main things to fix:  Being locked in place, allow ability to switch from swallow to spit on recast, possibly remove the forced spit after 14 sec, don't allow feeding while target is in your belly.**  I realize fixing some of this might be tricky, but please figure something out.  It is too fun.
+
+## One more important thing to note overall.  The frogs summoned do not follow the player, so they are not really considered summons.  This seems to be the same as the rats and Leandra's shadow demons.
+
+Fun Fact: If you transform into frog form, the abilities take you out of the form, but if I use my admin ".buff -1038422434" command, all abilities work.⬇️
+
+[Bradley (Admin) 2026-05-30] Feeding on a Swallowed enemy to shoot me into the stratosphere
+
+[Bradley (Admin) 2026-05-30] Double Tongue Slap
+
+[Bradley (Admin) 2026-05-30] Tongue Grab
+
+[Bradley (Admin) 2026-05-30] Swallow Ability.  His belly expands during the swallow 😂
+
+[Bradley (Admin) 2026-05-30] Poison Travel Leap.  I cast this one twice, so you you can see the acid pools in the picture too.
+
+[Bradley (Admin) 2026-05-30] BCH 0.18.4
+Beelzebub 0.55.0
+
+[Bradley (Admin) 2026-05-30] ## Bonus Junk 🥳 
+Moonie told me to try fighting Dracula with the frog summons.  Unfortunately, Dracula's transformation that leads into the 3rd phase will one-shot them, even when spamming Spectral Guardian.
+https://www.youtube.com/watch?v=meupye_-0Dk
+https://www.youtube.com/watch?v=Vq4NtclAwPk
+
+[Moonie 2026-05-30] The shielded frog armor is pretty great though
+
+[Xavarie  (Admin) 2026-05-30] 💖
+
+================================================================================
+CHANNEL: Albert the frog
+SOURCE FILE: Albert the frog.json
+
+[KingCarvar 2026-05-28] Cursed Toad King Swallow  [V-Blood]
+Prefab: AB_Cursed_ToadKing_Swallow_AbilityGroup   ID: 1292896032
+Unit: Albert the Duke of Balaton (id -203043163)
+Category: Spell   Creature: Other
+Desc: Captured from Cursed Toad King.
+Cooldown: 1s
+
+[KingCarvar 2026-05-28] https://medal.tv/games/v-rising/clips/mNWE02Z5WrZc3vx3_?invite=cr-MSx2SFUsOTczMTk0NQ&v=60
+
+================================================================================
+CHANNEL: Alpha, the White Wolf
+SOURCE FILE: Alpha, the White Wolf.json
+
+[Moonie 2026-05-28] Wolf Boss Bite  | -1654954396 ✅ / ❓
+Wolf Boss Bite Enraged | 1558429115 ✅
+
+Both of the above are bite attacks that work. They both do the same amount of damage. The only difference is the Enraged Boss Bite has a lower cast time. Boss Bite is 1.3s and Enraged is 0.6s. Unsure if both are needed.
+
+Wolf Boss Dash Attack Double | 280173050 ✅ / ❓
+Wolf Boss Dash Attack Single | 920051497 ✅ / ❓
+Wolf Boss Dash Attack Tripple  | -1161539168 ✅ / ❓
+
+The above dashes all do the same thing with the same cast time. Only one would need to be active to capture. I did not notice a difference in damage output.
+
+Wolf Boss Howl | 247740796 ❌
+
+This locks you in place for 1.3s with a 20CD. I believe this is the ability that summons the additional wolf allies but does not summon anything at this time. I tested this in and out of combat, with axes and unarmed. 
+
+Wolf Boss Maul Hard | 2145136774 ✅
+
+This is a dash, you are locked into place for a little before it works. It does pretty low damage. I did notice that if you do not hit an enemy a buff appears on your bar Diminishing Returns - Stun. This can stack up to three times and then it indicates Immune. Screenshot included for reference. 
+
+Wolf Boss Pounce | -821573025 ✅
+
+Works Fine/As Intended. There is no CD on it but a cast time that locks you into place for a little bit. 
+
+Wolf Boss Speed Buff | 544754926 ✅
+
+Gives a 2.0 increase to movement speed for 8 secs. Hard locks you in place though for a long period of time that doesn't make it feel good to use. 
+
+Wolf Boss Step Back | 1456629565 ✅
+
+Working as intended. This actually feels relatively smooth and gives a good dodge back.
+
+BCH v0.18.0
+
+[Moonie 2026-05-28] Tested all of the above with axes and as unarmed. All worked, there were some odd visuals and lock in at the end of skills. The step back felt the best to me.
+
+[Moonie 2026-05-28] Did confirm with Sov, three stacks of the DR - Stun make you immune to stun/incapacitate.
+
+================================================================================
+CHANNEL: BALANCING LIST: (Add Comments!)
+SOURCE FILE: BALANCING LIST_ (Add Comments!).json
+
+[Chaos 2026-05-28] This list is intended to serve as a centralized place where we can post abilities that we feel require balancing adjustments, either to their damage output or to their cooldown.
+
+Do not post items here that do not function. Items that do not function should get a post of their own. This is only for us to discuss the balancing of abilities that are otherwise fully functional.
+
+[Balanar 2026-05-28] Some skills have no cd at all i.e. Bandit Stone Breaker Mountain Rumbler Hard (Errol The Stone Breaker Knockback + 6 way aftershock)
+
+[Balanar 2026-05-28] Undead Flying Skull Self Destruct, does the explosion but you take absolutely no dmg (since it has a bit of long cast time, stucks you in place temporarily plus relatively low dmg[compared to other stuff]) is fine if it stays like it is but doesn't seem appropriate.
+
+[Onion 2026-05-28] Finn the fishmonger -  abilities does not really work, none of them worked for me
+Keely the Frost Archer -  Bandit Frost Archer Camouflage/HARD  - doesn't hide you at all, even tough you got 'Hide' buff - monsters target you  - so makes no point to have it
+
+[Ella 2026-05-28] Grayson the Armorer - V Blood reinforcement summon spell does not summon anything. I initially attempted to use it in tandem with the Errol the Stonebreaker summon spell and wondered if they just didn't stack, but Grayson's ability doesn't summon any archers even without any of Errol's summons alive
+
+[Chaos 2026-05-28] This is more of a broken ability I need to investigate, rather than a balancing thing, if you could please make a post about it into the forum about this specific ability.  Please share the ability ID or a screenshot.  You can enable Beelz diagnostics in the settings menu
+
+[Chaos 2026-05-28] Good find though!  Summons do have some different challenges I need to investigate.  Had to solve a number of issues with some other units summonings.
+
+[Ella 2026-05-28] can do!
+
+[Balanar 2026-05-28] Did you try equipping a fishing rod with them?(Sorry doing some other stuff rn).
+
+[Chaos 2026-05-28] Bradley said some of his abilities actually work in fishing spots specifically, lol
+
+[Chaos 2026-05-28] There are some interesting cases we may come across where abilities are part of a chain or have certain requirements that may be ambiguous to us initially
+
+[Onion 2026-05-28] Beatriche (sorry for buchering name) 
+
+has transformation for gargoyle - which is funny... you turn back by transforming to smth else. 
+and perma-fly ability from gargoyle with landing... that's really cool, but feels too early
+
+[Chaos 2026-05-28] Whaaaat!!  I didnt' expect that a transformation ability would work.  Thats awesome!!
+
+[Onion 2026-05-28] yeah! quite cool, that was fun find for me, gonna go for golemmancer next.. she has some trippy abilities
+
+[Onion 2026-05-28] okay. Beatriches transformation to gargoyle breaks all logic. 
+i get immortality frames. like 2 seconds worth or more
+i get healed.
+i can repeat it forever 
+😂
+
+[Onion 2026-05-28] [5. Beatrice the Tailor / Gargoyle Ability ID Testing Notes]
+- ID: 1563014858 / 1551140710 — Gargoyle Fly End / Hard: Makes absolutely no sense at all when you are on the ground.
+- ID: -382913708 — Gargoyle Fly Start: Binds your Spacebar to a smash-down landing. It isn't a linear downward path so you get stuck in rocks often and can easily clip out of textures. Fun to test, but not sure we even want flying mechanics this early in progression. (EDIT: Gargoyle flight is not permanent but: 
+   1. about 20seconds of fly-time.
+   2. you are immune to sun.
+   3. you can clip into stairs to fall out of map, land out of map (out of bounds) and land inrocks. - possibly land in occupied castle - have not tested. 
+   4. you can definetly land in buildings/start flying from anywhere. 
+- ID: 1460741503 — Gargoyle Wing Shield: Gives a long cast time but practically grants immortality and healing. Feels completely broken.
+- ID: 88850785 — Gargoyle Wing Shield Emerge: Can be spammed constantly for a rapid radius AoE. Does way too much damage for how fast it is.
+- ID: -915929892 — Legion Gargoyle Forward Swipe: Just a boring standard swipe.
+- ID: 701450949 / 183752077 / 174118917 — Legion Gargoyle Relocate Forward (All 3): These three travel slots don't seem to do anything at all.
+- ID: 1637511208 — Tailor Shapeshift: Broken as hell. Combines immortality with a heal for infinite health.
+  1. it does not do infinite -  heals for 200 HP max, to threshold - so if you took 350, it never heals 150missing back, but leaves black-bar  while being immortal, it counts total attained damage, so it does not overheal.  
+               -would be cool to test with HP potions - whereas you still got full-black bar by abusing this, it alone does not sustain you.
+```
+
+all of them are lowkey broken
+
+Added Edit after using more of skills.
+
+[Ella 2026-05-28] Related to Keely's invisibility, Polora's also is ineffective and can be seen through by enemies
+
+[Moonie 2026-05-28] I was going to test out Finn, but I hadn't unlocked the woodworking bench to make a fishing pole when I was on, if anyone wanted to get around to seeing if Finn's abilities work with pole xD
+
+[Onion 2026-05-28] nono. you don't need it
+you can craft it from your inventory! @Moonie
+
+also note - i did crafted it, and tried things near water with skills.. had no luck
+
+[Moonie 2026-05-28] back in my daaaay we had to use the woodworking bench to craft a pole.
+
+[Moonie 2026-05-28] https://tenor.com/view/grandma-sari-gif-14510159
+
+[Onion 2026-05-28] [Gloomrot The Professor Ability ID Testing Notes]
+- ID: 98352404 — Gloomrot The Professor Discharge: Grants a counter. Upon activation, you dash front-and-back, dealing damage both times. Really cool skill.
+- ID: 1142491430 — Gloomrot The Professor Electric Push: Works, but you stand idle for 3 seconds before 7 pulses start. You are completely locked in place and cannot move during the entire interaction. Highly useless, but a fun one.
+- ID: 1957366402 — Gloomrot The Professor Few Beams: Does absolutely nothing. Maybe it requires a specific form to function?
+- ID: -506564570 — Gloomrot The Professor Imploding Orb: Does not work at all.
+- ID: -841469184 — Gloomrot The Professor Many Beams: Does not work as well.
+- ID: 1379672... — Gloomrot The Professor Many Beams Hard: Does not work.
+- ID: -2097618568 — Gloomrot The Professor Multi Lazer: Works perfectly.
+- ID: 922412053 — Gloomrot The Professor Multi Lazer Hard: Works as well.
+- ID: -1904011156 — Gloomrot The Professor Overload Orb: Does absolutely nothing.
+- ID: -727882902 — Gloomrot The Professor Perma Beams: Tries to do something—the animation kicks in, but couldn't find what it actually does. Seems to give short immortality frames followed by a long CD, might be fine.
+- ID: -559662270 — Gloomrot The Professor Teleport Mid: Does a jump-ball animation, then returns right back down to the same place. Short animation that does nothing apart from looking quirky.
+```
+
+[Domino 2026-05-28] Corpse pile dig renders you invincible, allows you to attack during, and the ability is not locked during effect, along with no cooldown. 
+*also no weapon animating when attacking during dig*
+
+Undead Skeleton Golem Dig
+Prefab: AB_Undead_SkeletonGolem_Dig_AbilityGroup   ID: 2095802125
+Unit: Corpse Pile (id -1380216646)
+Category: Other   Creature: Undead
+Desc: Captured from Undead Skeleton Golem.
+Cooldown: 0.5s
+
+(go like 4 min into clip)
+
+================================================================================
+CHANNEL: Bane the Shadowblade
+SOURCE FILE: Bane the Shadowblade.json
+
+[Sovereign 2026-05-29] Prefab: AB_Undead_Infiltrator_AfterImage_AbilityGroup   ID: -1532726733 - Does not  fully work as intended. ❌ 
+
+^ Ability cast zone/range icon is almost identical to the bear charge. However, it does nothing if pressed with the cursor too far from your character. Cursor must be on/VERY close to the player model and direction cannot be fully chosen (see attached video).
+
+Prefab: AB_Undead_Infiltrator_ArmyOfShadows_AbilityGroup   ID: 1986068244 - Does not work. ❌ 
+
+Expected result: Multiple clones/minions summoned.
+Actual result: Locked in place with the animation playing, but nothing happens. 
+
+Prefab: AB_Undead_Infiltrator_DoubleStrike_AbilityGroup   ID: 1456136938 - Works fine/as intended. ✅ /❓ 
+
+^ Some *slight* sliding/jank animation. Multi-hit combo in 3 parts (2x double autos, followed by a small thrust forward). Not particularly 'useful' as an addition over base weapon attacks.
+
+Prefab: AB_Undead_Infiltrator_HeavyAttack_AbilityGroup   ID: -1422240708 - Works fine/as intended. ✅ /❓ 
+
+^ A single-use version of the thrust from the previous combo. Has both windup and endlag. Not worth using/enabling. 
+
+
+Prefab: AB_Undead_Infiltrator_KnifeThrow_AbilityGroup   ID: 1621601748  ✅
+Prefab: AB_Undead_Infiltrator_KnifeThrow_Hard_AbilityGroup   ID: -39228843  ✅
+
+^ Both work fine/as intended. Shorter cast time, +1/faster projectiles with the hard version. Briefly locks in place (no longer than a crossbow auto, longer if you choose to fire multiple daggers). Actually feels quite good to use.
+
+Prefab: AB_Undead_Infiltrator_ShadowFlurry_AbilityGroup   ID: 94933870 - Works fine/as intended. ✅ /❓ 
+
+^ Large, high damage AoE ability, with sizeable windup & endlag (~2s either end). Questionable recommendation due to this.
+
+Prefab: AB_Undead_Infiltrator_ShadowStep_AbilityGroup   ID: -664569083  - Works fine/as intended. ✅
+
+^ Requires a target to be used, with slight endlag. Even so, feels VERY good to use.
+
+================================================================================
+CHANNEL: Beatrice the Tailor
+SOURCE FILE: Beatrice the Tailor.json
+
+[NichtNoel 2026-05-31] Gargoyle Fly End ✅ ❓ 
+Category: Other   Cooldown: 0s
+
+-Character lands as intended at cursor location,
+-Travel distance is incredibly High depending where the Cursor placement is. 
+-It is possible to land out of Map, no Boundaries
+-crashing into Terrain or objects will get you stuck 
+
+Gargoyle Fly End Tailor Hard ✅ ❓ 
+Category: Other   Cooldown: 0s
+
+Character lands as intended at cursor location,
+-Travel distance is incredibly High depending where the Cursor placement is. 
+-When "Gargoyle Fly Start" is active and youre in the Air and you land, the --Chaos AoE does not appear.
+-It is possible to land out of Map, no Boundaries
+-crashing into Terrain or objects will get you stuck 
+
+Gargoyle Fly Start ✅ ❓ 
+Category: Other Cooldown: 0s
+
+-Holding the set Hotkey will make the Camera/Player go Up and Down. 
+-Character becomes invisible and walks in the air and is not flying like the bat form. 
+
+Gargoyle Wing Shield ✅ 
+Category: Buff   Cooldown: 0s
+
+Engulfes the Player in Stone and gives puts a Cone of Red Aura on the Player. It feels very usable. 
+
+Gargoyle Wing Shield Emerge✅ 
+Category: Buff   Cooldown: 0s
+
+-Knocks nearby Enemies away. Farther enemies, still hit by the shockwave will get hit but not knocked back.
+-Enemies about 3 Meters away from the Player will not get knocked back.
+
+Legion Gargoyle Forward Swipe❌ 
+Category: Buff   Cooldown: 0s
+
+-No Player Swing Animation. Character moves forward and Swing Animation appears.
+-Does DMG.
+
+Legion Gargoyle Relocate Forward Init❌ 
+Category: Buff   Cooldown: 0s
+
+Does Nothing. 
+No Animation, DMG or other. 
+
+Legion Gargoyle Relocate Forward Init Apply Targetbuff ❌ 
+Category: Buff   Cooldown: 0s 
+
+As Name says Targetbuff. Cursor has to be on player. Player Jumps on the spot. 
+Cannot be activated while running. 
+
+Legion Gargoyle Relocate Forward Travel❌ 
+Category: Buff   Cooldown: 0s
+
+Does Nothing.
+No Animation, DMG or other. 
+
+BCH 0.18.4
+Beelzebub 0.55.0
+
+[Balanar 2026-06-01] Let me add that if you use Wing shield during a transformation or buffer it, sometimes will render you immortal(as long as you dont use another transformation ability or any that would alter your character properties, it will stay that way). I didn't test it enough to know exactly how to trigger it consistently.
+
+================================================================================
+CHANNEL: Beelz Hotkeys
+SOURCE FILE: Beelz Hotkeys.json
+
+[Moonie 2026-05-28] I cannot seem to get the hotkeys to register. I have done the following, 
+
+1 - Hit Show Overlay - to see Action Bar overlay/enable
+2- Navigated to Hotkeys Tab in BCH
+3 - Under bind a new hotkey - searched for AoE - named it Bomb Throw and selected bind for Bandit Bomb Throw
+4 - System message generates and a message populates saying "Bound 'Bomb Throw' -> Bandit Bomb Throw
+
+At this point, nothing shows up under Your Hotkeys and nothing shows up in the overlay. I did try hitting refresh. See screenshot below. If I missed a step, please let me know.
+
+BCH version is v0.18.1
+
+[Chaos 2026-05-28] I will take a look at this, thank you for the screenshot and great details!
+
+[Chaos 2026-05-28] Oh, the CFG may have shipped with the default setting being 0 hotkeys enabled.  So they may be blocked.  I will need to check.
+
+[Chaos 2026-05-28] Admins can adjust hotkey allowance
+
+[Chaos 2026-05-28] in the CFG
+
+[Moonie 2026-05-28] Awesome! I was just thinking I was missing an enable step somewhere
+
+[Chaos 2026-05-28] Because last I tested in my local server it worked
+
+================================================================================
+CHANNEL: Beelzebub Feedback Project Overview
+SOURCE FILE: Beelzebub Feedback Project Overview.json
+
+[Xavarie  (Admin) 2026-05-28] Thank you so much for your time and help with our passion project!
+Please keep the details of this project quiet while we are in testing.
+For tracking, always use the appropriate tag.
+Have fun and help us break stuff!
+
+🩸 Now Recruiting: Testers for Beelzebub 🩸
+
+Hey Testers!  Our new server side mod will hopefully breath new life in a well loved game while we wait for the new VRising game to be developed. The premise: defeat a unit— any V-Blood or NPC — and steal its abilities. Build a collection across the whole bestiary and turn your enemies abilities into your personal arsenal.
+
+What you'll play with:
+- ⚔️ Steal abilities from enemies — V-Bloods and NPCs. 
+- 💀 Summon minions that fight for you
+- 🗡️ Per-weapon loadouts, bindable hotkeys, tunable spells
+
+What we ask of testers: report bugs clearly (what you did / what happened / what you expected), and share feedback on balance and fun (ex: Ability OP, Ability non-functional, etc.)
+
+⚠️ Read first — this is essentially an Alpha/Beta version on a dev server. Bugs and crashes are expected (that's the point), and your progress — or the whole server — may be wiped at any time without notice for updates or to address issues. Don't get attached; come to experiment, not to settle in.
+
+Thank you for your time and assistance! 
+Where to start-Please review "Testers Start Here" and use tags on every post please.
+
+[Balanar 2026-05-28] Beelzebub ability binding reset doesn't reset the bar to default, it will reset after swapping weapons, is this intended?
+
+[Xavarie  (Admin) 2026-05-28] Changed the channel name: Beelzebub Feedback Log & Project Overview
+
+[Chaos 2026-05-28] We may need to follow up on this to be sure, there are two things. 1) When you apply something or take something off you typically have to cycle your weapon so that the action bar registers it.  The action forces a refresh.  2) Clearing it typically empties it of custom abilities given by Beelz, but it may not restore innate/vanilla abilities
+
+[Xavarie  (Admin) 2026-05-28] Changed the channel name: Beelzebub Feedback Project Overview
+
+[Xavarie  (Admin) 2026-05-28] I am locking this post now that we have the rest of the information up. Hopefully,  this will prevent confusion and missing your comments. Thanks!
+
+================================================================================
+CHANNEL: Ben the Old Wanderer 109969450
+SOURCE FILE: Ben the Old Wanderer 109969450.json
+
+[Bradley (Admin) 2026-06-02] - Cursed Wanderer Fake Melee Attack | -1512616160 ❌ 💩 
+As the name says, it is a fake melee, so it does nothing.
+
+- Cursed Wanderer Melee Attack  |  -127603789 ✅ 
+Primary melee attack.  Standard damage, one hit instead of multi-hit, range can reach about 2 enemies.  Snares targets.
+
+- Cursed Wanderer Gossip  | -1137336047 ✅ 💩 
+You walk forward about 1 tile (5 units).  You let out 3 glowing balls that find the nearest enemy and entangle them.
+
+Ben works, but he isn't working very hard.  That's for sure.
+
+[Bradley (Admin) 2026-06-03] BCH 0.20.0
+Beelzebub 0.100.0
+
+================================================================================
+CHANNEL: Brad's Feedback on BCH Chat Window
+SOURCE FILE: Brad's Feedback on BCH Chat Window.json
+
+[Bradley (Admin) 2026-06-02] ## Disable Input while typing in chat 🔧 
+- Admin Keybinds: I'm trying to type in there and I end up teleporting everywhere or kill-buttoning everything.  
+- Numbered items in Hotbar:  It is switching between slots while typing numbers.
+- Tab key: While typing in chat, I can press tab to switch between which chat to type in, but the inventory screen opens and closes as I do this.
+
+[Bradley (Admin) 2026-06-02] ## Re-arrange Colors
+- This is a small nit-pick, but the icon colors don't match the ones in-game.  They are the correct 3 colors, but they are shuffled around.
+
+[Bradley (Admin) 2026-06-02] ## Colored Text Chat & Some icons
+- Option to make text chat color match the corresponding color of which chat it is from.  Also, maybe spice up the design with some icons.  Like one for send and copy.
+
+[Bradley (Admin) 2026-06-02] ## More Transparency
+- I know.  I'm crazy.  But, since I don't have an ultra-wide monitor, clawing back every millimeter of screen real-estate is valuable.  Plus is looks pretty sick.
+
+[Bradley (Admin) 2026-06-02] ## System message Clean up
+- Please provide a check box in the settings to remove system messages from the "All" tab in the chat.  I want to see what everyone is saying from anywhere with absolutely zero clutter.  ✅ (Guess I missed this one according to Moonie 😵‍💫 )
+- Additionally, you could provide the option to make the system messages appear in a separate window simultaneously.  Here are some picture examples of what that could look like:
+
+[Moonie 2026-06-02] There is the option to select what messages populate under all since that was one of my first requests :3
+
+[Moonie 2026-06-02] it should be under settings, cause I have it set so system messages do not show up under the all tab
+
+[Bradley (Admin) 2026-06-02] He has check boxes to disable a handful of items, but I still get tones of crap sent through regardless.  I need All System messages banned from that tab entirely.
+
+[Moonie 2026-06-02] so that is the chat noise section
+
+[Moonie 2026-06-02] there is another setting to click which messages go to your all tab for the chat ui
+
+[Moonie 2026-06-02] so that ALL system messages go to the systems tab, etc
+
+[Moonie 2026-06-02] I have my all set up to not show system messages
+
+[Bradley (Admin) 2026-06-02] I have never found a setting like this.  Let me know if you find it again.
+
+[Moonie 2026-06-02] unable to pull up the game right now but it looks like
+
+[Bradley (Admin) 2026-06-02] I'm dumb.  I must have read that section as which tabs to have visible tabs on the bar at the top.  So, I never bothered to poke at it.
+
+[Moonie 2026-06-02] you know that's fair xD
+
+[Moonie 2026-06-02] but that will clear those system messages right up off all
+
+[Bradley (Admin) 2026-06-03] ## Button Colors
+- The chat needs its own settings for button colors.  It would be nice to chose colors that look nice for it and have something that is more readable for the rest of the BCH menus. 
+- The color button in the Settings and Help doesn't even save on reboot.  Here are pictures.  It is fully red before, then after it is just copy and send.
+
+[Bradley (Admin) 2026-06-03] ## In-game Menus overlaying the chat
+- The player inventory successfully overlays on top of chat, but not the map or spell selection screens.
+
+[Bradley (Admin) 2026-06-03] ## Whisper Chat
+- it needs to show the recipient name
+
+[Bradley (Admin) 2026-06-03] ## Disable Input for BCH overall
+- This one disables movement and attacks, but does not disable switching between the numbered slots in your hotbar.  It also does not disable admin keybinds and the Tab key.  Same as Chat Window
+
+```Stop your character moving / attacking / casting (incl. hotkeyed commands) while the BCH main panel is open, so background actions don't fire while you click buttons or type into forms. Default OFF — enable to try it. Blanks your input data AFTER the game reads it (never blocks the input system), so it cannot freeze the UI like the removed 0.1.x attempt did.
+# Setting type: Boolean
+# Default value: false
+SuppressGameInputWhileUIOpen = true```
+
+================================================================================
+CHANNEL: CRITICAL LIST (DO NOT USE ABILITIES)
+SOURCE FILE: CRITICAL LIST (DO NOT USE ABILITIES).json
+
+[Chaos 2026-05-28] Abilities listed in this post have been tested to be game or server-breaking so please avoid using them, until I can test them out and conclude whether they can be fixed or whether we need to exclude them from the mod.
+
+[Chaos 2026-05-28] SERVER BREAKING ABILITIES:
+
+
+- Sir Erwin: "Militia Fabian Mountup" ability
+
+[Chaos 2026-05-28] CHARACTER BREAKING ABILITIES:
+
+- Gaius: "Undead Arena Champion Twinblade Throw"
+- Gaius: Undead Areana Champion Corpse Buff
+
+================================================================================
+CHANNEL: Cassius Vampire HIghLord - Id -496360395
+SOURCE FILE: Cassius Vampire HIghLord - Id -496360395.json
+
+[Xavarie  (Admin) 2026-06-02] High Lord Corpse Storm - ID: 1006960825✅ 🔧 
+Great for an ultimate spell. Duration is a bit long. It spawns in 3 waves. Large area AOE damage amount is a bit low but once. Spell is very usable better with some tweaking. Damage 107/107/160 sword on dummy/ Unarmed 101/101/151
+Awesome ability
+Category: Spell   Creature: Vampire
+Desc: Captured from Vampire High Lord.
+Cooldown: 14s Tested: Unarmed/Sword/Universal
+
+High Lord Leap Strike - ID: 938684260❌ ❌ ❌ 
+**BROKEN DONOT USE!!** __You have to kill your character to get out of the TPOSE.__ It starts with a great leap but ties you in a Tpose to Cassius Sword 
+Category: Travel   Creature: Vampire
+Desc: Leap into the air and strike down at target location, dealing {damage} magic damage. A nova of frost erupts from the impact location that Freezes any enemy hit for up to {duration}s. Enemy vampires are frozen for {vampireduration}s.
+Cooldown: 30s  Tested: Unarmed/Sword/Universal
+
+High Lord PBAE - ID: -1139777657❓ 
+Aimation. No Damage. Not useful (Title says Blood Rage but I didt get that )
+Category: Other   Creature: Vampire
+Desc: Heal nearby allies for {healing} of your spell power and apply a fading haste that increases movement speed by {hastefactor} and attack speed by {attackspeed} for {duration}s. Inflicts Leech on nearby enemies.
+Cooldown: 10s  Tested: Unarmed/Sword/Universal
+
+High Lord Pull Players  - ID: 851287157❌ 
+Aimation. No Damage. Not useful
+Category: Other   Creature: Vampire
+Desc: Spin around and slice nearby enemies dealing {damage} physical damage over {lifetimeduration}s.
+Cooldown: 8s  Tested: Unarmed/Sword/Universal
+
+High Lord Raise Dead  - ID: 416744805
+Aimation. No Damage. Not useful❌ 
+Category: Summon   Creature: Vampire
+Desc: Captured from Vampire High Lord.
+Cooldown: 8s  Tested: Unarmed/Sword/Universal
+
+High Lord Sword Dash Cleave - ID: -2126197617✅ 🔧 
+Great for GreatSword. Dash for 3 tiles+greatSword Swing upward 1tile (4total)locked in place a couple sec after action.
+Category: Melee   Creature: Vampire
+Desc: Charge forward and swing your great sword upward dealing {damage} physical damage in an area and launching enemies into the air for {duration}s.
+Cooldown: 8s  Tested: Unarmed/Sword/Universal
+
+High Lord Sword Primary Melee Attack- ID: -328302080✅ 
+Large sword swing. good for greatsword and sword. Does damage has green swing animation. No buffs or status applied to enemy or plyr. wide swing good to use.
+Category: Melee   Creature: Vampire
+Desc: Perform a combo of melee attacks dealing %35/%35/%40 physical damage.
+Cooldown:   Tested: Unarmed/Sword/Universal
+
+High Lord Unholy Skill -ID: -1298764600✅ 
+Basic Corrupted skull. spwns one skeleton single ball cast no cooldown.
+Category: Spell   Creature: Vampire
+Desc: Launch a projectile that deals {damage} magic damage, summons a skeleton and inflicts Condemn. The attack deals {bonusdamage} bonus damage to enemies below 30% health.
+Cooldown: none  Tested: Unarmed/Sword/Universal
+
+High Lord Unholy Warp  - ID: -604910466 ✅ 
+Fast Dash upto 4 tiles to cursor. Each cast gives player Diminished return buff. Tacks giving immunity on 4th cast. Very usable!
+Category: Spell   Creature: Vampire
+Desc: Leap into the air and strike down at target location, dealing {damage} magic damage. A nova of frost erupts from the impact location that Freezes any enemy hit for up to {duration}s. Enemy vampires are frozen for {vampireduration}s.
+Cooldown: 2s  Tested: Unarmed/Sword/Universal
+
+BCH 0.20.0
+Beelzebub 0.100.0
+
+[Xavarie  (Admin) 2026-06-02] High Lord Corpse Storm - ID: 1006960825
+
+[Xavarie  (Admin) 2026-06-02] High Lord Unholy Warp  - ID: -604910466
+
+[Xavarie  (Admin) 2026-06-02] Changed the channel name: Cassius Vampire HIghLord - Id -496360395
+
+================================================================================
+CHANNEL: Christina the Sun Priestess - ID -99012450)
+SOURCE FILE: Christina the Sun Priestess - ID -99012450).json
+
+[Moonie 2026-06-02] Nun Vblood Melee Attack  -ID: 607644390 ✅ 
+Category: Melee   
+Creature: Humanoid
+
+This is just a basic melee attack in an arc in front of you. Locks you into place for 1.4s, which does not feel good.
+
+Nun Counter  ID: -1725804558 🔧 ❓ 
+Category: Other   
+Creature: Humanoid
+Cast Time: 0.6s
+
+This a counter but is not as good as vanilla options or other boss skills as is. It has a 0.6s cast time where you are locked in place and still taking damage. It does some damage when hit and an aoe silence. I do not believe silence effects bosses. The cast time would need to be removed, I feel, in order to be a possibility.
+
+Nun Ao E  - ID: 1267698255 ✅ 🔧 
+Category: Aoe   
+Creature: Humanoid
+Cast Time: 1.8s
+
+This drops a beam of light at cursor location. The user is locked into place during the cast time, unsure if this can be shortened or removed. The initial drop heals allies/summons in the circle. After about 3s, another heal goes off and a large tick of damage to any enemy in the circle. This does not heal allies through the duration of the spell like the non-vblood nun ability.
+
+Nun HARD Holy Bolt Spray  - ID: 605530795 🔧 
+Category: Projectile   
+Creature: Humanoid
+Cast Time: 1s
+
+This shoots out a wave of holy light that damages on hit and leaves a dot tick. You are locked into place when you cast and it has some pretty bad end lag. Would feel much better to use if the lock/end lag could be adjusted/removed.
+
+Nun Healing Channel  - ID: 54266570 ✅ 🔧 
+8 sec duration
+Nun Healing Channel Ability Group Long  - ID: 1090673078 ❌ ❓ 
+5 sec duration
+Nun Healing Channel Ability Group Short  - ID: 397860291 ❌ ❓ 
+3 sec duartion
+Category: Buff   
+Creature: Humanoid
+
+All of the above are channel heals. They lock you in place for the cast time and the duration of the ability. You can dash and continue the channel, but are still locked into the place after the dash. The group channels DO NOT heal allies or summons. The heal amount seemed consistent across all three. Unsure if all are needed if it only heals self.
+
+Nun Holy Projectile  - ID: -1581417695 ❓ 
+Category: Projectile   
+Creature: Humanoid
+
+Locks you in place for cast time. Shoots five holy blots in a fan spread in front of you. Does not heal allies or leave a dot, so I'm unsure why you would use this ability vs her holy bolt spary.
+
+Nun V Blood Heal Command  [V-Blood]- ID: -1756529149 ❌
+Category: Buff   
+Creature: Humanoid
+
+This is listed as a buff but does not do anything currently. Maybe would do something to her summons if they spawned?
+
+Nun V Blood Spawn Minions  - ID: -1754021382 ❌
+Category: Spell  
+Creature: Humanoid
+
+Does not work at this time and locks you in place. 
+
+BCH v0.20.0
+Beelz v0.100.0
+
+[Moonie 2026-06-02] Changed the channel name: Christina the Sun Priestess - ID -99012450)
+
+================================================================================
+CHANNEL: Clive the Firestarter 1896428751
+SOURCE FILE: Clive the Firestarter 1896428751.json
+
+[Bradley (Admin) 2026-05-30] Bandit Bomber Elite Roll | 192866635 ✅ 💯 
+- Big dash forward for 0.5 sec, then an explosive bomb detonates behind you after 5 sec.
+
+Bandit Cluster Bomb Throw | -444905742 ✅ ❓ 
+- **Locked in place** for about 2.5 sec.  Throws a bomb that explodes into 3 more bombs , then those 3 bombs explode into 3 more bombs each.  10 sec cooldown.  **Need to fix being locked in place**.
+
+Bandit Sticky Bomb | 1479036818 🔧 
+- 0.7 sec cast time.  10 sec cooldown.  It has a description that matches pistol roll.  It says It fires a single bullet after a dodge roll (It does not do this. You stand in place for about 2 sec).  The bullet deals damage and explodes for more damage and knockback in an aoe from the target after 3 sec. I'm leaving out the percentages it mentioned because It copies the pistol, so they don't appear to be accurate.  The function is the same, but stronger.  I recommend trying to put the pistol dodge roll into the animation if possible or just remove the 2 sec wait time. 
+
+BCH 0.18.4
+Beelzebub 0.55.0
+
+================================================================================
+CHANNEL: Cyril the Cursed Smith 326378955
+SOURCE FILE: Cyril the Cursed Smith 326378955.json
+
+[Bradley (Admin) 2026-06-03] Undead Cursed Smith Hammer Slam  | -1502523453 ✅ ❓
+- You are **locked in place** and immune to damage for 3 sec while casting.  You life up an illusion hammer up, then slam down for aoe damage, knockback, and illusion application.  It then spawns a bunch of illusion spheres that slowly float and deals a little damage on enemy collision, and then they disappear on hit.  **No Cooldown on ability**.
+
+Undead Cursed Smith Melee Attack  | 1700777111  ✅ ❓
+- Same as Slashers.  Right, Left, Right primary attack sequence.  Followed by the Slasher dash forward and backwards, dealing damage and snare.  Primary attack sequence.  No cooldown.
+
+- Undead Cursed Smith Multi Dash  | -329078808 ❌
+- Undead Cursed Smith Multi Dash Charge | 340003308 🔧
+Both emit an illusion aoe pulse from the player.  This does no damage and applies no illusion effect to enemies.  Multi Dash does not dash at all, so it does nothing.  Multi Dash Charge, charges forward damaging all enemies hit.  Not impressive, but it functions.
+
+- Undead Cursed Smith Summon Weapon All  | 847476786  ✅ ❓
+- Undead Cursed Smith Summon Weapon Axe  | -1889094547  🔧
+- Undead Cursed Smith Summon Weapon Mace  | 546685538 🔧
+- Undead Cursed Smith Summon Weapon Slashers  | 151173850 🔧
+- Undead Cursed Smith Summon Weapon Spear  | 1162725480 🔧
+- Undead Cursed Smith Summon Weapon Sword  | -332863103 🔧
+Spawns ghostly illusion weapon summons.  Single weapon is only 1 weapon and is a 2.5 cast time and **locked in place**.  All Weapons is 1 of each, 5 total, and is a 7 sec cast time and **locked in place**.  All Weapons can have unit limit reduced by admin options to be less than 5, but not more.  Single weapons amount cannot be adjusted by admin options.
+
+- Undead Cursed Smith Sword Dash  | -668888775 ✅ ❓
+Moves about 1.5 tiles forward (8 units), followed up by a sword slash dealing damage in a small aoe range.  No Cooldown.
+
+[Bradley (Admin) 2026-06-03] Changed the channel name: Cyril the Cursed Smith 326378955
+
+[Bradley (Admin) 2026-06-03] BCH 0.20.0
+Beelzebub 0.100.0
+
+================================================================================
+CHANNEL: Domina the Blade Dancer (id -1101874342)
+SOURCE FILE: Domina the Blade Dancer (id -1101874342).json
+
+[#Toggle 2026-06-03] **Voltage Electric Rod ID: -1548349308**✅ 🔧 
+- Pretty awesome AOE Ultimate Ability which covers a very large area, this can be very good if tuned correctly. Usable, but needs tweaking - It lasts abit too long - Stationary during the Whole ability length, no animation except for Lightning effect. Animation/Effect Length 12s
+- Unit: Domina the Blade Dancer [V-Blood] (id -1101874342)
+- Category: Other   Creature: Other
+- Desc: Captured from Gloomrot Voltage. Performs a Large Area AOE Ability
+- Cooldown: 12s Tested: Unarmed/Slashers/Claws/Sword/Universal
+
+[#Toggle 2026-06-03] **Voltage Electric Sprint ID: -177268000**❌❌
+- ABility Not triggering, completely non functional
+- Unit: Domina the Blade Dancer [V-Blood]  (id -1101874342)
+- Category: Other   Creature: Other
+
+[#Toggle 2026-06-03] **Voltage Kick Combo ID: 1878838878**✅❌
+- Works like intended, effect shown but animation are stuck in Place. Caracther is able to turn and spin while using the ability. 3 Button press ability, almost like double Basic attack followed up by one Power attack.
+- Unit: Domina the Blade Dancer [V-Blood] (id -1101874342)
+- Category: Melee   Creature: Other
+ - Tested: Unarmed/Universal
+
+[#Toggle 2026-06-03] **Voltage Kick Combo Final ID: 1851411882**✅❌
+- This is the Final Attack from *Voltage Kick Combo ID 1878838878*, Works as intended but animation is not working.
+- Unit: Domina the Blade Dancer [V-Blood] (id -1101874342)
+- Category: Melee   Creature: Other
+- Tested: Unarmed/Universal
+
+[#Toggle 2026-06-03] **Voltage Leap Attack ID: 2016544872**✅ ❓
+- Awesome Leap animation With lighting, almost like a Lightning slam, looks awesome tho. There is a kick effect at the end, which is intended to work With domina's animations of course, other than that ability work fine. You get stuck for a second after you land.
+- Unit: Domina the Blade Dancer [V-Blood](id -1101874342)
+- Category: Travel   Creature: Other
+- Tested: Unarmed/Universal
+
+[#Toggle 2026-06-03] **Voltage Leap Attack Hard ID: -1853889696**✅ ❓
+- Pretty Much exactly same ability as *Voltage Leap Attack ID: 2016544872* - But harder..
+- Unit: Domina the Blade Dancer [V-Blood] (id -1101874342)
+- Category: Travel   Creature: Other
+- Tested: Unarmed/Universal
+
+[#Toggle 2026-06-03] **Voltage Sprint Kick ID: 788963695**✅ ❓
+- Very Highspeed Dash ability which covers alot of ground, Able to move while active, lasts very shortly. Works but needs to be tweaked if to be made usable. Character animation makes it look very unatural.
+- Unit: Domina the Blade Dancer [V-Blood] (id -1101874342)
+- Category: Melee   Creature: Other
+- Tested: Unarmed/Universal
+
+[#Toggle 2026-06-03] **Voltage Sprint Kick Antip ID: -1143650386**✅❓
+- Not completely sure what this does, animation is cool tho, extremely short dash forward. looks like mini powerup.
+- Unit: Domina the Blade Dancer [V-Blood] (id -1101874342)
+- Category: Melee   Creature: Other
+- Tested: Unarmed/Universal
+
+[#Toggle 2026-06-03] **Voltage Swap ID: -1372140488**❓❓
+- This is the Longrange Lightning attack she Does when she kicks. Animation is broken. Effect are Nice. Character is stationary during animation.
+- Unit: Domina the Blade Dancer [V-Blood] (id -1101874342)
+- Category: Other   Creature: Other
+- Tested: Unarmed/Universal
+
+[#Toggle 2026-06-03] **Voltage Whip ID: 1191517048**❌❓
+- This is her Whip Attack, player character is stuck when active, if tweaked it could be usable. Lighting whip cool animation, probably not gonna be used "late game"
+- Unit: Domina the Blade Dancer [V-Blood] (id -1101874342)
+- Category: Other   Creature: Other
+- Tested: Unarmed/Universal
+
+[#Toggle 2026-06-03] **Voltage Whirlwind ID: -1243386667**✅🔧
+- This is her spinnign whirlwind attack, looks good and could work.Cast animation too long - stationary during the cast time. You are completely "stuck" during this. It needs to be tweaked to be viable, like cast speed changes. Character Animation is not too awfull for sure. Character does a jump by the end of animation, this could be looked into aswell. For sure Ability that could work on the release. 
+- Unit: Domina the Blade Dancer [V-Blood] (id -1101874342)
+- Category: Melee   Creature: Other
+- Tested: Unarmed/Universal
+
+[#Toggle 2026-06-03] Changed the channel name: Domina the Blade Dancer (id -1101874342)
+
+[Bradley (Admin) 2026-06-03] BCH 0.20.0
+Beelzebub 0.100.0
+
+================================================================================
+CHANNEL: Dracula related server crash
+SOURCE FILE: Dracula related server crash.json
+
+[Bradley (Admin) 2026-05-28] Dracula Spell Stone Bolt Spray
+Prefab: AB_Dracula_SpellStone_BoltSpray_AbilityGroup   ID: 1957691133
+Unit: Dracula Spell Stone Large Blood (id 32692466)
+Category: Projectile   Creature: Demon
+Desc: Captured from Dracula Spell Stone Large Blood.
+Cooldown: 0.5s
+
+================================================================================
+CHANNEL: Errol The StoneBreaker -2025101517
+SOURCE FILE: Errol The StoneBreaker -2025101517.json
+
+[Bradley (Admin) 2026-05-29] Bandit Stone Breaker Mountain Rumbler Hard | 1688748795 🔧 
+- 6 second cast time and locked in place.  No cooldown at all.  Fun ability otherwise.
+
+Bandit Stone Breaker Rock Smash Hard | 2078583785 🔧 
+- 4 sec cast time and locked in place after a short dash backwards.  No cooldown.
+
+Bandit Stone Breaker Swing Attack Hard |  1684865572 🔧 
+- 1-1.5 sec cast time then dash forward to stun and knockback target.  No cooldown.  It also has 2 second end lag.  It does work on V-bloods and training dummy.  I still think this is worth keeping.
+
+Bandit Stone Breaker V Blood Mountain Rumbler | 593979922 🔧 
+- 6 second cast time and locked in place.  No cooldown at all.  Fun ability otherwise.
+
+Bandit Stone Breaker V Blood Reinforcement | 1267543813 🔧 
+- Calls in 2 level 14 miners.  20 sec cooldown.  They attack, but are weak.
+
+Bandit Stone Breaker V Blood Rock Smash | -96620724 🔧 
+- 4 sec cast time and locked in place.  No cooldown.
+
+Bandit Stone Breaker V Blood Spin Attack | -47403235 🔧 
+- 3 sec cast time and locked in place.  5 sec cooldown.  
+
+Bandit Stone Breaker V Blood Swing Attack | -331113507 🔧 
+- 1 sec cast time then dash forward knockback target a short distance.  No cooldown.  It also has 2 second end lag.
+
+[Bradley (Admin) 2026-05-30] BCH 0.18.4
+Beelzebub 0.55.0
+
+================================================================================
+CHANNEL: Finn The Fisherman -2122682556
+SOURCE FILE: Finn The Fisherman -2122682556.json
+
+[Bradley (Admin) 2026-05-30] Bandit Fisherman Feed Serpent Lineup 01 | -1601441951 ❌ 
+Bandit Fisherman Feed Serpent Lineup 02 | -1657698157 ❌ 
+Bandit Fisherman Feed Serpent Lineup 03 | -228936316 ❌ 
+Bandit Fisherman Feed Serpent Lineup Hard | 514628041 ❌ 
+- The lineups seem to be triggers for the boss to walk towards the spot to fish.  It does affect the player if you aim your cursor at yourself.  You dash forward a short distance with an additional 2.4 movement speed.
+
+Bandit Fisherman Fishing Lineup | -82547339 🔧 
+- Boosts movement speed by 2.4 speed, making your speed 6.4.  It lasts for 10 sec and you have free movement.  Your cursor must be on your player to make it work.  Could be made useful perhaps?
+
+Bandit Fisherman Fish Hook | 643209588 🔧 
+- It reels enemies in like a fishing rod, but it shows a net being cast on them.  It pulls them in from wherever it is cast, bringing them to the player.  They are not stunned.  If cast on yourself, you will be stunned.  Player is locked in place for 4 sec.  No cooldown.  Needs a lot of work.
+
+Bandit Fisherman Fishing Blowfish | -2096565232 ❌ 
+Bandit Fisherman Fishing Piranhas | 647582679 ❌ 
+Bandit Fisherman Fishing Old Boot | 396802528 ❌ 
+- It is the animation to spawn in either Blowfish or Piranhas or a Boot.  The animation only triggers on the player when your cursor in on an active fishing spot, but no fish spawn regardless.  The Old Boot version spawns 10 plant fibre when used on fishing spot.
+
+Bandit Fisherman Swing Attack | 1516349451 ✅ ❓ 
+- Functions like a basic swing attack.  It has to 2 hits that need to be manually triggered individually.  The 2nd hit has decent knockback.  It has at least 2 sec cast time for one hit and locks you in place for these hits.  Need some work, but close.
+
+Bandit Fisherman Spin Attack | -1807544727 ✅ ❓ 
+- It is the boss spinning his fishing rod before it lands an aoe hit with some knockback.  It deals no damage during the 4 sec spin build-up.
+
+[Bradley (Admin) 2026-05-30] Bandit Fisherman Serpent Feed | 571532506 🔧 
+Bandit Fisherman Serpent Feed Hard | -405467076 🔧 
+- These spawn the small or large serpent when cursor is on an active fishing spot.  The serpents that are spawned immediately go hide under water and have no enemy aggro.
+
+BCH 0.18.4
+Beelzebub 0.55.0
+
+================================================================================
+CHANNEL: Foulrot the Soultaker  -1208888966
+SOURCE FILE: Foulrot the Soultaker  -1208888966.json
+
+[Bradley (Admin) 2026-06-02] - Undead Zealous Cultist Ghastly Mockery |  -1208888966 ✅ ❓ 
+**You are locked in place** for 4 sec and have an illusion effect on your body.  If you are hit, it triggers a counter that causes you to disappear an reappear 2 tiles forward causing fear in a 1 tile radius.
+
+- Undead Zealous Cultist Shadow Meld  |  -1441325084 🔧 
+- Undead Zealous Cultist Shadow Meld Melee | -597391921 🔧 
+These are supposed to work as a pair.  The ability of Shadow Meld even has this description:
+```Desc: Enter a state of invisibility, increasing movement speed by {movespeed} for {lifetimeduration}s. Your next primary attack deals {damage} physical damage and incapacitates the enemy for {stunduration}s. Using any skill breaks camouflage.
+Cooldown: 15s```
+Shadow meld has 15 sec cooldown, 5 sec invisibility duration, movement speed to 8 during duration.  Melee attack cancels invisibility early, but that melee is suppose to be the Shadow Meld Melee ability.  Also, that melee is suppose to cause incapacitate and it doesn't work on enemies.
+
+- Undead Zealous Cultist Slice Ability Group 01 | -116587794 ✅ 
+- Undead Zealous Cultist Slice Ability Group 02 | -280574043 🔧 
+These are primary attacks.  Group1 is a half tile dash forward followed up by a single swipe, which applies illusion on few targets in range.
+The Group2 ability is the same exact hit, but without the dash, so it is nicer to use.  However, it has a description.  It indicates that it is supposed to have a multi-hit combo, but that is not functional.  Multiple button presses are that same first attack.
+```Desc: Perform a combo of melee attacks dealing 
+{damage1}/{damage2}/{damage3} physical damage.```
+
+- Undead Zealous Cultist Summon Ghosts |  -1784566500 ❌ 
+Does not Summon banshees like intended.  Also says it has 8 second cooldown, but that is not functional.
+
+[Bradley (Admin) 2026-06-03] BCH 0.20.0
+Beelzebub 0.100.0
+
+================================================================================
+CHANNEL: Frostmaw the Mountain Terror - id 24378719
+SOURCE FILE: Frostmaw the Mountain Terror - id 24378719.json
+
+[Xavarie  (Admin) 2026-06-02] Wendigo Frost Nova - ID: 1238313774✅ 
+large ice nova AOE animation (like end of Arctic leap) Does damage as it flows over enemy unit and inflicts Chill for damage.
+Category: Aoe   Creature: Other
+Desc: Captured from Wendigo.
+Cooldown: 0s Tested: Unarmed/universal/Sword
+
+Wendigo Ice Beam First - ID: 495259674✅ 
+Clockwise Ice beam. does damage as beam makes contact, and freeze snare lasts ~1.5s. Must place the cursor on character to engage spell.
+Category: Projectile   Creature: Other
+Desc: Captured from Wendigo.
+Cooldown: 0 Tested: Unarmed/universal/Sword
+
+Wendigo Ice Beam Second - ID: 1390611238✅ 
+Counter-Clockwise Ice beam. does damage as beam makes contact, and freeze snare lasts ~1.5s. Must place the cursor on character to engage spell.
+Category: Projectile   Creature: Other
+Desc: Captured from Wendigo.
+Cooldown 0s Tested: Unarmed/universal/Sword
+
+Wendigo Ice Dash Init - ID: 54541608 ✅ ❌ 
+Enter attack pose only. held in place. (start animation for other abilities) **No use for mod.**
+Category: Spell   Creature: Other
+Desc: Captured from Wendigo.
+Tested: Unarmed/universal/Sword
+
+Wendigo Ice Dash Strike - ID: 203761859❓ 🔧 
+visual broken for swing. animated dash+swish does some damage. 
+Category: Melee   Creature: Other
+Desc: Captured from Wendigo.
+Cooldown: 0.7s Tested: Unarmed/universal/Sword
+
+Wendigo Ice Dash Strike Hard - ID: 929369353❓ 🔧 
+visual broken for swing. animated dash+swish does some damage. x2 damage from reg strike
+Category: Melee   Creature: Other
+Desc: Captured from Wendigo.
+Cooldown: 0.7s Tested: Unarmed/universal/Sword
+
+Wendigo Ice Dash Travel - ID: -496233120✅ 
+Dash only. No Damage to units. No Chill. The distance is 2 tiles
+Category: Travel   Creature: Other
+Desc: Captured from Wendigo.
+Cooldown: 0.7s Tested: Unarmed/universal/Sword
+
+Wendigo Ice Dash Travel Hard - ID: -2029387940✅ 
+Dash only. No Damage to units. No Chill. The distance is almost double the reg Ice dash travel. =3 tiles
+Category: Travel   Creature: Other
+Desc: Captured from Wendigo.
+Cooldown: 0.7s Tested: Unarmed/universal/Sword
+
+Wendigo Icicle Throw - ID: -1683730497 ✅ ❓ 
+Throw Ice projectile. Inflicts chill and freezes enemies. Cursor has to be placed on target to activate.
+Category: Projectile   Creature: Other
+Desc: Captured from Wendigo.
+Cooldown: 0s Tested: Unarmed/universal/Sword
+
+Wendigo Leap Attack - ID: -1986179833✅ 🔧 
+Ice jump attack. Inflicts Kockback. Does some low damage on impact of outer ring(15 unarmed/65 sword). Travel distance is 1 tile - up to 4.5 tiles. Able to target jump. Moving targets are difficult to target since small delay in starting attack. May need to increase the cooldown for balance. **Has potential if adjustments work**
+Category: Travel   Creature: Other
+Desc: Captured from Wendigo.
+Cooldown: 0.5s Tested: Unarmed/universal/Sword
+
+Wendigo Melee Attack - ID: 1568904735 ✅ ❓ 
+Animation Swing disconnect. No Movement on swing. Swing animation does low damage (8/8/10 unarmed-30/30/47 sword on dummy) 
+Category: Melee   Creature: Other
+Desc: Captured from Wendigo.
+Cooldown:  0     Tested: Unarmed/universal/Sword
+
+Wendigo Snow Storm - ID: -2090815764✅ ❌ 
+Animation only. No Damage. Visual only
+Category: Spell   Creature: Other
+Desc: Captured from Wendigo.
+Cooldown:    Tested: Unarmed/universal/Sword
+
+[Xavarie  (Admin) 2026-06-02] Changed the channel name: Frostmaw the Mountain Terror - id 24378719
+
+================================================================================
+CHANNEL: GENERAL FEEDBACK (Add Comments!)
+SOURCE FILE: GENERAL FEEDBACK (Add Comments!).json
+
+[Chaos 2026-05-28] This post is for tracking comments for general feedback which applies broadly to the mod Bloodcraft Hub or to the abilities as a whole rather than a specific ability.
+
+[Chaos 2026-05-28] Two things I found:
+- The Scan all abilities in BCH isn't scanning all abilities.  
+- The Beastiary in BCH is missing ALL abilities, only shows captured (Beelz update needed)
+- Need to add a quick hide toggle for the Beelz hotkey overlay into BCH.  Currently have to go into the Beelz subtab for hotkeys to hide it
+- Need to add auto hide for Beelz overlay if on a server without Beelz, and auto hide BC/KC overlays if not on a server with BC/KC
+
+[Balanar 2026-05-28] Summons from skills acquired don't DE spawn even if you die.(more explicit details of individual skills will be added later as an edit)
+
+[Onion 2026-05-28] After **1 hour** of messing around some super-generic notes
+
+```
+[1. Low UI Contrast]
+The Problem: Placeholder text is barely visible when the input field is not selected.
+
+Proposed Fix: Increase the contrast between the text color and the input background.
+
+[2. Keybind Conflict on Text Input]
+The Problem: Typing words containing the letter 'B' (like 'bolt') triggers the game's default Build Menu.
+
+Proposed Fix: Switch text fields to dropdown select menus. Allow users to filter by V-Bloods or Basic Mobs, then click their choice from the list.
+
+[3. Keeping Data Tidy and Manageable]
+The Problem: There is a huge amount of abilities and data shown all at once. Most people will never use basic-mob abilities anyway (apart from specific ones), so showing everything just clutters the list and makes it unmanageable.
+
+Proposed Fix: Limit each mob to a specific array of core abilities. if they differ. The data pool can be diluted to keep things clean and organized, and it will still be a really amazing mod.
+
+
+[4. Wonky Ability Refreshing]
+The Problem: New abilities don't apply instantly; you have to swap weapons or manually clear the HUD bars to force a refresh (especially annoying during the starter castle tutorial, where you have to use default abilities for unlocking castle h.).
+
+Is it possible?: Add a function to instantly force-refresh and enforce custom abilities without requiring weapon swaps.
+```
+
+[Domino 2026-05-28] As scan all isn't working; sorting captured abilities by kind is not functional
+
+================================================================================
+CHANNEL: Gaius Ability locks you in place
+SOURCE FILE: Gaius Ability locks you in place.json
+
+[Bradley (Admin) 2026-05-28] Undead Areana Champion Corpse Buff (one ability from him that is misspelled too) after animation ends, you are locked in place.
+
+BCH 0.18.0
+Beelzebub 0.55.0
+
+[Chaos 2026-05-28] I will investigate!  Does it do anything otherwise?
+
+[Bradley (Admin) 2026-05-28] It does a green explosion.  It does not seem to damage enemies.
+
+[Bradley (Admin) 2026-05-28] Also, when you are locked in place, enemies phase through you and enemy aggro is disabled.
+
+================================================================================
+CHANNEL: Gaius Crashes game
+SOURCE FILE: Gaius Crashes game.json
+
+[Bradley (Admin) 2026-05-28] "Undead Arena Champion Twinblade Throw"
+BCH 0.18.0
+Beelzebub 0.55.0
+
+[Chaos 2026-05-28] I wonder if this ability would work if you applied it to the twinblade weapon.  Probably still game breaking, but curious
+
+[Bradley (Admin) 2026-05-28] yup, it still crashed even when specifically equipped to a twinblade only.
+
+================================================================================
+CHANNEL: Game Crash on vanilla weapon ability when GLOOMROT TECHNICIAN FIDDLE is bound
+SOURCE FILE: Game Crash on vanilla weapon ability when GLOOMROT TECHNICIAN FIDDLE is bound.json
+
+[Domino 2026-05-29] Game is crashing when using sword E ability on NPCs 
+
+__Abilities bound to sword during this (at least in the clip)__
+1 - Gloomrot Technician Fiddle
+Prefab: AB_Gloomrot_Technician_Fiddle_AbilityGroup   ID: 1485838951
+Unit: Technician (id** 820492683)**
+Category: Other   Creature: Other
+Desc: Captured from Gloomrot Technician.
+
+*Once ability set was cleared had no issues using sword E, and no issues when bound this to axes loadout *
+
+[Domino 2026-05-29] FURTHER:
+Have reproduced with bell ringer ability - starting to believe it's just my sword
+
+================================================================================
+CHANNEL: General Elena the hollow
+SOURCE FILE: General Elena the hollow.json
+
+[KingCarvar 2026-05-29] Ice Ranger Tower Of Frost  [V-Blood]
+Prefab: AB_IceRanger_TowerOfFrost_AbilityGroup   ID: 1431473799
+Unit: General Elena the Hollow (id 795262842)
+Category: Spell   Creature: Vampire
+Desc: Captured from Vampire Ice Ranger.
+Cooldown: 0.5s
+
+[KingCarvar 2026-05-29] Ice Ranger Tower Of Frost Low Health  [V-Blood]
+Prefab: AB_IceRanger_TowerOfFrost_LowHealth_AbilityGroup   ID: 2057952818
+Unit: General Elena the Hollow (id 795262842)
+Category: Buff   Creature: Vampire
+Desc: Captured from Vampire Ice Ranger.
+Cooldown: 0.5s
+
+[KingCarvar 2026-05-29] both of these send you to space on cast
+
+[KingCarvar 2026-05-29] https://medal.tv/games/v-rising/clips/mNYeVxpG15JWiwMvF?invite=cr-MSxVQVIsOTczMTk0NQ
+
+[Ella 2026-05-30] TO THE MOON
+
+================================================================================
+CHANNEL: Goreswine the Ravager 577478542
+SOURCE FILE: Goreswine the Ravager 577478542.json
+
+[Bradley (Admin) 2026-05-29] Undead Bishop Of Death Chain Bolt Hard | -323939446 🔧 
+- Shoots a projectile that sways left and right as it goes forward.  2 sec cast time and locked in place.  3 sec cooldown.
+
+Undead Bishop Of Death Corpse Explosion | -1272200774 ✅ ❓ 
+- 2 sec cast and locked in place.  12 second cooldown.  small aoe green explosion.  **Need to remove being locked in place.**
+
+Undead Bishop Of Death Corpse Explosion Hard | 1971375367 ✅ ❓
+- 3 sec cast and locked in place.  12 second cooldown.  large aoe green explosion.  **Need to remove being locked in place.**
+
+Undead Bishop Of Death Corpse Party | 622287046 ❌ 
+- 14 sec cooldown.  first of those 7 sec, you are invincible and unable to move.  probably suppose to trigger enemy spawns.
+
+Undead Bishop Of Death Corpse Party Hard | -184530068 ❌ 
+- Same as the last, but no cooldown.
+
+Undead Bishop Of Death Flesh Warp Travel | 2145809434 ✅ 💯 
+- Awesome.  15 sec cooldown.  disappear, travel forward, reappear,  leave behind green explosion.
+
+Undead Bishop Of Death Projectile | 780432315 🔧 
+- 3 sec cast time locked in place.  3 sec cooldown after.  Single green projectile. 
+
+Undead Bishop Of Death Small Explosion | 852659329 🔧 
+- small aoe explosion at cursor.  2 sec cast time **locked in place**.  **No cooldown**.  Leaves an acid puddle for 10 sec.
+
+[Bradley (Admin) 2026-05-30] BCH 0.18.4
+Beelzebub 0.55.0
+
+================================================================================
+CHANNEL: Grayson The Armourer 1106149033
+SOURCE FILE: Grayson The Armourer 1106149033.json
+
+[Bradley (Admin) 2026-05-30] Bandit Stalker V Blood Charge Attack | 65616384 ✅ ❓ 
+- About 2.5 sec cast time and **locked in place**.  Short dash forward, then slam a hammer down.  Hammer appears in hand for a slit sec then disappears.
+
+Bandit Stalker V Blood Emote Aggro | -146108512 ❌ 
+- Whip sound and **locked in place**.  Meant for aggro, so probably skip.
+
+Bandit Stalker V Blood Melee Attack | -66951019 🔧 
+- 4 sec until hammer slams down.  1 extra second of end lag.  **Locked in place** for whole 5 sec.
+
+Bandit Stalker V Blood Projectile | 226929260 🔧 
+- About 3.5 sec cast time and **locked in place**.  Casts 3 chains outward that damage and disappear after first hit.  6 sec cooldown.
+
+Bandit Stalker V Blood Projectile Hard | -1865487078 🔧 
+- Same as the last, but with 5 chains.
+
+Bandit Stalker V Blood Reinforcement | 1106149033 ❌ 
+- 20 sec cooldown for enemy summon.  Does not actual summon.  Not functional.
+
+Bandit Stalker V Blood Spike Trap | 19031114 ✅ ❓ 
+- Sends out 3 waves of spike traps.  They damage and snare on hit, then disappear after that one hit.  If not hit, they seem to stay up for 2 min 30 sec. 12 sec cooldown.
+
+Bandit Stalker V Blood Spin Attack | -2121210997 ✅ ❓ 
+Bandit Stalker V Blood Spin Attack Hard | 609538743 ✅ ❓ 
+- Same ability.  3 sec cast time and **locked in place**.  1 sec cooldown.  5 consecutive hits on spin attack, but knocks them back on first hit..
+
+[Bradley (Admin) 2026-05-30] BCH 0.18.4
+Beelzebub 0.55.0
+
+================================================================================
+CHANNEL: Grayson the Armorer summon spell
+SOURCE FILE: Grayson the Armorer summon spell.json
+
+[Ella 2026-05-28] [Ability ID -1749428209]
+Animation plays but ability does not summon anything. I initially attempted to use it in tandem with the Errol the Stonebreaker summon spell and wondered if they just didn't stack, but Grayson's ability doesn't summon any archers even without any of Errol's summons alive
+
+[Chaos 2026-05-28] I wonder, is Grayson's summons part of a chain off actions or a standalone action?  Do you recall how it occurs in his fight?
+
+[Chaos 2026-05-28] One of the challenges I found of summonings is that some of them are standalone abilities and others are part of a chain, and separated from the chain they exist in with the boss requires some coding workarounds to enable it to be recognized as a standalone ability
+
+[Chaos 2026-05-28] There are also other cases where summoning are parts of a event trigger and not a boss ability or subability.  Like hit 0% health on Solaris and he spawns the Angel
+
+[Ella 2026-05-28] i'll go kill him a few more times and see what i can see
+
+[Ella 2026-05-28] i do think he summons after a certain period of time
+
+================================================================================
+CHANNEL: Grethel the Glassblower (id 910988233)
+SOURCE FILE: Grethel the Glassblower (id 910988233).json
+
+[🥞🌼Pancake🌼🥞 2026-06-03] ***Militia Glassblower Approach  ID: -719487446***
+Does not seem to do anything. It shows a cooldown was activated, but there is no sort of combat or damage detected.
+
+Category: Other   Creature: Humanoid
+Desc: Captured from Militia Glassblower.
+Cooldown: 1s
+
+
+
+***Militia Glassblower Cyclone  ID: -29584300***
+Medium cone damage. Three rotating discs fly out like a cone, and return to you, inflicting damage a second time as they pass through the target. Cast time 1.5 seconds. Storm shield did not activate.
+
+Category: Other   Creature: Humanoid
+Desc: Conjure a cyclone that pierces enemies dealing {damage} magic damage and inflicting Static. The cyclone returns after reaching max distance, granting Storm Shield. Storm Shields circle around you, dealing {orbitdamage} magic damage and inflicting Static. E
+Cooldown: 7s
+
+
+
+***Militia Glassblower Cyclone Hard   ID: 317399990***
+Same as the one above, but has a shorter cooldown of .8 seconds. Storm shield did not activate here either.
+
+Category: Other   Creature: Humanoid
+Desc: Conjure a cyclone that pierces enemies dealing {damage} magic damage and inflicting Static. The cyclone returns after reaching max distance, granting Storm Shield. Storm Shields circle around you, dealing {orbitdamage} magic damage and inflicting Static. E
+Cooldown: 7s
+
+
+
+***Militia Glassblower Deep Breath ID: 800186323***
+Shows the animation of blowing air, like a sweeping cone AOE, but does not seem to do any damage. 
+
+Category: Projectile   Creature: Humanoid
+Desc: Captured from Militia Glassblower.
+Cooldown: 1s
+
+[🥞🌼Pancake🌼🥞 2026-06-03] ***Militia Glassblower Deep Breath Hard  ID: -1174644772***
+Same as above. Shows the animation, not does not seem to do any damage.
+
+Category: Projectile   Creature: Humanoid
+Desc: Captured from Militia Glassblower.
+Cooldown: 1s
+
+
+***Militia Glassblower Glass Rain    ID: -212014657***
+7-10 pools of molten glass sporadically cover a vast area, inflicting ground AOE damage where they spawn. They remain actively doing damage for 20+ seconds. 1.5 second cast time.
+
+Category: Other   Creature: Humanoid
+Desc: Captured from Militia Glassblower.
+Cooldown: 1s
+
+
+***Militia Glassblower Mirror Shield  ID: 890007919***
+A large frontal shield. Shoots a cone AOE outward after being hit by an enemy. Does heavy damage and knockback. Cast time .7 seconds.
+
+Category: Buff   Creature: Humanoid
+Desc: Captured from Militia Glassblower.
+Cooldown: 1s
+
+
+***Militia Glassblower Wind Dash    ID: -225237355***
+Doesn't leap, it is more like glide backwards a couple steps. Then launches you forward, causing heavy AOE damage in a line. Does not seem to freeze mobs, but the description says "enemy vampires" so maybe it is meant for PVP (?) Cast time 1.8 seconds.
+
+Category: Other   Creature: Humanoid
+Desc: Leap into the air and strike down at target location, dealing {damage} magic damage. A nova of frost erupts from the impact location that Freezes any enemy hit for up to {duration}s. Enemy vampires are frozen for {vampireduration}s.
+Cooldown: 8s
+
+[Bradley (Admin) 2026-06-03] BCH 0.20.0
+Beelzebub 0.100.0
+
+================================================================================
+CHANNEL: Jade the Vampire Hunter
+SOURCE FILE: Jade the Vampire Hunter.json
+
+[Sovereign 2026-05-28] ID: 76767983 — "V Hunter Jade Blast Vault" - Works fine/as intended. ✅ 
+
+ID: -1294182358 — "V Hunter Jade Caltrops" ❓ 
+ID: 1372353064 — "V Hunter Jade Caltrops Hard"❓ 
+^ Both of these work functionally, however, there is no range limitation (mouse cursor placement allows you to throw them 'screens' away).
+
+ID: -526118698 — "V Hunter Jade Disabling Shot" - Works fine/as intended. ✅ 
+
+ID: -453760177 — "V Hunter Jade Explosive Shells"  - Works fine/as intended. ✅ 
+
+
+ID: -1783782358 — "V Hunter Jade Revolvers"
+ID: -2013216961 — "V Hunter Jade Revolvers 2"
+ID: 1196517991 — "V Hunter Jade Revolvers 3"
+ID: 688350142 — "V Hunter Jade Revolvers 4"
+
+^ All work fine/as intended, possible exclusion due to each one being a single pistol shot(?) ✅ /❓
+
+ID: -1884688827 — "V Hunter Jade Snipe" ✅
+ID: -1030552412 —  "V Hunter Jade Snipe Hard" ✅
+
+^ Both work fine/as intended.
+
+ID: 501615608 — "V Hunter Jade Stealth" - Works fine/as intended. ✅
+
+[Sovereign 2026-05-28] All of the above were tested with both pistols and a melee weapon (axe) with no issues (outside of some stiff animations on a couple of the shots, which was to be expected). They did not cause any issue in usage nor visually.
+
+Examples being on "Disabling Shot", "Explosive Shells", "Revolvers #". <<< Unsure if they SHOULD work with anything other than pistols so possible bug(?), otherwise done for thoroughness.
+
+================================================================================
+CHANNEL: Keely The Frost Archer 1124739990
+SOURCE FILE: Keely The Frost Archer 1124739990.json
+
+[Bradley (Admin) 2026-05-28] Bandit Deadeye Camouflage | 403340165 ✅  
+- 4 sec invisibility for 15 sec cooldown.  ok ability.
+
+Bandit Deadeye Roll | -912372242 ✅  
+- super short dash with 10 sec cooldown.  kind of boring.
+
+Bandit Frost Arrow Camouflage HARD | 1015070299 ✅ 
+- 4 sec invisibility for 15 sec cooldown plus a frost aoe at the end.  great
+
+Bandit Frost Arrow Rain Of Arrows | 766284586 🔧  
+- around 2 sec cast time and you are locked in place for it.  casts ice arrows from sky similar to crossbow.  Good, but locked in place too long.
+
+Bandit Frost Arrow Rain Of Arrows Hard | -328617085 🔧 
+- around 2 sec cast time and you are locked in place for it.  casts ice arrows and then another set immediately after with same cast time.  Good, but locked in place too long.
+
+Bandit Frostt Arrow Multi Shot | 2134585360 🔧 
+- Frost has 2 t's.  Ability shoots 3 ice projectiles.  About 3 sec cast and 5 second cooldown.  You are locked in place too.  Cast time and cooldown need to be adjusted and not being locked in place.
+
+Bandit Frostt Arrow Multi Shot Hard | -1871956083 🔧 
+- Frost has 2 t's.  Ability shoots 5 ice projectiles.  About 3 sec cast and 5 second cooldown.  You are locked in place too.  Cast time and cooldown need to be adjusted and not being locked in place.
+
+[Bradley (Admin) 2026-05-30] BCH 0.18.4
+Beelzebub 0.55.0
+
+================================================================================
+CHANNEL: Kodia The Ferocious Bear -1391546313
+SOURCE FILE: Kodia The Ferocious Bear -1391546313.json
+
+[Bradley (Admin) 2026-05-30] Bear Dire Area Attack | -1972594588 ✅ ❓ 
+Big aoe of rocks falls from the sky.  4 sets of rocks fall back to back.  5 sec cast time and locked in place.  6 sec cooldown.
+
+Bear Dire Dash | -1709055711 ✅ 💯 
+Dash forward dealing damage.  12 sec cooldown.  Fun fact: This has already been added as a custom ability for the bear shapeshift within Bloodcraft.
+
+Bear Dire Melee Attack | 1814567660 ✅ ❓ 
+Bear Dire Melee Attack Ability Group Hasted | -217583794 ✅ ❓ 
+Single basic attack, with no ability to follow up for more hits.  2.3 sec cooldown.  Locked in place for the 1.25 sec cast time.  The Hasted version is a 0.9 sec cast time instead.
+
+Bear Dire On Aggro Emote | -1155840114 ❌ 
+Cooldown: 0.5s.  No effect when used on player.
+
+Bear Dire Roar | -1559349374 ✅ ❓ 
+4 sec cast time and locked in place.  20 sec cooldown.  Very slight enemy knockback and snare for 3 sec.  Movement speed ramps up from 4 to 8 after about 3 sec wait.  Then stays at 8 for 5 sec before falling back down.
+
+Bear Dire Target Switch | -1748125028 ❌ 
+no effect on player
+
+Bear Fall Asleep | -193432841 ❌ 
+Bear Wake Up | -388636006 ❌ 
+works on the player, but functionally useless.  It is just the animation triggered when you start the boss aggro and leave the boss aggro.
+
+BCH 0.18.4
+Beelzebub 0.55.0
+
+================================================================================
+CHANNEL: Kriig the Undead General
+SOURCE FILE: Kriig the Undead General.json
+
+[Sovereign 2026-05-28] Prefab: AB_Undead_Leader_AreaAttack_Group   ID: 211628325 - Works fine/as intended. ✅ 
+
+Prefab: AB_Undead_Leader_ChainHookProjectile_Group   ID: 234226418 - Works fine/as intended. ✅ 
+
+Prefab: AB_Undead_Leader_MeleeStandard_Group   ID: 346834991 - ❌ 
+
+^ BARELY functions due to insanely long windup AND endlag (also only replaces one basic hit from reaper), do NOT recommend.
+
+Prefab: AB_Undead_Leader_SpinningDash_Group   ID: 948587795 - Works fine/as intended ✅ ❗ 
+
+^ Also works with applying agony to summoned allied skeletons! (There IS some disconnect at the start of the skill, does not impact it functionally).
+
+Prefab: AB_Undead_Leader_WardOfTheDamned_AbilityGroup   ID: -1504629350 - Works fine/as intended ✅ ❓ 
+
+^ Functional, albeit VERY slow moving in comparison to the player version (along with having a slightly slower cast time), perhaps exclude this.
+
+[Sovereign 2026-05-28] Tested with reaper, unarmed, and pistols. Each produced the exact same results.
+
+================================================================================
+CHANNEL: Leandra the Shadow Priestess
+SOURCE FILE: Leandra the Shadow Priestess.json
+
+[Sovereign 2026-05-29] Prefab: AB_Undead_BishopOfShadows_EternalDarkness_AbilityGroup   ID: 1583944483 ❌ ❓❗
+
+^ Long cast time (1.5s) followed by a long/drawn out (invisible) glide animation through the air. Immune whilst travelling. Possible use-case IF the travel time can be sped up. 
+
+Prefab: AB_Undead_BishopOfShadows_ShadowSoldier_AbilityGroup   ID: 461701172 ❌❗
+
+^ Does not work. 
+❗  = Chain-casting was tested, to see if soldiers could be summoned whilst travelling. This does not work, nor does any other combination.
+
+Prefab: AB_Undead_BishopOfShadows_Projectile_AbilityGroup   ID: 787702249 - Works fine/as intended ✅ 
+Prefab: AB_Undead_BishopOfShadows_Projectile_Hard_AbilityGroup   ID: 651637774 - Works fine/as intended ✅ 
+
+^ Both work functionally but deal very little damage. Normal version is 1 projectile, hard version is 3 (both pierce targets). Recommend only adding the latter.
+
+Prefab: AB_Undead_BishopOfShadows_ShadowStep_AbilityGroup   ID: 1325722355 - Works functionally, but bugged (see below). ⁉️ 
+
+Prefab: AB_Undead_BishopOfShadows_TrippleBolt_AbilityGroup   ID: -1795148379 - Works functionally, but bugged (see below). ⁉️ 
+
+^
+Bug information provided below. If fixed, however, recommend adding both of these as they're very fun/useful.
+
+Multiple notes for the last 2 skills:-
+
+- Shadow clone minions are summoned when using either of said skills
+- Minions do NOT despawn until player death
+
+**__BUG__**  
+
+Upon using either skill in combat, causes player to die regardless of HP value (I have died with 800 & 1200hp remaining). Unsure of full cause but cannot be used in current state. Seems like it's tied to the minions being killed(?), usually takes a few casts/minion deaths before brief loss of character control into instant death.
+
+================================================================================
+CHANNEL: Lidia the Chaos Archer
+SOURCE FILE: Lidia the Chaos Archer.json
+
+[Bradley (Admin) 2026-05-30] Bandit Deadeye Camouflage | 403340165 ✅ 💯 
+- 4 sec duration 15 sec cooldown for invisibility.  your attacks cancel invis, but enemy hits do not.  Basic, but perfect.
+
+Bandit Deadeye Chaos Nuke Hard | -1181691042 ❌ 
+- Appears to shoot chaos arrow straight up into the air, but they never land.
+
+Bandit Deadeye Chaosbarrage | 1996370390 ✅ ❓ 
+- 5 sec cast time and **locked in place**.  Waits 2 sec, then cast 4 arrows in a row where the cursor is for about 3 more sec.  Can move cursor between each shot.  14 sec cooldown when arrows start, so 11 remaining sec after cast.  Leaves chaos puddles that last 15 sec.
+
+Bandit Deadeye Chaosbarrage Hard | 642767950 ✅ ❓ 
+- Same cast and cooldown as before, but shoots double the arrows in a burst.
+
+Bandit Deadeye Chaosstorm | -1230681995 ✅ ❓ 
+- Shoots 3 Chaos arrows.  1 per sec.  5 sec cooldown as soon as first arrow is shot.  **Locked in place** for 3 sec cast time. 1.5 sec prior to cast.
+
+Bandit Deadeye Chaosstorm Hard | -836774616 ✅ ❓ 
+- 1.2 prior to cast. Double the arrows over the same time period.  Otherwise same.
+
+Bandit Deadeye Roll | -912372242 ✅ ❓ 
+- Short dash with 0.35 sec cast.  10 sec cooldown.  No invincibility.  Should probably get invincibility to be even worth considering.
+
+BCH 0.18.4
+Beelzebub 0.55.0
+
+[Bradley (Admin) 2026-05-30] Forgot the id
+Unit: Bandit Chaosarrow (id 763273073)
+
+================================================================================
+CHANNEL: Lidia's Bandit Deadeye Chaos Nuke Hard
+SOURCE FILE: Lidia's Bandit Deadeye Chaos Nuke Hard.json
+
+[Balanar 2026-05-28] Bandit Deadeye Chaos Nuke Hard( Lidia's big aoe after firing an arrow into the air) will fire the arrow but the subsequent part of the aoe never happens.
+
+[Balanar 2026-05-28] BCH 1.8
+
+[Balanar 2026-05-28] Beelzebub 0.55.0
+
+[Chaos 2026-05-28] Probably a chain of abilities.  I will research it
+
+[Chaos 2026-05-28] Thank you, good find!
+
+================================================================================
+CHANNEL: Maja the Dark Savant
+SOURCE FILE: Maja the Dark Savant.json
+
+[Sovereign 2026-05-29] Prefab: AB_Militia_Scribe_CuttingParchment02_AbilityGroup   ID: -198012170 - Works fine/as intended.  ✅ /❓ 
+
+^ 1.5s cast time, 1s endlag. Very little damage, do not recommend adding.
+
+Prefab: AB_Militia_Scribe_QuickAttack_AbilityGroup   ID: -1104025162 - Works fine/as intended.  ✅ /‼️ 
+Prefab: AB_Militia_Scribe_RangedAttack_AbilityGroup   ID: -186690512 - Works fine/as intended.  ✅ /‼️
+
+^ Functionally the same. Only the latter shows a cooldown on the tooltip (1.5s), yet both are a 1.7s cast time. Recommend only adding one of these.
+
+Prefab: AB_Militia_Scribe_RazorParchment_AbilityGroup   ID: 2019689688 - Works fine/as intended.  ✅ /❓
+
+^ High amount of endlag, VERY little damage. Not recommended.
+
+Prefab: AB_Militia_Scribe_WhackAScribe_Init_AbilityGroup   ID: -1332977411 - Does not work. ❌ 
+
+^ Assume this is supposed to be a chain of skill usage with the following skill(?), does nothing as a singular ability.
+
+Prefab: AB_Militia_Scribe_WhackAScribe_Travel_AbilityGroup   ID: -1008562275 - Works fine/as intended.  ✅ /❓
+
+^ Long cast time and endlag (could possibly be adjusted?). Not recommended otherwise, due to lengthy locking up of character.
+
+Prefab: AB_Militia_Scribe_InkExplosion_AbilityGroup   ID: -592301846 - Works fine/as intended.  ✅ /‼️
+
+^ Very long cast time (2.5s) with light endlag (~1.5s), if cast time could be lowered slightly would feel very good to use (awkward/feels bad against more mobile targets).
+
+Prefab: AB_Militia_Scribe_InkFuel_AbilityGroup   ID: -1922948406 - Works fine/as intended.  ✅ /‼️
+
+^ Works identical to the boss, locked in place whilst slowly dragging a minion to consume. Heal from consuming works fine and is a decent size. 
+
+‼️  = Each ability that is supposed to summon ink minions does so. Consuming works as expected and they DO despawn over time.
+
+================================================================================
+CHANNEL: Meredith the Bright Archer (id 850622034)
+SOURCE FILE: Meredith the Bright Archer (id 850622034).json
+
+[🥞🌼Pancake🌼🥞 2026-06-02] Meredith the Bright Archer (id 850622034)
+
+***Militia Light Arrow Basic Shot ID: 764619540***
+Strong single target ranged attack. Cast time 1.6 seconds. No cooldown. Feels like the cast time is too long, because you must stand in place to cast.
+
+Category: Projectile   Creature: Humanoid
+Desc: Captured from Militia Longbowman Light Arrow.
+
+
+
+***Militia Light Arrow Dash  ID: -202704002***
+Dash through enemies in a row, inflicting medium damage in a single line, snaring them. No cooldown. Incredible potential to endlessly evade everything thrown your way. 
+ 
+Category: Travel   Creature: Humanoid
+Desc: Captured from Militia Longbowman Light Arrow.
+
+
+
+***Militia Light Arrow Hard Guided Arrow  ID: 1181965808***
+Ranged attack that bounces between different targets. Does immense damage to a single target, but nearly imperceptible to the other targets hit. Cast time 2.5 seconds, no movement allowed during cast. 
+ 
+Category: Projectile   Creature: Humanoid
+Desc: Captured from Militia Longbowman Light Arrow.
+
+
+
+***Militia Light Arrow Heal Shot ID: -1509483896***
+Weak damage. Does not heal you. I can see no reason to use this spell as it is.
+
+Category: Projectile   Creature: Humanoid
+Desc: Captured from Militia Longbowman Light Arrow.
+Cooldown: 1.5s
+
+***Militia Light Arrow Multi Shot Hard  ID: 1574404388***
+Medium damage cone AOE attack. Fairly long cooldown compared to other spells offered. Doesn't actually knock them back. 
+
+Category: Projectile   Creature: Humanoid
+Desc: You fire 5 piercing arrows in a cone-shaped area to deal 100% physical damage and knock back enemies. The Focus effect is removed to fire one additional arrow per stack, each dealing 20% ​​more damage.
+Cooldown: 8s
+
+[🥞🌼Pancake🌼🥞 2026-06-02] ***Militia Light Arrow Quick Shot ID: -1282136902***
+Single target attack. Medium damage. Cast time .6 seconds, no movement allowed.
+
+Category: Projectile   Creature: Humanoid
+Desc: Captured from Militia Longbowman Light Arrow.
+Cooldown: 1.5s
+
+
+
+***Militia Light Arrow Snipe ID: -1286987800***
+Impressively massive damage. Single target attack. Long cast time of 2.5 seconds, no movement allowed. No cooldown.
+
+Category: Projectile   Creature: Humanoid
+Desc: Captured from Militia Longbowman Light Arrow.
+
+
+
+***Militia Light Arrow Spawn Minions ID: 336380612***
+Does nothing. No minions spawn. Shows an animation of light, and briefly holds you in place, but nothing happens.
+
+Category: Projectile   Creature: Humanoid
+Desc: Captured from Militia Longbowman Light Arrow.
+Cooldown: 1s
+
+
+***Militia Light Arrow Throw ID: -494771621***
+Incredible AOE damage. Multiple circles surround your feet, doing a lot of damage to anyone who stands near you. The cooldown is long, but the damage is so much more than the other AOE spells. 
+
+Category: Projectile   Creature: Humanoid
+Desc: Captured from Militia Longbowman Light Arrow.
+Cooldown: 10s
+
+[Moonie 2026-06-02] *I had messed around with Meredith previoulsy, so just adding my input here. 
+
+Militia Light Arrow Heal Shot ID: -1509483896 ✅  💯 
+Category: Projectile   Creature: Humanoid
+Desc: Captured from Militia Longbowman Light Arrow.
+Cooldown: 1.5s
+
+To clarify, this ability heals your allies quite a bit, including minions/summons. It will bounce to up to 5 allies/summons. It does weak damage but is actually a great heal for summons playstyle or if you wanted to try to make a healer. I healed sov to full when he was fighting some bosses.  The rat army as well.
+
+[Moonie 2026-06-02] Militia Light Arrow Multi Shot Hard  ID: 1574404388 ✅ 
+Category: Projectile   Creature: Humanoid
+Cooldown: 8s
+
+On top of what Pancake mentioned, this ability will also heal allies/summons in the cone.
+
+[🥞🌼Pancake🌼🥞 2026-06-02] Thank you so much, Moonie! I was just goofing off alone, I will edit that part out. I appreciate the correction
+
+[🥞🌼Pancake🌼🥞 2026-06-02] Actually, I will leave it with my error so others see how it works solo vs how it works best with others.
+
+[Moonie 2026-06-02] You just need to summon a rat army too pancake!
+
+[Moonie 2026-06-02] 10/10 would recommend
+
+[Bradley (Admin) 2026-06-03] BCH 0.20.0
+Beelzebub 0.100.0
+
+================================================================================
+CHANNEL: NPC non-V Blood abilities spreadsheet
+SOURCE FILE: NPC non-V Blood abilities spreadsheet.json
+
+[Domino 2026-05-29] If anyone else wants to use it i thought i'd make the spreadsheet i'm using accessible? If I started plopping posts down for every unit this may be flooded so i'm slapping them all in here if that's fine 
+Color coded & Sorted by unit 
+
+https://docs.google.com/spreadsheets/d/1r4QA-lbFpM6wcLJSMX1vFAEnxmrbXk_M8886acV8Cy0/edit?usp=sharing
+
+[Chaos 2026-05-29] Thank you for taking the initiative to test out the NPC abilities.  Appreciate the organization of their info into a workbook
+
+================================================================================
+CHANNEL: Nibbles, the Putrid Rat
+SOURCE FILE: Nibbles, the Putrid Rat.json
+
+[Moonie 2026-05-29] Vermin Dire Rat Gnaw - ID: -1199198217 ✅
+Cooldown: 1.2s
+
+Locks you in place for once second with a slight delay afterwards. Does one hard hit. 
+
+Vermin Dire Rat Multi Gnaw  - ID: -70575944 ✅
+
+Does a smaller hit than Dire Rat Gnaw. However, there is no CD, quick attack speed, and you can spam it forever if you wanted. It will dash you forward in the direction of your mouse cursor until you hit something. You do take damage during this movement. 
+
+Vermin Dire Rat Multi Gnaw Buff  ID: 1450204157 ❌ ❓
+
+I could not determine what this buffed. I assume it is supposed to buff dire rat multi gnaw based on the name but could not see an increase in power, MS, or AS. You might as well just use bloodrage or power surge. 
+
+Vermin Dire Rat Poison Burst - ID: -1024883556 ✅
+Cooldown: 12s
+
+Locks you into place for about 2 secs. You can be knocked out, the skill does not go on CD if you are knocked out of the cast. It releases a big aoe poison burst then leaves a dot for about 6 secs. 
+
+Vermin Dire Rat Rat Vanguard - ID: 830495620 ‼️
+Cooldown: 8s
+
+This skill is loads of fun but needs adjusted. You are locked into place for 2.4s but afterwords you go under ground for about 16secs, are completely invulnerable, and summon a total of six rat bros. These rat bros are not tethered to you and will stay around the area you summoned them. They will fight things that come into their range. They do not despawn. They are either killed or you need to die in order to despawn them. Saying that you can just keep summoning them forever. Rat to server ratio has yet to be fully determined. I filled up the castle, the iron mine, and the dunley market just fine.
+
+BCH v0.18.4
+
+[Moonie 2026-05-29] It makes me jump for joy when the merchants respawn. 😄
+
+[Moonie 2026-05-29] Dracula's castle can fit so many rats in it. :ratstarion:
+
+================================================================================
+CHANNEL: Nicholaus the Fallen
+SOURCE FILE: Nicholaus the Fallen.json
+
+[Moonie 2026-05-30] Undead Priest Elite Emote Aggro -   ID:-1153380978 ❌
+Cooldown: 1s
+
+This skill does nothing. 
+
+Undead Priest Elite Projectile - ID: 14728131 ❓ ✅ 
+Undead Priest Elite Projectile Hard - ID: 1837385563 ✅ 
+Cooldown: 2s
+
+Both of the above abilities do the same thing, except the Hard version has a faster cast time. I would recommend only using that one. This shoots a projectile that does an aoe on impact. 
+
+Undead Priest Elite Projectile Nova - ID: 1988754598 ✅ 🔧 
+Undead Priest Elite Projectile Nova Hard- ID: 1619461812 ✅ 🔧 
+Cooldown: 8s
+Cast Time: 3s
+
+Both of the above abilities do the same thing. You are locked in place for the 3s and then do an inital tick of damage, before you start shooting off waves of skulls around you. The hard version does 4 waves while the normal version does 3. You are LOCKED in place while the waves go off, for about 4.5s. With the cast time, you are locked in place for about 8s. I did mess around and found that once the cast time is completed ANY vanilla dash will work and let you continue the channel (locks you in place at dash destination, finishes the skull waves.) A few other boss travel abilities will let you cancel the spell, in particular Polara's Otherside (1795809188) cancelled the spell immediately and let you move. The spell went on CD  instead of continuing. I believe all travel skills should function the same, whether we decide to let the channel to continue or have all of them cancel. 
+
+All of the above abilities seemed to be fairly hard hitting in comparions to the other VBloods I had tested (Alpha, Meredith, Nibbles, Christina, and Polora)
+
+
+Undead Priest Elite Teleport Travel - ID: -1125894381 ✅ 
+Cooldown: 9s
+Cast Time: 1s
+
+Locked into place for the cast time but then  has you disappear and drop down at target location. Does aoe damage on impact and releases a wave of skills.  It will go to mouse cursor placement but there is a fairly normal range. 
+
+Undead Priest Elite Raise Dead - ID: -2034290170 ✅ 
+
+Summons 4 armored skeletons. Can summon a total of 12 before limit is reached. (3 casts) Will not despawn on death, logging out despawns them if they are not killed.
+
+Undead Priest Elite Raise Horde - ID: 1414167161 ✅ 
+
+Summons 12 unarmored skeletons. Can use ability up to 3 times however the third use will only spawn 1 skeleton if the previous 2 waves are still alive. Total of 25 skeletons. These will despawn at death and when you log out. 
+
+Undead Priest Raise Dead- ID: -1742500275 ✅ 
+
+Summons 6 armored skeletons, can summon up to 3 times however the third use will only spawn 3 if the previous 2 waves are still alive. Total of 15. These will only depsawn when you log out. 
+
+All of the above can be summond together for up to 52 total summons. They are tethered to the player and will follow you around.
+
+🔧 The current summon use limit, does feel bad though. It indicates "Summon use limit reached (3/3) for "Skill." Wait for an active use's minions to die." What this actually means is you CANNOT use that skill again until ALL current summons for that skill are dead. So if you have 15 skele bros from Raise Dead summoned and all but 1 of them die, you are still not able to use Raise Dead.  If you are wanting to limit the number of spawns that is fine, but we should be able to reuse when the numbers have decreased enough and be able to summon up to the limit.
+
+BCH 0.18.4
+Beelzebub 0.55.0
+
+================================================================================
+CHANNEL: Octavian the militia captain
+SOURCE FILE: Octavian the militia captain.json
+
+[KingCarvar 2026-05-28] Militia Call Adds  [V-Blood]
+Prefab: AB_Militia_CallAdds_AbilityGroup   ID: 1870073064
+Unit: Octavian the Militia Captain (id 1688478381)
+Category: Other   Creature: Humanoid
+Desc: Captured from Militia Leader.
+Cooldown: 40s
+
+[KingCarvar 2026-05-28] summon doesnt do anything
+
+================================================================================
+CHANNEL: Polora the Feywalker
+SOURCE FILE: Polora the Feywalker.json
+
+[Moonie 2026-05-30] Poloma Hard Projectile -  ID: -595482115 ✅ 
+Cooldown: 3s
+Cast Time: 1.5s
+
+This locks you in place for 1.5s, before shooting off wisps in a circle around the player. They damage enemies and heal allies. Does not seem to be a lock delay at the end. 
+
+Poloma Otherside  -  ID: 1795809188 ✅ 💯 
+Cooldown: 0.5s
+
+This ability feels great. There is no locking in place when you use it or end delay. It makes you invisible, invulnerable, and has a movement speed buff for about 2secs. You can keep spamming it as needed.  You are unable to use actions/abilities while invisible. 
+
+Poloma Otherside Ability Group Ally  - ID: 2033547790 ✅ 💯 
+Cooldown: 0.5s
+
+This is the same abilkity as above excepts it applies to the target of your cursor (ally or self).  There does not seem to be a limit on the range of this ability other than screen load in.  You can use this ability first on an ally and then use Poloma Otherside to make you both invuln fairly quickly. 
+
+Poloma Pixie  -   ID: -1036943907 ❌
+Cooldown: 20s
+
+I could not get this ability to trigger. I believe these should be the butterflies you summons. I tried in and out of combat, with a weapon and without. No luck. 
+
+Poloma Projectile  - ID: -914903899 ✅ 
+Cooldown: 3s
+Cast Time:  1.5s
+
+This locks you in place for 1.5s and then shoots off 3 wisps in front of you. Once again they damage enemies they hit and heal allies.
+
+Poloma Spirit Rift  - ID: -939006306 ✅ 🔧 
+Cooldown: 2.5s
+Cast Time: 1.6s
+
+This locks you in place for 1.6s and then does an aoe Fear around you. It does not do any damage. You feel locked into place a little too long and there is slight end delay. As is  it does not feel worth while to use even  in pvp, which I think it would get the most use from. 
+
+Poloma Wolf  - ID: -321651703 ✅ ❓ 
+Cooldown: 3s
+Cast Time: 1.7s
+
+This is very similiar to the vanilla spectral wolf ability. Except it locks you in place for 1.7s and it does the heal bounce without needing a jewel equipped. However, I don't really see a reason for this ability when spectral wolf is in the game. 
+
+BCH v0.18.4
+
+================================================================================
+CHANNEL: Quincey the Bandit King -Unit: Bandit Tourok (id -1659822956)
+SOURCE FILE: Quincey the Bandit King -Unit_ Bandit Tourok (id -1659822956).json
+
+[Xavarie  (Admin) 2026-05-30] Bandit Tourok V Blood Call Reinforcements- ID: -3835897 ❌ 
+Category: Summon   Cooldown: 0s
+Tested: universal/Sword 
+Skill does nothing
+
+Bandit Tourok V Blood Chaos Charge -  ID: 840159262 ✅ ❓ 
+Category: Melee   Cooldown: 12s
+Tested: universal/Sword 
+This is the Chaos charge, which inflicts ignite and does damage. Plus, it does knock back to the enemies caught in the wake. It feels very usable.
+
+Bandit Tourok V Blood Chaos Parry - ID: 1452056926 ✅ ❓ 
+Category: Buff  Cooldown: 1s
+Tested: universal/Sword 
+Chaos Barrier-character locked in place can spin 360. Barrier does counterattack.
+
+Bandit Tourok V Blood Chaos Wave-  ID: 2003603501 ✅ 
+Category: Spell  Cooldown: 0s
+Tested: universal/Sword 
+Chaos waves across ground. Large AOE attack. Inflicts Ignite on multiple targets. Animation is about 2 sec for recast.
+
+Bandit Tourok V Blood Double Swing - ID: 455219779 ❌ 
+Category: Melee   Cooldown: 2s
+The animation is broken. Character does not move, but see swish for sword swing. It does do enemy damage.
+Tested: universal/Sword 
+
+Bandit Tourok V Blood Double Swing- ID: -453755281 ❌ 
+Category: Melee   Cooldown: 2s
+The animation is broken.  Character does not move, but see swish for sword swing. It does do enemy damage.
+Tested: universal/Sword 
+
+Bandit Tourok V Blood Rage Of Chaos -  ID: 69086718 ❌ 
+Category: Buff   Cooldown: 40s
+Tested: universal/Sword 
+Animation only. Engilfs player in waves of Chaos fire for a couple of secs.
+
+Bandit V Blood Rage Of Chaos Charge - ID: 82350674 ✅ 
+Category: Melee   Cooldown: 12s
+Tested: universal/Sword 
+This is Duplicate of the Chaos charge, which inflicts ignite and does damage. Plus, it does knock back to the enemies caught in the wake. **It feels very usable**. AOE- Leaves path of Chaos fire. 
+
+Bandit Tourok Weapon Throw Hard  - ID: 358187796 ✅ ❓ 
+Category: Projectile   Cooldown: 0 
+Throw projectile (looks like single axe animation -kind of) locked in place for a few seconds. Inflicts Snare on target and Slows them for almost 2s. This has a slow animation start. May effect usability.
+Tested: universal/Sword 
+
+BCH 0.18.4
+Beelzebub 0.55.0
+
+================================================================================
+CHANNEL: Raziel The Shepard-Militia Bishop Of Dunley (id -680831417)-IN Progress
+SOURCE FILE: Raziel The Shepard-Militia Bishop Of Dunley (id -680831417)-IN Progress.json
+
+[Xavarie  (Admin) 2026-06-03] Militia Bishop Of Dunley Holy Beam - ID: 1611191665
+Category: Projectile   Cooldown:
+
+Militia Bishop Of Dunley Holy Beam Aggro Buff - ID: -1049539886
+Category: Projectile   Cooldown: 14s
+Desc: Captured from Militia Bishop Of Dunley.
+
+
+Militia Bishop Of Dunley Holy Beam Target Buff -  ID: -1957047297
+Category: Projectile   Cooldown: 14s
+Desc: Captured from Militia Bishop Of Dunley.
+
+
+Militia Bishop Of Dunley Holy Circles - ID: -545560531
+Category: Spell   Cooldown:
+
+Militia Bishop Of Dunley Projectile -ID: 368122726
+Category: Projectile   Cooldown:
+
+Militia Bishop Of Dunley Projectile Hard -ID: -88118341
+Category: Projectile   Cooldown:
+
+Militia Bishop Of Dunley Summon Eye Of God -ID: 1674395967
+Category: Summon   Cooldown:
+
+Militia Bishop Of Dunley Summon Pillar - ID: 296313928
+Category: Summon  Cooldown:
+
+================================================================================
+CHANNEL: Rufus The Foreman 2122229952
+SOURCE FILE: Rufus The Foreman 2122229952.json
+
+[Bradley (Admin) 2026-05-29] Bandit Foreman Blood Rag | -892431821 🔧 
+- Description seems to be the same as a normal blood rage, but 3 sec cast time and locked in place.  10 second duration.  gives 1.4 movement speed, but does not affect attack speed or heal allies.
+
+Bandit Foreman Bolt Storm | 1187864883 🔧 
+- 5 sec cast time and locked in place.  8 sec cooldown.  It has the same description as crossbow Q, but does not cause snare or mark target for crossbow synergy.
+
+Bandit Foreman Crossbow | -2010697707 🔧 
+Bandit Foreman Crossbow Blood Rage | -1100933071 🔧 (3 sec instead of 4)
+Bandit Foreman Crossbow Hard | 46962343 🔧 
+Bandit Foreman Crossbow Hard Blood Rage | -1432555386 🔧 
+- 4 sec cast time and locked in place.  No cooldown.  Seems to function similar Crossbow E, but the arrow pierces continuously in a straight line.
+
+Bandit Foreman Rapid Shot | -1326540020 (0.4 cast time between button presses) 🔧 
+Bandit Foreman Rapid Shot Hard | -1696612225  (0.25 cast time between button presses) 🔧 
+- 5 sec cast time and locked in place.  No cooldown.  Seems to function similar Crossbow E, but the arrow pierces continuously in a straight line.  They also apply buff that stacks. 
+DiminishingReturn_Buff_Stun | -160846617
+This buff says it makes you more resistant to crowd control effects and it lasts 12 seconds.
+
+Bandit Foreman Rapid Shot Init | -871701576 ❌ 
+Bandit Foreman Rapid Shot Init Hard | -1568783706 ❌ 
+- Same thing.  These appear to be used for the starting animation of Rufus's enraged stated.  You are locked in place during animation and no buffs seem to even be applied.
+
+Bandit Foreman Reinforcement | 1914101495 🔧 
+- 20 sec cooldown.  Spawns 2 level 14 miners. Weak.
+
+Bandit Foreman Roll | -1773431654 ✅ 
+- 7 sec cooldown with 3 charges.  Seems to be a pretty standard dash.  It has no invincibility frames.  I think it should have some to be worthwhile.
+
+Bandit Foreman Throw Net | 2130985273 ✅ 
+- 4 sec cast and locks in place.  10 sec cooldown.  3 sec snare.  Just make is not lock in place
+
+[Bradley (Admin) 2026-05-30] BCH 0.18.4
+Beelzebub 0.55.0
+
+================================================================================
+CHANNEL: Sir Erwin Crashes Server on Horse Mount
+SOURCE FILE: Sir Erwin Crashes Server on Horse Mount.json
+
+[Bradley (Admin) 2026-05-28] Yes, the whole server, not just my game.  Caused by "Militia Fabian Mountup" ability.
+BCH 0.18.0
+Beelzebub 0.55.0
+
+[Chaos 2026-05-28] I wonder.... If this ability would work if you were on a horse.... Probably not.  lol
+
+[Chaos 2026-05-28] Made me think of what you found with Finn's abilities, where they work in relationship to a fishing node
+
+================================================================================
+CHANNEL: TESTERS, START HERE!
+SOURCE FILE: TESTERS, START HERE!.json
+
+[Chaos 2026-05-28] :TSR_VampHappy: Welcome, testers!
+  Thank you so much for jumping in to help us test our new mod, Beelzebub — Lord of Gluttony! Your feedback will directly shape the mod before it launches
+  publicly on Thunderstore.
+
+  Below is everything you need: server details, what we're testing, how to report findings, a few disclaimers, and a getting-started walkthrough.
+
+  🖥️ Server Info
+  - Name: Beelzebub-LoG-Dev-Server
+  - Address: 31.220.97.66:33500
+  - Password: BLOG
+
+  (Big thanks to Xavarie for setting this up!)
+
+  🎯 What We're Testing
+  Two things — please focus on these rather than normal gameplay (building, progression, etc.):
+  1. Technical bugs — anything that throws an error (in chat or your BepInEx console) or doesn't work as intended.
+  Examples: a captured spell won't fire; an ability can't be attached to the action bar; errors spam your chat.
+ 2. Balancing — features that work but need tuning for a fun, fair experience at the default settings the mod will ship with.
+  Examples: a spell is too OP; an ability grants invulnerability; a cooldown feels off.
+
+When you come across an ability that doesn't work, it will generally be classifiable as one of these:
+1) the ability doesn't cast when pressed. 
+2) the ability casts but does not generate the expected outcome. (ex: character makes noise but no spell/dmg occurs).
+3) the ability causes your character to get stuck. (note: some of these you can escape through personal ingenuity but others may require an admin to attempt to unlock or reset your character or otherwise your character may need to be deleted and re-created. )
+4) High: the ability causes your personal game to crash but the server remains up.
+5) Critical: the ability causes the server itself to crash.
+
+  🐛 How to Report
+  - Post each finding in <#beelz-feedback-log> and tag it!
+  - Please include what happened, what you expected, how to reproduce it, and your mod version (shown on BCH's About tab).
+  - For Beelzebub issues, turn on BloodCraftHub → Beelzebub → Settings → "Enable diagnostic details." It shows each ability's ID and writes a
+  copy-paste-able trace to your log — drop those lines (and the ability ID) into your report so we can pinpoint it fast.
+  - Screenshots and clips are gold. 🙌
+
+  🧪 Testing Setup
+  To get you straight into testing without leveling barriers, you may start with advanced gear and capabilities. Need a specific item to test something?   
+  Ask an admin and we'll grant it — as long as it supports the two goals above.
+
+  ⚠️ Disclaimers
+  - This is an alpha/beta build, so the server may be reset or wiped — either to resolve severe issues or to shift testing focus (e.g. adding Bloodcraft   
+  later to check compatibility).
+  - V Rising has a huge number of abilities, and we don't yet know which behave well on a player character. Using certain NPC abilities could break your   
+  character. We'll investigate, work around them, and disable problem abilities where needed.
+  - If a character becomes corrupted/unusable and our admin tools can't recover it, we may need to delete it so you can start fresh. Thanks for rolling    
+  with it!
+
+  🚀 Getting Started
+  1. Install BloodCraftHub (BCH) — the client-side companion UI for managing Beelzebub's captured abilities. It's required for this test (it's also part of
+   what we're evaluating). Grab the .zip pinned at the top of this channel and install it manually, or use your mod manager's "Import local mod."
+  2. Launch your modded game and connect using the server info above.
+  3. Play through the starting area — you can start using Beelzebub right away.
+  4. Open BCH and go to the Beelzebub section. Start with the Quick Start and Help tabs for how everything works.
+  5. Capture abilities by defeating units, then slot them onto your bar from the Loadout tab.
+
+  That's it — dive in, break things :TSR_VampMischeivious: , and tell us what you find. Thank you again! 🦇
+
+[Chaos 2026-05-28] This is the version of BloodCraft Hub that should work with Beelzebub.  It is a requirement if you are joining the testing server.
+
+[Chaos 2026-05-31] Newer version of BCH 0.20.0 here.  Leaving 0.18.4 as well in case there are any unforeseen issues with the Beelz 0.100.0 patch.
+
+[Xavarie  (Admin) 2026-06-01] Pinned a message.
+
+[Xavarie  (Admin) 2026-06-02] # Documentation Info. Please review so we are all on the same page.
+
+## Emojis to use at the end of 1st line with casual name and ID:
+✅ =Good as is: for 1st version of mod release
+✅ 🔧 =Good but needs some adjustments
+✅ ❓ = Works as intended but unsure if usable for Mod
+✅ ❌ = Works as Intended, but Not usable for mod (like animations)
+🔧 = Needs work
+❓ = Unsure if usable/please review
+❌ = Not usable at all
+❌ ❓ = Don't think will be usable/Please review
+
+This way, we are all on the same page 😜 
+
+**Include the versions of the Mods you are using at bottom of page:**
+ BCH 0.20.0
+Beelzebub 0.100.0 
+## PICK YOUR TAGS
+
+## How to Do Ability reviews:
+**Common Name **(1st in the copied information)- **ID#** **Emoji**
+**Your review and findings **
+**Category**:    **Creature: ** (part of copied information: if avail)
+**Desc: **(part of copied information if available)
+**Cooldown:** may need to add **Tested:**What sets were used
+### Examples of Ability reviews: ----------------------------
+Geomancer Enraged Smash - ID: 1079488801✅ ✅ 
+Awesome! Cone AOE. Cone shaped path of rocks with mild explosion at end. **Very usable as is**. Cooldown feels appropriate 11s. 
+Category: Melee   Creature: Construct
+Desc: Perform a combo of melee attacks dealing {damage1}/{damage2}/{damage3} physical damage.
+Cooldown: 11s Tested: Unarmed/universal/Sword
+
+**These examples did not have the Desc in the copied information:**
+
+Bandit Tourok Weapon Throw Hard  - ID: 358187796 ✅ ❓ 
+Category: Projectile   Cooldown: 0 
+Throw projectile (looks like single axe animation -kind of) locked in place for a few seconds. Inflicts Snare on target and Slows them for almost 2s. This has a slow animation start. May effect usability.  
+Tested: universal/Sword 
+
+Poloma Spirit Rift  - ID: -939006306 ✅ 🔧 
+Cooldown: 2.5s
+Cast Time: 1.6s
+Tested: universal/sword
+This locks you in place for 1.6s and then does an aoe Fear around you. It does not do any damage. You feel locked into place a little too long. and there is slight end delay. As is doesn't feel worth while to use even pvp, which I think it would get the most use from. 
+
+
+**Hope this helps give you ideas on how to complete your documentation. Please reach out if you have questions. You can delete the PreFab description for the copied information. to help clean up the review and the duplication of info.
+Thank you again!**
+
+================================================================================
+CHANNEL: Terah The Geomancer - id -1065970933
+SOURCE FILE: Terah The Geomancer - id -1065970933.json
+
+[Xavarie  (Admin) 2026-06-01] Geomancer Awake - ID: -394948183 ❌ 
+This is an animation only. It locks you in place during the animation, bouncing rocks and dust around you. **It functions as intended but is basically useless.**
+Category: Other   Creature: Construct
+Desc: Captured from Geomancer Human.
+Cooldown: 1s Tested: Unarmed/universal/Sword
+
+Geomancer Enrage - ID: -1204505053❌ 
+Animation and sound only. Character enters attack stance zero damage.
+Category: Other   Creature: Construct
+Desc: Captured from Geomancer Human.
+Cooldown: 11s Tested: Unarmed/universal/Sword
+
+Geomancer Enraged Smash - ID: 1079488801✅ ✅ 
+Awesome! Cone AOE. Cone shaped path of rocks with mild explsion at end. **Very usable as is.** Cooldown feels appropirate. 
+Category: Melee   Creature: Construct
+Desc: Perform a combo of melee attacks dealing {damage1}/{damage2}/{damage3} physical damage.
+Cooldown: 11s Tested: Unarmed/universal/Sword
+
+Geomancer Golem Raise Guardians -ID: -598112885❌ 
+Sound of the Golems rising. Character enters attack stance. No damage or actions taken. **Functions as intened not really useful.**
+Category: Buff   Creature: Construct
+Desc: Captured from Geomancer Human.
+Cooldown: 8s Tested: Unarmed/sword
+
+Geomancer Ground Slam-ID: 2106422510✅ 🔧 
+Large AOE circle of rock shards spreading out and drops a few rock nodes. Does some damage within the circle. Usable as is and cooldown feels approriate. Maybe look at cast time?
+Category:** Aoe**   Creature: Construct
+Desc: Captured from Geomancer Human.
+Cooldown: 13s Tested: Unarmed/universal/Sword
+
+Geomancer Human Projectile - ID: -1635892700🔧 
+Shoot one light ball projectile. Does low damage. Locks you in place too long.
+Category: Projectile   Creature: Construct
+Desc: Captured from Geomancer Human.
+Cooldown: 3.8s Tested: Unarmed/universal/Sword
+
+Geomancer Melee Attack -ID: 1500843923❌ 
+Animation of large Swish. No movement of character w/o weapon. Does damage unarmed 15pts (low). Inflicts snare/slow-3s . Functions as intened not really useful.
+Category: Melee   Creature: Construct
+Desc: Captured from Geomancer Human.
+Cooldown: 2s Tested: Unarmed/universal/Sword
+
+Geomancer Rock Slam - ID: -221719333 ❓ 
+Impact animation at character and sends out a few rock nodes. If you randomly hit someone with the dropping rock it does damage but it is difficult to aim.
+Category: Other   Creature: Construct
+Desc: Captured from Geomancer Human.
+Cooldown: 11s Tested: Unarmed/universal/Sword
+
+Geomancer Underground Tremmors - ID: -1148606177❌ 
+Tremors Sound and animation - no damage Long duration and locked in place. no use for BLOG
+Category: Other   Creature: Construct
+Desc: Captured from Geomancer Human.
+Cooldown: 15s  Tested: Unarmed/universal/Sword
+
+Vampire Dracula Quick Teleport-ID:-1940289109✅ ✅ 
+(AKA:Artic Leap) This is a fast teleport to the mouse point up to 4 tiles. Does not work in the golem transformation. Works great.
+Category: Travel   Creature: Construct
+Desc: Leap into the air and strike down at target location, dealing {damage} magic damage. A nova of frost erupts from the impact location that Freezes any enemy hit for up to {duration}s. Enemy vampires are frozen for {vampireduration}s.
+Cooldown: 1s  Tested: Unarmed/universal/Sword
+
+BCH 0.20.0
+Beelzebub 0.100.0
+
+[Xavarie  (Admin) 2026-06-01] Changed the channel name: Terah The Geomancer - id -1065970933 IN PROCESS
+
+[Xavarie  (Admin) 2026-06-02] Geomancer Transform To Golem - ID: 1925592126 ✅ 
+it works. no duration use trans to human to leave form.(ID: -716557249) Damage output is extremely low
+Category: Other   Creature: Construct
+Desc: Captured from Geomancer Human.
+Cooldown: 1.5s  Tested: Unarmed/universal/Sword
+
+Geomancer Transform To Golem Second Time - ID: -2084016434✅ 
+It WORKS!!  Transformation does not appear to have a duration. Very slow walk like designed. Damage output is extremely low does two hand smash and left arm swing hits.
+Category: Other   Creature: Construct
+Desc: Captured from Geomancer Human.
+Cooldown: 1.5s  Tested: Unarmed/universal/Sword
+
+Geomancer Transform To Human - ID: -716557249 ✅ 
+Transform from golem to human with animation in rock pile.
+Category: Other   Creature: Construct
+Desc: Captured from Geomancer Human.
+Cooldown: 1.5s  Tested: Unarmed/universal/Sword
+
+BCH 0.20.0
+Beelzebub 0.100.0
+
+[Xavarie  (Admin) 2026-06-02] Changed the channel name: Terah The Geomancer - id -1065970933
+
+================================================================================
+CHANNEL: Treant and Golem abilities will stuck you
+SOURCE FILE: Treant and Golem abilities will stuck you.json
+
+[Balanar 2026-05-28] Fall asleep abilities from this 2 mobs are independent and stuck you in place. Each require require their respective wake up skill to unstuck and if you use both fall asleep commands then you need both wake up commands to be able to move. They provide no advantage in usage. Removal of these skills is recommended.
+
+[Chaos 2026-05-28] LOL, that is a great point about chains of abilities or toggle abilities like sleep and wake up!  I hadnt thought of this, because Ive mostly been focused on breaking chains apart to get them to work, I wonder if we could setup chains or toggles for groups of abilities, so it could become SLEEP/WAKE in one button
+
+================================================================================
+CHANNEL: Tristan the Vamipre Hunter
+SOURCE FILE: Tristan the Vamipre Hunter.json
+
+[Sovereign 2026-05-29] Prefab: AB_VHunter_Leader_Crossbow_Group   ID: -737556373 - Works fine/as intended. ✅ 
+Prefab: AB_VHunter_Leader_Crossbow_Group_Fast   ID: -23281706 - Works fine/as intended. ✅ 
+Prefab: AB_VHunter_Leader_Crossbow_Group_Hard   ID: -1330984343 - Works fine/as intended. ✅ 
+
+^ All 3 are functionally the same, with the hard version having a faster cast time (1s vs 1.5s). Recommended to only add the hard version as it renders the other 2 moot.
+
+Prefab: AB_VHunter_Leader_FireRain_Group   ID: 985201241 - Works fine/as intended. ✅ / ❗ 
+
+^  Cast time is fine, character is locked in place during the cast with some endlag. Slight reduction in endlag would make this very fun/viable to use. Fire puddles currently damage the player.❗ 
+
+Prefab: AB_VHunter_Leader_LeapThrust_Group   ID: 1501188283 - Works fine/as intended. ✅ / ❓ 
+
+^ Works fine but has a broken animation and endlag. Very little difference over the vanilla greatsword Q, do not recommend adding.
+
+Prefab: AB_VHunter_Leader_MeleeHorizontal_Group   ID: 1552780633 - Works fine/as intended. ✅ / ❓
+Prefab: AB_VHunter_Leader_MeleeHorizontal_Hard_Group   ID: -1417141477 - Works fine/as intended. ✅ / ❓
+
+^ Both of these have very broken animations, suffer from long windup/endlag, and are worse versions of the greatsword auto attacks. Do not recommend adding.
+
+Prefab: AB_VHunter_Leader_MeleeStraight_Group   ID: 224496996 - Works fine/as intended. ✅ / ❓
+
+^ Reduction in windup/endlag would make this a fun/good addition, not recommended otherwise.
+
+Prefab: AB_VHunter_Leader_Roll_Group   ID: -175257190 ❓ 
+
+^ Functions fine for the most part. Causes awkward movement at the back end due to no fitting animation. Has a VERY short cooldown. If animation can be smoothed, recommend a *slightly* longer cooldown, fun/usable otherwise.
+
+Prefab: AB_VHunter_Leader_Whirlwind_Init_AbilityGroup   ID: -343320686 - Works fine/as intended. ✅ / ❗ 
+Prefab: AB_VHunter_Leader_Whirlwind_AbilityGroup   ID: -1503146131 - Works fine/as intended. ✅ / ❗  
+
+^ "Init" starts the cast time for the ability and greys it out whilst in use (unlike Maja, for example). However, "Ability" can be used by itself. Feels VERY good as is, both in terms of using and damage (no windup/endlag at all).
+
+❗ = Tested with Moonie in pvp and the whirlwind dropped fire puddles on her once hit. Fire puddles from this also caused damage to self. This is NOT the case for normal enemies/test dummies, only raw damage and no fire.
+
+================================================================================
+CHANNEL: Unable to Assign Vanilla Spells
+SOURCE FILE: Unable to Assign Vanilla Spells.json
+
+[Moonie 2026-05-28] I was unable to assign vanilla spells to Travel, slot 5-6, and Ultimate after clearing bar. 
+
+I had done the following, 
+
+1 - Axe skills were all replaced by Wolf Boss skills. 
+2 - Cleared the set. 
+3 - Switched to Sword to reset the bar.
+4 - Tried to assign Blood Rite to slot 6. Spell would not stay on slot. It would just diappear. Bar does not  update and there is nothing to press. 
+5 - Tried Reset Bar and Fix Bar in Beelz tab. Spells still would not assign. 
+6 - left game - logged back in still unable to assign spells 
+7- exited fully from v rising, opened, logged in still unable to assign spells
+8- Tried every spell under the sun (once Xav unlocked everything) and was able to get the unholy dash in travel slot that then let me assign  the rest of the spells. (slot 5 and 6)
+
+I was able to get Sov to replicate the above for me. But neither of us were able to replicate it again after we were able to trigger vanilla spell assignment. 
+
+I'll try to keep breaking more.
+
+[Chaos 2026-05-28] Looking into this!  Good find, thank you!
+
+================================================================================
+CHANNEL: Ungora the Spider Queen -548489519
+SOURCE FILE: Ungora the Spider Queen -548489519.json
+
+[Bradley (Admin) 2026-05-30] Spider Queen Ao E | 1573712465 ✅ ❓ 
+- Cast time 1.8 sec and **locked in place**.  Cooldown 0.85 sec.  Big acid ball spits upward and lands on cursor.  6 smaller acid balls spawn from that one and spread out nearby.  Acid pools last 30 sec. Acid pools deal damage over time and enemies will keep taking damage 2 sec after leaving pool.  Solid Ability.
+
+Spider Queen Melee Attack | 1274762079 ✅ ❓ 
+- Cast time 1.4 sec and **locked in place**.  3 sec cooldown.  It is meant to be sort of a primary attack, but is rather slow.  I think the damage needs be higher.  Maybe up to double to be on par with Frog King primary attack.
+
+Spider Queen PB Ao E | -2109003637 ✅ ❓ 
+- Cast time is 2 sec follow by 2 additional sec of being **locked in place**.  About 1 sec cooldown after whole animation finishes.  deals about 3x the damage as the melee attack in a wide aoe.  Feels a bit underwhelming, especially since it has no knockback or stun effects either.  Definitely needs some buffs.
+
+Spider Queen Projectile Loop | -1586810476 ✅ ❓ 
+- 2.2 wait, then 2.5 more sec to fully cast ability.  All locked in place.  Spits 5 acid projectiles in a wave a total of 5 times.  They do not cause damage over time.  They do have some small knockback.  Has no cooldown.  Ability is solid.
+
+Spider Queen Range Attack | 1132262199 ✅ 💯 
+- This might be perfect. Has a 1 sec cast time **locked in place**.  Followed up by a 2 sec cooldown.  It casts 5 acid projectiles in a single wave.  The projectile applies a poisoned status effect.  It does nothing initially, but the bar depletes after 3 sec and leaves an acid pool in that spot for 10 sec.  Awesome ability.
+
+Spider Queen Spawn Adds | -1779071085 ❌ 
+- Does not function on the player.  I even tried in the boss arena to see if it would have a different effect.  Nope.
+
+[Bradley (Admin) 2026-05-30] Spider Queen Web Hook | 1499629710 ✅ 
+- It pulls the enemy towards the player.  It can be cast where ever the cursor is, but it only seems to pull the target a maximum of 3 tiles or 15 units.  Cast time 0.8 sec **locked in place**.  2 sec cooldown.  Good for pvp?
+
+Spider Queen Web Projectile | 193592408 ✅ 😔 
+- 1.2 sec cast time and **locked in place**.  2 sec cooldown.  Casts a green acid ball that explodes into a web on the floor that slows enemies standing on it.  It shoots towards the cursor, but also has a max range of 3 tiles.  If it hits an enemy it does a tiny bit of damage, then spawns the web at their feet. ** It functions fine, but is just underwhelming**.
+
+Spider Queen Cocoonify | 2130811227 ❌ ❓ 
+- Has no effect on enemies, but I have yet try on other vampire players.  This could be salvageable later.  Especially since the Cocoon ability does work from the normal forest dweller spider.
+
+I can also apply spider form with my admin command and the animations do function on the spider form.  I'll share some fun pictures later.
+
+BCH 0.18.4
+Beelzebub 0.55.0
+
+[Bradley (Admin) 2026-05-30] Spider Queen Melee
+
+[Bradley (Admin) 2026-05-30] Spider Queen AoE
+
+[Bradley (Admin) 2026-05-30] Spider Queen Projectile Loop
+
+[Bradley (Admin) 2026-05-30] These next 2 are actually from the Forest Dweller Spider
+This one is Forest Dweller Webbing
+
+[Bradley (Admin) 2026-05-30] This is the Cocoon ability that is functional from the Forest Dweller
+
+================================================================================
+CHANNEL: Unstable Spider - self kill & invisibility on respawn
+SOURCE FILE: Unstable Spider - self kill & invisibility on respawn.json
+
+[Domino 2026-05-30] Ability: 
+Spider Baneling Explode Poison
+Prefab: AB_Spider_Baneling_Explode_Poison_Group   ID: -891106318
+Unit: Spider Baneling (id -764515001)
+Category: Spell   Creature: Beast
+
+steps: 
+1 - blow yourself up 
+2- respawn 
+3- you are now invisible 
+
+*Visual bug: still targeted by enemies, persists through death, restarting the game, unequip, etc.* 
+
+Haven't found a way to make myself visible again yet.
+
+================================================================================
+CHANNEL: Ziva the engineer
+SOURCE FILE: Ziva the engineer.json
+
+[KingCarvar 2026-05-28] Iva Bomber Jetpack Take Off  [V-Blood]
+Prefab: AB_Iva_BomberJetpack_TakeOff_AbilityGroup   ID: -1770586075
+Unit: Ziva the Engineer (id 172235178)
+Category: Aoe   Creature: Other
+
+[KingCarvar 2026-05-28] makes you clip through terrain if you use another abitlity that puts you on the ground'
+
+[KingCarvar 2026-05-28] Bat Vampire Jump Strike  [V-Blood]
+Prefab: AB_BatVampire_JumpStrike_AbilityGroup   ID: -66831677
+Unit: Lord Styx the Night Champion (id 1112948824)
+Category: Melee   Creature: Other
+
+[KingCarvar 2026-05-28] this one works well if you want to replicate this interaction
+
+[KingCarvar 2026-05-28] https://medal.tv/games/v-rising/clips/mNXoLT4541vMwqeDj?invite=cr-MSxQMlosOTczMTk0NQ
+
+[KingCarvar 2026-05-28] Iva Weapon Equip BFG  [V-Blood]
+Prefab: AB_Iva_WeaponEquip_BFG_AbilityGroup   ID: 948730951
+Unit: Ziva the Engineer (id 172235178)
+Category: Other   Creature: Other
+Desc: Captured from Gloomrot Iva.
+Cooldown: 0.5s
+
+[KingCarvar 2026-05-28] increases speed after use
+__________________________
+
+[KingCarvar 2026-05-28] Iva BFG Lightning Fire  [V-Blood]
+Prefab: AB_Iva_BFGLightningFire_AbilityGroup   ID: 1524772628
+Unit: Ziva the Engineer (id 172235178)
+Category: Spell   Creature: Other
+Desc: Captured from Gloomrot Iva.
+Cooldown: 2.5s
+
+[KingCarvar 2026-05-28] needs a target to fire
+
+================================================================================
+CHANNEL: megara the serpent queen
+SOURCE FILE: megara the serpent queen.json
+
+[KingCarvar 2026-05-29] Blackfang Morgana Travel To Position Swarm  [V-Blood]
+Prefab: AB_Blackfang_Morgana_TravelToPosition_Swarm_AbilityGroup   ID: -1980019894
+Unit: Blackfang Morgana (id 591725925)
+Category: Travel   Creature: Other
+Desc: Captured from Blackfang Morgana.
+Cooldown: 0.5s
+
+[KingCarvar 2026-05-29] Blackfang Morgana Traveling Orb Barrage  [V-Blood]
+Prefab: AB_Blackfang_Morgana_TravelingOrbBarrage_AbilityGroup   ID: 1242557903
+Unit: Blackfang Morgana (id 591725925)
+Category: Travel   Creature: Other
+Desc: Captured from Blackfang Morgana.
+Cooldown: 0.5s
+
+[KingCarvar 2026-05-29] Using -1980019894 followed by 1242557903 crashes the server

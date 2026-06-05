@@ -64,4 +64,5 @@ internal enum ShapeshiftForm : byte
     Toad     = 5,
     Werewolf = 6,   // v0.59.0: AB_Shapeshift_Wolf_Skin01_Buff
     Gargoyle = 7,   // v0.59.0: AB_Tailor_Shapeshift_Gargoyle_Buff
+    Mounted  = 8,   // v0.101.0: riding a horse — saddle bar, injectable free slots 3/6/7
 }

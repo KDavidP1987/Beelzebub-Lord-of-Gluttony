@@ -1,0 +1,2347 @@
+{
+  "Version": 1,
+  "DenyPatterns": [
+    "_Idle_",
+    "_Flee_",
+    "_Sequence_",
+    "_MeleeAttack_",
+    "_Block_",
+    "_Parry_",
+    "_Counter_",
+    "_Spawn_",
+    "_Despawn_",
+    "_Disappear_",
+    "_Death_",
+    "_Wounded_",
+    "_Hard_",
+    "_FeedBoss_",
+    "_Feed_Initiate_",
+    "_Test_",
+    "_Internal_",
+    "_DEBUG_"
+  ],
+  "AllowPatterns": [],
+  "DenyGuids": [],
+  "AllowGuids": [],
+  "AbilityMap": {
+    "AB_Militia_Fabian_Mountup_AbilityGroup": {
+      "Enabled": false,
+      "ReviewStatus": "Blocked",
+      "Notes": "Server-crash + persistent corruption on capture/use (Sir Erwin 'Mountup'). Disabled in the shipped default; also hard-blocked in code."
+    },
+    "AB_Bandit_Deadeye_Chaosbarrage_Hard_Group": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Bandit_Deadeye_ChaosNuke_Hard_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Bandit_Deadeye_Chaosstorm_Hard_Group": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Bandit_Fisherman_FeedSerpentLineup_Hard_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Bandit_Fisherman_SerpentFeed_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Bandit_Foreman_Crossbow_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Bandit_Foreman_Crossbow_Hard_BloodRage_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Bandit_Foreman_RapidShot_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Bandit_Foreman_RapidShot_Init_Hard_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Bandit_FrostArrow_RainOfArrows_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Bandit_FrosttArrow_MultiShot_Hard_Group": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Bandit_Mugger_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Bandit_Shared_Idle_Group_Pushups": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "idle_flee",
+      "Notes": "B1 audit: AI idle/flee behaviour — likely non-functional for a player; verify then Hide/Block"
+    },
+    "AB_Bandit_Shared_Idle_Group_Situps": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "idle_flee",
+      "Notes": "B1 audit: AI idle/flee behaviour — likely non-functional for a player; verify then Hide/Block"
+    },
+    "AB_Bandit_Shared_Idle_Group_Tinker": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "idle_flee",
+      "Notes": "B1 audit: AI idle/flee behaviour — likely non-functional for a player; verify then Hide/Block"
+    },
+    "AB_Bandit_Shared_Idle_Group_Whittling": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "idle_flee",
+      "Notes": "B1 audit: AI idle/flee behaviour — likely non-functional for a player; verify then Hide/Block"
+    },
+    "AB_Bandit_Stalker_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Bandit_Stalker_VBlood_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Bandit_Stalker_VBlood_Projectile_Hard_Group": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Bandit_Stalker_VBlood_SpinAttack_Hard_Group": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Bandit_StoneBreaker_MountainRumbler_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Bandit_StoneBreaker_RockSmash_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Bandit_StoneBreaker_SwingAttack_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Bandit_Thief_Counter_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "reaction",
+      "Notes": "B1 audit: reaction (counter/knockdown) — may be a real CC; evaluate in-game"
+    },
+    "AB_Bandit_Thug_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Bandit_Tourok_WeaponThrow_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Bandit_Worker_Gatherer_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Bandit_Worker_Shared_Flee_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "idle_flee",
+      "Notes": "B1 audit: AI idle/flee behaviour — likely non-functional for a player; verify then Hide/Block"
+    },
+    "AB_Bandit_Worker_Shared_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_BatVampire_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Bear_Dire_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Bear_Dire_MeleeAttack_AbilityGroup_Hasted": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Bear_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Bear_MeleeAttack_Large_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Bear_Mutant_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_CastleMan_FlameWhip_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_CastleMan_HolyBeam_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_CastleMan_Whip_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_ChurchOfLight_EnchantedCross_Beam_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_ChurchOfLight_Overseer_Hard_SnowLob_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_ChurchOfLight_Paladin_Hard_Dash_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_ChurchOfLight_Paladin_HolyFlackCannon_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Cursed_Mosquito_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Cursed_Witch_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_CursedWanderer_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Dreadhorn_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Emote_Vampire_Beckon_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "emote",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Emote_Vampire_Bow_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "emote",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Emote_Vampire_Clap_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "emote",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Emote_Vampire_Cry_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "emote",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Emote_Vampire_DanceSingle01_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "emote",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Emote_Vampire_DanceSingle02_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "emote",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Emote_Vampire_Laugh_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "emote",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Emote_Vampire_No_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "emote",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Emote_Vampire_Point_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "emote",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Emote_Vampire_Salute_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "emote",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Emote_Vampire_Shrug_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "emote",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Emote_Vampire_Sit_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "emote",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Emote_Vampire_Surrender_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "emote",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Emote_Vampire_Taunt_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "emote",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Emote_Vampire_ThankYou_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "emote",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Emote_Vampire_Walk_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "emote",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Emote_Vampire_Wave_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "emote",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Emote_Vampire_Yes_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "emote",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Farmlands_Farmer_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Feed_01_Initiate_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "feed",
+      "Notes": "B1 audit: feed lifecycle ability — likely non-functional for a player; verify then Hide/Block"
+    },
+    "AB_Feed_02_Bite_Abort_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "feed",
+      "Notes": "B1 audit: feed lifecycle ability — likely non-functional for a player; verify then Hide/Block"
+    },
+    "AB_Feed_03_Complete_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "feed",
+      "Notes": "B1 audit: feed lifecycle ability — likely non-functional for a player; verify then Hide/Block"
+    },
+    "AB_FeedBoss_01_Initiate_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "feed",
+      "Notes": "B1 audit: feed lifecycle ability — likely non-functional for a player; verify then Hide/Block"
+    },
+    "AB_FeedBoss_03_Complete_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "feed",
+      "Notes": "B1 audit: feed lifecycle ability — likely non-functional for a player; verify then Hide/Block"
+    },
+    "AB_FeedBoss_FeedOnDracula_01_Initiate_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "feed",
+      "Notes": "B1 audit: feed lifecycle ability — likely non-functional for a player; verify then Hide/Block"
+    },
+    "AB_FeedBoss_FeedOnDracula_03_Complete_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "feed",
+      "Notes": "B1 audit: feed lifecycle ability — likely non-functional for a player; verify then Hide/Block"
+    },
+    "AB_Gargoyle_FlyEnd_Tailor_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "UNBLOCKED 2026-06-05 — launch tamed via leapheight=30 + cooldown=12s instead of blocking.",
+      "Enabled": true,
+      "CooldownSeconds": 12.0,
+      "LeapHeight": 30.0
+    },
+    "AB_Geomancer_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Gloomrot_Batoon_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Gloomrot_SentryOfficer_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Gloomrot_Technician_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Gloomrot_TheProfessor_ManyBeams_Hard_Group": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Gloomrot_TheProfessor_MultiLazer_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Gloomrot_TractorBeamer_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_HighLord_SwordPrimary_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_IronGolem_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Knight_Shield_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Legion_Shadowkin_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Manticore_Dash_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_ManTrap_Dull_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_ManTrap_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Militia_BishopOfDunley_Projectile_Hard_Group": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Militia_ConstrainingPole_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Militia_Glassblower_Cyclone_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Militia_Glassblower_DeepBreath_Hard_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Militia_Glassblower_Emote_Idle_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "emote",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Militia_Guard_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Militia_Guard_VBlood_IceBoltsThrow_Hard_Group": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Militia_Guard_VBlood_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Militia_Heavy_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Militia_Leader_LeapAttack_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Militia_Light_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Militia_LightArrow_Hard_GuidedArrow_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Militia_LightArrow_MultiShot_Hard_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Militia_MeleeHorizontal_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Militia_MeleeStraight_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Militia_Torchbearer_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Monster_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Mutant_FleshGolem_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_NightMaiden_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Nun_Counter_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "reaction",
+      "Notes": "B1 audit: reaction (counter/knockdown) — may be a real CC; evaluate in-game"
+    },
+    "AB_Nun_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Nun_Vblood_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Paladin_DivineAngel_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Paladin_FallenAngel_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Paladin_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Poloma_Hard_Projectile_Group": {
+      "ReviewStatus": "Approved",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Purifier_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Purifier_MeleeAttack_Left_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Purifier_MeleeAttack_Right_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_RockElemental_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Scarecrow_Counter_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "reaction",
+      "Notes": "B1 audit: reaction (counter/knockdown) — may be a real CC; evaluate in-game"
+    },
+    "AB_Scarecrow_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_SeaSerpent_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_SeaSerpent_MeleeAttack_Hard_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_SeaSerpent_MeleeAttack_Hard_Combo01_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_SeaSerpent_MeleeAttack_Hard_Combo02_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Shapesfhit_Golem_T02_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Shapeshift_Bear_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_SkeletonSoldier_Minion_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_SlaveMaster_Knockdown_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "reaction",
+      "Notes": "B1 audit: reaction (counter/knockdown) — may be a real CC; evaluate in-game"
+    },
+    "AB_Sommelier_HorizontalBarrel_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Spectral_Guardian_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Spider_Forest_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Spider_Melee_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Spider_Queen_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_StoneGolem_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_SUMMON_Wolf_Shared_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Trader_Farbane_Stalker_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Treant_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Undead_BishopOfDeath_ChainBolt_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Undead_BishopOfDeath_CorpseParty_Hard_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Undead_BishopOfShadows_Projectile_Hard_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Undead_CursedSmith_FloatingMace_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting",
+      "Weapons": [
+        "Magic"
+      ]
+    },
+    "AB_Undead_CursedSmith_FloatingSlashers_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting",
+      "Weapons": [
+        "Magic"
+      ]
+    },
+    "AB_Undead_CursedSmith_FloatingSpear_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting",
+      "Weapons": [
+        "Magic"
+      ]
+    },
+    "AB_Undead_CursedSmith_FloatingSword_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting",
+      "Weapons": [
+        "Magic"
+      ]
+    },
+    "AB_Undead_CursedSmith_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Undead_GhostMilitia_Light_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Undead_Ghoul_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Undead_Infiltrator_KnifeThrow_Hard_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Undead_Priest_Elite_Idle_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "idle_flee",
+      "Notes": "B1 audit: AI idle/flee behaviour — likely non-functional for a player; verify then Hide/Block"
+    },
+    "AB_Undead_Priest_Elite_Projectile_Hard_Group": {
+      "ReviewStatus": "Approved",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Undead_Priest_Elite_ProjectileNova_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Undead_RottingGhoul_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Undead_SkeletonGolem_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Unholy_SkeletonWarrior_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Vampire_Axe_Primary_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Vampire_Cultist_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Vampire_Mace_Primary_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Vampire_Reaper_Primary_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Vampire_Slashers_Primary_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Vampire_Sword_Primary_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Vampire_Unarmed_Primary_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Vermin_Rat_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_VHunter_Jade_Caltrops_Hard_Group": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_VHunter_Jade_Snipe_Hard_Group": {
+      "ReviewStatus": "Approved",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_VHunter_Leader_Crossbow_Group_Hard": {
+      "ReviewStatus": "Approved",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_VHunter_Leader_MeleeHorizontal_Hard_Group": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Villager_Female_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Villager_Male_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Voltage_LeapAttack_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Wendigo_IceDash_Strike_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Wendigo_IceDash_Travel_Hard_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Wendigo_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Werewolf_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_WerewolfChieftain_Feed_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "feed",
+      "Notes": "B1 audit: feed lifecycle ability — likely non-functional for a player; verify then Hide/Block"
+    },
+    "AB_WerewolfChieftain_Human_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_WerewolfChieftain_Knockdown_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "reaction",
+      "Notes": "B1 audit: reaction (counter/knockdown) — may be a real CC; evaluate in-game"
+    },
+    "AB_WerewolfChieftain_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_WerewolfChieftain_MultiBiteBuff_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Winter_Yeti_AntarcticLeap_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Winter_Yeti_Avalanche_Hard_AbilityGroup_01": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Winter_Yeti_Avalanche_Hard_AbilityGroup_02": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Winter_Yeti_GrabIcicle_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Wolf_Boss_Maul_Hard_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Wolf_Cursed_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Wolf_Mutant_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Wolf_Shared_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Wolf_Winter_MeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_WormTerror_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_ArchMage_Emote_Aggro_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "emote",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Bandit_Foreman_VBlood_Emote_Aggro_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "emote",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Bandit_Mugger_Block_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "reaction",
+      "Notes": "B1 audit: reaction (counter/knockdown) — may be a real CC; evaluate in-game"
+    },
+    "AB_Bandit_Stalker_VBlood_Emote_Aggro_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Bear_Dire_OnAggro_Emote_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Blackfang_Livith_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Blackfang_Morgana_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Blackfang_Peon_Mining_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Blackfang_Peon_WoodChopping_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Blackfang_Valyr_PhaseDual_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Blackfang_Valyr_PhaseSingle_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_ChurchOfLight_CardinalAide_Block_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "reaction",
+      "Notes": "B1 audit: reaction (counter/knockdown) — may be a real CC; evaluate in-game"
+    },
+    "AB_ChurchOfLight_Cleric_Block_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "reaction",
+      "Notes": "B1 audit: reaction (counter/knockdown) — may be a real CC; evaluate in-game"
+    },
+    "AB_Devoted_Block_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "reaction",
+      "Notes": "B1 audit: reaction (counter/knockdown) — may be a real CC; evaluate in-game"
+    },
+    "AB_EmeryElemental_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_EmeryGolem_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_GoldGolem_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Legion_Guardian_Block_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "reaction",
+      "Notes": "B1 audit: reaction (counter/knockdown) — may be a real CC; evaluate in-game"
+    },
+    "AB_Manticore_Stagger_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "reaction",
+      "Notes": "B1 audit: reaction (counter/knockdown) — may be a real CC; evaluate in-game"
+    },
+    "AB_ManTrap_Corrupted_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_MantrapSapling_Corrupted_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Militia_Guard_Block_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "reaction",
+      "Notes": "B1 audit: reaction (counter/knockdown) — may be a real CC; evaluate in-game"
+    },
+    "AB_Treant_Corrupted_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Undead_BishopOfDeath_CorpseExplosion_Hard_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_hard",
+      "Notes": "B1 audit: brutal _Hard_ difficulty variant of a base ability — evaluate unique attributes vs the base"
+    },
+    "AB_Undead_GhostGuardian_Block_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "reaction",
+      "Notes": "B1 audit: reaction (counter/knockdown) — may be a real CC; evaluate in-game"
+    },
+    "AB_Undead_Guardian_Block_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "reaction",
+      "Notes": "B1 audit: reaction (counter/knockdown) — may be a real CC; evaluate in-game"
+    },
+    "AB_Undead_Priest_Elite_Emote_Aggro_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "B1 audit: emote — evaluate in-game for player usability (players want more emotes); keep if functional"
+    },
+    "AB_Vampire_Claws_Primary_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Vampire_DualHammers_Primary_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Vampire_TwinBlades_Primary_MeleeAttack_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "basic_attack",
+      "Notes": "B1 audit: generic primary/melee auto-attack — evaluate whether worth collecting"
+    },
+    "AB_Undead_CursedSmith_FloatingAxes_XStrikeXStrike_Toss_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Notes": "Cursed Blacksmith summons floating weapons as spells, not weapon abilities — universal (not weapon-gated). B6 decision."
+    },
+    "AB_Undead_CursedSmith_FloatingMace_HammerSlam_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Notes": "Cursed Blacksmith summons floating weapons as spells, not weapon abilities — universal (not weapon-gated). B6 decision."
+    },
+    "AB_Undead_CursedSmith_FloatingSword_DashAttack_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Notes": "Cursed Blacksmith summons floating weapons as spells, not weapon abilities — universal (not weapon-gated). B6 decision."
+    },
+    "AB_Undead_CursedSmith_Summon_WeaponAxe_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Notes": "Cursed Blacksmith summons floating weapons as spells, not weapon abilities — universal (not weapon-gated). B6 decision.",
+      "ReviewStatus": "Reviewed"
+    },
+    "AB_Undead_CursedSmith_Summon_WeaponMace_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Notes": "Cursed Blacksmith summons floating weapons as spells, not weapon abilities — universal (not weapon-gated). B6 decision.",
+      "ReviewStatus": "Reviewed"
+    },
+    "AB_Undead_CursedSmith_Summon_WeaponSlashers_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Notes": "Cursed Blacksmith summons floating weapons as spells, not weapon abilities — universal (not weapon-gated). B6 decision.",
+      "ReviewStatus": "Reviewed"
+    },
+    "AB_Undead_CursedSmith_Summon_WeaponSpear_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Notes": "Cursed Blacksmith summons floating weapons as spells, not weapon abilities — universal (not weapon-gated). B6 decision.",
+      "ReviewStatus": "Reviewed"
+    },
+    "AB_Undead_CursedSmith_Summon_WeaponSword_AbilityGroup": {
+      "Weapons": [
+        "Magic"
+      ],
+      "Notes": "Cursed Blacksmith summons floating weapons as spells, not weapon abilities — universal (not weapon-gated). B6 decision.",
+      "ReviewStatus": "Reviewed"
+    },
+    "AB_Spider_Queen_SpawnAdds_GateBoss_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_gateboss",
+      "Notes": "B7: gate-boss encounter variant of a base ability — evaluate hide."
+    },
+    "AB_Undead_ShadowSoldier_GateBoss_ShadowStrike_Dash_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_gateboss",
+      "Notes": "B7: gate-boss encounter variant of a base ability — evaluate hide."
+    },
+    "AB_Undead_ShadowSoldier_GateBoss_ShadowStrike_Strike_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_gateboss",
+      "Notes": "B7: gate-boss encounter variant of a base ability — evaluate hide."
+    },
+    "AB_Undead_SkeletonApprentice_Minion_Projectile_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_minion",
+      "Notes": "B7: minion/servant variant of a base ability — evaluate hide."
+    },
+    "AB_Blackfang_Alchemist_Throw_Servant_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "variant_minion",
+      "Notes": "B7: minion/servant variant of a base ability — evaluate hide."
+    },
+    "AB_Dracula_SpellStone_BoltSpray_AbilityGroup": {
+      "Enabled": true,
+      "ReviewStatus": "Reviewed",
+      "Notes": "UNBLOCKED 2026-06-05 — tester could not reproduce the crash on the current build."
+    },
+    "AB_Blackfang_Morgana_TravelToPosition_Swarm_AbilityGroup": {
+      "Enabled": true,
+      "ReviewStatus": "Reviewed",
+      "Notes": "UNBLOCKED 2026-06-05 — tester could not reproduce the crash on the current build."
+    },
+    "AB_Blackfang_Morgana_TravelingOrbBarrage_AbilityGroup": {
+      "Enabled": true,
+      "ReviewStatus": "Reviewed",
+      "Notes": "UNBLOCKED 2026-06-05 — tester could not reproduce the crash on the current build."
+    },
+    "AB_Gloomrot_Technician_Fiddle_AbilityGroup": {
+      "Enabled": false,
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "crash",
+      "Notes": "GAME CRASH (Gloomrot Technician Fiddle) when vanilla sword-E used while bound - tester v0.100"
+    },
+    "AB_Undead_BishopOfShadows_ShadowStep_AbilityGroup": {
+      "Enabled": true,
+      "ReviewStatus": "Reviewed",
+      "Notes": "UNBLOCKED 2026-06-05 — tester could not reproduce the crash on the current build."
+    },
+    "AB_Undead_BishopOfShadows_TrippleBolt_AbilityGroup": {
+      "Enabled": true,
+      "ReviewStatus": "Reviewed",
+      "Notes": "UNBLOCKED 2026-06-05 — tester could not reproduce the crash on the current build."
+    },
+    "AB_HighLord_LeapStrike_AbilityGroup": {
+      "Enabled": false,
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "stuck",
+      "Notes": "STUCK: permanent T-pose, must self-kill (Cassius High Lord Leap Strike) - tester v0.100"
+    },
+    "AB_Spider_Baneling_Explode_Poison_Group": {
+      "Enabled": false,
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "stuck",
+      "Notes": "STUCK: permanent invisibility on respawn (Spider Baneling Explode Poison) - tester v0.100"
+    },
+    "AB_IceRanger_TowerOfFrost_AbilityGroup": {
+      "Enabled": true,
+      "ReviewStatus": "Reviewed",
+      "Notes": "UNBLOCKED 2026-06-05 — launch tamed via leapheight=20 + cooldown=10s instead of blocking.",
+      "CooldownSeconds": 10.0,
+      "LeapHeight": 20.0
+    },
+    "AB_IceRanger_TowerOfFrost_LowHealth_AbilityGroup": {
+      "Enabled": true,
+      "ReviewStatus": "Reviewed",
+      "Notes": "UNBLOCKED 2026-06-05 — launch tamed via leapheight=20 + cooldown=10s instead of blocking.",
+      "CooldownSeconds": 10.0,
+      "LeapHeight": 20.0
+    },
+    "AB_Cursed_ToadKing_PoisonLeap_Travel_AbilityGroup": {
+      "Enabled": true,
+      "ReviewStatus": "Reviewed",
+      "Notes": "UNBLOCKED 2026-06-05 — launch tamed via leapheight=20 + cooldown=8s instead of blocking.",
+      "CooldownSeconds": 8.0,
+      "LeapHeight": 20.0
+    },
+    "AB_Cursed_ToadKing_Swallow_AbilityGroup": {
+      "Enabled": true,
+      "ReviewStatus": "Reviewed",
+      "Notes": "UNBLOCKED 2026-06-05 — launch tamed via leapheight=20 + cooldown=10s instead of blocking.",
+      "CooldownSeconds": 10.0,
+      "LeapHeight": 20.0
+    },
+    "AB_Gargoyle_FlyStart_AbilityGroup": {
+      "Enabled": true,
+      "ReviewStatus": "Reviewed",
+      "Notes": "UNBLOCKED 2026-06-05 — launch tamed via leapheight=30 + cooldown=12s instead of blocking.",
+      "CooldownSeconds": 12.0,
+      "LeapHeight": 30.0
+    },
+    "AB_Gargoyle_FlyEnd_AbilityGroup": {
+      "Enabled": true,
+      "ReviewStatus": "Reviewed",
+      "Notes": "UNBLOCKED 2026-06-05 — launch tamed via leapheight=30 + cooldown=12s instead of blocking.",
+      "CooldownSeconds": 12.0,
+      "LeapHeight": 30.0
+    },
+    "AB_Iva_BomberJetpack_TakeOff_AbilityGroup": {
+      "Enabled": true,
+      "ReviewStatus": "Reviewed",
+      "Notes": "UNBLOCKED 2026-06-05 — launch tamed via leapheight=30 + cooldown=15s instead of blocking.",
+      "CooldownSeconds": 15.0,
+      "LeapHeight": 30.0
+    },
+    "AB_Undead_ArenaChampion_TwinbladeThrow_AbilityGroup": {
+      "Enabled": false,
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "crash",
+      "Notes": "GAME CRASH (Gaius Undead Arena Champion Twinblade Throw) - tester v0.100"
+    },
+    "Undead_ArenaChampion_CorpseBuff": {
+      "Enabled": false,
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "stuck",
+      "Notes": "CHARACTER-BREAK: locks in place, aggro off (Gaius Undead Arena Champion Corpse Buff) - tester v0.100"
+    },
+    "AB_Bear_FallAsleep_Group": {
+      "Enabled": false,
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "stuck",
+      "Notes": "STUCK: toggle-lock until Wake Up (Treant/Golem/Bear Fall Asleep) - tester v0.100"
+    },
+    "AB_EmeryElemental_FallAsleep_Buff_AbilityGroup": {
+      "Enabled": false,
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "stuck",
+      "Notes": "STUCK: toggle-lock until Wake Up (Treant/Golem/Bear Fall Asleep) - tester v0.100"
+    },
+    "AB_EmeryGolem_FallAsleep_Buff_Group": {
+      "Enabled": false,
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "stuck",
+      "Notes": "STUCK: toggle-lock until Wake Up (Treant/Golem/Bear Fall Asleep) - tester v0.100"
+    },
+    "AB_GoldGolem_FallAsleep_Buff_AbilityGroup": {
+      "Enabled": false,
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "stuck",
+      "Notes": "STUCK: toggle-lock until Wake Up (Treant/Golem/Bear Fall Asleep) - tester v0.100"
+    },
+    "AB_IronGolem_FallAsleep_Buff_Group": {
+      "Enabled": false,
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "stuck",
+      "Notes": "STUCK: toggle-lock until Wake Up (Treant/Golem/Bear Fall Asleep) - tester v0.100"
+    },
+    "AB_RockElemental_FallAsleep_Buff_AbilityGroup": {
+      "Enabled": false,
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "stuck",
+      "Notes": "STUCK: toggle-lock until Wake Up (Treant/Golem/Bear Fall Asleep) - tester v0.100"
+    },
+    "AB_StoneGolem_FallAsleep_Buff_Group": {
+      "Enabled": false,
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "stuck",
+      "Notes": "STUCK: toggle-lock until Wake Up (Treant/Golem/Bear Fall Asleep) - tester v0.100"
+    },
+    "AB_Treant_Corrupted_FallAsleep_Group": {
+      "Enabled": false,
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "stuck",
+      "Notes": "STUCK: toggle-lock until Wake Up (Treant/Golem/Bear Fall Asleep) - tester v0.100"
+    },
+    "AB_Treant_FallAsleep_Group": {
+      "Enabled": false,
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "stuck",
+      "Notes": "STUCK: toggle-lock until Wake Up (Treant/Golem/Bear Fall Asleep) - tester v0.100"
+    },
+    "AB_Cursed_ToadKing_DoubleTongueSlap_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Cursed_ToadKing_FrogSplit_Travel_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Cursed_ToadKing_FrogVomit_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Cursed_ToadKing_PoisonRain_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Cursed_ToadKing_TongueGrab_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Cursed_ToadKing_Spit_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "UNBLOCKED 2026-06-05 — launch tamed via leapheight=15 + cooldown=8s instead of blocking.",
+      "Enabled": true,
+      "CooldownSeconds": 8.0,
+      "LeapHeight": 15.0
+    },
+    "AB_Wolf_Boss_Bite_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Wolf_Boss_Bite_Enraged_Group": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Wolf_Boss_DashAttack_Double_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Wolf_Boss_DashAttack_Single_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Wolf_Boss_DashAttack_Tripple_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Wolf_Boss_Howl_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Wolf_Boss_Pounce_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Wolf_Boss_SpeedBuff_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Wolf_Boss_StepBack_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Undead_Infiltrator_AfterImage_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Undead_Infiltrator_ArmyOfShadows_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Undead_Infiltrator_DoubleStrike_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Undead_Infiltrator_HeavyAttack_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Undead_Infiltrator_KnifeThrow_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Undead_Infiltrator_ShadowFlurry_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Undead_Infiltrator_ShadowStep_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Gargoyle_WingShield_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "exploit",
+      "Notes": "EXPLOIT: immortality + heal (Gargoyle Wing Shield) - blocked 2026-06-05",
+      "Enabled": false
+    },
+    "AB_Gargoyle_WingShield_Emerge_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "exploit",
+      "Notes": "tester v0.100: GOOD/EXPLOIT"
+    },
+    "AB_Legion_Gargoyle_ForwardSwipe_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Legion_Gargoyle_Relocate_ForwardInit_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Legion_Gargoyle_Relocate_ForwardInit_ApplyTargetbuff_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Tailor_Shapeshift_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "ReviewTag": "exploit",
+      "Notes": "tester v0.100: NOT-USABLE/EXPLOIT"
+    },
+    "AB_CursedWanderer_FakeMeleeAttack_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_CursedWanderer_Gossip_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_HighLord_CorpseStorm_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: TUNE"
+    },
+    "AB_HighLord_PBAE_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_HighLord_PullPlayers_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_HighLord_RaiseDead_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_HighLord_SwordDashCleave_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: TUNE"
+    },
+    "AB_HighLord_UnholySkill_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_HighLord_UnholyWarp_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Nun_AoE_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: TUNE"
+    },
+    "AB_Nun_HARD_HolyBoltSpray_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Nun_HealingChannel_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: TUNE"
+    },
+    "AB_Nun_HealingChannel_AbilityGroup_Long": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Nun_HealingChannel_AbilityGroup_Short": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Nun_HolyProjectile_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Nun_VBlood_HealCommand_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Nun_VBlood_SpawnMinions_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Bandit_Bomber_Elite_Roll_Group": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Bandit_ClusterBombThrow_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Bandit_StickyBomb_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Undead_CursedSmith_HammerSlam_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Undead_CursedSmith_MultiDash_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Undead_CursedSmith_MultiDash_Charge_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Undead_CursedSmith_Summon_WeaponAll_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Undead_CursedSmith_SwordDash_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Voltage_ElectricRod_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: TUNE"
+    },
+    "AB_Voltage_ElectricSprint_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Voltage_KickCombo_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: WORKS-NOT-USABLE"
+    },
+    "AB_Voltage_KickCombo_Final_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: WORKS-NOT-USABLE"
+    },
+    "AB_Voltage_LeapAttack_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Voltage_SprintKick_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Voltage_SprintKick_Antip_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Voltage_Swap_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Voltage_Whip_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Voltage_Whirlwind_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: TUNE"
+    },
+    "AB_Bandit_StoneBreaker_VBlood_MountainRumbler_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Bandit_StoneBreaker_VBlood_Reinforcement_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Bandit_StoneBreaker_VBlood_RockSmash_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Bandit_StoneBreaker_VBlood_SpinAttack_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Bandit_StoneBreaker_VBlood_SwingAttack_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Bandit_Fisherman_FeedSerpentLineup_01_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Bandit_Fisherman_FeedSerpentLineup_02_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Bandit_Fisherman_FeedSerpentLineup_03_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Bandit_Fisherman_FishingLineup_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Bandit_Fisherman_FishHook_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Bandit_Fisherman_FishingBlowfish_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Bandit_Fisherman_FishingPiranhas_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Bandit_Fisherman_FishingOldBoot_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Bandit_Fisherman_SwingAttack_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Bandit_Fisherman_SpinAttack_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Bandit_Fisherman_SerpentFeed_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "CHAR_Undead_ZealousCultist_VBlood": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Undead_ZealousCultist_ShadowMeld_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Undead_ZealousCultist_ShadowMeld_Melee_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Undead_ZealousCultist_Slice_AbilityGroup_01": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Undead_ZealousCultist_Slice_AbilityGroup_02": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Undead_ZealousCultist_SummonGhosts_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Wendigo_FrostNova_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Wendigo_IceBeam_First_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Wendigo_IceBeam_Second_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Wendigo_IceDash_Init_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: WORKS-NOT-USABLE"
+    },
+    "AB_Wendigo_IceDash_Strike_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Wendigo_IceDash_Travel_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Wendigo_IcicleThrow_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Wendigo_LeapAttack_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: TUNE"
+    },
+    "AB_Wendigo_SnowStorm_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: WORKS-NOT-USABLE"
+    },
+    "AB_Undead_BishopOfDeath_CorpseExplosion_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Undead_BishopOfDeath_CorpseParty_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Undead_BishopOfDeath_FleshWarp_Travel_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Undead_BishopOfDeath_Projectile_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Undead_BishopOfDeath_SmallExplosion_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Bandit_Stalker_VBlood_ChargeAttack_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Bandit_Stalker_VBlood_Projectile_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "CHAR_Bandit_Stalker_VBlood": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Bandit_Stalker_VBlood_SpikeTrap_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Bandit_Stalker_VBlood_SpinAttack_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Militia_Glassblower_Approach_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Militia_Glassblower_Cyclone_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: TUNE"
+    },
+    "AB_Militia_Glassblower_DeepBreath_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Militia_Glassblower_GlassRain_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Militia_Glassblower_MirrorShield_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Militia_Glassblower_WindDash_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_VHunter_Jade_BlastVault_Group": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_VHunter_Jade_Caltrops_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_VHunter_Jade_DisablingShot_Group": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_VHunter_Jade_ExplosiveShells_Group": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_VHunter_Jade_Revolvers_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_VHunter_Jade_Revolvers2_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_VHunter_Jade_Revolvers3_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_VHunter_Jade_Revolvers4_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_VHunter_Jade_Snipe_Group": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_VHunter_Jade_Stealth_Group": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Bandit_Deadeye_Camouflage_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Bandit_Deadeye_Roll_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Bandit_FrostArrow_Camouflage_HARD_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Bandit_FrostArrow_RainOfArrows_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Bandit_FrosttArrow_MultiShot_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Bear_Dire_AreaAttack_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Bear_Dire_Dash_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Bear_Dire_Roar_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Bear_Dire_TargetSwitch_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Bear_WakeUp_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Undead_Leader_AreaAttack_Group": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Undead_Leader_ChainHookProjectile_Group": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Undead_Leader_MeleeStandard_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Undead_Leader_SpinningDash_Group": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Undead_Leader_WardOfTheDamned_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Undead_BishopOfShadows_EternalDarkness_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Undead_BishopOfShadows_ShadowSoldier_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Undead_BishopOfShadows_Projectile_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Bandit_Deadeye_Chaosbarrage_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Bandit_Deadeye_Chaosstorm_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Militia_Scribe_CuttingParchment02_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Militia_Scribe_QuickAttack_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Militia_Scribe_RangedAttack_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Militia_Scribe_RazorParchment_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Militia_Scribe_WhackAScribe_Init_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Militia_Scribe_WhackAScribe_Travel_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Militia_Scribe_InkExplosion_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Militia_Scribe_InkFuel_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Militia_LightArrow_BasicShot_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Militia_LightArrow_Dash_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Militia_LightArrow_HealShot_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Militia_LightArrow_QuickShot_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Militia_LightArrow_Snipe_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Militia_LightArrow_SpawnMinions_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Militia_LightArrow_Throw_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Vermin_DireRat_Gnaw_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Vermin_DireRat_MultiGnaw_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Vermin_DireRat_MultiGnawBuff_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Vermin_DireRat_PoisonBurst_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Vermin_DireRat_RatVanguard_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "exploit",
+      "Notes": "EXPLOIT: infinite-invuln summons (Rat Vanguard) - blocked 2026-06-05",
+      "Enabled": false
+    },
+    "AB_Undead_Priest_Elite_Projectile_Group": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Undead_Priest_Elite_ProjectileNova_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: TUNE"
+    },
+    "AB_Undead_Priest_Elite_Teleport_Travel_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Undead_Priest_Elite_RaiseDead_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Undead_Priest_Elite_RaiseHorde_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Undead_Priest_RaiseDead_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Militia_CallAdds_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Poloma_Otherside_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Poloma_Otherside_AbilityGroup_Ally": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Poloma_Pixie_Group": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Poloma_Projectile_Group": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Poloma_SpiritRift_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: TUNE"
+    },
+    "AB_Poloma_Wolf_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Bandit_Tourok_VBlood_CallReinforcements_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Bandit_Tourok_VBlood_ChaosCharge_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Bandit_Tourok_VBlood_ChaosParry_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Bandit_Tourok_VBlood_ChaosWave_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Bandit_Tourok_VBlood_DoubleSwing_AbilityGroup01": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Bandit_Tourok_VBlood_DoubleSwing_AbilityGroup02": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Bandit_Tourok_VBlood_RageOfChaos_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Bandit_Tourok_VBlood_RageOfChaos_Charge_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Militia_BishopOfDunley_HolyBeam_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Militia_BishopOfDunley_HolyBeam_AggroBuff_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Militia_BishopOfDunley_HolyBeam_TargetBuff_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Militia_BishopOfDunley_HolyCircles_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Militia_BishopOfDunley_Projectile_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Militia_BishopOfDunley_SummonEyeOfGod_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Militia_BishopOfDunley_SummonPillar_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Bandit_Foreman_BloodRage_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Bandit_Foreman_BoltStorm_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Bandit_Foreman_Crossbow_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Bandit_Foreman_Crossbow_BloodRage_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Bandit_Foreman_RapidShot_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Bandit_Foreman_RapidShot_Init_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Bandit_Foreman_Reinforcement_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Bandit_Foreman_Roll_Group": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Bandit_Foreman_ThrowNet_Group": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Geomancer_Awake_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Geomancer_Enrage_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Geomancer_EnragedSmash_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Geomancer_Golem_RaiseGuardians_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Geomancer_GroundSlam_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: TUNE"
+    },
+    "AB_Geomancer_Human_Projectile_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: NEEDS-WORK"
+    },
+    "AB_Geomancer_RockSlam_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Geomancer_UndergroundTremmors_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Vampire_Dracula_QuickTeleport_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Geomancer_Transform_ToGolem_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Geomancer_Transform_ToGolem_SecondTime_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Geomancer_Transform_ToHuman_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_VHunter_Leader_Crossbow_Group": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_VHunter_Leader_Crossbow_Group_Fast": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_VHunter_Leader_FireRain_Group": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_VHunter_Leader_LeapThrust_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_VHunter_Leader_MeleeHorizontal_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_VHunter_Leader_MeleeStraight_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_VHunter_Leader_Roll_Group": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_VHunter_Leader_Whirlwind_Init_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_VHunter_Leader_Whirlwind_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Spider_Queen_AoE_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Spider_Queen_PBAoE_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Spider_Queen_ProjectileLoop_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Spider_Queen_RangeAttack_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Spider_Queen_SpawnAdds_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_Spider_Queen_WebHook_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Spider_Queen_WebProjectile_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Spider_Queen_Cocoonify_AbilityGroup": {
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "broken",
+      "Notes": "tester v0.100: NOT-USABLE"
+    },
+    "AB_BatVampire_JumpStrike_AbilityGroup": {
+      "ReviewStatus": "Approved",
+      "Notes": "tester v0.100: GOOD"
+    },
+    "AB_Iva_WeaponEquip_BFG_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Iva_BFGLightningFire_AbilityGroup": {
+      "ReviewStatus": "Reviewed",
+      "Notes": "tester v0.100: REVIEW"
+    },
+    "AB_Undead_AreanaChampion_CorpseBuff_AbilityGroup": {
+      "Enabled": false,
+      "ReviewStatus": "Blocked",
+      "ReviewTag": "stuck",
+      "Notes": "CHARACTER-BREAK: permanent locked/phased/invisible, survives relog (Gaius Corpse Buff ABILITY GROUP - the capturable ability; buff -485230865 was already listed) - re-audit 2026-06-05"
+    }
+  }
+}

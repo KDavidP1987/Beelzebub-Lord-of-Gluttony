@@ -40,31 +40,39 @@ internal static class AdminCommands
         ctx.Reply("=== Beelzebub ADMIN commands === (player commands: .beelz commands)");
         ctx.Reply("-- RULES / CAPTURE FILTERS --");
         ctx.Reply(".beelz admin rules / reload — show / re-read the ability rules");
-        ctx.Reply(".beelz admin ability <name> <field> <value> — set ANY per-ability rule live (enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, damagescale, cooldownscale, cooldown, range, charges, chargetime, aoe, projspeed, duration, healing, category, interrupt/freemove/castspeed, notes)");
+        ctx.Reply(".beelz admin ability <name> [<field> <value> ...] — set per-ability rule(s) live, up to 5 pairs; omit field to READ current config. Fields: enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, damagescale, cooldownscale, cooldown, range, charges, chargetime, aoe, projspeed, duration, healing, summoncap, summontimeout, summonunits, forcetimeout, category, reviewstatus, reviewtag, condition, interrupt/interruptonhit/freemove/freelymove/castspeed, notes");
+        ctx.Reply(".beelz admin ability-set <id> \"(field=value)(field2=value2)...\" — BULK-set MANY fields in one command (parens or ;-separated; handles spaces/commas)");
         ctx.Reply(".beelz admin ability <id> defaults  /  .beelz admin ability all defaults — reset one/every ability's shaping config to shipped baseline");
         ctx.Reply(".beelz admin transform-set <CHAR_unit> <field> <value> — set a per-unit transform rule (enabled, difficulty, tier, damagescale, cooldownscale, healthscale, speedscale, fullreplace, powerscalingmode, notes)");
         ctx.Reply(".beelz admin default <damagescale|cooldownscale> <value> — server-wide scaling baseline");
-        ctx.Reply(".beelz admin tune <ability> <interrupt|freemove|castspeed|cooldown|range|charges|chargetime|aoe|projspeed|duration|healing> <value> / tune-list — ability shaping shortcut, ONE field per command (Abilities_ApplyConfig, default ON)");
+        ctx.Reply(".beelz admin tune <ability> <interrupt|freemove|castspeed|cooldown|range|charges|chargetime|aoe|projspeed|leapheight|duration|healing> <value> / tune-list — ability shaping shortcut, ONE field per command (Abilities_ApplyConfig, default ON)");
         ctx.Reply(".beelz admin deny|undeny|allow|unallow <pattern> · denyguid|allowguid <add|remove> <guid> · transformonly <add|remove> <pattern|guid> — capture/reservation filters");
         ctx.Reply(".beelz admin freeze-captures <on|off|status> — master CaptureOnKill toggle");
         ctx.Reply("-- TRANSFORM CONFIG --");
         ctx.Reply(".beelz admin transform mode|duration|cooldown <regular|vblood> <...> — transform tuning");
         ctx.Reply(".beelz admin transform show — current transform settings · difficulty [basic|brutal] — server gating");
-        ctx.Reply(".beelz admin testform <wolf|bear|off> — [PHASE-1 TEST] enter a native form with your loadout's abilities (does it hold through casting?)");
+        ctx.Reply(".beelz admin testform <wolf|bear|off> / testmount <player> <on|off> — TEST: enter a native form / mounted bar with your loadout abilities");
+        ctx.Reply("-- BROADCASTS --");
+        ctx.Reply(".beelz admin broadcast <status|leaderboard on|off|interval <min>|top <n>|complete on|off|test> — server announcement controls");
+        ctx.Reply(".beelz admin broadcast-msg <complete|leaderboard> <list|add|remove|edit> — manage the announcement message pool (wrap text in \"quotes\")");
         ctx.Reply("-- PLAYER GRANTS --");
         ctx.Reply(".beelz admin give|revoke <player> <unitGuid> <abilityGuid> — grant / remove one captured ability");
         ctx.Reply(".beelz admin devour <player> <unitGuid> — grant ALL of a unit's abilities at once (alternative to transformation)");
         ctx.Reply(".beelz admin give-transform|revoke-transform|force-transform|clear-transform <player> [unitGuid] — renderable forms: Dracula, Morgana, Werewolf, Golem, Gargoyle (+ basic werewolf)");
         ctx.Reply(".beelz admin set-slot|clear-slot <player> <slot> [abilityGuid] — universal slot binds");
         ctx.Reply(".beelz admin set-weapon-slot|clear-weapon-slot <player> <weapon> <slot> [abilityGuid] — per-weapon binds");
+        ctx.Reply(".beelz admin reset-loadouts <player> CONFIRM — clear ALL of a player's slot/form/transform loadouts (captures kept)");
         ctx.Reply("-- INSPECT --");
         ctx.Reply(".beelz admin inspect <player> / progress <player> — view a player's state");
-        ctx.Reply(".beelz admin snapshot — server-wide summary · scan-abilities — dump ability metadata to disk");
+        ctx.Reply(".beelz admin snapshot — server-wide summary · scan-abilities — dump ability metadata to disk · dump <abilityGuid|form> — log an ability's ECS component chain (DIAGNOSTIC)");
         ctx.Reply("-- SUMMONS --");
         ctx.Reply(".beelz admin desummon <player> / desummon-all — clean up ally summons · revert-all — end all transforms");
         ctx.Reply("-- RECOVERY (fix a stuck player, no server wipe) --");
         ctx.Reply(".beelz admin respawn <player> — rebuild a stuck bar by respawning in place (keeps progress)");
+        ctx.Reply(".beelz admin purge <player> CONFIRM — LAST RESORT: wipe ALL bar integration to vanilla incl. the engine modification LEAK (captures/unlocks kept; player re-slots after)");
         ctx.Reply(".beelz admin rebuildslots / clearslotmods / rebuildbar <player> — slot/bar repair levers");
+        ctx.Reply(".beelz admin unmount <player> — force-dismount + clear stuck mount buffs (re-applies grants)");
+        ctx.Reply(".beelz admin cleanse <player> [buffNameOrGuid] — strip stuck STATE buffs (invisible/phased/immaterial that survive respawn+relog); omit buff to remove the known ones");
         ctx.Reply(".beelz admin buffs <player> — DIAGNOSTIC: dump buffs + slot overrides to the server log");
         ctx.Reply(".beelz admin copy-collection <player> / paste-collection <player> — backup + restore a collection");
         ctx.Reply(".beelz admin reset-character <player> CONFIRM-RESET — fresh character (collection preserved)");
@@ -135,14 +143,16 @@ internal static class AdminCommands
         // v0.46.0: re-apply ability cast-tuning from the freshly-loaded rules (no-op unless
         // Abilities_ApplyConfig). Lets admins hand-edit Interruptible/FreeMoveAfterCast and
         // reload without a server restart.
-        int tuned = AbilityTuningService.ApplyAll();
+        // v0.120.0: restore-then-reapply so a hand-edit that LOWERS or CLEARS a value takes effect on reload
+        // (ApplyAll alone left the old baked value until a restart — the "reload only works after restart" bug).
+        int tuned = AbilityTuningService.ReapplyAll();
         string tuneNote = Beelzebub.Config.Settings.Abilities_ApplyConfig.Value
             ? $" Ability tuning re-applied to {tuned} cast prefab(s)."
             : " (Ability tuning disabled — set Abilities_ApplyConfig to use it.)";
         ctx.Reply($"Rules reloaded from {Core.AbilityRules.RulesFilePath}.{tuneNote}");
     }
 
-    [Command("tune", description: "Shape an ability server-wide: interrupt on|off, interruptonhit on|off, freemove on|off, freelymove <seconds>, castspeed <0..1>, cooldown <seconds>, range <distance>, charges <n>, chargetime <seconds>, aoe <radius>, projspeed <speed>, duration <seconds>, healing <multiplier>, summoncap <n>, summontimeout <seconds>, forcetimeout <seconds>. Applies when Abilities_ApplyConfig is on (default). ONE field per command. Usage: .beelz admin tune <ability name> <knob> <value|clear>", adminOnly: true)]
+    [Command("tune", description: "Shape an ability server-wide: interrupt on|off, interruptonhit on|off, freemove on|off, freelymove <seconds>, castspeed <0..1>, cooldown <seconds>, range <distance>, charges <n>, chargetime <seconds>, aoe <radius>, projspeed <speed>, leapheight <height> (lower a boss leap's apex so a player caster isn't flung sky-high; vanilla ~250), duration <seconds>, healing <multiplier>, summoncap <n>, summontimeout <seconds>, forcetimeout <seconds>. Applies when Abilities_ApplyConfig is on (default). ONE field per command. Usage: .beelz admin tune <ability name> <knob> <value|clear>", adminOnly: true)]
     public static void Tune(ChatCommandContext ctx, string ability, string knob, string value)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
@@ -154,6 +164,15 @@ internal static class AdminCommands
             string resolved = Beelzebub.Services.AbilityRules.ResolveAbilityKey(name);
             if (resolved == null) { ctx.Reply($"No ability prefab found for ID '{name}'. Use the name or a valid ID from .beelz list."); return; }
             name = resolved;
+        }
+
+        // v0.129.0: guard the "showed applied but did nothing" trap — if the name isn't a real ability prefab
+        // (e.g. a humanized display name like "Bat Vampire Summon Minions"), tuning it would silently create a
+        // dead rule entry that never resolves to a prefab. Reject with guidance instead.
+        if (Beelzebub.Services.AbilityRules.ResolveAbilityGuid(name) == 0)
+        {
+            ctx.Reply($"'{name}' doesn't match a known ability prefab, so tuning it would do nothing. Use the ability's ID (from .beelz list / BCH) or its exact prefab name (e.g. AB_BatVampire_SummonMinions_AbilityGroup).");
+            return;
         }
 
         var map = Core.AbilityRules.Current.AbilityMap;
@@ -224,6 +243,12 @@ internal static class AdminCommands
                 { ctx.Reply("projspeed expects a projectile speed >= 0, or 'clear'."); return; }
                 e.ProjectileSpeed = ps;
                 break;
+            case "leapheight": case "travelheight":
+                if (clear) { e.LeapHeight = null; break; }
+                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float lh) || lh < 0f)
+                { ctx.Reply("leapheight expects a leap/travel height >= 0 (vanilla boss leaps ~250; try ~20-40), or 'clear'."); return; }
+                e.LeapHeight = lh;
+                break;
             case "duration": case "effectduration":
                 if (clear) { e.EffectDurationSeconds = null; break; }
                 if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float ed) || ed < 0f)
@@ -260,8 +285,14 @@ internal static class AdminCommands
                 { ctx.Reply("forcetimeout expects seconds >= 0 — force this ability's otherwise-INDEFINITE effects/buffs to expire after this long (adds a lifetime where there is none), or 'clear'."); return; }
                 e.ForceTimeoutSeconds = fto;
                 break;
+            case "powerwindow": case "dmgwindow":
+                if (clear) { e.PowerWindowSeconds = null; break; }
+                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float pw) || pw < 0f)
+                { ctx.Reply("powerwindow expects seconds >= 0 — how long the granted-cast power buff lasts so a POWER-SCALED DoT/AoE that ticks after the cast is still boosted (0/clear = default 1.5s). Only affects power-scaled damage; flat boss DoTs can't be scaled."); return; }
+                e.PowerWindowSeconds = pw;
+                break;
             default:
-                ctx.Reply("Unknown knob. Use: interrupt | interruptonhit | freemove | freelymove | castspeed | cooldown | range | charges | chargetime | aoe | projspeed | duration | healing | summoncap | summontimeout | summonunits | forcetimeout.");
+                ctx.Reply("Unknown knob. Use: interrupt | interruptonhit | freemove | freelymove | castspeed | cooldown | range | charges | chargetime | aoe | projspeed | leapheight | duration | healing | summoncap | summontimeout | summonunits | forcetimeout | powerwindow.");
                 return;
         }
         Core.AbilityRules.Save();
@@ -271,7 +302,7 @@ internal static class AdminCommands
             ctx.Reply($"Saved {k}={v} for '{name}', but Abilities_ApplyConfig is OFF — set it true (it applies on next load / reload).");
             return;
         }
-        int applied = AbilityTuningService.ApplyAll();
+        int applied = AbilityTuningService.ReapplyAll();   // v0.120.0: restore-then-reapply so lowering/clearing this field takes effect now, not next restart
         ctx.Reply($"Tuned '{name}': {k}={v}. Re-applied to {applied} cast prefab(s). NOTE: this is a GLOBAL prefab edit — the original NPC/boss cast of this ability changes too.");
         // v0.73.0: warn when charges can't apply (the ability has no charge system).
         if ((k == "charges" || k == "maxcharges" || k == "chargetime" || k == "chargeuptime")
@@ -307,9 +338,11 @@ internal static class AdminCommands
             if (e.ChargeTimeSeconds.HasValue) parts += $" chargetime={e.ChargeTimeSeconds.Value:F1}s";
             if (e.AoeRadius.HasValue) parts += $" aoe={e.AoeRadius.Value:F1}";
             if (e.ProjectileSpeed.HasValue) parts += $" projspeed={e.ProjectileSpeed.Value:F1}";
+            if (e.LeapHeight.HasValue) parts += $" leapheight={e.LeapHeight.Value:F1}";
             if (e.EffectDurationSeconds.HasValue) parts += $" duration={e.EffectDurationSeconds.Value:F1}s";
             if (e.HealingMultiplier.HasValue) parts += $" healing={e.HealingMultiplier.Value:F2}";
             if (e.ForceTimeoutSeconds.HasValue) parts += $" forcetimeout={e.ForceTimeoutSeconds.Value:F1}s";
+            if (e.PowerWindowSeconds.HasValue) parts += $" powerwindow={e.PowerWindowSeconds.Value:F1}s";
             if (e.SummonCap.HasValue) parts += $" summoncap={e.SummonCap.Value}";
             if (e.SummonTimeoutSeconds.HasValue) parts += $" summontimeout={e.SummonTimeoutSeconds.Value:F0}s";
             if (e.SummonUnitsPerCast.HasValue) parts += $" summonunits={e.SummonUnitsPerCast.Value}";
@@ -376,12 +409,14 @@ internal static class AdminCommands
     // v0.100.0: non-destructive per-player reset — clears bindings + custom loadouts + active transform,
     // KEEPS captures + unlocks. Fills the recovery-ladder gap between "respawn" (keeps everything) and
     // "reset-character"/"wipe" (nukes the collection).
-    [Command("reset-loadouts", description: "Reset a player's slot loadouts (universal + per-weapon + per-form) AND their custom transform loadouts, and end any active transform — KEEPS their captured abilities + transform unlocks. Usage: .beelz admin reset-loadouts <player>", adminOnly: true)]
-    public static void ResetLoadouts(ChatCommandContext ctx, string player)
+    [Command("reset-loadouts", description: "Reset a player's slot loadouts (universal + per-weapon + per-form) AND their custom transform loadouts, and end any active transform — KEEPS their captured abilities + transform unlocks. Usage: .beelz admin reset-loadouts <player> CONFIRM", adminOnly: true)]
+    public static void ResetLoadouts(ChatCommandContext ctx, string player, string confirm = null)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
         var character = EntityExtensions.FindCharacterByName(player, out ulong steamId, out string fullName);
         if (character == Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
+        if (!string.Equals(confirm?.Trim(), "CONFIRM", StringComparison.OrdinalIgnoreCase))
+        { ctx.Reply($"This clears ALL of {fullName}'s slot/form/transform loadouts (captures + unlocks kept). Re-run: .beelz admin reset-loadouts {player} CONFIRM"); return; }
 
         if (Core.AbilityRegistry.GetActiveTransform(steamId) != null)
             Core.Transforms.Revert(steamId, "admin reset-loadouts");
@@ -590,10 +625,23 @@ internal static class AdminCommands
     // Closes the gap where per-ability/per-unit/global-default fields were hand-edit-only.
     // ---------------------------------------------------------------------
 
-    [Command("ability", description: "Set ANY per-ability rule live. Usage: .beelz admin ability <name> <field> <value>. Fields: enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, damagescale, cooldownscale, cooldown, range, charges, chargetime, aoe, projspeed, duration, healing, summoncap, summontimeout, summonunits, forcetimeout, category, interruptible, interruptonhit, freemove, freelymove, castspeed, notes. (weapons/forms take a comma list or 'any' to clear; cooldown/range/charges/aoe/projspeed/duration/healing/forcetimeout/freelymove/interruptonhit are baked edits applied when Abilities_ApplyConfig is on, default; forcetimeout makes otherwise-indefinite effects expire; freelymove frees movement N seconds into a cast; interruptonhit cancels the cast when the caster is hit; summoncap/summontimeout/summonunits govern summons.) RESET: .beelz admin ability <id> defaults — clear one ability's shaping config back to shipped baseline; .beelz admin ability all defaults — reset every ability.", adminOnly: true)]
-    public static void AbilitySet(ChatCommandContext ctx, string ability, string field, string value = null)
+    [Command("ability", description: "Set ANY per-ability rule live. Usage: .beelz admin ability <name|id> [<field> <value> ...] — set UP TO 5 fields at once; OMIT field/value to READ every current setting. weapons/forms take a WHITELIST (e.g. 'sword,axe' or 'wolf') or '!X' to BLACKLIST (e.g. 'forms !mounted' = usable everywhere except mounted). Fields: enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, damagescale, cooldownscale, cooldown, range, charges, chargetime, aoe, projspeed, duration, healing, summoncap, summontimeout, summonunits, forcetimeout, category, interruptible, interruptonhit, freemove, freelymove, castspeed, notes. (weapons/forms take a comma list or 'any' to clear; cooldown/range/charges/aoe/projspeed/duration/healing/forcetimeout/freelymove/interruptonhit are baked edits applied when Abilities_ApplyConfig is on, default; forcetimeout makes otherwise-indefinite effects expire; freelymove frees movement N seconds into a cast; interruptonhit cancels the cast when the caster is hit; summoncap/summontimeout/summonunits govern summons.) CURATION: reviewstatus <Unreviewed|Reviewed|Approved|Blocked|Hidden>, reviewtag <type>, condition <Aimed|CloseRange|Summon|SelfCast|Movement|clear> (confirms an activation condition in-game -> conditionSource=confirmed, saved to the override file). RESET: .beelz admin ability <id> defaults — clear one ability's shaping config back to shipped baseline; .beelz admin ability all defaults — reset every ability.", adminOnly: true)]
+    public static void AbilitySet(ChatCommandContext ctx, string ability, string field = null, string value = null,
+        string field2 = null, string value2 = null, string field3 = null, string value3 = null,
+        string field4 = null, string value4 = null, string field5 = null, string value5 = null)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+
+        // v0.101.0: READ-ALL — ".beelz admin ability <id>" with no field dumps every configured setting.
+        if (field == null)
+        {
+            string rkey = AbilityRules.ResolveAbilityKey(ability);
+            if (string.IsNullOrEmpty(rkey)) { ctx.Reply($"Couldn't resolve ability '{ability}' — use a name or ID from .beelz list."); return; }
+            string cfg = Core.AbilityRules.DescribeAbilityConfig(rkey);
+            ctx.Reply($"{rkey} config: {cfg}");
+            Core.Log.LogInfo($"[Beelz ABILITY-CFG] {rkey}: {cfg}");
+            return;
+        }
 
         // v0.72.0: reset-to-defaults. `.beelz admin ability <id> defaults` / `.beelz admin ability all defaults`.
         string f = (field ?? "").Trim().ToLowerInvariant();
@@ -620,27 +668,112 @@ internal static class AdminCommands
             return;
         }
 
-        if (value == null) { ctx.Reply("Usage: .beelz admin ability <name|id> <field> <value>  —  or  '<id> defaults' / 'all defaults' to reset shaping config."); return; }
+        // v0.101.0: SET one OR several field/value pairs in a single command (up to 5).
+        var pairs = new System.Collections.Generic.List<(string field, string value)>();
+        void AddPair(string ff, string vv) { if (!string.IsNullOrWhiteSpace(ff)) pairs.Add((ff, vv)); }
+        AddPair(field, value); AddPair(field2, value2); AddPair(field3, value3); AddPair(field4, value4); AddPair(field5, value5);
+        if (pairs.Count == 0) { ctx.Reply("Usage: .beelz admin ability <name|id> [<field> <value> ...]  —  omit field/value to READ the current config; '<id> defaults' / 'all defaults' to reset shaping."); return; }
 
-        var (ok, msg) = Core.AbilityRules.SetAbilityField(ability, field, value);
-        ctx.Reply(msg);
-        if (!ok) return;
-        // v0.95.0: re-apply cast tuning live ONLY when a BAKED-tuning field changed. enabled/weapons/forms/
-        // transformonly/difficulty/phase/allowdenied/category/notes are capture-availability rules that
-        // ApplyAll doesn't touch — re-tuning every curated prefab on them was wasted work that also flooded
-        // the server log with [Beelz TUNE] lines on a simple enable/disable toggle.
-        if (Beelzebub.Config.Settings.Abilities_ApplyConfig.Value && IsBakedTuningField(f))
-            AbilityTuningService.ApplyAll();
-        // v0.73.0: charges/chargetime only apply to abilities that already have a charge system — warn
-        // rather than silently no-op (this bit a tester who set charges on a non-charge ability).
-        if (f.Contains("charge") && !AbilityTuningService.AbilityChainHasCharges(ability))
-            ctx.Reply("NOTE: this ability has no charge system, so 'charges'/'chargetime' won't apply. Charges can only be tuned on abilities that already use charges (e.g. dashes).");
-        // v0.76.0: a charge-governed ability (e.g. a dash) is gated by its charge RECHARGE, not an
-        // AbilityCooldownData cooldown — so setting 'cooldown' on it does nothing visible. Point the
-        // admin at chargetime instead.
-        if ((f == "cooldown" || f == "cd") && AbilityTuningService.AbilityChainHasCharges(ability))
-            ctx.Reply("NOTE: this ability is charge-based — its delay is the charge RECHARGE, not a cooldown, so 'cooldown' won't change what you feel. Use 'chargetime' (recharge seconds) and/or 'charges' instead.");
-        Audit(ctx, "ability-set", 0, ability ?? "", $"{field}={value}");
+        ApplyAbilityFieldPairs(ctx, ability, pairs);
+    }
+
+    /// <summary>
+    /// v0.116.0: apply a list of (field,value) config pairs to ONE ability — the shared core of both
+    /// <c>.beelz admin ability</c> (up to 5 space-separated pairs) and <c>.beelz admin ability-set</c> (a
+    /// quoted (field=value) blob, unlimited). Routes `condition` to the metadata override; everything else to
+    /// <see cref="AbilityRules.SetAbilityField"/>; re-applies baked cast tuning ONCE if any baked field changed.
+    /// </summary>
+    static void ApplyAbilityFieldPairs(ChatCommandContext ctx, string ability,
+        System.Collections.Generic.List<(string field, string value)> pairs)
+    {
+        var results = new System.Collections.Generic.List<string>();
+        bool anyBaked = false, chargeTouched = false, cooldownTouched = false;
+        foreach (var (pf, pv) in pairs)
+        {
+            string pfl = pf.Trim().ToLowerInvariant();
+            if (pv == null) { results.Add($"{pf}: needs a value"); continue; }
+            // v0.114.0 (B4): `condition` is METADATA, not a rule field — route it to the metadata override
+            // (sets conditionSource=confirmed). An admin/tester deliberately setting it IS the confirmation.
+            if (pfl == "condition")
+            {
+                int cguid = AbilityRules.ResolveAbilityGuid(ability);
+                if (cguid == 0) { results.Add("condition: couldn't resolve the ability to a GUID (use an id from .beelz list)."); continue; }
+                var (cok, cmsg) = Core.AbilityMetadata.SetConditionConfirmed(cguid, pv);
+                results.Add(cmsg);
+                continue;
+            }
+            var (ok, msg) = Core.AbilityRules.SetAbilityField(ability, pf, pv);
+            results.Add(msg);
+            if (ok)
+            {
+                if (IsBakedTuningField(pfl)) anyBaked = true;
+                if (pfl.Contains("charge")) chargeTouched = true;
+                if (pfl is "cooldown" or "cd") cooldownTouched = true;
+            }
+        }
+        ctx.Reply(string.Join("  |  ", results));
+
+        // Re-apply baked cast tuning ONCE if any baked-tuning field changed (capture/availability rules
+        // like enabled/weapons/forms don't need a re-tune).
+        if (anyBaked && Beelzebub.Config.Settings.Abilities_ApplyConfig.Value)
+            AbilityTuningService.ReapplyAll();   // v0.120.0: restore-then-reapply (lowering/clearing applies live)
+        // Advisory notes (charge system vs cooldown), same as the single-set path.
+        if (chargeTouched && !AbilityTuningService.AbilityChainHasCharges(ability))
+            ctx.Reply("NOTE: this ability has no charge system, so 'charges'/'chargetime' won't apply (only abilities that already use charges, e.g. dashes).");
+        if (cooldownTouched && AbilityTuningService.AbilityChainHasCharges(ability))
+            ctx.Reply("NOTE: this ability is charge-based — its delay is the charge RECHARGE, not a cooldown. Use 'chargetime' instead.");
+        Audit(ctx, "ability-set", 0, ability ?? "", string.Join(",", pairs.ConvertAll(x => $"{x.field}={x.value}")));
+    }
+
+    [Command("ability-set", description: "BULK-set many ability config fields in ONE command. Group each setting as (field=value) — or separate with ';' — so values can contain spaces/commas (weapon lists, notes) without breaking. Usage: .beelz admin ability-set <name|id> \"(cooldown=30)(weapons=sword,axe)(reviewstatus=Approved)(notes=big strong nuke)\"  OR  .beelz admin ability-set <id> \"cooldown=30; range=50; reviewstatus=Approved\". WRAP the whole list in \"quotes\" if any value has spaces. Same field names as .beelz admin ability (enabled, weapons, forms, transformonly, difficulty, phase, cooldown, range, charges, chargetime, aoe, projspeed, duration, healing, summoncap, summontimeout, summonunits, forcetimeout, category, reviewstatus, reviewtag, condition, interruptible, interruptonhit, freemove, freelymove, castspeed, notes).", adminOnly: true)]
+    public static void AbilitySetBulk(ChatCommandContext ctx, string ability, string configs)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        if (string.IsNullOrWhiteSpace(ability)) { ctx.Reply("Provide the ability name or id, then the config list."); return; }
+        if (string.IsNullOrWhiteSpace(configs))
+        {
+            ctx.Reply("Usage: .beelz admin ability-set <id> \"(field=value)(field2=value2)...\"  —  or  \"field=value; field2=value2\". Wrap in \"quotes\" if any value has spaces. Fields: same as .beelz admin ability.");
+            return;
+        }
+        var pairs = ParseConfigBlob(configs, out string parseErr);
+        if (parseErr != null) { ctx.Reply(parseErr); return; }
+        if (pairs.Count == 0) { ctx.Reply("No field=value pairs found. Use (field=value)(field2=value2) or field=value; field2=value2."); return; }
+        ApplyAbilityFieldPairs(ctx, ability, pairs);
+    }
+
+    /// <summary>
+    /// v0.116.0: parse a bulk-config blob into (field,value) pairs. Two forms (mutually compatible):
+    ///   - PARENTHESES: <c>(field=value)(field=value)</c> — each group is one field, so commas/spaces inside a
+    ///     value are preserved verbatim (weapon lists, multi-word notes). Preferred — unambiguous.
+    ///   - SEMICOLON:   <c>field=value; field=value</c> — split on ';' only, so a comma stays inside a value
+    ///     (e.g. weapons=sword,axe). The value is everything after the first '='.
+    /// Returns the pairs; sets <paramref name="error"/> (and returns what parsed) on a malformed token.
+    /// </summary>
+    static System.Collections.Generic.List<(string field, string value)> ParseConfigBlob(string blob, out string error)
+    {
+        error = null;
+        var pairs = new System.Collections.Generic.List<(string, string)>();
+        blob = (blob ?? "").Trim();
+        System.Collections.Generic.List<string> tokens = new();
+        if (blob.Contains("("))
+        {
+            var matches = System.Text.RegularExpressions.Regex.Matches(blob, @"\(([^)]*)\)");
+            if (matches.Count == 0) { error = "Couldn't parse any (field=value) groups. Example: (cooldown=30)(range=50)."; return pairs; }
+            foreach (System.Text.RegularExpressions.Match m in matches) tokens.Add(m.Groups[1].Value);
+        }
+        else
+        {
+            foreach (var t in blob.Split(';')) tokens.Add(t);
+        }
+        foreach (var raw in tokens)
+        {
+            var s = raw.Trim();
+            if (s.Length == 0) continue;
+            int eq = s.IndexOf('=');
+            if (eq <= 0) { error = $"Bad token '{s}' — expected field=value (e.g. cooldown=30)."; return pairs; }
+            pairs.Add((s.Substring(0, eq).Trim(), s.Substring(eq + 1).Trim()));
+        }
+        return pairs;
     }
 
     /// <summary>
@@ -797,6 +930,15 @@ internal static class AdminCommands
         var character = EntityExtensions.FindCharacterByName(player, out ulong steamId, out string fullName);
         if (character == Unity.Entities.Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
 
+        // v0.117.0: validate the ability GUID resolves to a real ability prefab — refuse to inject a garbage
+        // int into the player's collection (it would sit there uncastable). unitGuid is the source label only.
+        string giveAbName = (Core.PrefabNames != null && Core.PrefabNames.TryGetValue(abilityGuid, out var _gn))
+            ? _gn : new Stunlock.Core.PrefabGUID(abilityGuid).GetPrefabName();
+        if (string.IsNullOrEmpty(giveAbName) || giveAbName.IndexOf("Not Found", StringComparison.OrdinalIgnoreCase) >= 0)
+        { ctx.Reply($"abilityGuid {abilityGuid} doesn't resolve to a known ability prefab — refusing. Use an ID from .beelz list or .beelz api catalog abilities-all."); return; }
+        if (!giveAbName.StartsWith("AB_", StringComparison.OrdinalIgnoreCase))
+            ctx.Reply($"Note: {abilityGuid} ('{giveAbName}') is not an AB_ ability group — granting anyway, but verify it's a real castable ability.");
+
         var source = new Stunlock.Core.PrefabGUID(unitGuid).IsVBloodUnit()
             ? Beelzebub.Services.CaptureSource.VBlood
             : Beelzebub.Services.CaptureSource.Regular;
@@ -942,6 +1084,80 @@ internal static class AdminCommands
 
         ctx.Reply(sb.ToString());
         Audit(ctx, "inspect", steamId, fullName, "");
+    }
+
+    // v0.131.0 — known "stuck state" buffs that survive death/relog (no LifeTime + Persists_Through_Death /
+    // Immaterial composites). These are what leave a player permanently invisible/phased after casting a
+    // captured NPC ability (Spider Baneling HideCorpse, Gaius Corpse Buff, etc.). `cleanse` strips them.
+    static readonly System.Collections.Generic.HashSet<int> _stuckStateBuffGuids = new()
+    {
+        1160901934,   // Buff_General_HideCorpse (Spider Baneling Explode Poison) — permanent invisibility
+        -485230865,   // Undead_AreanaChampion_CorpseBuff (Gaius) — Immaterial/GhostMode/Immortal composite
+    };
+    static readonly string[] _stuckStateBuffNames = {
+        "HideCorpse", "Invisible", "Immaterial", "GhostMode", "Corpse",
+        "Camouflage", "Stealth", "Shroud", "Cloak",
+    };
+
+    [Command("cleanse", description: "RECOVERY: strip stuck STATE buffs from a player — fixes a character stuck invisible/phased/immaterial after casting an ability (survives respawn + relog). With no buff arg, removes the known stuck-state buffs (HideCorpse/Corpse/Invisible/Immaterial/Camouflage/Stealth). Pass a buff NAME-substring or GUID to strip a specific one. Usage: .beelz admin cleanse <player> [buffNameOrGuid]", adminOnly: true)]
+    public static void Cleanse(ChatCommandContext ctx, string player = null, string buff = null)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+
+        Entity character; ulong steamId; string fullName;
+        if (string.IsNullOrWhiteSpace(player))
+        {
+            character = ctx.Event.SenderCharacterEntity; steamId = character.GetSteamId(); fullName = "you";
+        }
+        else
+        {
+            character = EntityExtensions.FindCharacterByName(player, out steamId, out fullName);
+            if (character == Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
+        }
+        if (!character.Exists() || !Core.EntityManager.HasBuffer<BuffBuffer>(character))
+        { ctx.Reply("No buff buffer on that character (offline or gone)."); return; }
+
+        string target = (buff ?? "").Trim();
+        int targetGuid = 0; bool byGuid = int.TryParse(target, out targetGuid);
+
+        // Snapshot the buff entities first (destroying mutates the buffer).
+        var toRemove = new System.Collections.Generic.List<(Entity e, string name)>();
+        var bb = Core.EntityManager.GetBuffer<BuffBuffer>(character);
+        for (int i = 0; i < bb.Length; i++)
+        {
+            int guid = bb[i].PrefabGuid._Value;
+            Entity be = bb[i].Entity;
+            string name = bb[i].PrefabGuid.GetPrefabName() ?? "(unknown)";
+            bool match;
+            if (target.Length > 0)
+                match = byGuid ? guid == targetGuid
+                               : name.IndexOf(target, StringComparison.OrdinalIgnoreCase) >= 0;
+            else
+                match = _stuckStateBuffGuids.Contains(guid)
+                        || Array.Exists(_stuckStateBuffNames, p => name.IndexOf(p, StringComparison.OrdinalIgnoreCase) >= 0);
+            if (match && be.Exists()) toRemove.Add((be, name));
+        }
+
+        int removed = 0;
+        foreach (var (e, name) in toRemove)
+        {
+            try
+            {
+                if (!e.Exists() || e.Has<DestroyTag>()) continue;
+                DestroyUtility.Destroy(Core.EntityManager, e, DestroyDebugReason.TryRemoveBuff);
+                removed++;
+                Core.Log.LogInfo($"[Beelz CLEANSE] {fullName} ({steamId}): removed buff {name} (#{e.GetPrefabGuid()._Value}).");
+            }
+            catch (Exception ex) { Core.Log.LogWarning($"[Beelz CLEANSE] failed to remove {name}: {ex.Message}"); }
+        }
+
+        if (removed == 0)
+            ctx.Reply(target.Length > 0
+                ? $"No buff matching '{target}' found on {fullName}. Run .beelz admin buffs {(string.IsNullOrWhiteSpace(player) ? "" : player)} to see their buffs, then cleanse by name/GUID."
+                : $"No known stuck-state buffs found on {fullName}. Run .beelz admin buffs {(string.IsNullOrWhiteSpace(player) ? "" : player)} to identify the buff, then: .beelz admin cleanse {(string.IsNullOrWhiteSpace(player) ? "<you>" : player)} <buffNameOrGuid>.");
+        else
+            ctx.Reply($"Cleansed {removed} buff(s) from {fullName}. If they're still affected, equip/swap a weapon or relog to refresh, or run .beelz admin buffs {(string.IsNullOrWhiteSpace(player) ? "" : player)} to find a remaining one.");
+        Audit(ctx, "cleanse", steamId, fullName, $"target='{target}' removed={removed}");
     }
 
     [Command("buffs", description: "DIAGNOSTIC: dump a player's active buffs and which ones override ability slots, to the server log (with a chat summary). Use to find what's driving a stuck ability bar. Usage: .beelz admin buffs [player] (default: you)", adminOnly: true)]
@@ -1137,6 +1353,157 @@ internal static class AdminCommands
         Audit(ctx, "respawn", steamId, fullName, "");
     }
 
+    [Command("unmount", description: "RECOVERY: free a player stuck on a summoned mount (e.g. the Sir Erwin 'Militia Fabian Mountup' crash) — strips the mount/rider buffs, despawns the orphaned steed near them, and re-applies their Beelz grants. Safe to run repeatedly; if the bar still looks stuck afterward, follow with .beelz admin respawn. Usage: .beelz admin unmount [player] (default: you)", adminOnly: true)]
+    public static void Unmount(ChatCommandContext ctx, string player = null)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+
+        Entity character;
+        ulong steamId;
+        string fullName;
+        if (string.IsNullOrWhiteSpace(player))
+        {
+            character = ctx.Event.SenderCharacterEntity;
+            steamId = character.GetSteamId();
+            fullName = "you";
+        }
+        else
+        {
+            character = EntityExtensions.FindCharacterByName(player, out steamId, out fullName);
+            if (character == Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
+        }
+        if (!character.Exists()) { ctx.Reply("That character no longer exists."); return; }
+
+        var (buffs, steeds, grants) = MountRecovery.Recover(character);
+        ctx.Reply($"Unmount recovery for {fullName}: stripped {buffs} mount/rider buff(s), despawned {steeds} steed(s), re-applied {grants} grant(s)."
+            + (buffs == 0 && steeds == 0 ? " (Nothing mount-related found — if the bar is still stuck, try .beelz admin respawn.)" : " If the bar still looks stuck, run .beelz admin respawn."));
+        Audit(ctx, "unmount", steamId, fullName, $"buffs={buffs} steeds={steeds} grants={grants}");
+    }
+
+    [Command("testmount", description: "STAGE-2 TEST: spawn a rideable horse next to a player to test whether mounting coexists with Beelz granted abilities WITHOUT crashing the server. Have some Beelz abilities slotted, walk onto the horse and press your mount key, then ride + cast a spell and watch whether the server stays up. 'off' removes the horse and frees you. Usage: .beelz admin testmount [on|off] [player]", adminOnly: true)]
+    public static void TestMount(ChatCommandContext ctx, string mode = "on", string player = null)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+
+        // Allow ".beelz admin testmount <player>" (mode omitted) by treating a non-keyword first arg as the player.
+        string m = (mode ?? "on").Trim().ToLowerInvariant();
+        if (m != "on" && m != "off") { player = mode; m = "on"; }
+
+        Entity character;
+        ulong steamId;
+        string fullName;
+        if (string.IsNullOrWhiteSpace(player))
+        {
+            character = ctx.Event.SenderCharacterEntity;
+            steamId = character.GetSteamId();
+            fullName = "you";
+        }
+        else
+        {
+            character = EntityExtensions.FindCharacterByName(player, out steamId, out fullName);
+            if (character == Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
+        }
+        if (!character.Exists()) { ctx.Reply("That character no longer exists."); return; }
+
+        if (m == "off")
+        {
+            int b = MountRecovery.StripMountBuffs(character);
+            int h = MountRecovery.DespawnNearbyRideables(character);
+            int s = MountRecovery.DespawnNearbyFabianSteeds(character);
+            int g = SlotApply.RestoreResolvedGrants(character);
+            ctx.Reply($"testmount off for {fullName}: removed {h} horse(s){(s > 0 ? $" + {s} steed(s)" : "")}, stripped {b} mount buff(s), re-applied {g} grant(s).");
+            Audit(ctx, "testmount", steamId, fullName, $"off horses={h} steeds={s} buffs={b} grants={g}");
+            return;
+        }
+
+        bool ok = MountRecovery.SpawnTestHorse(character);
+        ctx.Reply(ok
+            ? $"Spawned a rideable horse next to {fullName}. Walk onto it and press your mount key (V Rising's own handshake). With Beelz abilities slotted, ride around + cast a spell, then tell me if the SERVER stayed up — that's the test. Run '.beelz admin testmount off' to remove it."
+            : $"Could not spawn a test horse for {fullName} (see [Beelz MOUNT] in the log).");
+        Audit(ctx, "testmount", steamId, fullName, $"on ok={ok}");
+    }
+
+    [Command("purge", description: "LAST-RESORT RECOVERY: wipe ALL of Beelzebub's action-bar integration back to vanilla — clears the deep engine MODIFICATION LEAK (a creature kit stuck on the bar that survives relog/respawn/resetbar), ends + un-parks any transform, and removes every slot/form/weapon/hotkey/loadout binding. KEEPS the player's captured abilities + transform unlocks. Use when a bar is stuck and nothing else worked. Usage: .beelz admin purge <player> CONFIRM", adminOnly: true)]
+    public static void Purge(ChatCommandContext ctx, string player = null, string confirm = null)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+
+        Entity character;
+        ulong steamId;
+        string fullName;
+        if (string.IsNullOrWhiteSpace(player))
+        {
+            character = ctx.Event.SenderCharacterEntity;
+            steamId = character.GetSteamId();
+            fullName = "you";
+        }
+        else
+        {
+            character = EntityExtensions.FindCharacterByName(player, out steamId, out fullName);
+            if (character == Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
+        }
+
+        if (!string.Equals(confirm?.Trim(), "CONFIRM", StringComparison.OrdinalIgnoreCase))
+        {
+            ctx.Reply($"This wipes ALL Beelzebub bar integration for {fullName} back to vanilla (transform, every slot/form/weapon/hotkey/loadout binding, AND the deep engine modification leak) — their captured abilities + transform unlocks are KEPT. Re-run: .beelz admin purge {(string.IsNullOrWhiteSpace(player) ? "you" : player)} CONFIRM");
+            return;
+        }
+
+        if (!character.Exists() || !Core.EntityManager.HasBuffer<AbilityGroupSlotBuffer>(character))
+        {
+            ctx.Reply("That character has no ability-slot buffer (offline or gone). The player must be ONLINE for a purge — it operates on their live character.");
+            return;
+        }
+
+        int keptCaptures = Core.AbilityRegistry.ListFor(steamId).Count;
+        int keptTransforms = Core.AbilityRegistry.ListTransforms(steamId).Count;
+
+        int loadouts = 0, hotkeys = 0, forms = 0, orphans = 0;
+        (int scanned, int removedById, int sourcesDestroyed, int forced) reg = (0, 0, 0, 0);
+        try
+        {
+            // (1) End + UN-PARK any transform (parked = the disconnect-grace record that would otherwise
+            // restore the form on reconnect). Revert with restoreBar:false (purge wants a vanilla bar, not
+            // re-applied grants), then ClearActiveTransform to drop a parked/disconnected record too.
+            try { Core.Transforms.Revert(steamId, "admin purge", restoreBar: false); } catch { /* not transformed */ }
+            Core.AbilityRegistry.ClearActiveTransform(steamId);
+            Core.AbilityRegistry.ClearTransformCooldowns(steamId);
+
+            // (2) Clear every Beelzebub slot binding (universal + per-weapon + per-form), custom transform
+            // loadouts and the slot baseline. KEEPS captures + unlocks.
+            loadouts = Core.AbilityRegistry.ClearAllLoadouts(steamId);
+
+            // (3) Clear all custom hotkeys.
+            foreach (var name in Core.AbilityRegistry.ListHotkeys(steamId).Keys.ToList())
+                if (Core.AbilityRegistry.ClearHotkey(steamId, name)) hotkeys++;
+
+            // (4) Strip any lingering form/shapeshift buffs, then destroy player-owned override SOURCES
+            // (orphaned ReplaceAbilityOnSlotBuff carriers) so their modifications become removable.
+            forms = TransformBuffService.RemoveAllFormsAndShapeshifts(character);
+            orphans = TransformBuffService.DestroyOwnedAbilitySlotOrphans(character);
+
+            // (5) THE DEEP FIX: clear the leaked AbilityGroupSlot modifications at the engine registry
+            // level (pop each by id via RemoveAbilityGroupModificationOnSlot + sweep loose orphans),
+            // then authoritatively re-resolve the bar from equipment + spellbook.
+            reg = TransformBuffService.PurgeAbilitySlotModifications(character);
+
+            Core.Persistence.RequestSave();
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogError($"[Beelz] purge failed for {fullName}: {ex}");
+            ctx.Reply($"purge failed: {ex.Message} (some steps may have applied — check the server log under [Beelz PURGE]).");
+            return;
+        }
+
+        Core.Log.LogInfo($"[Beelz PURGE] {fullName} ({steamId}): loadouts={loadouts} hotkeys={hotkeys} forms={forms} orphanSources={orphans} | registry scanned={reg.scanned} removedById={reg.removedById} sourcesDestroyed={reg.sourcesDestroyed} forced={reg.forced} | kept captures={keptCaptures} transforms={keptTransforms}.");
+        // VCF's ctx.Reply caps at FixedString512Bytes (~512 bytes) and THROWS on overflow — keep each
+        // line short + ASCII, and split across two replies.
+        ctx.Reply($"Purged {fullName}'s bar to vanilla: ended any transform, cleared {loadouts} bind(s)/{hotkeys} hotkey(s)/{forms} form(s), removed {reg.removedById}+{reg.sourcesDestroyed} leaked slot mod(s) across {reg.scanned} slots. Kept {keptCaptures} abilities + {keptTransforms} transform unlock(s).");
+        ctx.Reply("Now equip/swap a weapon (or relog) to finish patching, then re-slot with .beelz slot. (Log [Beelz PURGE] has before/after dumps; any 'Could not remove modification id' lines are harmless.)");
+        Audit(ctx, "purge", steamId, fullName, $"loadouts={loadouts} hotkeys={hotkeys} forms={forms} orphans={orphans} regRemoved={reg.removedById} sourcesDestroyed={reg.sourcesDestroyed} forced={reg.forced}");
+    }
+
     [Command("clearslotmods", description: "RECOVERY: clear orphaned ability-slot MODIFICATIONS on a player's character (the deep cause of a bar frozen on a creature kit) and force the slots to rebuild from base. Run after .beelz clear if a stuck bar survives everything. Usage: .beelz admin clearslotmods [player] (default: you)", adminOnly: true)]
     public static void ClearSlotMods(ChatCommandContext ctx, string player = null)
     {
@@ -1284,20 +1651,21 @@ internal static class AdminCommands
                 Core.Log.LogInfo($"[Beelz REBUILDSLOTS]   slot[{idx}] active={activeName} base={baseName}");
             }
 
-            // SAFE FIX: write each active slot back to its stored BASE ability (the vanilla value
-            // already on your character) via the engine's own slot-setter. Values only — NO entity
-            // destruction (that crashed the server). Mark each slot dirty so the bar re-resolves.
-            var sgm = Core.ServerGameManager;
-            var dirty = Unity.Entities.ComponentType.ReadWrite(Il2CppInterop.Runtime.Il2CppType.Of<AbilityGroupSlot.DirtyTag>());
-            foreach (var (idx, baseAbility, slot) in snap)
-            {
-                active++;
-                try { sgm.ModifyAbilityGroupOnSlot(equipBuff, character, idx, baseAbility); resynced++; }
-                catch (Exception ex) { Core.Log.LogWarning($"[Beelz REBUILDSLOTS] resync slot {idx} failed: {ex.Message}"); }
-                try { if (slot.Exists() && !Core.EntityManager.HasComponent(slot, dirty)) Core.EntityManager.AddComponent(slot, dirty); }
-                catch (Exception ex) { Core.Log.LogWarning($"[Beelz REBUILDSLOTS] dirty slot {idx} failed: {ex.Message}"); }
-            }
-            if (Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+            // v0.120.0 AUTHORITATIVE RECOVERY (replaces the old base-resync). Writing the stored base back
+            // was a NO-OP whenever the base was already correct but the engine's CACHED resolved value
+            // (AbilityGroupSlot.StateEntity) stayed pinned to a form ability — the "rebuildslots reported
+            // success but the bar stayed stuck (even across relog)" case from the transform-chaining report.
+            // All steps are engine-path with NO slot-entity destruction (the dangling-ref crash only ever
+            // came from destroying slot ENTITIES, which we never do here):
+            //   1) destroy any player-owned override SOURCE (orphaned form/carrier buff still injecting),
+            //   2) push every slot to Empty via ModifyAbilityGroupOnSlot — clears the cached StateEntity and
+            //      forces a clean re-resolve from equipment + spellbook,
+            //   3) re-apply the player's saved Beelzebub grants on the cleaned bar.
+            active = snap.Count;
+            int orphans = Beelzebub.Services.TransformBuffService.DestroyOwnedAbilitySlotOrphans(character);
+            resynced = Beelzebub.Services.TransformBuffService.ForceResetAbilitySlots(character);
+            Beelzebub.Services.SlotApply.RestoreResolvedGrants(character);
+            Core.Log.LogInfo($"[Beelz REBUILDSLOTS] authoritative recovery: destroyed {orphans} override source(s), force-cleared {resynced} slot(s), re-applied saved grants.");
         }
         catch (Exception ex)
         {
@@ -1306,8 +1674,8 @@ internal static class AdminCommands
             return;
         }
 
-        Core.Log.LogInfo($"[Beelz REBUILDSLOTS] {fullName} ({steamId}): re-synced {resynced}/{active} active slot(s) to base ({mismatched} were mismatched).");
-        ctx.Reply($"Re-synced {resynced} ability slot(s) to your base abilities for {fullName} ({mismatched} were mismatched). No entities destroyed. Equip/swap a weapon to refresh your bar; if it's still off, relog. Details in the server log under [Beelz REBUILDSLOTS].");
+        Core.Log.LogInfo($"[Beelz REBUILDSLOTS] {fullName} ({steamId}): authoritative recovery done ({mismatched} slot(s) were mismatched pre-reset).");
+        ctx.Reply($"Force-rebuilt the action bar for {fullName}: destroyed lingering override sources, cleared the engine's cached slot values, and re-applied saved grants ({mismatched} slot(s) were stuck pre-reset). No entities destroyed. ⚠️ If the bar is STILL on a creature kit, the value is cached deep in the engine's per-character bar state (it can even survive a relog) and the ONLY reliable cure is to rebuild the character: run \".beelz admin respawn {(string.IsNullOrWhiteSpace(player) ? "" : player)}\" — it respawns on the spot and KEEPS gear, blood, captures & unlocks (NOT a character reset). Details in the server log under [Beelz REBUILDSLOTS].");
         Audit(ctx, "rebuildslots", steamId, fullName, $"active={active} resynced={resynced} mismatched={mismatched}");
     }
 
@@ -1499,6 +1867,15 @@ internal static class AdminCommands
         var character = EntityExtensions.FindCharacterByName(player, out ulong steamId, out string fullName);
         if (character == Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
 
+        // v0.120.0: transforms no longer switch in place (TryActivate refuses if already transformed,
+        // so chaining can't corrupt the bar). Make the admin override explicit rather than racy:
+        // require the target be cleared first.
+        if (Core.AbilityRegistry.GetActiveTransform(steamId) is not null)
+        {
+            ctx.Reply($"{fullName} is already transformed. Run .beelz admin clear-transform {player} first, then force-transform.");
+            return;
+        }
+
         // Ensure unlock exists and clear cooldown so TryActivate sails through.
         var source = new PrefabGUID(unitGuid).IsVBloodUnit() ? CaptureSource.VBlood : CaptureSource.Regular;
         Core.AbilityRegistry.AddTransformUnlock(steamId, unitGuid, source);
@@ -1544,7 +1921,7 @@ internal static class AdminCommands
         }
     }
 
-    [Command("desummon", description: "v0.23.2: clean up all Beelzebub-tagged ally summons following a specific player. Includes orphans from previous sessions. Usage: .beelz admin desummon <player>", adminOnly: true)]
+    [Command("desummon", description: "Clean up all Beelzebub-tagged ally summons following a specific player. Includes orphans from previous sessions. Usage: .beelz admin desummon <player>", adminOnly: true)]
     public static void Desummon(ChatCommandContext ctx, string player)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
@@ -1574,7 +1951,7 @@ internal static class AdminCommands
         Audit(ctx, "desummon", steamId, fullName, $"tracked={tracked} orphans={orphans} processed={processed}");
     }
 
-    [Command("desummon-all", description: "v0.23.2: global sweep — destroy every Beelzebub-tagged ally summon on the map regardless of owner. Use to recover from stale state. Usage: .beelz admin desummon-all", adminOnly: true)]
+    [Command("desummon-all", description: "Global sweep — destroy every Beelzebub-tagged ally summon on the map regardless of owner. Use to recover from stale state. Usage: .beelz admin desummon-all", adminOnly: true)]
     public static void DesummonAll(ChatCommandContext ctx)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
@@ -1696,11 +2073,11 @@ internal static class AdminCommands
     // player's spell bar. For "fix my broken loadout" support tickets, the admin
     // previously had to walk the player through `.beelz grant` themselves.
 
-    [Command("set-slot", description: "Bind a player's universal-bucket slot to an ability. Usage: .beelz admin set-slot <player> <slot 1-6> <abilityGuid>", adminOnly: true)]
+    [Command("set-slot", description: "Bind a player's universal-bucket slot to an ability. Usage: .beelz admin set-slot <player> <slot 0-7> <abilityGuid>", adminOnly: true)]
     public static void SetSlot(ChatCommandContext ctx, string player, int slot, int abilityGuid)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
-        if (slot < 1 || slot > 6) { ctx.Reply("Slot must be 1-6."); return; }
+        if (!Beelzebub.Services.AbilityRegistry.IsValidSlot(slot)) { ctx.Reply("Slot must be 0 (primary), 1-6, or 7 (ultimate)."); return; }
 
         var character = EntityExtensions.FindCharacterByName(player, out ulong steamId, out string fullName);
         if (character == Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
@@ -1731,11 +2108,11 @@ internal static class AdminCommands
         Audit(ctx, "set-slot", steamId, fullName, $"slot={slot} ability={abilityGuid} ({abilityName}) appliedNow={appliedNow} transformOnly={transformOnly} enabled={enabled}");
     }
 
-    [Command("set-weapon-slot", description: "Bind a player's weapon-specific slot to an ability. Usage: .beelz admin set-weapon-slot <player> <weapon> <slot 1-6> <abilityGuid>", adminOnly: true)]
+    [Command("set-weapon-slot", description: "Bind a player's weapon-specific slot to an ability. Usage: .beelz admin set-weapon-slot <player> <weapon> <slot 0-7> <abilityGuid>", adminOnly: true)]
     public static void SetWeaponSlot(ChatCommandContext ctx, string player, string weaponStr, int slot, int abilityGuid)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
-        if (slot < 1 || slot > 6) { ctx.Reply("Slot must be 1-6."); return; }
+        if (!Beelzebub.Services.AbilityRegistry.IsValidSlot(slot)) { ctx.Reply("Slot must be 0 (primary), 1-6, or 7 (ultimate)."); return; }
 
         if (!Enum.TryParse<WeaponFamily>(weaponStr, ignoreCase: true, out var weapon)
             || weapon == WeaponFamily.None
@@ -1772,11 +2149,11 @@ internal static class AdminCommands
         Audit(ctx, "set-weapon-slot", steamId, fullName, $"weapon={weapon} slot={slot} ability={abilityGuid} ({abilityName}) appliedNow={appliedNow}");
     }
 
-    [Command("clear-slot", description: "Clear a player's universal-bucket slot binding. Usage: .beelz admin clear-slot <player> <slot 1-6>", adminOnly: true)]
+    [Command("clear-slot", shortHand: "unslot", description: "Clear a player's universal-bucket slot binding. Usage: .beelz admin clear-slot <player> <slot 0-7>. Alias: .beelz admin unslot.", adminOnly: true)]
     public static void ClearSlot(ChatCommandContext ctx, string player, int slot)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
-        if (slot < 1 || slot > 6) { ctx.Reply("Slot must be 1-6."); return; }
+        if (!Beelzebub.Services.AbilityRegistry.IsValidSlot(slot)) { ctx.Reply("Slot must be 0 (primary), 1-6, or 7 (ultimate)."); return; }
 
         var character = EntityExtensions.FindCharacterByName(player, out ulong steamId, out string fullName);
         if (character == Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
@@ -1915,11 +2292,11 @@ internal static class AdminCommands
         Core.Log.LogWarning($"[Beelz AUDIT] admin={adminSteamId} action=wipe-all players={players} abilities={abilities} transforms={transforms} reverted_first={activeSteamIds.Count}");
     }
 
-    [Command("clear-weapon-slot", description: "Clear a player's weapon-specific slot binding. Usage: .beelz admin clear-weapon-slot <player> <weapon> <slot 1-6>", adminOnly: true)]
+    [Command("clear-weapon-slot", shortHand: "weapon-unslot", description: "Clear a player's weapon-specific slot binding. Usage: .beelz admin clear-weapon-slot <player> <weapon> <slot 0-7>. Alias: .beelz admin weapon-unslot.", adminOnly: true)]
     public static void ClearWeaponSlot(ChatCommandContext ctx, string player, string weaponStr, int slot)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
-        if (slot < 1 || slot > 6) { ctx.Reply("Slot must be 1-6."); return; }
+        if (!Beelzebub.Services.AbilityRegistry.IsValidSlot(slot)) { ctx.Reply("Slot must be 0 (primary), 1-6, or 7 (ultimate)."); return; }
 
         if (!Enum.TryParse<WeaponFamily>(weaponStr, ignoreCase: true, out var weapon)
             || weapon == WeaponFamily.None

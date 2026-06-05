@@ -126,6 +126,11 @@ internal static class Core
             try { Services.AbilityTuningService.ApplyAll(); }
             catch (System.Exception ex) { Log.LogWarning($"[Beelz] ability-tuning apply failed: {ex.Message}"); }
 
+            // v0.101.0: make Erwin/Fabian's lightning abilities mount-usable (strip their "pause the horse"
+            // StartCast buff that otherwise demounts a player who casts them from the saddle).
+            try { Services.MountRecovery.NeutralizeMountDisruptingCasts(); }
+            catch (System.Exception ex) { Log.LogWarning($"[Beelz] mount-disrupt neutralize failed: {ex.Message}"); }
+
             IsReady = true;
             // v0.81.0: start the per-frame heartbeat driver (idle-safe summon timeout + cooldown enforcement).
             try { Services.Heartbeat.StartTimer(); }

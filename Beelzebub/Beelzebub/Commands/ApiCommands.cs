@@ -155,7 +155,48 @@ internal static class ApiCommands
     //     `[BEELZ:end] cmd=broadcast-msgs pool= count=`.
     //   These let BCH's transform-loadout + announcements editors read state structurally instead of
     //   parsing human chat text.
-    const int ApiVersion = 22;
+    // v23 (v0.101.0): CATALOG FILTERING (additive — old `catalog abilities [page]` calls still work). Both
+    //   `api catalog abilities` and `api catalog abilities-all` now accept an optional FILTER:
+    //   `api catalog abilities <page> <filter> <value>` where filter ∈
+    //     weapon=<family> (e.g. Sword) | cat=<Summon|Spell|Projectile|Melee|Buff|Aoe|Travel|WeaponSpell|Other>
+    //     | unit=<substring of source-NPC name> | form=<Wolf|Bear|…|Mounted> (curated Forms-tagged) |
+    //     search=<substring of ability name>.
+    //   The stream is filtered to the matching subset BEFORE pagination, so BCH can load just "sword
+    //   abilities" / "summons" / "Erwin's abilities" quickly instead of the full ~1700-row catalog. The
+    //   `[BEELZ:end]` line now also carries `filter=<key|-> value=<val|->`; `total=`/`pages=` reflect the
+    //   FILTERED set. Old parsers that ignore the extra tokens + send no filter get the full list as before.
+    // v24 (v0.107.0): ACTIVATION-CONDITION metadata (additive). `api info` + `catalog-ability` now also emit
+    //   `condition=<Aimed|CloseRange|Summon|SelfCast|Movement|-> condition_mods=<Combo,Charged,Channel|->
+    //   condition_source=<auto|confirmed|admin|->`. Auto-classified from prefab data (tools/classify_conditions.py);
+    //   it states HOW an ability is used (aim it / be adjacent / summons / self / mobility) so a working-but-
+    //   conditional ability isn't shown as broken. INFORMATIONAL ONLY — never disables (distinct from the
+    //   `incompatible` flag). `source=auto` = unconfirmed candidate. BCH (api>=24) can show a "Use:" hint /
+    //   filter chip; treat `condition=-` as unknown. All additive — old parsers ignore the new tokens.
+    // v25 (v0.112.0): REVIEW/CURATION tracking (additive). `api info` + `catalog-ability` now also emit
+    //   `review_status=<Unreviewed|Reviewed|Approved|Blocked|Hidden> review_tag=<emote|feed|idle_flee|
+    //   variant_hard|basic_attack|reaction|combo|...|->`. review_status = where the ability sits in our
+    //   curation workflow; review_tag = the audit-assigned TYPE for grouped follow-up/testing. NEITHER is
+    //   a runtime gate (enabled= stays the kill-switch). BCH (api>=25) can group/filter a "test backlog"
+    //   by tag (e.g. show all emotes flagged for usability testing) and surface review_status. Additive —
+    //   old parsers ignore the two new tokens. Populated from ability_rules(.default).json.
+    // v26 (v0.113.0): SOURCE-TIER metadata (additive). `api info` + `catalog-ability` now also emit
+    //   `source_level=<int|-> source_tier=<T1|T2|T3|T4|-> is_vblood=<0|1>`. The primary source unit's
+    //   level + a level-derived difficulty tier (T1<30 / T2 30-46 / T3 47-63 / T4 64+) + whether that unit
+    //   is a VBlood boss. INFORMATIONAL — for "captured from <unit> (T3 VBlood)" display + tier filtering.
+    //   `-`/`0` when no source NPC is mapped (~813 of 1,813). Baked into ability_metadata.json by
+    //   tools/merge_tier_into_metadata.py. Additive — old parsers ignore the three new tokens.
+    // v27 (v0.116.0): CATALOG FILTERS extended (additive). `api catalog abilities[-all] <page> <filter> <value>`
+    //   now also accepts filter keys `tag`/`reviewtag` (review_tag), `status`/`reviewstatus` (review_status),
+    //   `tier` (T1|T2|T3|T4), and `vblood` (1|0). So BCH can load just one curation/source group server-side
+    //   (e.g. `catalog abilities-all 0 tag emote`, or `tier T4`, or `vblood 1`) instead of streaming all rows.
+    //   The existing keys (search|weapon|cat|unit|form) are unchanged. Gate `api>=27`. Fully additive.
+    // v28 (v0.119.0): `api slots` now emits `label=<friendly ability name>` on every `[BEELZ:slot]` and
+    //   `[BEELZ:form-slot]` line (SafeToken-encoded). Lets BCH render a hover CARD with the real ability name
+    //   for Beelz-granted slots — the native action-bar tooltip shows "No Name" for NPC abilities (a V Rising
+    //   client-localization gap; the server can't fix the native card). Full card data (desc/cooldown/cast/
+    //   condition/…) is still per-ability via `api info-guid <guid>`. Only Beelz-bound slots appear in `api
+    //   slots`, so BCH scopes its card to these and leaves VANILLA slots' native tooltips untouched. Additive.
+    const int ApiVersion = 28;
 
     [Command("help", description: "List the Beelzebub API/BCH read commands (machine-readable data streams).")]
     public static void Help(ChatCommandContext ctx)
@@ -163,9 +204,10 @@ internal static class ApiCommands
         ctx.Reply("=== Beelzebub API commands === (BCH-readable; emit [BEELZ:*] data lines for client UIs)");
         ctx.Reply(".beelz api version — API + plugin version · .beelz api bch <on|off|status> — toggle your event stream");
         ctx.Reply(".beelz api list / slots / transforms / hotkeys / active — stream your own data");
-        ctx.Reply(".beelz api info <index> — ability tooltip data · .beelz api progress — completion data");
+        ctx.Reply(".beelz api info <index> / info-guid <guid> — ability tooltip data (by list index or PrefabGUID) · .beelz api progress — completion data");
         ctx.Reply(".beelz api bestiary [page] — collection book · .beelz api verbosity — your verbosity setting");
-        ctx.Reply(".beelz api catalog [units|abilities] [page] — curated-catalog streams");
+        ctx.Reply(".beelz api catalog [units|abilities] [page] [filter value] — curated-catalog streams · catalog abilities-all (admin) — every ability for config");
+        ctx.Reply("    filters: weapon|cat|unit|form|search|tag|reviewstatus|tier|vblood — load just a subset fast");
         ctx.Reply(".beelz api rules / config / cooldowns / transform-config — server config + state streams");
         ctx.Reply(".beelz api tform-kit <unit> / tform-binds <unit> — transform kit + your custom binds · api broadcast-msgs <pool> (admin)");
         ctx.Reply("These power BloodCraftHub's on-screen UI; most just stream data and don't change anything.");
@@ -207,11 +249,20 @@ internal static class ApiCommands
         ctx.Reply($"[BEELZ:end] cmd=list count={captured.Count}");
     }
 
-    [Command("slots", description: "Stream the caller's current slot assignments — both universal and weapon-specific buckets (BCH-readable).")]
+    [Command("slots", description: "Stream the caller's current slot assignments — universal + weapon + form buckets, each row carrying a=<guid> an=<prefab> label=<friendly name> (BCH-readable; label= for the hover card).")]
     public static void Slots(ChatCommandContext ctx)
     {
         if (!Core.IsReady) { ctx.Reply("[BEELZ:err] cmd=slots code=not_ready msg=plugin_not_initialized"); return; }
         ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
+
+        // v0.119.0 (ApiVersion 28): emit the friendly ability NAME per slot so BCH can render a hover card
+        // with the real name (the native action-bar tooltip shows "No Name" for NPC abilities — client
+        // localization gap). Lightweight name-only resolver (ResolveAbilityName, no ECS probe), SafeToken-
+        // encoded. Full card data (desc/stats) is still fetched per-ability via `api info-guid`. Only
+        // Beelz-bound slots appear here, so BCH scopes its card to these and leaves vanilla slots' native
+        // tooltips untouched.
+        string Label(int g) => SafeToken(Core.AbilityMetadata?.ResolveAbilityName(g)
+            ?? new PrefabGUID(g).GetPrefabName().Humanize());
 
         int n = 0;
         // Universal bucket (bucket=any).
@@ -220,7 +271,7 @@ internal static class ApiCommands
         {
             ctx.Reply(
                 $"[BEELZ:slot] bucket=any slot={slot}" +
-                $" a={abilityGuid} an={new PrefabGUID(abilityGuid).GetPrefabName()}");
+                $" a={abilityGuid} an={new PrefabGUID(abilityGuid).GetPrefabName()} label={Label(abilityGuid)}");
             n++;
         }
         // W3 per-weapon buckets.
@@ -231,7 +282,7 @@ internal static class ApiCommands
             {
                 ctx.Reply(
                     $"[BEELZ:slot] bucket={weapon} slot={slot}" +
-                    $" a={abilityGuid} an={new PrefabGUID(abilityGuid).GetPrefabName()}");
+                    $" a={abilityGuid} an={new PrefabGUID(abilityGuid).GetPrefabName()} label={Label(abilityGuid)}");
                 n++;
             }
         }
@@ -244,7 +295,7 @@ internal static class ApiCommands
             {
                 ctx.Reply(
                     $"[BEELZ:form-slot] form={form} slot={slot}" +
-                    $" a={abilityGuid} an={new PrefabGUID(abilityGuid).GetPrefabName()}");
+                    $" a={abilityGuid} an={new PrefabGUID(abilityGuid).GetPrefabName()} label={Label(abilityGuid)}");
                 n++;
             }
         }
@@ -255,7 +306,7 @@ internal static class ApiCommands
         ctx.Reply($"[BEELZ:end] cmd=slots count={n}");
     }
 
-    [Command("transforms", description: "Stream the caller's transform unlocks (BCH-readable). TX1 matrix attributes included.")]
+    [Command("transforms", description: "Stream the caller's transform unlocks (BCH-readable). Matrix attributes included.")]
     public static void Transforms(ChatCommandContext ctx)
     {
         if (!Core.IsReady) { ctx.Reply("[BEELZ:err] cmd=transforms code=not_ready msg=plugin_not_initialized"); return; }
@@ -453,7 +504,15 @@ internal static class ApiCommands
             $" summon_units_override={(Core.AbilityRules.GetSummonUnitsPerCast(abilityName) is int suo ? suo.ToString() : "-")}" +
             $" force_timeout_override={(Core.AbilityRules.GetForceTimeoutSeconds(abilityName) is float fto ? fto.ToString("F1") : "-")}" +
             $" free_move_secs={(freeMoveSecs.HasValue ? freeMoveSecs.Value.ToString("F1") : "-")}" +                          // v0.87.0
-            $" interrupt_on_hit={(interruptOnHit.HasValue ? (interruptOnHit.Value ? "on" : "off") : "auto")}";              // v0.87.0
+            $" interrupt_on_hit={(interruptOnHit.HasValue ? (interruptOnHit.Value ? "on" : "off") : "auto")}" +              // v0.87.0
+            $" condition={SafeToken(string.IsNullOrEmpty(meta?.Condition) ? "-" : meta.Condition)}" +                       // v0.107.0 (ApiVersion 24)
+            $" condition_mods={(meta?.ConditionModifiers is { Count: > 0 } cm ? string.Join(",", cm) : "-")}" +
+            $" condition_source={SafeToken(string.IsNullOrEmpty(meta?.ConditionSource) ? "-" : meta.ConditionSource)}" +
+            $" review_status={SafeToken(Core.AbilityRules.GetReviewStatus(abilityName))}" +                               // v0.112.0 (ApiVersion 25)
+            $" review_tag={(string.IsNullOrEmpty(Core.AbilityRules.GetReviewTag(abilityName)) ? "-" : SafeToken(Core.AbilityRules.GetReviewTag(abilityName)))}" +
+            $" source_level={(meta?.SourceLevel.HasValue == true ? meta.SourceLevel.Value.ToString() : "-")}" +          // v0.113.0 (ApiVersion 26)
+            $" source_tier={SafeToken(string.IsNullOrEmpty(meta?.SourceTier) ? "-" : meta.SourceTier)}" +
+            $" is_vblood={(meta?.IsVBlood == true ? 1 : 0)}";
         ReplyChunked(ctx, "info", idField, body);
     }
 
@@ -564,7 +623,7 @@ internal static class ApiCommands
         ctx.Reply(sb.ToString());
     }
 
-    [Command("progress", description: "Return the caller's collection-completion data (BCH-readable, IN4).")]
+    [Command("progress", description: "Return the caller's collection-completion data (BCH-readable).")]
     public static void Progress(ChatCommandContext ctx)
     {
         if (!Core.IsReady) { ctx.Reply("[BEELZ:err] cmd=progress code=not_ready msg=plugin_not_initialized"); return; }
@@ -592,7 +651,7 @@ internal static class ApiCommands
 
     // --- IN3: catalog endpoints (BCH "collection book" view) ---
 
-    [Command("catalog", description: "Summary of what's in the curated catalog (counts only). Drill in via .beelz api catalog units|abilities. (IN3)")]
+    [Command("catalog", description: "Summary of what's in the curated catalog (counts only). Drill in via .beelz api catalog units|abilities.")]
     public static void Catalog(ChatCommandContext ctx)
     {
         if (!Core.IsReady) { ctx.Reply("[BEELZ:err] cmd=catalog code=not_ready msg=plugin_not_initialized"); return; }
@@ -686,8 +745,9 @@ internal static class ApiCommands
 
             bool curated = map != null && map.ContainsKey(name);
             bool include = adminAll
-                ? !Core.AbilityFilter.IsJunkAbility(name)                          // admin: every real ability group
-                : (curated || Core.AbilityFilter.ShouldCapture(name, guid, out _)); // player: collectible only
+                ? !Core.AbilityFilter.IsJunkAbility(name)                          // admin: every real ability group (incl. blocked/hidden — admin sees review_status)
+                : ((curated || Core.AbilityFilter.ShouldCapture(name, guid, out _)) // player: collectible only...
+                   && !Core.AbilityRules.IsReviewGated(name, guid));               // ...minus ReviewStatus Blocked/Hidden (v0.115.0 curation gate)
             if (!include) continue;
 
             names.Add(name);
@@ -723,6 +783,29 @@ internal static class ApiCommands
         if (guid != 0 && Core.AbilityMetadata != null
             && Core.AbilityMetadata.TryGetPrimarySourceNpc(guid, out int ug, out string un))
         { unitGuid = ug; unit = string.IsNullOrWhiteSpace(un) ? "-" : SafeToken(un); }
+
+        // v0.109.0 (ApiVersion 24 fix): activation-condition tokens — the contract says catalog-ability
+        // carries these (it previously only landed in `api info`). Lightweight dict lookup, no ECS probe.
+        string cond = "-", condMods = "-", condSrc = "-";
+        if (guid != 0 && Core.AbilityMetadata != null
+            && Core.AbilityMetadata.TryGetCondition(guid, out var cC, out var cM, out var cS))
+        {
+            if (!string.IsNullOrEmpty(cC)) cond = SafeToken(cC);
+            if (!string.IsNullOrEmpty(cM)) condMods = SafeToken(cM);
+            if (!string.IsNullOrEmpty(cS)) condSrc = SafeToken(cS);
+        }
+        string condTokens = $" condition={cond} condition_mods={condMods} condition_source={condSrc}";
+
+        // v0.113.0 (ApiVersion 26): source-unit tier (level/tier band/VBlood) — lightweight lookup, no ECS probe.
+        string srcLevel = "-", srcTier = "-", isVb = "0";
+        if (guid != 0 && Core.AbilityMetadata != null
+            && Core.AbilityMetadata.TryGetSourceTier(guid, out var sLvl, out var sTier, out var sVb))
+        {
+            if (sLvl.HasValue) srcLevel = sLvl.Value.ToString();
+            if (!string.IsNullOrEmpty(sTier)) srcTier = SafeToken(sTier);
+            isVb = sVb ? "1" : "0";
+        }
+        string tierTokens = $" source_level={srcLevel} source_tier={srcTier} is_vblood={isVb}";
 
         if (map != null && map.TryGetValue(name, out var entry))
         {
@@ -763,7 +846,11 @@ internal static class ApiCommands
                 $" interrupt_on_hit={(entry.InterruptOnHit.HasValue ? (entry.InterruptOnHit.Value ? "on" : "off") : "auto")}" +        // v0.87.0
                 $" school={school}" +
                 $" desc={Clamp(desc, 256)}" +
-                $" notes={SafeToken(Clamp(entry.Notes ?? "", 256))}";
+                $" notes={SafeToken(Clamp(entry.Notes ?? "", 256))}" +
+                $" review_status={SafeToken(string.IsNullOrEmpty(entry.ReviewStatus) ? "Unreviewed" : entry.ReviewStatus)}" +   // v0.112.0 (ApiVersion 25)
+                $" review_tag={(string.IsNullOrEmpty(entry.ReviewTag) ? "-" : SafeToken(entry.ReviewTag))}" +                    // v0.112.0 (ApiVersion 25)
+                condTokens +   // v0.109.0 (ApiVersion 24): condition/condition_mods/condition_source
+                tierTokens;    // v0.113.0 (ApiVersion 26): source_level/source_tier/is_vblood
             ReplyChunked(ctx, "catalog-ability", $"an={name}", bodyC);   // v0.76.0: chunked (was >512-byte crash)
             return;
         }
@@ -809,48 +896,118 @@ internal static class ApiCommands
             $" interrupt_on_hit=auto" +      // v0.87.0
             $" school={school}" +
             $" desc={Clamp(desc, 256)}" +
-            $" notes=";
+            $" notes=" +
+            $" review_status=Unreviewed review_tag=-" +   // v0.112.0 (ApiVersion 25): uncurated => defaults
+            condTokens +   // v0.109.0 (ApiVersion 24): condition/condition_mods/condition_source
+            tierTokens;    // v0.113.0 (ApiVersion 26): source_level/source_tier/is_vblood
         ReplyChunked(ctx, "catalog-ability", $"an={name}", bodyU);   // v0.76.0: chunked (was >512-byte crash)
     }
 
-    [Command("catalog abilities", description: "Stream the FULL capturable ability catalog (curated rules + discovered universe) with matrix attributes (BCH collection book). Optional page index, default 0. Page size 40.")]
-    public static void CatalogAbilities(ChatCommandContext ctx, int page = 0)
+    [Command("catalog abilities", description: "Stream the capturable ability catalog with matrix attributes (BCH collection book). Optional page (default 0, size 40) + FILTER: catalog abilities <page> <weapon|cat|unit|form|search|tag|reviewstatus|tier|vblood> <value> — load just a subset (e.g. weapon Sword, cat Summon, unit Erwin, search lightning, tag emote, tier T4, vblood 1) instead of the full ~1700 rows.")]
+    public static void CatalogAbilities(ChatCommandContext ctx, int page = 0, string filter = null, string value = null)
     {
         if (!Core.IsReady) { ctx.Reply("[BEELZ:err] cmd=catalog-abilities code=not_ready msg=plugin_not_initialized"); return; }
         if (page < 0) page = 0;
         // Rebuild the union when a fresh scan starts (page 0) or nothing is cached; reuse for page>0
         // so one scan sees a consistent snapshot and we don't re-enumerate ~14k prefabs per page.
         if (page == 0 || _catalog == null) _catalog = BuildCatalogSnapshot(adminAll: false);
-        StreamCatalog(ctx, _catalog, page, "catalog-abilities");
+        StreamCatalog(ctx, _catalog, page, "catalog-abilities", filter, value);
     }
 
-    [Command("catalog abilities-all", description: "ADMIN: stream EVERY ability group for configuration — regardless of enable/deny/difficulty/inclusive (junk stubs excluded). Same line format + fields as `catalog abilities` (each row carries enabled=, so a client can filter to the enabled set). Optional page, default 0. Page size 40.", adminOnly: true)]
-    public static void CatalogAbilitiesAll(ChatCommandContext ctx, int page = 0)
+    [Command("catalog abilities-all", description: "ADMIN: stream EVERY ability group for configuration — regardless of enable/deny/difficulty/inclusive (junk stubs excluded). Same line format + FILTER support as `catalog abilities` (each row carries enabled=). Usage: catalog abilities-all <page> <weapon|cat|unit|form|search|tag|reviewstatus|tier|vblood> <value>.", adminOnly: true)]
+    public static void CatalogAbilitiesAll(ChatCommandContext ctx, int page = 0, string filter = null, string value = null)
     {
         if (!Core.IsReady) { ctx.Reply("[BEELZ:err] cmd=catalog-abilities-all code=not_ready msg=plugin_not_initialized"); return; }
         if (page < 0) page = 0;
         if (page == 0 || _catalogAll == null) _catalogAll = BuildCatalogSnapshot(adminAll: true);
-        StreamCatalog(ctx, _catalogAll, page, "catalog-abilities-all");
+        StreamCatalog(ctx, _catalogAll, page, "catalog-abilities-all", filter, value);
     }
 
-    /// <summary>v0.100.0: shared paginated emit for the player + admin catalog scopes.</summary>
-    static void StreamCatalog(ChatCommandContext ctx, CatalogSnapshot snap, int page, string cmd)
+    /// <summary>v0.100.0: shared paginated emit for the player + admin catalog scopes.
+    /// v0.101.0 (ApiVersion 23): optional filter (weapon/cat/unit/form/search) applied to the cached full
+    /// snapshot BEFORE pagination, so BCH can load a subset fast instead of all ~1700 rows.</summary>
+    static void StreamCatalog(ChatCommandContext ctx, CatalogSnapshot snap, int page, string cmd, string filterKey = null, string filterVal = null)
     {
         if (snap == null || snap.Names.Count == 0)
         {
-            ctx.Reply($"[BEELZ:end] cmd={cmd} count=0 total=0 page=0 pages=1");
+            ctx.Reply($"[BEELZ:end] cmd={cmd} count=0 total=0 page=0 pages=1 filter=- value=-");
             return;
         }
+
+        string fk = filterKey?.Trim().ToLowerInvariant();
+        string fv = filterVal?.Trim();
+        var names = snap.Names;
+        if (!string.IsNullOrEmpty(fk) && !string.IsNullOrEmpty(fv))
+            names = names.Where(n => MatchesCatalogFilter(n, snap.Guids, fk, fv)).ToList();
+
         const int pageSize = 40;
-        int total = snap.Names.Count;
-        int pages = (total + pageSize - 1) / pageSize;
+        int total = names.Count;
+        int pages = total == 0 ? 1 : (total + pageSize - 1) / pageSize;
         if (page >= pages) page = pages - 1;
-        var slice = snap.Names.Skip(page * pageSize).Take(pageSize).ToList();
+        var slice = total == 0
+            ? new System.Collections.Generic.List<string>()
+            : names.Skip(page * pageSize).Take(pageSize).ToList();
         foreach (var name in slice) EmitCatalogAbilityLine(ctx, name, snap.Guids);
-        ctx.Reply($"[BEELZ:end] cmd={cmd} count={slice.Count} total={total} page={page} pages={pages}");
+        ctx.Reply($"[BEELZ:end] cmd={cmd} count={slice.Count} total={total} page={page} pages={pages}"
+            + $" filter={(string.IsNullOrEmpty(fk) ? "-" : fk)} value={(string.IsNullOrEmpty(fv) ? "-" : SafeToken(fv))}");
     }
 
-    [Command("hotkeys", description: "Stream the caller's named hotkey bindings (BCH-readable). W4 extra slots beyond V Rising's 6.")]
+    /// <summary>
+    /// v0.101.0 (ApiVersion 23): does a catalog row match a load filter? Lets BCH/testers pull a subset
+    /// (e.g. all Sword abilities, all Summons, a unit's kit) instead of the whole ~1700-row catalog.
+    /// </summary>
+    static bool MatchesCatalogFilter(string name, System.Collections.Generic.Dictionary<string, int> guids, string key, string val)
+    {
+        int guid = (guids != null && guids.TryGetValue(name, out var g)) ? g : 0;
+        switch (key)
+        {
+            case "search": case "name":
+                return name.IndexOf(val, StringComparison.OrdinalIgnoreCase) >= 0;
+
+            case "weapon": case "weapons":
+                if (!Enum.TryParse<WeaponFamily>(val, ignoreCase: true, out var wf) || wf == WeaponFamily.None) return false;
+                var fams = Core.AbilityRules.ClassifyWeaponFamilies(name);
+                return fams != null && fams.Contains(wf);
+
+            case "cat": case "type": case "category":
+                var cat = Core.AbilityRules.GetAbilityCategoryOverride(name) ?? Categorization.ClassifyAbility(name);
+                return string.Equals(cat.ToString(), val, StringComparison.OrdinalIgnoreCase);
+
+            case "unit":
+                if (guid == 0 || Core.AbilityMetadata == null) return false;
+                if (!Core.AbilityMetadata.TryGetPrimarySourceNpc(guid, out _, out var un) || string.IsNullOrEmpty(un)) return false;
+                return un.IndexOf(val, StringComparison.OrdinalIgnoreCase) >= 0;
+
+            case "form": case "forms":
+                var map = Core.AbilityRules?.Current?.AbilityMap;
+                if (map != null && map.TryGetValue(name, out var e) && e.Forms is { Count: > 0 })
+                    return e.Forms.Any(f => f.TrimStart('!').Equals(val, StringComparison.OrdinalIgnoreCase));
+                return false;
+
+            // v0.116.0 (ApiVersion 27): curation/source filters — load only the group you want to work.
+            case "tag": case "reviewtag":
+                return string.Equals(Core.AbilityRules.GetReviewTag(name), val, StringComparison.OrdinalIgnoreCase);
+
+            case "status": case "review": case "reviewstatus":
+                return string.Equals(Core.AbilityRules.GetReviewStatus(name), val, StringComparison.OrdinalIgnoreCase);
+
+            case "tier":
+                return guid != 0 && Core.AbilityMetadata != null
+                    && Core.AbilityMetadata.TryGetSourceTier(guid, out _, out var tr, out _)
+                    && string.Equals(tr, val, StringComparison.OrdinalIgnoreCase);
+
+            case "vblood": case "isvblood":
+                if (guid == 0 || Core.AbilityMetadata == null) return false;
+                Core.AbilityMetadata.TryGetSourceTier(guid, out _, out _, out var isVb);
+                bool want = val is "1" or "true" or "yes" or "on" or "vblood";
+                return isVb == want;
+
+            default:
+                return true;   // unknown filter key → don't filter (stream everything)
+        }
+    }
+
+    [Command("hotkeys", description: "Stream the caller's named hotkey bindings (BCH-readable). Extra slots beyond V Rising's 6.")]
     public static void Hotkeys(ChatCommandContext ctx)
     {
         if (!Core.IsReady) { ctx.Reply("[BEELZ:err] cmd=hotkeys code=not_ready msg=plugin_not_initialized"); return; }

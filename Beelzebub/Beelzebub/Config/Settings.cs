@@ -12,6 +12,10 @@ internal static class Settings
     public static ConfigEntry<bool> Capture_InclusiveMode { get; private set; }
     public static ConfigEntry<bool> Grant_EnforceTransformOnly { get; private set; }
 
+    // v0.115.0: when true, an ability whose ReviewStatus is Blocked or Hidden is treated as a hard
+    // curation gate — not capturable/grantable, and excluded from the player catalog/collection. See Initialize().
+    public static ConfigEntry<bool> Curation_EnforceReviewStatus { get; private set; }
+
     // Shared-kill credit (B2)
     public static ConfigEntry<string> Capture_ShareCreditMode { get; private set; }
     public static ConfigEntry<float> Capture_ShareCreditRadius { get; private set; }
@@ -254,6 +258,13 @@ internal static class Settings
     // v0.65.0 (J1): global minimum-cooldown floor, applied via the baked-prefab tuning path.
     public static ConfigEntry<float> Grant_MinimumCooldownSeconds { get; private set; }
 
+    // v0.120.0: cross-mod slot-conflict priority. The Priority stamped on Beelzebub's spell-slot grant
+    // overrides (ReplaceAbilityOnSlotBuff). Only matters when ANOTHER mod writes the same slot at the
+    // same priority (e.g. Bloodcraft's class/"shift" spell on slot 3 + unarmed spells on slots 1/4, all
+    // Priority 0) — at an equal priority the winner is load-order-dependent. Raise above 0 to make
+    // Beelzebub win deterministically. See Initialize() + docs/INTEROP_BLOODCRAFT.md.
+    public static ConfigEntry<int> Interop_SlotInjectionPriority { get; private set; }
+
     public static void Initialize(ConfigFile config)
     {
         CaptureOnKill = config.Bind(
@@ -268,6 +279,16 @@ internal static class Settings
             "A small hardcoded junk filter (idle/spawn/death/etc. stubs) and the per-ability Enabled " +
             "kill-switch (AbilityMap) still apply. Set to false for a curated server — the full " +
             "deny-list + difficulty pipeline then returns.");
+
+        Curation_EnforceReviewStatus = config.Bind(
+            "Capture", nameof(Curation_EnforceReviewStatus), true,
+            "v0.115.0 CURATION GATE (default ON). When true, an ability whose ReviewStatus is 'Blocked' " +
+            "(incompatible / unwanted) or 'Hidden' (junk) is NOT capturable or grantable and is excluded " +
+            "from the player ability catalog + collection total — making ReviewStatus a real curation lever, " +
+            "not just a tracking note. Enforced even in Capture_InclusiveMode (it's a deliberate decision, " +
+            "like the per-ability Enabled kill-switch). Set to false to TEST a blocked ability without " +
+            "un-blocking it (e.g. inclusive testing where you want every tagged ability still reachable). " +
+            "Unreviewed/Reviewed/Approved are always collectible.");
 
         Grant_EnforceTransformOnly = config.Bind(
             "Capture", nameof(Grant_EnforceTransformOnly), false,
@@ -335,16 +356,18 @@ internal static class Settings
         // bosses (BossFormRegistry). Grants the FORM, not abilities. Rarer than Devour by default so the
         // transformation is a prestige prize a player works toward, on top of devouring/capturing the kit.
         DropChance_TransformUnlock_VBlood = config.Bind(
-            "Capture.DropChance", nameof(DropChance_TransformUnlock_VBlood), 0.0015f,
+            "Capture.DropChance", nameof(DropChance_TransformUnlock_VBlood), 1.0f,
             "Per-kill chance (0.0-1.0) to unlock a V-Blood transform boss's TRANSFORMATION (Dracula, Morgana, " +
             "Werewolf Chieftain, Geomancer/Golem, Tailor/Gargoyle, …). Independent of the Devour/ability rolls. " +
-            "Default rarer than Devour — the form is the hardest prize. Only fires for units the game can render " +
-            "as a player form.");
+            "v0.128.0 TEST-FRIENDLY DEFAULT = 1.0 (every transform-boss kill grants its form) so testers reliably " +
+            "get transforms — LOWER this for a balanced release (it was 0.0015, ~0.15%, before). Only fires for " +
+            "units the game can render as a player form. NOTE: changing this default only affects a FRESH config; " +
+            "an existing server keeps its .cfg value until you run `.beelz admin set DropChance_TransformUnlock_VBlood <v>`.");
         DropChance_TransformUnlock_Regular = config.Bind(
-            "Capture.DropChance", nameof(DropChance_TransformUnlock_Regular), 0.005f,
+            "Capture.DropChance", nameof(DropChance_TransformUnlock_Regular), 1.0f,
             "Per-kill chance (0.0-1.0) to unlock a non-V-Blood transform unit's TRANSFORMATION (e.g. the basic " +
-            "werewolf from the common werewolf NPC). Higher than the V-Blood transform default since these are " +
-            "common mobs. Independent of Devour/ability rolls.");
+            "werewolf from the common werewolf NPC). v0.128.0 TEST-FRIENDLY DEFAULT = 1.0 (was 0.005) — LOWER for a " +
+            "balanced release. Independent of Devour/ability rolls.");
 
         Capture_PityIncrementPerKill = config.Bind(
             "Capture.Pity", nameof(Capture_PityIncrementPerKill), 0.0025f,
@@ -680,6 +703,18 @@ internal static class Settings
             "reload`). WARNING: GLOBAL — it also raises the source NPC/boss cooldown of any ability below " +
             "the floor. A per-ability absolute cooldown (`.beelz admin ability <name> cooldown <sec>`) is " +
             "still floored by this value.");
+
+        Interop_SlotInjectionPriority = config.Bind(
+            "Interop", nameof(Interop_SlotInjectionPriority), 0,
+            "v0.120.0: the Priority value Beelzebub stamps on its spell-slot grant overrides — the " +
+            "ReplaceAbilityOnSlotBuff entries that put your captured abilities on slots 0-7. This ONLY " +
+            "matters when ANOTHER mod also writes the same slot. Bloodcraft, for example, writes its " +
+            "class/'shift' spell to slot 3 and its unarmed spells to slots 1+4 at Priority 0; at an equal " +
+            "priority the winner is load-order-dependent (nondeterministic). Set this to 1 (or higher) to " +
+            "make Beelzebub's bind WIN those contested slots deterministically; leave at 0 for neutral/" +
+            "legacy behavior; set negative to make Beelzebub YIELD so the other mod wins. Harmless on " +
+            "single-mod servers — nothing else competes there, so 0 and 1 look identical. The complementary " +
+            "lever is Bloodcraft's own ShiftSlot/UnarmedSlots flags. See docs/INTEROP_BLOODCRAFT.md.");
 
         Capture_GrantSignatureSummons = config.Bind(
             "Capture", nameof(Capture_GrantSignatureSummons), true,

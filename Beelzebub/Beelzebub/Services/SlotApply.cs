@@ -100,6 +100,9 @@ internal static class SlotApply
         string name = ability.GetPrefabName();
         if (!Core.AbilityRules.IsEnabled(name, abilityGuid)) return false;
         if (Core.AbilityRules.IsTransformOnlyEnforced(name, abilityGuid)) return false;
+        // v0.101.0: explicit weapon blacklist ("!Sword" in the ability's Weapons list) — refuse on that
+        // weapon even if the ability is otherwise universal.
+        if (Core.AbilityRules.IsWeaponBlocked(name, weapon)) return false;
 
         var families = Core.AbilityRules.ClassifyWeaponFamilies(name);
         // Universal: empty (None) or contains Magic — fires for any weapon, including unarmed.
@@ -317,7 +320,9 @@ internal static class SlotApply
                 // (the "all my abilities suddenly have a long cooldown" report). Cooldown follows the
                 // ABILITY, not the slot.
                 CopyCooldown = ShouldCopyCooldown(character, slot, entry.abilityGuid),
-                Priority = 0,
+                // v0.120.0: configurable so an admin can make Beelzebub win (or yield) a slot another
+                // mod (e.g. Bloodcraft) also writes. Default 0 = legacy/neutral. See Settings.Interop_*.
+                Priority = Beelzebub.Config.Settings.Interop_SlotInjectionPriority.Value,
             });
             injected++;
             (injectedSlots ??= new List<int>()).Add(slot);
@@ -479,7 +484,8 @@ internal static class SlotApply
             Slot = slot,
             NewGroupId = ability,
             CopyCooldown = copyCd,
-            Priority = 0,
+            // v0.120.0: configurable cross-mod slot priority (see Settings.Interop_SlotInjectionPriority).
+            Priority = Beelzebub.Config.Settings.Interop_SlotInjectionPriority.Value,
         });
     }
 

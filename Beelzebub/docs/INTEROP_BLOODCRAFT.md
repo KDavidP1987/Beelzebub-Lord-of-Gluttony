@@ -1,196 +1,309 @@
 # Bloodcraft coexistence audit (IN1)
 
 How Beelzebub (`kdpen.Beelzebub`) interacts with Bloodcraft (`io.zfolmt.Bloodcraft`)
-when both are loaded on the same dedicated server. Tested against **Bloodcraft v1.13.21**
-and **Beelzebub v0.15.0**.
+when both are loaded on the same dedicated server.
 
-**TL;DR**: They coexist cleanly out of the box. There's exactly one config knob
-to flip if you want them perfectly out of each other's way (Bloodcraft's
-`ShiftSlot`). Everything else either operates on different surfaces or composes
-naturally.
+**Audited against Bloodcraft v1.13.21 and Beelzebub v0.119.0 (ApiVersion 28).**
+*(Previous revision of this doc was pinned to Beelzebub v0.15.0 and is superseded
+— it predated slots 0/7, per-form loadouts, the mounted form, and hotkeys, and it
+over-claimed the slot-tie outcome. See "What changed since the v0.15.0 doc" at the
+bottom.)*
+
+**TL;DR**: They coexist cleanly — no crashes, no hard conflicts. The only friction
+is **shared ownership of spell-bar slots**: both mods inject
+`ReplaceAbilityOnSlotBuff` entries onto the same player equip-buff. On a slot **both**
+mods bind, the winner is **order-dependent and not guaranteed** (see §2) — so the
+fix is to stop them contesting the same slot via two Bloodcraft config flags
+(`ShiftSlot`, `UnarmedSlots`). Everything else operates on different surfaces or
+composes additively.
+
+---
+
+## Quick reference
+
+| Surface | Bloodcraft | Beelzebub | Status |
+|---|---|---|---|
+| Spell-slot injection | slots 1, 3, 4 (name-gated) | slots 0–7 (weapon-family gated) | ⚠️ **contest on 1/3/4** — flip 2 flags |
+| Stat bonuses | expertise + legacy via `ModifyUnitStatBuff_DOTS` | transform-only carrier buff | ✅ additive, balance-only |
+| Death / V-Blood progression | XP, expertise, legacy, familiars | ability capture, unlock rolls | ✅ independent |
+| Shapeshift forms | ExoForm (Dracula/Morgana/prestige), BearFormDash | vanilla Wolf/Bear/… + Gargoyle + Mounted | 🔬 verify Dracula/Morgana overlap |
+| Persistence | `config/Bloodcraft/PlayerData/…` | `config/kdpen.Beelzebub/state.json` | ✅ isolated |
+| Chat commands | `.bloodcraft` / `.bc` | `.beelz` | ✅ isolated |
 
 ---
 
 ## Shared Harmony patch surfaces
 
-Both mods patch the same V Rising server systems. None of the overlaps cause
-direct conflict because all the relevant patches are `Postfix` or
-`Prefix-no-skip` (neither mod blocks the original method, neither mod cancels
-the other's work).
+Both mods patch several of the same V Rising server systems. None of the overlaps
+crash, because every relevant patch is `Postfix` or `Prefix-no-skip` — neither mod
+blocks the original method, neither cancels the other's work. The one that needs
+thought is `ReplaceAbilityOnSlotSystem` (§2).
 
 ### 1. `DeathEventListenerSystem.OnUpdate` — both Postfix
 
-| Mod | Purpose | Patch type |
-|---|---|---|
-| Bloodcraft | Leveling XP, expertise (weapon), legacy (blood), familiar unlock, professions, quest progress | Postfix |
-| Beelzebub  | Ability capture roll + transform-unlock roll on regular-mob kills | Postfix |
+| Mod | Purpose |
+|---|---|
+| Bloodcraft | Leveling XP, weapon expertise, blood legacy, familiar unlock, professions, quests |
+| Beelzebub  | Ability-capture roll + transform-unlock roll on regular-mob kills |
 
-Both iterate `__instance._DeathEventQuery` independently. Neither mutates the
-death events. Patch execution order (alphabetical by Harmony ID) is
-**Bloodcraft → Beelzebub**, but order doesn't matter here — both are pure
-side-effect consumers.
+Both iterate the death-event query independently; neither mutates the events.
+Execution order doesn't matter — both are pure side-effect consumers.
+**Conflict: none.**
 
-**Conflict**: none. Same kill triggers both mods' bookkeeping.
+### 2. `ReplaceAbilityOnSlotSystem.OnUpdate` — both Prefix, both append to the buffer
 
-### 2. `ReplaceAbilityOnSlotSystem.OnUpdate` — both Prefix, both add to the buffer
+The only overlap worth thinking about. Both mods add `ReplaceAbilityOnSlotBuff`
+entries onto the player's `EquipBuff_Weapon_*` entity so their abilities appear on
+the spell bar.
 
-This is the only overlap that's worth thinking about. Both mods inject
-`ReplaceAbilityOnSlotBuff` entries onto the player's `EquipBuff_Weapon_*`
-entity to make captured/class abilities show up on the spell bar.
+**Bloodcraft** (`Patches/ReplaceAbilityOnSlotSystemPatch.cs`) keys off the
+equip-buff's **prefab name**:
 
-| Mod | Slots it touches | Trigger |
-|---|---|---|
-| Bloodcraft | Slot 3 (`ShiftSlot` class spell), Slots 1 + 4 (`UnarmedSlots` extra spells while unarmed/fishingpole), full overwrite when not wielding a weapon (`SetSpells`) | When the player has class abilities and the config flags are on |
-| Beelzebub  | Any of slots 1–6 the player has bound via `.beelz grant <slot> <index>` (universal) or `.beelz weapon-grant <weapon> <slot> <index>` (per-weapon) — gated by weapon-family compatibility | When the player has saved Beelzebub grants |
+| Bloodcraft write | Config flag | Slot | Trigger (name contains) |
+|---|---|---|---|
+| First unarmed spell | `UnarmedSlots` | **1** | `unarmed` / `fishingpole` |
+| Second unarmed spell | `Duality` | **4** | `unarmed` / `fishingpole` |
+| Class / "shift" spell | `ShiftSlot` + `SHIFT_LOCK_KEY` | **3** | `weapon` (armed) or unarmed |
+| Lock spell choices | — | reads 5/6 only | not a `WeaponLevel` entity |
 
-Both prefixes run in the same frame. Each calls `buffer.Add(...)` for its own
-slot bindings. The buffer can carry multiple entries for the same slot —
-V Rising's resolver picks the **last entry added with the highest `Priority`**
-(both mods use `Priority = 0`, so last-in-wins for ties).
+> The Bloodcraft **"shift key"** is not a keybind hook — Bloodcraft has no input/
+> keyboard patch. It writes the class spell into **GroupSlot index 3** and lets V
+> Rising's existing shift-modifier wiring fire it. `SetSpells` only *reads* slots
+> 5/6 to remember the player's spell choices; it does not write the buffer.
 
-Patch order: Bloodcraft prefix runs first, Beelzebub prefix second. **If both
-mods bind the same slot, Beelzebub wins** (its entry was added more recently
-to the buffer). That's usually the right behavior — players are explicitly
-choosing the Beelzebub bind by typing the chat command.
+**Beelzebub** (`Patches/ReplaceAbilityOnSlotSystemPatch.cs` →
+`Services/SlotApply.cs`) injects saved grants across **slots 0–7** on the same
+`EquipBuff_Weapon_*` entity, gated by weapon-family compatibility. **Unarmed is a
+real weapon family in Beelzebub** (`SlotApply.DetectFamily` :67), so Beelzebub
+*also* injects on the unarmed bar — meaning every slot Bloodcraft touches (1, 3, 4)
+is a slot Beelzebub can also bind.
 
-**Important wrinkle (Beelzebub v0.14.0+)**: while a player is transformed
-(`.beelz transform <unit>`), Beelzebub's Prefix early-returns and adds nothing
-to the EquipBuff buffer. Transform slot overrides live on a dedicated carrier
-buff (`Buff_VBlood_Ability_Replace`) with `Priority = 99`, which wins over
-both Bloodcraft AND Beelzebub's own grant injection. So during a transform,
-Bloodcraft's class/shift spells are visually masked by the transform — they
-return on revert.
+#### ⚠️ Who wins a contested slot is NOT guaranteed
 
-#### Recommendations
+Both mods append at **`Priority = 0`** (Bloodcraft `:81/95/116`; Beelzebub
+`SlotApply.cs:323`). On Beelzebub's live weapon-swap path,
+`ResolveAndInjectGrants` does a plain `buffer.Add` **without removing** a
+competitor's entry for that slot (`SlotApply.cs:312`) — so both entries coexist in
+the buffer and the tie is broken by buffer order. That order depends on:
 
-- **Slot 3 (`Q` ability)**: if you bind slot 3 with `.beelz grant 3 …`,
-  Bloodcraft's class shift spell will be in the buffer too but will lose
-  on the priority tie. To avoid an invisible-but-loaded conflict, either:
-  - Set Bloodcraft `ShiftSlot = false` in the Bloodcraft config, OR
-  - Just leave it — Beelzebub wins. Bloodcraft's class abilities are
-    still available through Bloodcraft's other mechanisms (e.g. its own
-    cast triggers).
-- **Slots 1 + 4 unarmed**: only relevant if you fight unarmed. Bloodcraft's
-  `UnarmedSlots = true` will compete with any Beelzebub bind on slots 1/4.
-  Same priority-tie rule — Beelzebub wins. Recommend Bloodcraft
-  `UnarmedSlots = false` if you're using Beelzebub for the unarmed kit.
-- **Slots 5/6 (spell slots)**: Bloodcraft's `SetSpells` only fires on the
-  unarmed/fishingpole equip-buff, not weapon equip-buffs. Beelzebub's grants
-  win cleanly on weapons. No flip needed.
+- **Cross-plugin Harmony prefix order**, which follows BepInEx **load order**, not
+  patch-class name. Neither mod sets `[HarmonyPriority]`. It *may* land
+  Bloodcraft-first today (GUID `i` < `k`), but nothing enforces it and a load-order
+  change flips it silently.
+- **How V Rising resolves equal-priority, same-slot duplicates** (first- vs
+  last-in) — not confirmed from the source.
+
+So on a slot both mods bind, the outcome is **order-dependent and brittle**, not a
+reliable "Beelzebub wins." Treat a contested slot as undefined and avoid it.
+
+> **Note:** Beelzebub's *manual* command path (`SlotApply.ApplyGrant` →
+> `ReplaceSlotEntry` :479) DOES strip prior entries for the slot before adding —
+> but that only de-dupes Beelzebub's own entries, not Bloodcraft's (different patch
+> class, different invocation). It does not make Beelzebub win the cross-mod tie.
+
+#### Recommendations (slots)
+
+Set these in `BepInEx/config/io.zfolmt.Bloodcraft.cfg` if you want Beelzebub to own
+those slots cleanly:
+
+```ini
+[Classes]
+ShiftSlot    = false   # frees slot 3 for Beelzebub
+UnarmedSlots = false   # frees slots 1 + 4 on the unarmed bar
+```
+
+- **Slot 3 (R / shift):** with `ShiftSlot=false`, Bloodcraft stops writing slot 3;
+  Beelzebub owns it uncontested. Bloodcraft class abilities remain available through
+  Bloodcraft's own mechanisms.
+- **Slots 1 + 4 (unarmed):** only matters if you fight unarmed. `UnarmedSlots=false`
+  frees them for Beelzebub's unarmed loadout.
+- **Slots 5/6:** no conflict — Bloodcraft's `SetSpells` only reads them, and on the
+  unarmed/fishingpole buff at that. Beelzebub owns them on weapons cleanly.
+- **Slots 0 (primary) / 7 (ultimate):** Beelzebub binds these (since v0.91.0);
+  Bloodcraft touches neither. No conflict.
+
+**Deterministic alternative — `Interop_SlotInjectionPriority` (v0.120.0):** Beelzebub
+now exposes the priority it stamps on its grant overrides as an admin config key (in
+the `[Interop]` section of `kdpen.Beelzebub.cfg`, also settable live via
+`.beelz admin set Interop_SlotInjectionPriority <n>`):
+
+| Value | Effect on a contested slot |
+|---|---|
+| `0` (default) | Neutral / legacy — equal-priority tie, load-order-dependent (as above) |
+| `1` or higher | **Beelzebub wins** the slot deterministically (beats Bloodcraft's `Priority=0`) |
+| negative | **Beelzebub yields** — the other mod's bind wins |
+
+This is harmless on a single-mod server (nothing else competes, so `0` and `1` look
+identical). It's a class-wide lever (it re-asserts Beelzebub over *any* equal/lower-
+priority third-party `ReplaceAbilityOnSlotBuff` writer, not just Bloodcraft) — which
+is exactly the intent. The form/transform carrier buffs (`Priority=99/100`) are
+unaffected. Use this **or** the Bloodcraft flag separation above — the flags hand the
+slot off entirely; this just decides who wins when both still write it.
 
 ### 3. `VBloodSystem.OnUpdate` — both Prefix on feed-kills
 
 | Mod | Purpose |
 |---|---|
-| Bloodcraft | Leveling XP boost, expertise progress, blood-legacy progress, familiar unlock, quest progress (all gated by per-system config flags) |
+| Bloodcraft | Leveling XP, expertise/legacy progress, familiar unlock, quests (all config-gated) |
 | Beelzebub  | V-Blood ability capture + V-Blood transform-unlock roll |
 
-Different EventList for each iteration but same source query. No mutation —
-both purely add side effects. Beelzebub runs after Bloodcraft (alphabetical).
+Same source query, separate effect lists, no mutation — both add side effects only.
 **No conflict.**
 
-### 4. `GameDataInitialized` / init-time patches — coexist
+### 4. `BuffSystem_Spawn_Server.OnUpdate` — both Postfix, different targets
 
-Both mods hook init events to detect when `PrefabCollectionSystem` is
-populated. They run independently; neither blocks the other.
+Bloodcraft uses it to apply expertise/legacy stats on the bonus-stats buff;
+Beelzebub uses it to apply per-form loadouts when a shapeshift form buff spawns.
+Different buff entities. **No conflict.**
+
+### 5. `StatChangeSystem.OnUpdate` — both Prefix, different targets
+
+Bloodcraft applies class on-hit effects; Beelzebub pushes attackers into a summon's
+aggro buffer. Different entities. **No conflict.**
+
+### 6. `LinkMinionToOwnerOnSpawnSystem` / init-detection — coexist
+
+Both Postfix minion-link (Bloodcraft = familiars, Beelzebub = summons; different
+owners) and both hook init events to detect `PrefabCollectionSystem` readiness.
+Independent. **No conflict.**
+
+---
+
+## Stat scaling (expertise / blood legacy vs Beelzebub power)
+
+Bloodcraft applies weapon-expertise and blood-legacy bonuses as
+`ModifyUnitStatBuff_DOTS` entries on a bonus-stats buff (`BonusPlayerStatsBuff`,
+GUID `737485591`), driven by `WeaponManager` / `BloodManager` through the
+buff-spawn path. *(Note: Bloodcraft's dedicated
+`ModifyUnitStatBuffSystemSpawnPatch` is commented out in v1.13.21 — stats go
+through the buff-spawn route instead.)*
+
+Beelzebub touches player stats in only two narrow, self-reverting places:
+
+- **Transform stat scaling** (`TransformBuffService`) — `ModifyUnitStatBuff_DOTS`
+  on a transform-only carrier buff (`Buff_VBlood_Ability_Replace`, GUID
+  `1171608023`). Exists only while transformed; reverts on exit.
+- **Granted-ability power window** (`GrantPowerScalingService`) — a short-lived
+  buff applied on cast of a captured ability. **Its default mode is `PlayerScaled`,
+  which is a no-op** (the ability simply scales with the player's existing power).
+
+**Conflict: none, technically.** V Rising's stat resolver sums all
+`ModifyUnitStatBuff_DOTS` additively, so they stack without error. The only
+consequence is **balance**, and because Beelzebub's grant scaling defaults to no-op
+there is **no double-dip on ordinary granted abilities** — they just benefit from
+the player's Bloodcraft-boosted power, as expected.
+
+**Tuning hint:** if you run both, dial Beelzebub's per-transform `DamageScale` down
+a notch — a fully-leveled Bloodcraft player already carries large `+%` expertise/
+legacy bonuses, and Beelzebub's transform scale multiplies on top of that baseline.
+
+---
+
+## Shapeshift / transform overlap (🔬 verify in-game)
+
+Both mods write `ReplaceAbilityOnSlotBuff` onto **shapeshift buff entities**:
+
+- **Bloodcraft** — `Utilities/Shapeshifts.cs:ModifyShapeshiftBuff` (:337) writes
+  the bar for its **ExoForms** (prestige-unlocked Evolved-Vampire **Dracula** /
+  Corrupted-Serpent **Morgana** and related), and `BearFormDash` adds a dash to
+  bear form. Bloodcraft's `ShapeshiftSystemPatch` otherwise only dismisses an
+  active familiar on shapeshift.
+- **Beelzebub** — `ShapeshiftAbilityService.ApplyFormLoadout` injects per-form
+  loadouts onto **vanilla** Wolf / Bear / Rat / Spider / Toad / Gargoyle and the
+  **Mounted** saddle bar (mounted = slots 3/6/7 only), at **`Priority = 99`** on the
+  form buff entity. Beelzebub's slot patch explicitly recognizes its own supported
+  forms and the mount buff and injects there; non-supported shapeshift buffs (e.g. a
+  Bloodcraft ExoForm) fall through and are ignored (they aren't a weapon family).
+
+For ordinary vanilla forms vs Bloodcraft ExoForms these target **different buff
+entities**, so they don't collide. **The one place to verify:** Beelzebub's
+`.beelz transform` uses the **Dracula / Morgana** form space — the *same* exoform
+family Bloodcraft's prestige ExoForm uses. They're mutually exclusive in practice
+(one active form at a time), but confirm in-game that triggering a Beelzebub
+transform on a character with a Bloodcraft ExoForm unlock doesn't double-stamp the
+same shapeshift buffer. Likewise, a Beelzebub bear-form loadout will override
+Bloodcraft's `BearFormDash` slot.
+
+Recommendation: have players use one mod's transform/shapeshift mechanic at a time.
 
 ---
 
 ## Player-facing collisions (none structural)
 
-### Chat commands — different prefixes
-
-Bloodcraft uses `.bloodcraft` (or `.bc`). Beelzebub uses `.beelz`. The
-underlying VCF dispatcher resolves them independently — no shared command names.
-
-### Verbosity / notifications
-
-Both mods have their own verbosity-per-player tracking. Bloodcraft:
-`.bloodcraft verbosity`. Beelzebub: `.beelz verbosity <silent|summary|verbose>`.
-Independent — players set each separately.
-
-### Persistence
-
-| Mod | Data path |
-|---|---|
-| Bloodcraft | `BepInEx/config/Bloodcraft/PlayerData/<steamId>/*.json` (one file per subsystem) |
-| Beelzebub  | `BepInEx/config/kdpen.Beelzebub/state.json` (single file) |
-
-Zero overlap. Wiping one mod's data doesn't touch the other.
-
-### Transforms
-
-Bloodcraft's exoform shapeshifts (`Buff_General_Shapeshift_Werewolf_Standard`,
-`Buff_General_Shapeshift_Werewolf_VBlood`) are different buff prefabs from
-Beelzebub's transformation carrier (`Buff_VBlood_Ability_Replace` GUID
-1171608023). Two players could in principle stack Beelzebub transform + Bloodcraft
-shapeshift simultaneously — but in practice native shapeshift forms drop on any
-off-form cast, so layering them is pointless. Recommend players pick one mod's
-transform mechanic at a time and ignore the other while it's active.
-
-### Damage scaling
-
-Bloodcraft applies its own damage/stat modifications via `ModifyUnitStatBuff_DOTS`
-on class buffs, blood quality, expertise, etc. Beelzebub's TX6 stat scaling
-(v0.15.0) does the same thing but on a separate carrier buff that only exists
-during a transform. Both stack additively in V Rising's stat resolver — a
-50%-physical-power Bloodcraft expertise bonus PLUS a 50%-physical-power
-Beelzebub transform scale both apply.
-
-**Tuning hint**: if a server runs both mods, dial Beelzebub's `DamageScale`
-values down a notch — a fully-leveled Bloodcraft player with weapon expertise
-already has +X% baseline. Beelzebub scales are multiplied on top of that.
+- **Chat commands:** Bloodcraft `.bloodcraft` / `.bc`, Beelzebub `.beelz` — the VCF
+  dispatcher resolves them independently; no shared names.
+- **Verbosity / notifications:** each mod tracks its own per-player verbosity
+  (`.bloodcraft verbosity` vs `.beelz verbosity`). Independent.
+- **Persistence:** Bloodcraft → `BepInEx/config/Bloodcraft/PlayerData/<steamId>/*.json`;
+  Beelzebub → `BepInEx/config/kdpen.Beelzebub/state.json`. Zero overlap — wiping one
+  mod's data doesn't touch the other.
+- **Logs:** both write to the shared `BepInEx/LogOutput.log`; each prefixes its own
+  lines (`[Beelz…]` vs `[Bloodcraft]`).
 
 ---
 
 ## Things that look like conflicts but aren't
 
-- **"Both mods log similar `[BeelzAUDIT]` / `[Bloodcraft]` lines"** — they
-  write to the same `BepInEx/LogOutput.log` because that's the shared log
-  sink. Each mod's prefix on its log lines disambiguates.
-- **"My slot 3 sometimes shows the wrong ability"** — this is the
-  Bloodcraft/Beelzebub slot-3 contest. Pick one and disable the other's
-  binding for that slot per the recommendations above.
-- **"Beelzebub transform overrides Bloodcraft class spells"** — by design,
-  v0.14.0+. The carrier buff has `Priority = 99`. Class spells return on revert.
+- **"My slot 3 (or 1/4) shows/fires the wrong ability."** That's the contested-slot
+  case in §2. Pick one mod for that slot — flip the Bloodcraft flag.
+- **"Beelzebub transform hides my Bloodcraft class spells."** While transformed,
+  Beelzebub's slot-grant branch early-returns (`ReplaceAbilityOnSlotSystemPatch.cs:97`)
+  and the transform carrier buff (`Priority = 99`) owns the bar. Bloodcraft's
+  class/shift spells return on revert.
+- **"Both mods log similar lines."** Shared log sink; the per-mod prefixes
+  disambiguate.
 
 ---
 
-## Recommended Bloodcraft config flags for cleanest interop
+## Recommended config for cleanest interop
 
-In `BepInEx/config/Bloodcraft.cfg`:
+`BepInEx/config/io.zfolmt.Bloodcraft.cfg`:
 
 ```ini
 [Classes]
-ShiftSlot = false           # if you bind slot 3 via Beelzebub
-UnarmedSlots = false        # if you want unarmed slots 1+4 free for Beelzebub
-
-[Quality]
-# Leave the rest alone — they don't intersect with Beelzebub.
+ShiftSlot    = false   # if you bind slot 3 (R) via Beelzebub
+UnarmedSlots = false   # if you want unarmed slots 1 + 4 free for Beelzebub
+# Leave everything else — leveling, expertise, legacies, familiars, professions
+# don't intersect with Beelzebub.
 ```
 
-In `BepInEx/config/kdpen.Beelzebub.cfg`:
+`BepInEx/config/kdpen.Beelzebub.cfg`:
 
 ```ini
 [Transformation]
-# Leave defaults — Beelzebub's carrier buff handles its own lifecycle.
-Transform_NativeShapeshift_Enabled = false
+# Defaults are fine — the transform carrier buff manages its own lifecycle.
+# If players also use Bloodcraft ExoForms, consider keeping native-shapeshift
+# loadouts off to avoid form overlap:
+Forms_CustomAbilities_Enabled = false
 ```
-
-These two flips give you Beelzebub's full slot stack with Bloodcraft running
-in parallel and never stepping on it. The rest of Bloodcraft (leveling,
-expertise, familiars, etc.) runs unmodified.
 
 ---
 
-## What's NOT supported as cross-mod feature
+## What's NOT a cross-mod feature
 
-Beelzebub doesn't read any Bloodcraft data. There's no integration where, for
-example, Bloodcraft class abilities become Beelzebub-grantable. If you want
-to use a Bloodcraft class spell as your slot binding, you either use
-Bloodcraft's own slot system (and disable Beelzebub for that slot via
-`.beelz unslot N`) or capture the same ability via Beelzebub's normal kill
-mechanic and bind it that way.
+Beelzebub reads no Bloodcraft data and vice-versa. There's no integration where a
+Bloodcraft class spell becomes Beelzebub-grantable (or the reverse). To use a
+Bloodcraft class spell in a slot, use Bloodcraft's own slot system (and
+`.beelz unslot N` to free that slot in Beelzebub); to use it as a Beelzebub bind,
+capture the same ability via Beelzebub's kill mechanic. Cross-mod feature
+integration is intentional non-scope — the two compose by each minding its own
+state and respecting the slot resolver.
 
-Cross-mod feature integration is intentional non-scope. Both mods compose by
-each minding their own state and respecting the slot-priority resolver.
+---
+
+## What changed since the v0.15.0 doc
+
+For anyone diffing against the previous revision:
+
+1. **Corrected the slot-tie claim.** The old doc said the resolver does
+   "last-in-wins" and that "Beelzebub wins" deterministically. That reasoning relied
+   on an assumed cross-plugin patch order and an unverified resolver behavior — see
+   §2. A contested equal-priority slot is order-dependent; don't rely on a winner.
+2. **Slots 0 and 7.** Beelzebub now binds primary (0) and ultimate (7). Bloodcraft
+   touches neither — noted for completeness.
+3. **Per-form loadouts (v0.95+) + Mounted form (v0.101).** New shapeshift overlap
+   surface vs Bloodcraft ExoForms / BearFormDash — see the shapeshift section.
+4. **Hotkeys.** `.beelz cast <name>` hotkeys are server storage + BCH UI buttons —
+   no engine-slot or keybind collision with Bloodcraft.
+5. **Grant power scaling default is no-op** (`PlayerScaled`), so no stat double-dip
+   on ordinary granted abilities.

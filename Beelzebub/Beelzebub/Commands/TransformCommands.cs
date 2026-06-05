@@ -433,7 +433,7 @@ internal static class TransformCommands
         Core.Chat.SendEvent(character, $"[BEELZ:event] type=summon u={active.UnitPrefabGuid} ability={def.AbilityGuid}");
     }
 
-    [Command("active", description: "v0.24.1: show your current spell bar with full ability info per slot (name, school, cooldown, description). Useful for transforms since V Rising's action-bar tooltip can't render NPC ability text. Usage: .beelz active")]
+    [Command("active", description: "Show your current spell bar with full ability info per slot (name, school, cooldown, description). Useful for transforms since V Rising's action-bar tooltip can't render NPC ability text. Usage: .beelz active")]
     public static void Active(ChatCommandContext ctx)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
@@ -492,7 +492,7 @@ internal static class TransformCommands
         ctx.Reply($"  {slotName}: {title}{school}{cd}{warning}");
     }
 
-    [Command("tp", description: "v0.23.12: shortcut to stash summons before using a waygate or bat-form. Equivalent to `.beelz summons stash`. Summons auto-restore at your destination via PlayerTeleportSystem.")]
+    [Command("tp", description: "Shortcut to stash summons before using a waygate or bat-form. Equivalent to `.beelz summons stash`. Summons auto-restore at your destination via PlayerTeleportSystem.")]
     public static void Tp(ChatCommandContext ctx)
     {
         Summons(ctx, "stash");
@@ -662,7 +662,7 @@ internal static class TransformCommands
         }
     }
 
-    [Command("catalog", description: "Curated boss-kit reference — every curated boss V-Blood with its tier/difficulty. NOTE: only Dracula & Morgana transform in this version; every other unit's kit is collected as abilities (see .beelz bestiary). Usage: .beelz catalog [page]. Sorted by tier ascending. 10 per page.")]
+    [Command("catalog", description: "Curated boss-kit reference — every curated boss V-Blood with its tier/difficulty. NOTE: a few units (Dracula, Morgana, Werewolf, Golem, Gargoyle) can be transformed into; every other unit's kit is collected as abilities (see .beelz bestiary). Usage: .beelz catalog [page]. Sorted by tier ascending. 10 per page.")]
     public static void Catalog(ChatCommandContext ctx, int page = 0)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }

@@ -797,6 +797,218 @@ internal static class TransformBuffService
     }
 
     /// <summary>
+    /// v0.120.0 — DEEP FIX for the engine-level modification LEAK behind the "bar stuck on a
+    /// creature kit that survives relog, respawn, resetbar, rebuildslots and clearslotmods" case.
+    ///
+    /// Root cause (confirmed from a live server log): the stuck ability is NOT a live override
+    /// source, NOT the slot's base value, and NOT an active transform — it is a deep STACK of
+    /// orphaned modifications on the slot's <c>AbilityGroupSlot.GroupGuid</c> (a ModifiablePrefabGUID)
+    /// inside the global <c>ProjectM.ModificationsRegistry</c>. The form/carrier buffs that wrote
+    /// those modifications were destroyed in a PRIOR session, so nothing remains to remove them; the
+    /// engine compresses them on load (<c>[CompressModificationIdsOnLoadSystem]</c>) but never drops
+    /// them, and the slot keeps resolving to a buried Werewolf/etc. modification.
+    ///
+    /// Why every earlier recovery failed:
+    ///   * <c>clearslotmods</c> clears the per-slot-entity <c>AbilityGroupSlotModificationBuffer</c> —
+    ///     the WRONG structure; the leak lives in the global registry, not that buffer (it finds 0).
+    ///   * <c>ForceResetAbilitySlots</c>/<c>respawn</c> push <c>ModifyAbilityGroupOnSlot(..,Empty)</c>,
+    ///     which ADDS another modification on top of the stack rather than removing the buried ones.
+    ///
+    /// The fix uses the engine's OWN registry-aware removers (no generic IL2CPP calls):
+    ///   1) Dump each slot's modifications via <c>GetFormattedEntityModificationsMessage</c> (the same
+    ///      formatter the engine logs), parse out every modification id, and pop each with
+    ///      <c>ServerGameManager.RemoveAbilityGroupModificationOnSlot</c> — the exact inverse of the
+    ///      add path, so references are fixed correctly.
+    ///   2) Sweep any remaining orphaned-source modifications with
+    ///      <c>ModificationsRegistry.ClearLooseSourceModifications</c>.
+    /// Before/after dumps are logged per slot so a single test run reveals exactly what cleared.
+    /// Returns (slotsScanned, modsRemovedById, looseCleared, slotsForced).
+    /// </summary>
+    public static (int scanned, int removedById, int sourcesDestroyed, int forced) PurgeAbilitySlotModifications(Entity character)
+    {
+        if (!character.Exists() || !Core.EntityManager.HasBuffer<AbilityGroupSlotBuffer>(character))
+            return (0, 0, 0, 0);
+
+        var sgm = Core.ServerGameManager;
+        var reg = sgm.Modifications;
+        var em = Core.EntityManager;
+
+        // Snapshot (slotIndex -> slotEntity) BEFORE touching the registry — removing modifications can
+        // cause structural changes that invalidate the character's live AbilityGroupSlotBuffer handle.
+        var slots = new List<(int idx, Entity slot)>();
+        var buf = em.GetBuffer<AbilityGroupSlotBuffer>(character);
+        for (int i = 0; i < buf.Length; i++)
+            slots.Add((i, buf[i].GroupSlotEntity._Entity));
+        var slotEntitySet = new HashSet<Entity>();
+        foreach (var (_, se) in slots) if (se != Entity.Null) slotEntitySet.Add(se);
+
+        int scanned = 0, removedById = 0;
+        var hadMods = new List<(int idx, Entity slot)>();
+        var sourcesToDestroy = new HashSet<Entity>();
+
+        // PASS 1 — for each slot whose AbilityGroupSlot.GroupGuid carries modifications, log the BEFORE
+        // dump, pop each GroupGuid modification by id via the engine's own slot-remover, and remember the
+        // modification SOURCE entities (for the destroy backstop below). Slots with no mods are skipped
+        // (296 slots exist; only the active bar leaks) to keep the log readable.
+        foreach (var (idx, slot) in slots)
+        {
+            if (slot == Entity.Null || !slot.Exists()) continue;
+            scanned++;
+            string before = FormatEntityModifications(reg, em, slot);
+            if (string.IsNullOrEmpty(before) || !GroupGuidStillModified(before)) continue;
+
+            hadMods.Add((idx, slot));
+            Core.Log.LogInfo($"[Beelz PURGE] slot[{idx}] {slot} BEFORE:\n{before}");
+
+            foreach (int id in ParseGroupGuidModIds(before))
+            {
+                try { sgm.RemoveAbilityGroupModificationOnSlot(character, idx, ModificationId.NewId(id)); removedById++; }
+                catch (Exception ex) { Core.Log.LogWarning($"[Beelz PURGE] slot[{idx}] remove ModId {id} failed: {ex.Message}"); }
+            }
+            foreach (Entity src in ParseGroupGuidSources(before))
+                if (src != Entity.Null && src != character && !slotEntitySet.Contains(src)) sourcesToDestroy.Add(src);
+        }
+
+        // PASS 2 — DESTROY BACKSTOP. If the by-id removal didn't clear a slot's GroupGuid override (the
+        // form-injected mods aren't always poppable by the slot-remover), destroy the modification SOURCE
+        // entities. V Rising self-heals this: when a modification source is destroyed the engine logs
+        // "Clearing entity ... which is a modification source ... the modifiable value will be patched"
+        // and reverts the slot to base — confirmed against a live server. We only ever destroy SOURCE
+        // entities (deferred DestroyUtility), never a slot entity (that path is the relog crash).
+        int sourcesDestroyed = 0;
+        bool anySurvived = false;
+        foreach (var (idx, slot) in hadMods)
+        {
+            if (!slot.Exists()) continue;
+            string mid = FormatEntityModifications(reg, em, slot);
+            if (GroupGuidStillModified(mid))
+            {
+                anySurvived = true;
+                foreach (Entity src in ParseGroupGuidSources(mid))
+                    if (src != Entity.Null && src != character && !slotEntitySet.Contains(src)) sourcesToDestroy.Add(src);
+            }
+        }
+        if (anySurvived)
+        {
+            foreach (Entity src in sourcesToDestroy)
+            {
+                if (!src.Exists() || src.Has<DestroyTag>()) continue;
+                if (slotEntitySet.Contains(src) || src == character) continue;
+                try
+                {
+                    string sn = src.GetPrefabGuid().GetPrefabName();
+                    DestroyUtility.Destroy(em, src, DestroyDebugReason.TryRemoveBuff);
+                    sourcesDestroyed++;
+                    Core.Log.LogInfo($"[Beelz PURGE] destroyed modification source {src} ({(string.IsNullOrEmpty(sn) ? "no prefab" : sn)}); engine will clean its mods + patch the slot(s).");
+                }
+                catch (Exception ex) { Core.Log.LogWarning($"[Beelz PURGE] destroy source {src} failed: {ex.Message}"); }
+            }
+        }
+
+        // Authoritative empty-push + re-resolve so the cleaned bar rebuilds from equipment + spellbook.
+        int forced = ForceResetAbilitySlots(character);
+        if (Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+
+        // PASS 3 — AFTER dump for the slots that had mods (source-destroy patches on a later tick, so a
+        // surviving line here is expected; what matters is the slot resolving to base once the engine reaps).
+        foreach (var (idx, slot) in hadMods)
+        {
+            if (!slot.Exists()) continue;
+            string after = FormatEntityModifications(reg, em, slot);
+            Core.Log.LogInfo($"[Beelz PURGE] slot[{idx}] {slot} AFTER:\n{(GroupGuidStillModified(after) ? after : "(GroupGuid reverted to base)")}");
+        }
+
+        Core.Log.LogInfo($"[Beelz PURGE] {character}: scanned {scanned} slot(s), {hadMods.Count} had GroupGuid mods, removed {removedById} by id, destroyed {sourcesDestroyed} source(s), force-cleared {forced} slot(s).");
+        return (scanned, removedById, sourcesDestroyed, forced);
+    }
+
+    /// <summary>
+    /// Best-effort wrapper around the engine's <c>ModificationsRegistry.GetFormattedEntityModificationsMessage</c>
+    /// — returns the human-readable per-entity modification dump (or "" on any failure). Used by
+    /// <see cref="PurgeAbilitySlotModifications"/> for both diagnostics and id/source harvesting.
+    /// </summary>
+    static string FormatEntityModifications(ModificationsRegistry reg, EntityManager em, Entity entity)
+    {
+        try
+        {
+            var sb = new Il2CppSystem.Text.StringBuilder();
+            reg.GetFormattedEntityModificationsMessage(sb, em, entity);
+            return sb.ToString();
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogWarning($"[Beelz PURGE] FormatEntityModifications({entity}) failed: {ex.Message}");
+            return "";
+        }
+    }
+
+    // The engine formatter prints, per modifiable field:
+    //   - AbilityGroupSlot.GroupGuid: PrefabGuid(X) (Base: PrefabGuid(Y))
+    //       [ModId 5066] Set PrefabGuid(Z) from Entity(326806:1) (No PrefabGUID, Entity Name '')
+    // We only ever touch the GroupGuid field (the ability override) — never CopyCooldown / SpellModsSource.
+    static readonly System.Text.RegularExpressions.Regex _modIdRx =
+        new(@"\[ModId\s+(\d+)\]", System.Text.RegularExpressions.RegexOptions.Compiled);
+    static readonly System.Text.RegularExpressions.Regex _srcRx =
+        new(@"from\s+Entity\((\d+):(\d+)\)", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>True if the dump shows at least one modification under the AbilityGroupSlot.GroupGuid field.</summary>
+    static bool GroupGuidStillModified(string dump)
+    {
+        if (string.IsNullOrEmpty(dump)) return false;
+        bool inGroupGuid = false;
+        foreach (string raw in dump.Split('\n'))
+        {
+            string t = raw.TrimStart();
+            if (t.StartsWith("- AbilityGroupSlot.", StringComparison.Ordinal))
+                inGroupGuid = t.StartsWith("- AbilityGroupSlot.GroupGuid", StringComparison.Ordinal);
+            else if (inGroupGuid && t.StartsWith("[ModId", StringComparison.Ordinal))
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>Parse the modification ids under the AbilityGroupSlot.GroupGuid field only.</summary>
+    static List<int> ParseGroupGuidModIds(string dump)
+    {
+        var ids = new List<int>();
+        if (string.IsNullOrEmpty(dump)) return ids;
+        bool inGroupGuid = false;
+        foreach (string raw in dump.Split('\n'))
+        {
+            string t = raw.TrimStart();
+            if (t.StartsWith("- AbilityGroupSlot.", StringComparison.Ordinal))
+                inGroupGuid = t.StartsWith("- AbilityGroupSlot.GroupGuid", StringComparison.Ordinal);
+            else if (inGroupGuid)
+            {
+                var m = _modIdRx.Match(t);
+                if (m.Success && int.TryParse(m.Groups[1].Value, out int id) && id > 0) ids.Add(id);
+            }
+        }
+        return ids;
+    }
+
+    /// <summary>Parse the modification SOURCE entities under the AbilityGroupSlot.GroupGuid field only.</summary>
+    static List<Entity> ParseGroupGuidSources(string dump)
+    {
+        var list = new List<Entity>();
+        if (string.IsNullOrEmpty(dump)) return list;
+        bool inGroupGuid = false;
+        foreach (string raw in dump.Split('\n'))
+        {
+            string t = raw.TrimStart();
+            if (t.StartsWith("- AbilityGroupSlot.", StringComparison.Ordinal))
+                inGroupGuid = t.StartsWith("- AbilityGroupSlot.GroupGuid", StringComparison.Ordinal);
+            else if (inGroupGuid)
+            {
+                var m = _srcRx.Match(t);
+                if (m.Success && int.TryParse(m.Groups[1].Value, out int eidx) && int.TryParse(m.Groups[2].Value, out int ever))
+                    list.Add(new Entity { Index = eidx, Version = ever });
+            }
+        }
+        return list;
+    }
+
+    /// <summary>
     /// v0.43.14: force V Rising to REBUILD the player's ability bar from scratch. The engine
     /// builds the resolved bar once, gated by the enableable <c>AbilityBarInitializationState</c>
     /// tag (ProjectM). A shapeshift triggers a rebuild for the form; if the player left the form

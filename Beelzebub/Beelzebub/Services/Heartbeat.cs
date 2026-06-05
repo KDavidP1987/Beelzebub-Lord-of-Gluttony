@@ -79,6 +79,11 @@ internal static class Heartbeat
         // v0.88.0: periodic server-wide leaderboard broadcast (no-op unless enabled + interval elapsed).
         try { BroadcastService.Tick(); }
         catch (Exception ex) { Core.Log.LogError($"[Beelz] Heartbeat BroadcastService.Tick failed: {ex}"); }
+
+        // v0.101.0: inject the Mounted saddle loadout for players who just got on a horse (mounting fires
+        // no EnterShapeshiftEvent, so this scan is how the Mounted form is detected). No-op when disabled.
+        try { ShapeshiftAbilityService.TickMountedForms(); }
+        catch (Exception ex) { Core.Log.LogError($"[Beelz] Heartbeat TickMountedForms failed: {ex}"); }
     }
 }
 

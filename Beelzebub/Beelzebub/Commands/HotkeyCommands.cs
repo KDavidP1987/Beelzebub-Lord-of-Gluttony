@@ -30,8 +30,8 @@ internal static class HotkeyCommands
         ctx.Reply("Cast a bound hotkey with .beelz cast <name>. BloodCraftHub can surface these as on-screen buttons.");
     }
 
-    [Command("set", description: "Bind a hotkey name to a captured ability by index. Usage: .beelz hotkey set <name> <index>")]
-    public static void Set(ChatCommandContext ctx, string name, int index)
+    [Command("set", description: "Bind a hotkey name to a captured ability. Usage: .beelz hotkey set <name> <index|ability ID> (the number is a .beelz list index when in range, otherwise the ability's stable ID).")]
+    public static void Set(ChatCommandContext ctx, string name, int indexOrId)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
         if (!Beelzebub.Config.Settings.Hotkeys_Enabled.Value)
@@ -47,11 +47,8 @@ internal static class HotkeyCommands
 
         ulong steamId = ctx.Event.SenderCharacterEntity.GetSteamId();
         var captured = Core.AbilityRegistry.ListFor(steamId);
-        if (index < 0 || index >= captured.Count)
-        {
-            ctx.Reply($"Index {index} out of range (valid: 0-{captured.Count - 1}). Use .beelz list to see indices.");
-            return;
-        }
+        int index = BeelzCommands.ResolveCapturedSelector(captured, indexOrId, out string selErr);   // v0.117.0: index OR stable ID
+        if (index < 0) { ctx.Reply(selErr); return; }
 
         int max = Beelzebub.Config.Settings.Hotkeys_MaxPerPlayer.Value;
         int existing = Core.AbilityRegistry.HotkeyCount(steamId);

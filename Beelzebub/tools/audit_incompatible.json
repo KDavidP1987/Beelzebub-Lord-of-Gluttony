@@ -1,0 +1,67 @@
+{
+ "confirmed": [
+  {
+   "guid": "1583944483",
+   "name": "Caminhada de Névoa",
+   "prefab": "AB_Undead_BishopOfShadows_EternalDarkness_AbilityGroup",
+   "reason": "AnimRig: phase ability bound to NPC animation rig"
+  },
+  {
+   "guid": "1325722355",
+   "name": "Mist Walk",
+   "prefab": "AB_Undead_BishopOfShadows_ShadowStep_AbilityGroup",
+   "reason": "AnimRig: phase ability bound to NPC animation rig"
+  },
+  {
+   "guid": "-664569083",
+   "name": "Undead Infiltrator Shadow Step",
+   "prefab": "AB_Undead_Infiltrator_ShadowStep_AbilityGroup",
+   "reason": "AnimRig: phase ability bound to NPC animation rig"
+  },
+  {
+   "guid": "-1125894381",
+   "name": "Mist Walk",
+   "prefab": "AB_Undead_Priest_Elite_Teleport_Travel_AbilityGroup",
+   "reason": "AnimRig: travel/dash sequence bound to NPC animation rig"
+  },
+  {
+   "guid": "-22490832",
+   "name": "Mist Walk",
+   "prefab": "AB_Undead_ShadowSoldier_GateBoss_ShadowStep_AbilityGroup",
+   "reason": "AnimRig: phase ability bound to NPC animation rig"
+  }
+ ],
+ "candidates_animrig": [],
+ "candidates_phase": [
+  {
+   "guid": "109607953",
+   "name": "VHunter Castle Man Whip AoEChange Phase",
+   "prefab": "AB_VHunter_CastleMan_WhipAoEChangePhase_AbilityGroup"
+  },
+  {
+   "guid": "-1329409686",
+   "name": "Blackfang Valyr Phase Dual Bomber Duel Quake",
+   "prefab": "AB_Blackfang_Valyr_PhaseDual_BomberDuelQuake_AbilityGroup"
+  },
+  {
+   "guid": "-1015932492",
+   "name": "Blackfang Valyr Phase Dual Chase Target Buff",
+   "prefab": "AB_Blackfang_Valyr_PhaseDual_ChaseTargetBuff_AbilityGroup"
+  },
+  {
+   "guid": "68363809",
+   "name": "Blackfang Valyr Phase Dual Melee Attack",
+   "prefab": "AB_Blackfang_Valyr_PhaseDual_MeleeAttack_AbilityGroup"
+  },
+  {
+   "guid": "-9078612",
+   "name": "Blackfang Valyr Phase Dual Seismic Jump",
+   "prefab": "AB_Blackfang_Valyr_PhaseDual_SeismicJump_AbilityGroup"
+  },
+  {
+   "guid": "140047325",
+   "name": "Blackfang Valyr Phase Dual Tackle",
+   "prefab": "AB_Blackfang_Valyr_PhaseDual_Tackle_AbilityGroup"
+  }
+ ]
+}

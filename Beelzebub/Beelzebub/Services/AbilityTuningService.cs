@@ -62,7 +62,7 @@ internal static class AbilityTuningService
                     && e.FreeMoveAfterSeconds == null && e.InterruptOnHit == null   // v0.87.0
                     && e.CooldownSeconds == null && e.MaxRangeOverride == null
                     && e.ChargesMax == null && e.ChargeTimeSeconds == null
-                    && e.AoeRadius == null && e.ProjectileSpeed == null
+                    && e.AoeRadius == null && e.ProjectileSpeed == null && e.LeapHeight == null
                     && e.EffectDurationSeconds == null && e.HealingMultiplier == null
                     && e.ForceTimeoutSeconds == null) continue;
                 tuned.Add((Stem(kv.Key), e));
@@ -113,6 +113,20 @@ internal static class AbilityTuningService
             Core.Log.LogInfo($"[Beelz TUNE] applied tuning to {prefabsTuned} prefab(s) from {tuned.Count} curated entry(ies)"
                 + (globalMinCd > 0f ? $" + global min-cooldown {globalMinCd:F2}s" : "") + ".");
         return prefabsTuned;
+    }
+
+    /// <summary>
+    /// v0.120.0: restore every tuned prefab to its shipped baseline, THEN re-apply the current rules — so a
+    /// reload/edit is fully idempotent. <see cref="ApplyAll"/> alone only WRITES fields that still have a value,
+    /// so LOWERING or CLEARING a tuned field left the previously-baked value in place until a server restart
+    /// (the "reload only works after a restart" report). Restoring first computes the net result from baseline
+    /// every time, so decreases and clears take effect live. Use this for admin reload + single-edit re-apply;
+    /// at init <see cref="ApplyAll"/> is enough (prefabs are already fresh, nothing cached to restore).
+    /// </summary>
+    public static int ReapplyAll()
+    {
+        RestoreAll();        // back to shipped baseline (no-op for anything never tuned this session)
+        return ApplyAll();   // re-bake the current rules from that clean baseline
     }
 
     /// <summary>Strip a trailing group suffix so a group-keyed entry matches its cast prefabs.</summary>
@@ -220,7 +234,7 @@ internal static class AbilityTuningService
         // v0.73.0: MaxRangeOverride also walks downstream — for a projectile spell the GROUP's
         // AbilityGroupInfo.MaxRange (set above) is only the aim/cast clamp; the projectile's own travel
         // distance lives on Projectile.Range on the spawned projectile, reached by the walker.
-        if ((entry.AoeRadius.HasValue || entry.ProjectileSpeed.HasValue || entry.MaxRangeOverride.HasValue
+        if ((entry.AoeRadius.HasValue || entry.ProjectileSpeed.HasValue || entry.LeapHeight.HasValue || entry.MaxRangeOverride.HasValue
              || entry.EffectDurationSeconds.HasValue || entry.HealingMultiplier.HasValue
              || entry.ForceTimeoutSeconds.HasValue
              || entry.FreeMoveAfterSeconds.HasValue)   // v0.93.0: freelymove also clears MovementImpair on the spawned CHANNEL buff (the firing-phase root) — that's a downstream write, so the walker must run for it
@@ -320,6 +334,8 @@ internal static class AbilityTuningService
     /// </summary>
     static void ApplyDownstream(Entity groupPrefab, string prefabName, AbilityRules.AbilityEntry entry, StringBuilder log, ref bool changed)
     {
+        var visited = new HashSet<int>();   // prefabs already EDITED (near + deep) — never double-edit
+        var nearRoots = new List<int>();    // near reach = roots for the guarded deeper-reach
         try
         {
             var starts = Core.EntityManager.GetBuffer<AbilityGroupStartAbilitiesBuffer>(groupPrefab);
@@ -327,20 +343,76 @@ internal static class AbilityTuningService
             {
                 if (!Core.PrefabCollectionSystem._PrefabLookupMap.TryGetValue(starts[i].PrefabGUID, out Entity cast) || !cast.Exists()) continue;
                 // Buff/debuff duration + healing can hang off the CAST itself, not only the spawned hit.
-                WriteSpawnedFields(cast, starts[i].PrefabGUID._Value, prefabName, entry, log, ref changed);
+                int cg = starts[i].PrefabGUID._Value;
+                if (visited.Add(cg)) WriteSpawnedFields(cast, cg, prefabName, entry, log, ref changed);
+                nearRoots.Add(cg);
                 if (!Core.EntityManager.HasBuffer<AbilitySpawnPrefabOnCast>(cast)) continue;
                 var spawns = Core.EntityManager.GetBuffer<AbilitySpawnPrefabOnCast>(cast);
                 for (int j = 0; j < spawns.Length; j++)
                 {
                     if (!Core.PrefabCollectionSystem._PrefabLookupMap.TryGetValue(spawns[j].SpawnPrefab, out Entity sp) || !sp.Exists()) continue;
-                    WriteSpawnedFields(sp, spawns[j].SpawnPrefab._Value, prefabName, entry, log, ref changed);
+                    int sg = spawns[j].SpawnPrefab._Value;
+                    if (visited.Add(sg)) WriteSpawnedFields(sp, sg, prefabName, entry, log, ref changed);
+                    nearRoots.Add(sg);
                 }
             }
+            // v0.108.0: surgical deeper-reach for AoE-DELIVERED effects (Nun-style heals that land several
+            // hops down via SpawnPrefabOnDestroy). ONLY the ability-specific-component fields (aoe/projspeed/
+            // range/healing) and ONLY onto prefabs named AB_<thisAbility>_* — shared generic buffs
+            // (Buff_General_*) are a HARD boundary, never edited or crossed. See ADMIN_COMMANDS_AUDIT.md §A.
+            if (entry.HealingMultiplier.HasValue || entry.AoeRadius.HasValue
+                || entry.ProjectileSpeed.HasValue || entry.MaxRangeOverride.HasValue || entry.LeapHeight.HasValue)
+                DeepFollowAbilitySpecific(nearRoots, Stem(prefabName), prefabName, entry, log, ref changed, visited);
         }
         catch (Exception ex) { Core.Log.LogWarning($"[Beelz TUNE] downstream walk failed on {prefabName}: {ex.Message}"); }
         // v0.85.0: now that the spawn-prefab buffer walk is finished, apply the deferred force-timeout
         // LifeTime ADDs (structural — unsafe during the walk).
         FlushPendingForceTimeout(prefabName, log, ref changed);
+    }
+
+    /// <summary>
+    /// v0.108.0: GUARDED deeper-reach. From the near spawns, follow the AoE-landing / buff-apply spawn edges
+    /// (SpawnPrefabOnDestroy, AbilitySpawnPrefabOnCast, ApplyBuffOnGameplayEvent[Buff0]) deeper into the
+    /// chain, writing ONLY the ability-specific-component fields (aoe/projspeed/range/healing — `deepSafe`)
+    /// onto prefabs whose name is <c>AB_&lt;thisAbility&gt;_*</c>. A non-ability-specific prefab (shared
+    /// <c>Buff_General_*</c>, another ability's buff) is a HARD BOUNDARY: never edited AND not crossed — so a
+    /// deep edit can NEVER bleed into a shared buff or another ability. Node-budget bounded; dedup'd against
+    /// the shared <paramref name="visited"/> set so a near-edited prefab isn't touched twice.
+    /// </summary>
+    static void DeepFollowAbilitySpecific(List<int> roots, string stem, string prefabName, AbilityRules.AbilityEntry entry, StringBuilder log, ref bool changed, HashSet<int> visited)
+    {
+        if (string.IsNullOrEmpty(stem)) return;
+        var seen = new HashSet<int>();
+        var queue = new System.Collections.Generic.Queue<int>(roots);
+        int budget = 60;
+        while (queue.Count > 0 && budget-- > 0)
+        {
+            int g = queue.Dequeue();
+            if (!seen.Add(g)) continue;
+            if (!Core.PrefabCollectionSystem._PrefabLookupMap.TryGetValue(new PrefabGUID(g), out Entity e) || !e.Exists()) continue;
+            // STEM GUARD: ability-specific prefabs only are edited AND traversed (the shared-prefab boundary).
+            string nm = new PrefabGUID(g).GetPrefabName() ?? "";
+            bool abilitySpecific = string.Equals(nm, stem, StringComparison.OrdinalIgnoreCase)
+                || nm.StartsWith(stem + "_", StringComparison.OrdinalIgnoreCase);
+            if (!abilitySpecific) continue;
+            if (visited.Add(g))   // not already edited by the near pass
+                WriteSpawnedFields(e, g, prefabName, entry, log, ref changed, deepSafe: true);
+            try
+            {
+                if (e.TryGetComponent<SpawnPrefabOnDestroy>(out var spd)) queue.Enqueue(spd.SpawnPrefab._Value);
+                if (Core.EntityManager.HasBuffer<AbilitySpawnPrefabOnCast>(e))
+                {
+                    var b = Core.EntityManager.GetBuffer<AbilitySpawnPrefabOnCast>(e);
+                    for (int k = 0; k < b.Length; k++) queue.Enqueue(b[k].SpawnPrefab._Value);
+                }
+                if (Core.EntityManager.HasBuffer<ApplyBuffOnGameplayEvent>(e))
+                {
+                    var b = Core.EntityManager.GetBuffer<ApplyBuffOnGameplayEvent>(e);
+                    for (int k = 0; k < b.Length; k++) queue.Enqueue(b[k].Buff0._Value);
+                }
+            }
+            catch (Exception ex) { Core.Log.LogWarning($"[Beelz TUNE] deep-follow hop failed on {prefabName}: {ex.Message}"); }
+        }
     }
 
     /// <summary>v0.85.0: add a LifeTime+Destroy to each indefinite buff queued during the walk, so the
@@ -378,11 +450,13 @@ internal static class AbilityTuningService
     {
         public float? Cooldown, MaxRange, AoeRange, ProjSpeed, ChargeUpTime;
         public float? ProjRange;   // v0.73.0: Projectile.Range (projectile travel distance)
+        public float? TravelHeight; // v0.125.0: TravelBuff.Height (leap/travel apex on the phase buff)
         public float? LifeTime;    // v0.73.0: LifeTime.Duration on a spawned Buff (over-time effect length)
         public bool LifeTimeAdded; // v0.85.0: we ADDED a LifeTime to an indefinite buff (remove it on restore)
         public int? ChargesMax;
         public Il2CppSystem.Nullable_Unboxed<float>[] Durations;   // per ApplyBuffOnGameplayEvent element
         public (float h, float pct, float perSp)[] Heals;          // per HealOnGameplayEvent element
+        public float? HealPerSec;  // v0.120.0: HealingBuff.HealingPerSecond (periodic/AoE/channel heal rate)
         // v0.87.0: cast modifiers — cache so `defaults` can restore them (the v0.46 interrupt/movement
         // writes never cached, so `defaults` couldn't undo them; closed here).
         public InterruptTypes? Interrupt;   // AbilityInterruptData.InterruptTypes
@@ -406,8 +480,15 @@ internal static class AbilityTuningService
         return o;
     }
 
-    /// <summary>Write the downstream shaping fields onto one prefab (cast or spawned) if it carries them.</summary>
-    static void WriteSpawnedFields(Entity sp, int spGuid, string prefabName, AbilityRules.AbilityEntry entry, StringBuilder log, ref bool changed)
+    /// <summary>
+    /// Write the downstream shaping fields onto one prefab (cast or spawned) if it carries them.
+    /// v0.108.0: <paramref name="deepSafe"/>=true (the guarded deeper-reach pass for AoE-delivered effects)
+    /// runs ONLY the ability-specific-component fields (aoe / projspeed / range / healing). It SKIPS the
+    /// LifeTime/duration/forcetimeout/free-move fields, because those components live on SHARED generic buffs
+    /// (Buff_General_*) and editing them deep would bleed across every ability that uses them. See
+    /// docs/ADMIN_COMMANDS_AUDIT.md §A.
+    /// </summary>
+    static void WriteSpawnedFields(Entity sp, int spGuid, string prefabName, AbilityRules.AbilityEntry entry, StringBuilder log, ref bool changed, bool deepSafe = false)
     {
         if (entry.AoeRadius.HasValue && sp.Has<TargetAoE>())
         {
@@ -450,9 +531,25 @@ internal static class AbilityTuningService
             catch (Exception ex) { Core.Log.LogWarning($"[Beelz TUNE] projectile-range write failed on {prefabName}: {ex.Message}"); }
         }
 
+        // v0.125.0: leapheight → TravelBuff.Height on a leap/travel ability's phase buff. Vanilla boss
+        // leaps use a huge apex (~250) that flings a player caster sky-high; lowering it keeps them grounded.
+        // Ability-specific component (lives on AB_<ability>_Phase/_Travel), so safe in the deep pass too.
+        if (entry.LeapHeight.HasValue && sp.Has<TravelBuff>())
+        {
+            try
+            {
+                if (sp.TryGetComponent<TravelBuff>(out var tbCur)) CaptureOriginal(spGuid).TravelHeight ??= tbCur.Height;
+                float h = entry.LeapHeight.Value;
+                sp.With((ref TravelBuff t) => System.Runtime.CompilerServices.Unsafe.AsRef(in t.Height) = h);
+                log.Append($" leapheight={h:F1}");
+                changed = true;
+            }
+            catch (Exception ex) { Core.Log.LogWarning($"[Beelz TUNE] leap-height write failed on {prefabName}: {ex.Message}"); }
+        }
+
         // v0.68.0 (Stage 2b): ABSOLUTE override of applied buff/debuff durations. ApplyBuffOnGameplayEvent
         // is a BUFFER; OverrideDuration is a Nullable<float>. Set, not multiplied → idempotent.
-        if (entry.EffectDurationSeconds.HasValue && Core.EntityManager.HasBuffer<ApplyBuffOnGameplayEvent>(sp))
+        if (!deepSafe && entry.EffectDurationSeconds.HasValue && Core.EntityManager.HasBuffer<ApplyBuffOnGameplayEvent>(sp))
         {
             try
             {
@@ -483,7 +580,7 @@ internal static class AbilityTuningService
         // LifeTime on spawned prefabs that are BUFFS. Guarded to Buff prefabs so we never touch a
         // projectile's flight LifeTime. (This does NOT change an ability's cast/channel time — that's the
         // cast-time data, deliberately left alone so the player isn't re-rooted.)
-        if (entry.EffectDurationSeconds.HasValue && sp.Has<Buff>() && sp.Has<LifeTime>())
+        if (!deepSafe && entry.EffectDurationSeconds.HasValue && sp.Has<Buff>() && sp.Has<LifeTime>())
         {
             try
             {
@@ -496,27 +593,27 @@ internal static class AbilityTuningService
             catch (Exception ex) { Core.Log.LogWarning($"[Beelz TUNE] lifetime write failed on {prefabName}: {ex.Message}"); }
         }
 
-        // v0.85.0: FORCE-TIMEOUT — make an otherwise-INDEFINITE buff this ability spawns expire after a
-        // strict number of seconds. If the buff already has a LifeTime we just set it (idempotent); if it
-        // has NONE (the indefinite case `duration` can't fix), we QUEUE adding a LifeTime+Destroy and flush
-        // it after the walk (AddComponent is a structural change that would invalidate the buffer walk).
-        // Buff-only, so a projectile's flight time is never touched.
-        if (entry.ForceTimeoutSeconds.HasValue && entry.ForceTimeoutSeconds.Value > 0f && sp.Has<Buff>())
+        // v0.108.0 FORCE-TIMEOUT SPLIT (admin-tester report): forcetimeout must CLEANLY CANCEL an otherwise-
+        // INDEFINITE effect after N seconds — NOT compress a finite buff's playback. The old code SET the
+        // LifeTime on a buff that already HAD one, which sped up timing-driving buffs (the "alters the speed"
+        // complaint). Now we ONLY add a LifeTime+Destroy to a buff with NO existing LifeTime (genuinely
+        // indefinite — the case `duration` can't fix); a buff that already has a finite LifeTime is left
+        // ALONE (it times out on its own — use `duration` to change its length). Buff-only; near-pass only
+        // (deepSafe skips it so we never alter a shared buff's lifetime).
+        if (!deepSafe && entry.ForceTimeoutSeconds.HasValue && entry.ForceTimeoutSeconds.Value > 0f && sp.Has<Buff>())
         {
             try
             {
                 float ft = entry.ForceTimeoutSeconds.Value;
                 if (sp.Has<LifeTime>())
                 {
-                    if (sp.TryGetComponent<LifeTime>(out var ltCur)) CaptureOriginal(spGuid).LifeTime ??= ltCur.Duration;
-                    sp.With((ref LifeTime lt) => System.Runtime.CompilerServices.Unsafe.AsRef(in lt.Duration) = ft);
-                    log.Append($" forcetimeout={ft:F1}s");
-                    changed = true;
+                    log.Append(" forcetimeout=skip(has-lifetime; use duration)");   // never compress a finite buff
                 }
                 else
                 {
                     CaptureOriginal(spGuid).LifeTimeAdded = true;   // remember we added it (for restore)
                     _pendingForceTimeoutAdd.Add((spGuid, ft));      // deferred structural add (see flush)
+                    log.Append($" forcetimeout+={ft:F1}s(cancel)");
                     changed = true;
                 }
             }
@@ -529,7 +626,7 @@ internal static class AbilityTuningService
         // lasts the buff's whole lifetime (component dump v0.89.1 confirmed this is the real root, not the
         // cast component we were editing). So when freelymove is set, also clear the MovementImpair bit on
         // spawned buffs in the chain — letting the player move while the ability runs. Cached for `defaults`.
-        if (entry.FreeMoveAfterSeconds.HasValue && sp.Has<BuffModificationFlagData>())
+        if (!deepSafe && entry.FreeMoveAfterSeconds.HasValue && sp.Has<BuffModificationFlagData>())
         {
             try
             {
@@ -577,6 +674,30 @@ internal static class AbilityTuningService
             }
             catch (Exception ex) { Core.Log.LogWarning($"[Beelz TUNE] healing write failed on {prefabName}: {ex.Message}"); }
         }
+
+        // v0.120.0: periodic / AoE / channel heals deliver via HealingBuff.HealingPerSecond (a per-second
+        // aura tick), NOT HealOnGameplayEvent (instant/event heals). So `healing` previously had no effect on
+        // healing AURAS (the Nun AoE heal, healing channels) — only instant heals scaled. Multiply the
+        // per-second rate too, from the cached ORIGINAL so reloads/`defaults` don't compound. Rides the same
+        // deep-follow walk (HealingMultiplier is a deep-safe field), so an ability-specific heal aura several
+        // hops down is reached; shared Buff_General_* auras remain a hard boundary (stem guard), never edited.
+        if (entry.HealingMultiplier.HasValue && sp.Has<HealingBuff>())
+        {
+            try
+            {
+                float m = entry.HealingMultiplier.Value;
+                if (sp.TryGetComponent<HealingBuff>(out var hbCur))
+                {
+                    var o = CaptureOriginal(spGuid);
+                    o.HealPerSec ??= hbCur.HealingPerSecond;
+                    float baseRate = o.HealPerSec.Value;
+                    sp.With((ref HealingBuff h) => System.Runtime.CompilerServices.Unsafe.AsRef(in h.HealingPerSecond) = baseRate * m);
+                    log.Append($" healps x{m:F2}");
+                    changed = true;
+                }
+            }
+            catch (Exception ex) { Core.Log.LogWarning($"[Beelz TUNE] healingbuff write failed on {prefabName}: {ex.Message}"); }
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -604,10 +725,27 @@ internal static class AbilityTuningService
         if (string.IsNullOrEmpty(key)) return 0;
         string stem = Stem(key);
         int n = 0;
+        var done = new HashSet<int>();
+        // 1. structural reach (group + casts + direct spawns).
         foreach (int g in CollectAbilityPrefabGuids(stem))
-            if (_originals.TryGetValue(g, out var o)
+            if (done.Add(g) && _originals.TryGetValue(g, out var o)
                 && Core.PrefabCollectionSystem._PrefabLookupMap.TryGetValue(new PrefabGUID(g), out Entity p) && p.Exists())
             { RestorePrefab(p, o); n++; }
+        // 2. v0.109.0: ALSO restore any CACHED prefab whose name is AB_<stem>_* — covers the v0.108
+        //    deep-follow targets (SpawnPrefabOnDestroy landings etc.) that CollectAbilityPrefabGuids' 2-hop
+        //    walk + spawnable-name map can miss, which otherwise leaked a deep aoe/healing/projspeed edit
+        //    past `.beelz admin ability <id> defaults`. The deep-follow only edits ability-specific (stem)
+        //    prefabs, so the name match is a sound, conservative restore key.
+        foreach (var kv in _originals)
+        {
+            int g = kv.Key;
+            if (done.Contains(g)) continue;
+            string nm = new PrefabGUID(g).GetPrefabName() ?? "";
+            if (!(string.Equals(nm, stem, StringComparison.OrdinalIgnoreCase)
+                  || nm.StartsWith(stem + "_", StringComparison.OrdinalIgnoreCase))) continue;
+            if (Core.PrefabCollectionSystem._PrefabLookupMap.TryGetValue(new PrefabGUID(g), out Entity p) && p.Exists())
+            { RestorePrefab(p, kv.Value); done.Add(g); n++; }
+        }
         return n;
     }
 
@@ -679,6 +817,8 @@ internal static class AbilityTuningService
                 prefab.With((ref TargetAoE a) => System.Runtime.CompilerServices.Unsafe.AsRef(in a.MaxRange) = o.AoeRange.Value);
             if (o.ProjSpeed.HasValue && prefab.Has<Projectile>())
                 prefab.With((ref Projectile p) => System.Runtime.CompilerServices.Unsafe.AsRef(in p.Speed) = o.ProjSpeed.Value);
+            if (o.TravelHeight.HasValue && prefab.Has<TravelBuff>())
+                prefab.With((ref TravelBuff t) => System.Runtime.CompilerServices.Unsafe.AsRef(in t.Height) = o.TravelHeight.Value);
             if (o.ProjRange.HasValue && prefab.Has<Projectile>())
                 prefab.With((ref Projectile p) => System.Runtime.CompilerServices.Unsafe.AsRef(in p.Range) = o.ProjRange.Value);
             if (o.LifeTimeAdded && prefab.Has<LifeTime>())
@@ -704,6 +844,8 @@ internal static class AbilityTuningService
                     buf[k] = e;
                 }
             }
+            if (o.HealPerSec.HasValue && prefab.Has<HealingBuff>())   // v0.120.0: restore HealingBuff aura rate
+                prefab.With((ref HealingBuff h) => System.Runtime.CompilerServices.Unsafe.AsRef(in h.HealingPerSecond) = o.HealPerSec.Value);
             // v0.87.0: restore cast modifiers.
             if (o.Interrupt.HasValue && prefab.Has<AbilityInterruptData>())
                 prefab.With((ref AbilityInterruptData d) => System.Runtime.CompilerServices.Unsafe.AsRef(in d.InterruptTypes) = o.Interrupt.Value);

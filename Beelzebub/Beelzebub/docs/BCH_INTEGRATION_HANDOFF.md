@@ -18,8 +18,434 @@
 > in the BCH workspace.
 >
 > **Canonical source of truth for the wire API:**
-> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 22`). If this doc
+> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 28`). If this doc
 > and that file ever disagree, the file wins — and this doc should be corrected.
+
+---
+
+# ⭐ BCH CATCH-UP: v0.100 → v0.131 (read this first) ⭐
+
+> **🆕 v0.131 (ApiVersion still 28, no wire change) — NEW recovery command `.beelz admin cleanse <player> [buffNameOrGuid]`.**
+> Strips stuck STATE buffs (invisible/phased/immaterial that survive respawn+relog) from a player; omit the buff
+> arg to remove the known culprits. Pure chat command BCH already relays — a BCH "fix stuck player" escalation can
+> add it (ladder: `cleanse` for stuck states → `purge` for a stuck bar → `respawn`). No `[BEELZ:*]`/parser impact.
+>
+> **🆕 v0.127-0.130 (ApiVersion still 28, NO wire change — the only BCH action is a catalog re-read):**
+> - **(v0.130) Catalog data enriched** — mined the prefab dump to fill `type` (+1120), `name` (the 39 blanks),
+>   and `categories` (+250). New per-ability METADATA fields exist server-side (`mechanic`, `baseCooldown`,
+>   `baseCastTime`, `tier`) but are **NOT emitted over the wire yet** — say the word and I'll add them to
+>   `catalog-ability`/`api info` with an ApiVersion bump if BCH wants them. Real `description` only exists for
+>   ~425 abilities (NPC abilities have none in-game) — testers are filling the rest.
+> - **(v0.129) Capture set changed (re-read catalog):** 5 abilities UN-blocked (Dracula Bolt Spray, Morgana
+>   Swarm+Orb Barrage, Leandra ShadowStep+TrippleBolt — testers couldn't reproduce the crashes); 8 "launch you
+>   to space" abilities un-blocked + tamed (Elena ToF ×2, Ziva Jetpack, Toad Swallow/PoisonLeap/Spit, Gargoyle
+>   Fly); 2 EXPLOITS blocked (Gargoyle Wing Shield, Rat Vanguard). So `enabled`/`review_status` on those rows
+>   changed — re-read.
+> - **(v0.127) 2 more crash/break abilities blocked** (Gaius Corpse Buff ability, Toad King Spit).
+> - **(v0.128) Transform-unlock drop chance default raised to 1.0** (TEST default — config key, not wire).
+> - **NOTE for BCH testing on an EXISTING server:** these data changes ship in the default but an existing
+>   server keeps its own `ability_rules.json`/`.cfg` until re-seeded — so they may not be live yet on the dev
+>   server until that's done.
+>
+> **🆕 v0.126 (ApiVersion still 28, no wire change):** (a) more boss summons spawn allies (server-side, nothing for BCH); (b) **~308 more abilities renamed** out of the generic "Primary Attack"/"Secondary Attack" mislabel → **re-read the catalog / clear cached scan** to pick up the corrected `label=` values (genuine basic attacks keep "Primary Attack"); (c) **transform-into abilities** (shapeshift form-triggers + Geomancer "Transform To Golem/Human") are no longer captured or returned in `tform-kit`/`tform-binds` — a transform-loadout panel will simply no longer see them as bindable, no parser change.
+
+
+**If BCH last synced at the v0.100.0 packaged build (ApiVersion ~21/22), this single section is everything that
+changed. The dated banners further down are the detailed history; this is the consolidated, do-this list.**
+Current server build: **Beelzebub v0.131.0, ApiVersion 28.** Everything below is **additive and back-compatible**
+— an old BCH that ignores the new tokens keeps working; nothing is wire-breaking since v0.76's chunking.
+**v0.121-0.125 are recovery/data/tuning only — NO wire/ApiVersion change (still 28):** `.beelz admin purge`
+(last-resort stuck-bar recovery, v0.121); the `FixedString512Bytes` reply fix (v0.123); **catalog labels improved**
+— 52 abilities were mis-named "Arctic Leap" and are now correct, so **BCH should re-read the catalog / clear any cached
+scan** (v0.124); ten boss summon abilities now spawn allied units + a new `leapheight` admin tune knob (v0.125,
+internal/admin — not emitted over the wire). Nothing BCH must change beyond a catalog re-read.
+**v0.120.0 is data/behavior only — NO ApiVersion change (still 28), nothing wire-breaking.** What it means for BCH:
+the player catalog got smaller (basic primary/melee auto-attacks are now `review_status=Blocked` by default — ~106
+abilities) and some ability `label=`/`desc=` values that used to come back in Russian/Chinese/German/etc. now return
+proper English. **BCH should just re-read the catalog (and clear any cached scan) — no parser change.** Detail in the
+v0.120.0 callout below.
+
+## 1. ApiVersion timeline (capability gates)
+
+| ApiVer | Beelz ver | What it added (wire) |
+|---|---|---|
+| 22 | 0.100.0 | (BCH's last sync) transform-loadout + broadcast reads; `a=`/`unit=`/`unitguid=` on catalog-ability |
+| 23 | 0.101.0 | **catalog LOAD FILTERS** — `api catalog abilities[-all] <page> <filter> <value>` |
+| 24 | 0.107.0 | **activation-condition** tokens: `condition=` / `condition_mods=` / `condition_source=` |
+| 25 | 0.112.0 | **review/curation** tokens: `review_status=` / `review_tag=` |
+| 26 | 0.113.0 | **source-tier** tokens: `source_level=` / `source_tier=` / `is_vblood=` |
+| 27 | 0.116.0 | **catalog filters extended** — `tag` / `reviewstatus` / `tier` / `vblood` filter keys |
+| 28 | 0.119.0 | **`api slots` carries `label=`** (friendly ability name per slot) — for the hover CARD |
+
+Gate each feature on `api>=N`. `api version` returns `[BEELZ:version] api=28 plugin=0.120.0 ready=…`.
+
+## 2. New per-row tokens on `catalog-ability` AND `api info` (all additive)
+
+Every ability row now carries these in addition to the v0.100 set (`a=`, `unit=`, `unitguid=`, `weapons=`,
+`forms=`, `enabled=`, `cat=`, `desc=`, all the `*_override=` shaping fields, etc.):
+
+| Token | Values | Meaning (api>=) |
+|---|---|---|
+| `condition=` | `Aimed\|CloseRange\|Summon\|SelfCast\|Movement\|-` | HOW the ability is used — informational, never disables (24) |
+| `condition_mods=` | `Combo,Charged,Channel` (comma) `\|-` | orthogonal modifiers (24) |
+| `condition_source=` | `auto\|confirmed\|admin\|-` | `auto`=classifier guess, `confirmed`=tester-verified (24) |
+| `review_status=` | `Unreviewed\|Reviewed\|Approved\|Blocked\|Hidden` | our curation state for the ability (25) |
+| `review_tag=` | a type tag (see list below) `\|-` | audit-assigned grouping (25) |
+| `source_level=` | int `\|-` | the source unit's level (26) |
+| `source_tier=` | `T1\|T2\|T3\|T4\|-` | level-derived tier (T1<30 / T2 30-46 / T3 47-63 / T4 64+) (26) |
+| `is_vblood=` | `0\|1` | source unit is a VBlood boss (26) |
+
+`review_tag` value set (v0.118): `emote, feed, idle_flee, variant_hard, variant_gateboss, variant_minion,
+basic_attack, reaction, combo, summon, lifecycle, dev, crash, stuck, broken, exploit` (free-text — treat
+unknown tags gracefully). Sentinels are `-` (string) / `0` (bool); treat `-` as "unknown".
+
+## 3. Catalog filters (server-side, fast) — `api>=27`
+
+`api catalog abilities <page> <filter> <value>` and `api catalog abilities-all <page> <filter> <value>` accept:
+`weapon` · `cat` · `unit` · `form` · `search` · **`tag`** (review_tag) · **`reviewstatus`** · **`tier`** (T1–T4) ·
+**`vblood`** (1/0). Filtering happens BEFORE pagination, so `total=`/`pages=` and `filter=`/`value=` on the
+`[BEELZ:end]` line reflect the filtered subset. **Use this to load one group fast** instead of streaming ~1,700
+rows (e.g. `api catalog abilities-all 0 tag emote`, `… 0 tier T4`, `… 0 reviewstatus Blocked`).
+
+## 4. Behavior changes BCH should know (no wire shape change)
+
+- **ReviewStatus is now a curation GATE (v0.115).** With `Curation_EnforceReviewStatus` ON (default), abilities
+  with `review_status=Blocked` or `Hidden` are **removed from the player catalog** (`api catalog abilities`) and
+  the **collection total** server-side. So BCH's player-facing collection auto-shrinks to the real shippable set
+  — **no BCH change needed**. The ADMIN scope (`api catalog abilities-all`) still lists them so an admin tool can
+  show/manage blocked rows (filter `reviewstatus Blocked`). Note: the admin `enabled=` token reflects the raw
+  `Enabled` field, NOT the review gate — use `review_status` to detect curation-gated rows.
+- **v0.118 baseline applied — the player catalog got smaller.** A tester-feedback pass set ~83 abilities to
+  `Blocked` (26 confirmed crash/stuck + broken ones) and ~75 to `Approved`, ~323 to `Reviewed`. **BCH just
+  re-reads `api catalog abilities` + `api progress`** — the denominator/collection-% changed because blocked
+  abilities no longer count. Nothing to parse differently.
+- **Weapon-family corrections (v0.113).** ~17 abilities now report a corrected `weapons=`: Pollaxe / TwinBlades /
+  Slashers abilities now bind to their own weapon (were Axe/universal); the 12 Cursed-Blacksmith conjured-weapon
+  abilities are now `weapons=Magic` (universal). A weapon filter just buckets them correctly now — no action.
+
+## 5. Commands BCH may invoke (admin/companion tooling)
+
+- **`.beelz admin ability-set <id> "(field=value)(field2=value2)…"`** (v0.116) — bulk-set many ability config
+  fields in one command (parens or `;`-separated; handles spaces/commas). Use this instead of chaining single
+  `.beelz admin ability <id> <field> <value>` calls when a UI applies several settings at once.
+- **Stable IDs everywhere (v0.117).** `cast`, `forget`, `info`, `hotkey set` now accept an ability's **stable
+  PrefabGUID** (the `a=<guid>` value), not just the shifting `.beelz list` index. **BCH should pass the stable
+  `a=` id** when invoking these — it's robust against the index shifting as the player captures more. `cast` also
+  now re-checks ownership (a hotkey pointing at a forgotten ability is rejected, not fired).
+- **Curation fields settable in-game** (for an admin UI): `.beelz admin ability <id> reviewstatus <Unreviewed|
+  Reviewed|Approved|Blocked|Hidden>`, `… reviewtag <tag>`, `… condition <Aimed|CloseRange|Summon|SelfCast|
+  Movement|clear>` (writes `condition_source=confirmed`). Admin slot binds now accept slot **0 (primary)** and
+  **7 (ultimate)** too, and `clear-slot`/`unslot` (and `clear-weapon-slot`/`weapon-unslot`) are interchangeable.
+
+## 6. BCH action checklist (priority order)
+
+1. **Nothing is required** — every change is additive; an unchanged BCH keeps working with a smaller, cleaner
+   player catalog automatically.
+2. **(recommended) Gate on `api>=27`** and add the catalog filters to your load path — load by `tag`/`tier`/
+   `unit` instead of the full stream for a big speed-up on the ability book.
+3. **(recommended) Surface `review_status` / `review_tag`** in an admin/curation view; filter the admin
+   `abilities-all` stream by `reviewstatus Blocked` to show what's curated-out.
+4. **(optional) Show `condition=` as a "Use:" hint** and `source_tier=`/`is_vblood=` as "captured from X (T3 ·
+   VBlood)" + a tier filter chip.
+5. **(when you invoke commands) prefer the stable `a=<guid>` id** for `cast`/`forget`/`info`/`hotkey set`, and use
+   `ability-set` for multi-field config.
+
+## 7. BCH-side items from v0.100 testing (FYI for the BCH session)
+
+These are **client-side** findings (handled in the BCH workspace, not the server contract) — listed so you can
+carry them over. Full detail in the server repo's `docs/TESTER_ABILITY_BASELINE.md` / `TESTER_BASELINE_v0100.md`
+cross-cutting sections.
+
+- **Hotkeys "won't register" — NOT a shipped-default bug.** Shipped defaults are `Hotkeys_Enabled=true`,
+  `Hotkeys_MaxPerPlayer=5`. The v0.100 test server had hotkeys at 0 (a per-server config). If hotkeys fail,
+  check (a) the server's `[Hotkeys]` config, (b) BCH's cast-firing path (server stores the binding via
+  `.beelz hotkey set`; BCH fires it via `.beelz cast <name>`). The server-side binding/list is exposed via
+  `api hotkeys`.
+- **"Scan all abilities" / bestiary only shows captured.** BCH should read the full ability universe from
+  **`api catalog abilities`** (player-collectible set) or **`api catalog abilities-all`** (admin: every ability),
+  not just `api list` (captured-only). The catalog is the "scan everything" source; `api list` is "what I own."
+- **Data volume is unmanageable as one flat list.** The catalog filters (section 3) are the answer — load by
+  `unit` / `tag` / `tier` and paginate, rather than one ~1,700-row dump or a free-text box (typing in-game
+  triggers game keybinds).
+
+### BCH TODO — catalog scan UX (bestiary + admin tab)
+
+These are **BCH-side** (client) features to add; the server side already supports them.
+
+1. **Warn the user the first full scan is slow.** A full `api catalog abilities[-all]` scan streams ~1,700 rows
+   over chat and can take **5+ minutes the first time**. The bestiary AND the admin ability tab should show a
+   one-time notice like *"Scanning the full ability list — this can take several minutes on the first run."*
+   Strongly steer users to the **filtered** scans (section 3: by `unit`/`tag`/`tier`) for everyday use, and
+   treat the full scan as a one-time/occasional build.
+2. **Cache the scan result locally + add a "Clear / Refresh cache" action.** BCH should persist the scanned
+   catalog in its client model (`BeelzState`) so it isn't re-streamed every session, and expose a button to
+   **clear that cache and re-scan from scratch** — for when the user wants a fresh pull or suspects the cached
+   data is stale/corrupt. **No server command is needed:** the server **rebuilds its catalog snapshot on every
+   page-0 request** (`_catalog`/`_catalogAll` are rebuilt when `page==0`), so BCH simply drops its local cache
+   and re-requests `api catalog … 0 …` — it gets fresh, current server data. (Server config changes — block an
+   ability, `.beelz admin reload`, etc. — are reflected automatically on the next page-0 scan.)
+3. **Make the cache invalidation discoverable.** Surface when the cache was last built ("Last scanned: …") next
+   to the refresh button, so a user knows whether to re-scan after the admin curates abilities.
+
+### BCH TODO — ability cards show "No Name" on the action bar (client-localization limitation)
+
+**Root cause (confirmed server-side):** the action-bar hover card's name/description are resolved by V Rising
+**client-side**, from the client's localization database keyed by the ability's `PrefabGUID`. NPC/boss ability
+prefabs have **no player-facing localization entry**, so the **native** tooltip renders "No Name" with no
+description. The ability prefab's `AbilityGroupInfo` component carries cast/range/behavior data but **no name or
+description field**, so there is **no server-writable component** that makes the native card show text. (This is
+the same limitation that motivated the `.beelz active` command.)
+
+**The server already provides the correct data — Beelz NEVER returns "No Name".** Every ability resolves to a
+friendly name (and description where curated), sourced from the bundled `ability_metadata.json` with a humanized
+fallback (3-tier: override → shipped → humanized prefab name; the last tier always returns a string). BCH reads it from:
+- **`api slots`** (api>=28) → per slot: `[BEELZ:slot] bucket=<any|weapon> slot=<n> a=<guid> an=<prefab> label=<friendly name>`
+  and `[BEELZ:form-slot] form=<F> slot=<n> a=<guid> an=<prefab> label=<friendly name>`. **The name for every
+  Beelz-granted slot in ONE call** — this is the headline fix; `label=` is SafeToken-encoded (spaces→`_`).
+- **`api info <index>` / `info-guid <guid>`** → the FULL card: `label=` `desc=<description|->` `school=` `cat=`
+  `cooldown_seconds=` `cast_time_seconds=` `range=` `condition=` `source_tier=` `is_vblood=` … (per-ability).
+- **`api list`** → per captured row: `a=<guid> an=<prefab> label=<friendly name> ulabel=<unit name>`.
+
+**RECOMMENDED implementation (Option 1 — BCH draws its own hover card). Server side is now ready; this is the BCH
+build:**
+1. On bar load / change, call **`api slots`** → you get every Beelz-bound slot with its `a=<guid>` and
+   `label=<name>`. Build a `slot → {guid, name}` map. (Only Beelz slots are listed — see vanilla rule below.)
+2. Pre-fetch the full card for each slotted `guid` via **`api info-guid <guid>`** and cache it in `BeelzState`
+   (name, desc, school, cooldown, cast time, range, condition, source). ~8–16 calls on bar-load, then cached.
+3. On **hover of an action-bar slot**: if the slot's ability guid is in your Beelz-slot map, render your own
+   overlay card from the cache (instant). The `label=` covers the name even before the `info-guid` resolves.
+4. ⚠️ **VANILLA NON-INTERFERENCE (required):** render your card **only** for slots that appear in `api slots`
+   (i.e., Beelz-granted). For any slot NOT in that list — a vanilla ability or an empty slot — **render nothing**
+   and let V Rising's native tooltip show. `api slots` is authoritative: the server lists ONLY Beelz binds
+   (vanilla abilities are never in Beelz's slot maps), so scoping to the listed slots cannot touch vanilla cards.
+   Re-pull `api slots` on weapon/form swap (the `[BEELZ:slot-current]` footer tells you the active bucket).
+
+**Alternative (Option 2 — inject client-side localization).** Write a localization entry mapping the ability
+`PrefabGUID` → `label=`/`desc=` into the client's localization DB so the **native** card renders. More integrated
+but hooks the localization system; the same vanilla rule applies (only inject for Beelz-granted abilities).
+
+**Server-side enhancement that would help the cards (separate work):** description coverage in
+`ability_metadata.json` is currently ~27% (name coverage is ~100%). So BCH cards will reliably show the **name**
+but a blank **description** for many abilities until the descriptive-curation pass (B8) fills them in. Name is
+never blank; descriptions are the gap.
+- **Brad's chat-window feedback** (input-suppression-while-typing, color routing, transparency, whisper recipient
+  name, system-message routing, button-color persistence) is **entirely BCH-internal** — no server side. It's
+  captured in the tester docs for your reference.
+
+## 8. Bloodcraft coexistence — what BCH should know (no wire change)
+
+Many servers run **Beelzebub + Bloodcraft (`io.zfolmt.Bloodcraft`)** together. This is fully supported and
+needs **no parser/ApiVersion change** — but it affects how BCH's **action-bar hover card** (the "No-Name" fix,
+section 7) behaves, so account for it in the UI. Full server-side detail:
+`Beelzebub/docs/INTEROP_BLOODCRAFT.md`.
+
+**The one thing that matters for BCH:** Bloodcraft *also* writes the spell bar. With its default flags it puts a
+**class/"shift" spell on slot 3** (`ShiftSlot`) and **unarmed spells on slots 1 + 4** (`UnarmedSlots`). Beelzebub
+binds slots 0–7. So on a dual-mod server **slots 1/3/4 can be claimed by either mod.**
+
+1. **The vanilla-non-interference rule already protects you for pure-Bloodcraft slots.** `api slots` lists **only
+   Beelz binds** — a Bloodcraft class/unarmed spell is **never** in `api slots`. So as long as BCH renders its
+   hover card **only for slots returned by `api slots`** (section 7, step 4), it will **not** draw over a slot
+   that Bloodcraft owns and Beelz doesn't — the native tooltip shows there. No change needed; just keep that rule
+   strict.
+2. **⚠️ Contested slot = card may not match what fires.** If a player has BOTH a Beelz bind AND a Bloodcraft
+   spell on the *same* slot (e.g. slot 3), `api slots` lists it (Beelz owns a bind there) so BCH draws its card
+   from the Beelz `label=` — but **which ability actually casts is load-order-dependent** (both mods write at
+   `Priority=0`; the tie is not deterministic — see INTEROP §2). The card could show the Beelz ability while the
+   slot fires Bloodcraft's class spell. **This is a server-config issue, not a BCH bug.**
+3. **Resolution to surface to admins/users — two levers:**
+   - **Beelzebub-side (v0.120.0):** new config key **`Interop_SlotInjectionPriority`** (int, `[Interop]` section,
+     default `0`). Reflection-streamed in `api config` like every other key, so a BCH admin panel picks it up
+     automatically; settable live via `.beelz admin set Interop_SlotInjectionPriority <n>`. `0` = neutral
+     (load-order tie); **`1`+ = Beelzebub wins the contested slot deterministically**; negative = Beelzebub
+     yields. This makes the card-vs-cast mismatch in #2 go away (the Beelz bind the card shows is also the one
+     that fires). A BCH settings UI can expose it as a small stepper/number field.
+   - **Bloodcraft-side:** the server admin sets Bloodcraft `ShiftSlot=false` / `UnarmedSlots=false` (in
+     `io.zfolmt.Bloodcraft.cfg`) to hand those slots off entirely. BCH itself doesn't need to detect Bloodcraft.
+4. **No other BCH-facing overlap.** Stat bonuses (expertise/blood-legacy) stack additively with Beelz transform
+   scaling (balance only, no wire impact); transforms/shapeshifts, persistence, and chat-command prefixes are all
+   isolated. Nothing for BCH to parse differently.
+
+---
+
+> **🆕 2026-06-05 (v0.126.0, ApiVersion still 28) — MORE catalog-label corrections, more summons, transform-into excluded from kit. RE-READ THE CATALOG.**
+> Three changes; all are server-side content/behavior, **no new wire field, no ApiVersion bump, nothing wire-breaking.**
+>
+> 1. **Catalog labels: ~308 more abilities renamed (ACTION: re-read catalog / clear cached scan).** Same scrape-default
+>    class as the v0.124 Arctic-Leap fix: ~308 abilities that were generically named **"Primary Attack" / "Secondary
+>    Attack"** but whose prefab clearly isn't a basic attack (summons, roars, dashes, special/charge/spin attacks, AI
+>    behaviour variations) now emit their correct `label=` on `catalog-ability` / `api info` / `info-guid`. **Genuine
+>    basic attacks still read "Primary Attack"** (only the mislabels changed — the live "Primary Attack" count went
+>    450 → 150). Same tokens as before, better values → **BCH just needs a catalog re-read; no parser change.** If BCH
+>    cached display names per GUID, invalidate that cache so the corrected names show.
+>
+> 2. **More boss summons spawn allied units (server-side, nothing for BCH).** Carver Boss "Summon Carvers", Bishop of
+>    Dunley "Summon Pillar", and Monster "Lightning Pillars" now spawn for a player caster (the pillar ones are
+>    stationary turrets; Lightning Pillars is strong and admin-tunable). Morgana's "Summon Tail" spawns but is an
+>    immobile boss-part that won't actively fight. No `[BEELZ:*]` line, no command/field change.
+>
+> 3. **Transform-INTO abilities are no longer capturable OR returned in the transform kit (MINOR — affects a transform
+>    panel).** In addition to the `_Shapeshift_*` form-triggers (already excluded), the Geomancer's
+>    `AB_Geomancer_Transform_ToGolem` / `_SecondTime` / `_ToHuman` are now treated as transform triggers and filtered
+>    by `AbilityFilter.ShouldCapture`. Because `tform-kit` is built from `UnitKitService.FullEligibleKit` (which routes
+>    through `ShouldCapture`), **these no longer appear in `[BEELZ:tform-ability]` rows from `api tform-kit <unit>`**,
+>    and can't be captured/devoured. **Wire format is unchanged** — a transform-loadout panel simply gets a slightly
+>    shorter, cleaner kit (it never should have offered "become this form" as a bindable slot ability). No action
+>    required unless BCH hard-coded one of those GUIDs as bindable; if so, drop it. `tform-binds` (current binds) is
+>    unaffected in shape.
+>
+> **Net for BCH: do a catalog re-read (item 1); everything else is transparent.** ApiVersion stays 28.
+
+> **🆕 2026-06-05 (v0.124-0.125, ApiVersion still 28) — CATALOG label fix + boss summons + new `leapheight` tune field.**
+> Three things, all additive / no wire-break:
+> - **(v0.124) 52 abilities were mis-named "Arctic Leap"** (a scrape collision that also gave them the frost
+>   description) — including all 6 Cursed Smith weapon-summons, Bat Vampire's summon/leaps, Mountain Beast
+>   ghost-calls, and many boss leaps/teleports. They now emit their correct `label=` (and the bogus `desc=` is
+>   gone) on `catalog-ability` / `api info` / `info-guid`. **ACTION FOR BCH: re-read the catalog and clear any
+>   cached scan** so the corrected names show. No parser/field change — same tokens, better values.
+> - **(v0.125) Ten boss summon abilities now spawn ALLIED units when a player casts them** (Tourok Call
+>   Reinforcements, Stalker Reinforcement, Bat Vampire Summon Minions, Morgana Summon Tail, Cardinal Summon
+>   Aide & Summon Orb, Paladin Summon Angel, High Lord Raise Dead, Bishop Eye of God, Zealous Cultist Summon
+>   Ghosts). Pure server-side spawn behavior — **no `[BEELZ:*]` line, nothing for BCH to do.**
+> - **(v0.125) NEW per-ability tuning field `leapheight`** — sets `TravelBuff.Height` on a leap/travel ability's
+>   phase buff so a boss leap (e.g. Bat Vampire's) doesn't fling the caster sky-high (vanilla ~250; try ~20-40).
+>   Settable via `.beelz admin ability <id> leapheight <v>` / `.beelz admin tune <id> leapheight <v>` /
+>   `ability-set`; `clear` or `defaults` reverts. Applied server-wide when `Abilities_ApplyConfig` is on (default),
+>   and it's a GLOBAL prefab edit (the source boss's leap changes too). **Like `powerwindow`, it is NOT emitted
+>   over the wire** (no `leapheight_override=` token yet), so there's no parser impact — a BCH ability-config
+>   panel can offer it as another numeric input that WRITES via the admin command. (If you want BCH to also READ
+>   the current value back, say so and I'll add a `leapheight_override=` field to `api info`/`catalog-ability`
+>   and bump ApiVersion — a 1-line capability gate for BCH, same as the other shaping overrides in section C.)
+>
+> **🛟 2026-06-05 (v0.121, v0.123) — `.beelz admin purge` recovery command (no wire change).** `.beelz admin purge
+> <player> CONFIRM` is the new last-resort stuck-bar fix (wipes all Beelz bar integration + the engine-level
+> modification leak back to vanilla; keeps captures + transform unlocks). v0.123 fixed an over-long reply that
+> threw after it ran. A BCH "fix stuck bar" escalation can end at `purge` after `respawn` (purge resets the
+> player's slot bindings, so they re-slot afterward). Pure chat command BCH already relays — nothing to parse.
+
+> **⚠️ 2026-06-05 (v0.120.0, ApiVersion still 28) — TRANSFORM behavior changes (no wire change). MINOR ACTION FOR BCH.**
+> Two behavior changes from tester feedback; both are chat-command/catalog behavior, no new `[BEELZ:*]` line or field:
+> - **`.beelz transform` now REFUSES if the player is already transformed** (it used to silently revert-then-switch,
+>   which corrupted the action bar on the next revert). The reply is now e.g. *"You're already transformed as X. Use
+>   .beelz revert first, then transform again."* **BCH action:** a transform-UI button that triggers `.beelz transform`
+>   while already transformed will get this refusal — surface the message and/or gate the button on active-transform
+>   state (BCH already knows the active transform from `[BEELZ:active]`). Admin `force-transform` likewise now needs
+>   `clear-transform` first.
+> - **Transform/shapeshift TRIGGER abilities (`AB_Shapeshift_*`) are no longer capturable/devourable.** They're
+>   reserved for the transform system, so they drop out of the player catalog (`api catalog abilities`) + collection
+>   total, exactly like a `review_status=Blocked` row. **BCH action: none** — just re-read the catalog; the
+>   denominator shrinks slightly. A boss's normal combat abilities are unaffected (only the form trigger is removed).
+> - **Units' basic primary/melee auto-attacks (~106) are now `review_status=Blocked` by default.** They leave the
+>   player catalog + collection total (admins can re-enable per-ability via `.beelz admin ability <id> reviewstatus
+>   Reviewed`, or globally via `Curation_EnforceReviewStatus`). They carry `review_tag=basic_attack` in the ADMIN
+>   scope (`api catalog abilities-all`, filter `tag basic_attack` / `reviewstatus Blocked`). **BCH action: none** —
+>   re-read `api catalog abilities` + `api progress`; the denominator just got smaller.
+> - **Foreign-language `label=`/`desc=` FIXED (data quality).** ~42 abilities used to return their name/description
+>   in Russian/Chinese/Japanese/Korean/Thai/Polish/German/French/etc. (bad shipped data); they now return proper
+>   **English** (the humanized fallback). This affected `api slots` `label=`, `api list`, and `api catalog`/`info`
+>   `label=`/`desc=`. **BCH action: clear any cached catalog/scan and re-pull** so users stop seeing the old foreign
+>   strings; nothing to parse differently. (Was a Beelzebub-side data bug, not a BCH rendering issue.)
+> - **(Minor) new admin tuning field `powerwindow`** on `.beelz admin ability <id>` (granted-cast power-window
+>   seconds for power-scaled DoT/AoE). Settable via `ability`/`tune`/`ability-set`; **not** emitted over the wire, so
+>   no parser impact — a BCH ability-config panel can offer it as another numeric field if desired.
+> - **Stuck-bar recovery (no wire change; NO BCH work required).** `.beelz resetbar` (user) and `.beelz admin
+>   rebuildslots` (admin) now authoritatively clear the engine's cached slot values + re-apply grants. For the
+>   WORST case — a bar whose resolved value is cached deep in the character's bar state and SURVIVES a relog —
+>   the only reliable cure is **`.beelz admin respawn`** (rebuilds a fresh character entity; keeps gear/blood/
+>   captures/unlocks; NOT `reset-character`). These are all chat commands BCH already relays (recovery section
+>   below); only the human-text replies changed, which BCH doesn't parse. **Optional:** a BCH "fix stuck bar"
+>   admin action should prefer `.beelz admin respawn` as the guaranteed escalation over rebuildslots/resetbar.
+>
+> **🆕 2026-06-05 (v0.121.0, ApiVersion still 28) — LAST-RESORT stuck-bar recovery `.beelz admin purge` (no wire change).**
+> New admin command **`.beelz admin purge <player> CONFIRM`** for the worst stuck-bar case — a creature kit jammed on
+> the bar by an engine-level MODIFICATION LEAK that survives relog AND respawn AND resetbar/rebuildslots/clearslotmods.
+> It wipes ALL Beelzebub bar integration to vanilla (ends + un-parks any transform, clears every slot/form/weapon/hotkey
+> binding) and — the new piece — removes the leaked `AbilityGroupSlot` modifications at the engine
+> `ModificationsRegistry` level, while KEEPING the player's captured abilities + transform unlocks. Player must be online.
+> **No `[BEELZ:*]` line, no config key, no parser impact** — purely a chat command BCH already relays. **Optional:** a BCH
+> "fix stuck bar" escalation ladder can now end at `.beelz admin purge` as the final step after `respawn` (note purge
+> resets the player's slot bindings, so they re-slot afterward; respawn keeps them — try respawn first, purge if it persists).
+>
+> **ℹ️ 2026-06-05 (v0.119.0, ApiVersion still 28) — BLOODCRAFT COEXISTENCE note (advisory; no wire change).**
+> A fresh deep audit of Beelzebub vs **Bloodcraft v1.13.21** confirms the two coexist with no crashes. The only
+> BCH-relevant point is the **shared spell bar**: Bloodcraft writes slot 3 (`ShiftSlot` class spell) and slots
+> 1 + 4 (`UnarmedSlots`); Beelzebub writes 0–7. Because `api slots` lists **only Beelz binds**, BCH's existing
+> "render the hover card only for slots in `api slots`" rule (section 7, step 4) already avoids drawing over
+> pure-Bloodcraft slots — keep it strict. The **only** caveat: on a slot BOTH mods bind, the actual cast is
+> load-order-dependent (equal `Priority=0`), so BCH's card (drawn from the Beelz `label=`) may not match what
+> fires. **Fix (v0.120.0):** the new admin config key **`Interop_SlotInjectionPriority`** (default `0`; set `1`
+> to make Beelzebub win deterministically) — reflection-streamed in `api config`, so a BCH settings panel
+> exposes it for free; alternatively the admin flips Bloodcraft's `ShiftSlot`/`UnarmedSlots`. Stat bonuses,
+> transforms, persistence, and command prefixes are all isolated. **No parser/ApiVersion change.** See catch-up
+> §8 above and `docs/INTEROP_BLOODCRAFT.md` for the full surface-by-surface breakdown.
+>
+> **🆕 2026-06-03 (v0.116.0, ApiVersion 26→27) — CATALOG FILTERS extended (additive). ACTION FOR BCH (optional).**
+> `api catalog abilities <page> <filter> <value>` and `abilities-all` now accept four more `<filter>` keys on
+> top of `weapon|cat|unit|form|search`: **`tag`** (matches `review_tag`, e.g. `tag emote`), **`reviewstatus`**
+> (matches `review_status`, e.g. `reviewstatus Approved`), **`tier`** (`T1|T2|T3|T4`), and **`vblood`** (`1|0`).
+> Filtering still happens BEFORE pagination, so `total=`/`pages=` and the `filter=`/`value=` tokens on
+> `[BEELZ:end]` reflect the filtered subset. This lets BCH load just one curation/source group server-side
+> (a "test backlog" view by tag, a tier band, VBlood-only) instead of streaming ~1,700 rows — much faster.
+> Fully additive; gate `api>=27`. Old filter keys unchanged.
+>
+> **ℹ️ 2026-06-03 (v0.115.0) — ReviewStatus is now a CURATION GATE (no wire/ApiVersion change, still 26).**
+> With the new `Curation_EnforceReviewStatus` config ON (default), an ability whose `review_status` is
+> `Blocked` or `Hidden` is no longer capturable/grantable and is **excluded from the player catalog**
+> (`api catalog abilities`) + the collection total. So BCH's player-facing catalog automatically stops
+> listing curated-out abilities — no BCH change needed. The ADMIN catalog (`api catalog abilities-all`) still
+> lists them, carrying `review_status=Blocked|Hidden` so an admin tool can show "blocked/hidden" state. The
+> per-row `enabled=` token in the admin view still reflects the raw `Enabled` field (not the review gate);
+> use `review_status` to detect curation-gated rows. Today only 1 ability is gated this way (Sir Erwin's
+> Mountup), so the player set is unchanged in practice.
+>
+> **🆕 2026-06-03 (v0.113.0, ApiVersion 25→26) — SOURCE-TIER metadata (additive). OPTIONAL FOR BCH.**
+> `api info` and `catalog-ability` now also emit `source_level=<int|->` · `source_tier=<T1|T2|T3|T4|->` ·
+> `is_vblood=<0|1>` — the primary source unit's level, a level-derived difficulty tier (T1<30 / T2 30-46 /
+> T3 47-63 / T4 64+), and whether that unit is a VBlood boss. **INFORMATIONAL** (like `condition=`). Lets BCH
+> show "captured from <unit> (T3 · VBlood)" and offer a tier filter. `-`/`0` when no source NPC is mapped
+> (~813 of 1,813 — backfill stubs / shared prefabs). Gate `api>=26`. Additive — old parsers ignore the three
+> new tokens.
+>
+> **ℹ️ 2026-06-03 (v0.113.0) — WEAPON-FAMILY data correction (no wire shape change).** The
+> ability→weapon classifier was missing Pollaxe / TwinBlades / Slashers, so ~17 abilities reported the wrong
+> `weapons=` value (Pollaxe abilities showed `Axe`; TwinBlades/Slashers showed `any`/Magic). Now corrected to
+> their real family. **No wire shape change** — same `weapons=` token, corrected values; a BCH weapon filter
+> just buckets those ~17 rows correctly now. No action required.
+>
+> **🆕 2026-06-03 (v0.112.0, ApiVersion 24→25) — REVIEW/CURATION tracking (additive). OPTIONAL FOR BCH.**
+> `api info` and `catalog-ability` now also emit two tokens exposing our ability-curation state:
+> `review_status=<Unreviewed|Reviewed|Approved|Blocked|Hidden>` · `review_tag=<emote|feed|idle_flee|
+> variant_hard|basic_attack|reaction|combo|summon|lifecycle|dev|…|->`. `review_status` = where the ability
+> sits in our review workflow; `review_tag` = an audit-assigned TYPE used to group abilities for follow-up
+> testing (a curation/test backlog). **NEITHER is a runtime gate** — `enabled=` is still the kill-switch, and
+> these are purely informational (like `condition=`). A first triage pass tagged 217 abilities (emotes, AI
+> idles/flees, feed steps, `_Hard_` brutal variants, generic auto-attacks, reactions) as `review_status=Reviewed`
+> with their `review_tag`. **Suggested BCH use (gate `api>=25`):** offer a "review/test backlog" view that
+> groups or filters by `review_tag` (e.g. show all `emote` rows to test for usability) and can display
+> `review_status`. `review_tag=-` = untagged. Fully additive — old parsers ignore the two new tokens.
+>
+> **🆕 2026-06-02 (v0.107.0, ApiVersion 23→24) — ACTIVATION-CONDITION metadata (additive). OPTIONAL FOR BCH.**
+> `api info` and `catalog-ability` now also emit three tokens telling a player HOW an ability is used (so a
+> working-but-conditional ability isn't shown as broken):
+> `condition=<Aimed|CloseRange|Summon|SelfCast|Movement|->` · `condition_mods=<Combo,Charged,Channel|->` ·
+> `condition_source=<auto|confirmed|admin|->`. Auto-classified from the prefab data across ~1,750 abilities
+> (1,146 labeled; ambiguous ones emit `condition=-`). **INFORMATIONAL ONLY — never disables an ability**
+> (distinct from `incompatible=`). `source=auto` = an unconfirmed classifier candidate. BCH (gate `api>=24`)
+> can show a "Use: <condition>" hint on the ability tooltip and/or offer a condition filter chip. Old parsers
+> that ignore the three new tokens are unaffected.
+>
+> **🆕 2026-06-01 (v0.101.0, ApiVersion 22→23) — CATALOG LOAD FILTERS. ACTION FOR BCH.** Testers reported the
+> full `api catalog abilities` stream (~1700 rows) takes **3–5 minutes** to load. Both catalog commands now
+> accept an optional filter so BCH can load a **subset** fast:
+> `api catalog abilities <page> <filter> <value>` and `api catalog abilities-all <page> <filter> <value>`,
+> where `<filter>` ∈ **`weapon`** (a WeaponFamily, e.g. `Sword`) · **`cat`** (Summon|Spell|Projectile|Melee|
+> Buff|Aoe|Travel|WeaponSpell|Other) · **`unit`** (substring of the source-NPC name, e.g. `Erwin`) ·
+> **`form`** (Wolf|Bear|Rat|Spider|Toad|Werewolf|Gargoyle|Mounted — matches curated `forms`-tagged abilities) ·
+> **`search`** (substring of the ability prefab name, e.g. `lightning`). Filtering happens BEFORE pagination,
+> so `total=`/`pages=` on the `[BEELZ:end]` line reflect the **filtered** set, and that line now also carries
+> `filter=<key|-> value=<val|->`. **Fully additive** — omit the filter args and you get the full list exactly
+> as before (old BCH builds keep working). Suggested BCH UI: a filter dropdown (weapon / type / unit / form /
+> name-search) that loads only the chosen chunk; capability-gate on `api>=23`.
 >
 > ## 📥 PENDING BCH REQUESTS — implement in Beelzebub
 >
@@ -190,6 +616,34 @@
 >   field** (that's the player's own dash/shield self-cancel; this is "an enemy hit breaks my cast").
 > Both server-wide baked edits (Abilities_ApplyConfig), cleared by `defaults`. A BCH ability-config panel
 > reads/writes them like the other `_override`/cast-tuning fields. Additive — older parsers ignore them.
+>
+> **🆕 v0.101.0 — MOUNTED FORM + FORM/WEAPON LOCKING + ABILITY-CONFIG TOOLS (mostly additive; the only
+> wire bump is the catalog filter = ApiVersion 23, banner'd at the top). ACTION FOR BCH on the form roster +
+> the `forms`/`weapons` value format.** This session's BCH-facing surface, grouped:
+>
+> - **NEW form: `Mounted`.** Riding a horse is now a loadout "form" (slots **3/6/7** only = R/C/ultimate; the
+>   horse owns primary/leap/spacebar/gallop/thrust). Bind with **`.beelz form-grant mounted <slot> <ability>`**
+>   exactly like the other forms — it emits the existing `[BEELZ:event] type=form-slot-granted form=Mounted
+>   slot= a= an=` line (and `form-slot-cleared`). **BCH ACTION:** add `Mounted` to the form roster its loadout
+>   UI shows (the form picker + the `form=` parser), and ideally restrict its slot picker to 3/6/7. Gated by the
+>   server's `Forms_CustomAbilities_Enabled`.
+> - **`forms` + `weapons` now support a WHITELIST or `!`BLACKLIST, and are ENFORCED.** Previously `forms=` was
+>   metadata-only; now the per-ability `forms`/`weapons` lists gate which captured abilities are usable per
+>   form/weapon. **Value format BCH must handle:** each token is a plain name (allow-list: usable ONLY there)
+>   OR `!`-prefixed (block-list: usable everywhere EXCEPT there) — e.g. `forms=!Mounted`, `weapons=!Sword`,
+>   `forms=Wolf,Bear`. This appears in the existing **`catalog-ability` `forms=` / `weapons=`** tokens (so BCH's
+>   ability-config grid should render/edit allow vs `!`block), and is written via
+>   **`.beelz admin ability <id> forms !mounted`** / `weapons !sword` (admin panel write). A `form-grant` /
+>   `weapon-grant` of a locked ability is now REFUSED with a chat error.
+> - **Ability-config admin ergonomics** (admin chat; BCH config panels can use): **`.beelz admin ability <id>`**
+>   with NO field now PRINTS every configured setting (a `key=value …` chat line, also logged
+>   `[Beelz ABILITY-CFG]`); and you can **set up to 5 fields at once** —
+>   `.beelz admin ability <id> cooldown 10 forms !mounted damagescale 1.5`.
+> - **Catalog LOAD FILTERS (ApiVersion 23)** — see the top banner. `api catalog abilities[-all] <page>
+>   <weapon|cat|unit|form|search> <value>` streams a subset fast (BCH should add a filter dropdown).
+> - **Behavioral:** Sir Erwin / Fabian lightning abilities are now mount-usable (boss "pause-the-horse" buff
+>   stripped); the **`Militia Fabian Mountup`** ability (`-1623080868`) is **hard-blocked** (server-crash) — it
+>   reports `enabled=0` and isn't capturable/grantable, so BCH's enabled-filter already hides it.
 >
 > **✅ v0.100.0 — STRUCTURED TRANSFORM-LOADOUT + BROADCAST READS (ApiVersion 21 → 22, additive; plugin
 > stays 0.100.0). Resolves PENDING #7 + #8.** Three new BCH-readable `api` commands so the transform-loadout
@@ -845,9 +1299,11 @@ ability …` (section D). Full set (current at v0.94 — no new wire fields sinc
 ### D) NEW/CHANGED ADMIN commands (for admin panels)
 - **`.beelz admin ability <name|id> <field> <value>` — the master per-ability editor.** Accepts the
   ability NAME *or* GUID (v0.69). Fields: `cooldown · range · charges · chargetime · aoe · projspeed ·
-  duration · healing · forcetimeout · freelymove · interruptonhit · interruptible · freemove ·
-  castspeed · summoncap · summontimeout · summonunits · damagescale · cooldownscale · enabled ·
-  weapons · forms · category · notes · …`. Reset: `.beelz admin ability <id> defaults` (one) /
+  leapheight (v0.125) · duration · healing · forcetimeout · powerwindow · freelymove · interruptonhit ·
+  interruptible · freemove · castspeed · summoncap · summontimeout · summonunits · damagescale ·
+  cooldownscale · enabled · weapons · forms · category · notes · …`. (`leapheight` + `powerwindow` are
+  write-only — settable here but not emitted in section C, so a panel writes them without a read-back.)
+  Reset: `.beelz admin ability <id> defaults` (one) /
   `all defaults` (every ability). `.beelz admin tune <ability> <knob> <value>` is the one-field
   shorthand. These are GLOBAL prefab edits (the source NPC/boss cast changes too).
 - **`.beelz admin broadcast <status|leaderboard on|off|interval <min>|top <1-5>|complete on|off|test>`

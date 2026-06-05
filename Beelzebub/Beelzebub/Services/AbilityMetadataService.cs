@@ -280,6 +280,15 @@ internal sealed class AbilityMetadataService
         // shipped is the curated default list.
         var incompatible = over?.Incompatible ?? ship?.Incompatible ?? false;
         var incompatibleReason = over?.IncompatibleReason ?? ship?.IncompatibleReason;
+        // v0.107.0: activation condition — override (admin/confirmed) beats shipped (auto). Informational only.
+        var condition = over?.Condition ?? ship?.Condition;
+        var conditionDescriptor = over?.ConditionDescriptor ?? ship?.ConditionDescriptor;
+        var conditionModifiers = over?.ConditionModifiers ?? ship?.ConditionModifiers;
+        var conditionSource = over?.ConditionSource ?? ship?.ConditionSource;
+        // v0.113.0 (B5): source-unit tier — override beats shipped.
+        var sourceLevel = over?.SourceLevel ?? ship?.SourceLevel;
+        var sourceTier = over?.SourceTier ?? ship?.SourceTier;
+        var isVBlood = over?.IsVBlood ?? ship?.IsVBlood ?? false;
 
         // Humanized fallback for missing name.
         if (string.IsNullOrEmpty(name))
@@ -310,6 +319,13 @@ internal sealed class AbilityMetadataService
             HasOverrideEntry = over is not null,
             Incompatible = incompatible,
             IncompatibleReason = incompatibleReason,
+            Condition = condition,
+            ConditionDescriptor = conditionDescriptor,
+            ConditionModifiers = conditionModifiers,
+            ConditionSource = conditionSource,
+            SourceLevel = sourceLevel,
+            SourceTier = sourceTier,
+            IsVBlood = isVBlood,
         };
     }
 
@@ -341,6 +357,86 @@ internal sealed class AbilityMetadataService
             return true;
         }
         return false;
+    }
+
+    /// <summary>
+    /// v0.109.0: lightweight activation-condition lookup for the catalog hot path (override &gt; shipped, NO
+    /// ECS probe — like <see cref="TryGetCuratedText"/>). Lets <c>catalog-ability</c> carry the same
+    /// <c>condition</c>/<c>condition_mods</c>/<c>condition_source</c> tokens <c>api info</c> emits (the
+    /// ApiVersion-24 contract). Returns false (and nulls) when no condition is curated for this guid.
+    /// </summary>
+    public bool TryGetCondition(int abilityGroupGuid, out string condition, out string mods, out string source)
+    {
+        condition = mods = source = null;
+        _overrides.TryGetValue(abilityGroupGuid, out var over);
+        _shipped.TryGetValue(abilityGroupGuid, out var ship);
+        condition = over?.Condition ?? ship?.Condition;
+        var m = over?.ConditionModifiers ?? ship?.ConditionModifiers;
+        mods = (m is { Count: > 0 }) ? string.Join(",", m) : null;
+        source = over?.ConditionSource ?? ship?.ConditionSource;
+        return !string.IsNullOrEmpty(condition);
+    }
+
+    /// <summary>v0.113.0 (B5): lightweight source-tier lookup for the catalog/info hot path (override &gt;
+    /// shipped, no ECS probe). Returns false when no source NPC is mapped for this guid.</summary>
+    public bool TryGetSourceTier(int abilityGroupGuid, out int? level, out string tier, out bool isVBlood)
+    {
+        _overrides.TryGetValue(abilityGroupGuid, out var over);
+        _shipped.TryGetValue(abilityGroupGuid, out var ship);
+        level = over?.SourceLevel ?? ship?.SourceLevel;
+        tier = over?.SourceTier ?? ship?.SourceTier;
+        isVBlood = over?.IsVBlood ?? ship?.IsVBlood ?? false;
+        return !string.IsNullOrEmpty(tier) || level.HasValue;
+    }
+
+    // v0.114.0 (B4): canonical activation conditions + their standard one-line descriptors (mirrors
+    // tools/classify_conditions.py). Used by the in-game condition-confirmation command.
+    static readonly (string Name, string Descriptor)[] _conditionKinds =
+    {
+        ("Aimed",      "Aim at a target or direction — fires downrange"),
+        ("CloseRange", "Needs enemies next to / in front of you"),
+        ("Summon",     "Summons units/allies — no aim needed"),
+        ("SelfCast",   "Self/ally effect — works on press"),
+        ("Movement",   "Mobility / travel — no target needed"),
+    };
+
+    /// <summary>
+    /// v0.114.0 (B4): admin/tester confirms an ability's activation condition in-game. Writes the condition
+    /// (with <c>conditionSource="confirmed"</c>) onto the per-server override entry — promoting an `auto`
+    /// classifier guess to verified. <c>clear</c>/<c>auto</c> removes the override (reverts to shipped).
+    /// Persisted to ability_metadata_overrides.json; surfaced everywhere Resolve/TryGetCondition read.
+    /// </summary>
+    public (bool ok, string message) SetConditionConfirmed(int abilityGroupGuid, string conditionRaw)
+    {
+        string v = (conditionRaw ?? "").Trim();
+        if (v.Length == 0)
+            return (false, "condition expects Aimed|CloseRange|Summon|SelfCast|Movement (or 'clear').");
+
+        _overrides.TryGetValue(abilityGroupGuid, out var existing);
+        var entry = existing ?? new AbilityMetadataEntry();
+
+        if (v.Equals("clear", StringComparison.OrdinalIgnoreCase)
+            || v.Equals("auto", StringComparison.OrdinalIgnoreCase)
+            || v.Equals("none", StringComparison.OrdinalIgnoreCase))
+        {
+            entry.Condition = null;
+            entry.ConditionDescriptor = null;
+            entry.ConditionSource = null;
+            SetOverride(abilityGroupGuid, entry);
+            return (true, $"Cleared condition override for {abilityGroupGuid} — reverts to the shipped/auto label.");
+        }
+
+        string canon = null, desc = null;
+        foreach (var (n, d) in _conditionKinds)
+            if (string.Equals(n, v, StringComparison.OrdinalIgnoreCase)) { canon = n; desc = d; break; }
+        if (canon == null)
+            return (false, $"Unknown condition '{v}'. Valid: Aimed, CloseRange, Summon, SelfCast, Movement (or 'clear').");
+
+        entry.Condition = canon;
+        entry.ConditionDescriptor = desc;
+        entry.ConditionSource = "confirmed";
+        SetOverride(abilityGroupGuid, entry);
+        return (true, $"Confirmed condition '{canon}' for {abilityGroupGuid} (source=confirmed; saved to overrides).");
     }
 
     public bool TryGetCuratedText(int abilityGroupGuid, out string description, out string school)
@@ -520,6 +616,41 @@ internal sealed class AbilityMetadataEntry
     /// - "Corpse-Required" — natural chain animates existing corpses; player has none in range
     /// </summary>
     public string IncompatibleReason { get; set; }
+
+    /// <summary>
+    /// v0.107.0: ACTIVATION CONDITION — distinct from <see cref="Incompatible"/>. The ability WORKS, but
+    /// only under this condition; this tells the player HOW to make it do something so a conditional ability
+    /// isn't mistaken for a broken one. NEVER disables anything (informational). Auto-classified from prefab
+    /// data by tools/classify_conditions.py. Categories:
+    ///   Aimed       — aim at a target/direction (projectile/skillshot)
+    ///   CloseRange  — needs enemies next to / in front of you (point-blank AoE + melee; honest umbrella)
+    ///   Summon      — summons units/allies (no aim needed)
+    ///   SelfCast    — self/ally effect, works on press
+    ///   Movement    — mobility/travel, no target needed
+    ///   Unclassified— left unlabeled (no guess)
+    /// </summary>
+    public string Condition { get; set; }
+
+    /// <summary>Human one-line descriptor of the condition (e.g. "Needs enemies next to / in front of you").</summary>
+    public string ConditionDescriptor { get; set; }
+
+    /// <summary>Orthogonal modifiers: Combo (multi-cast sequence) / Charged / Channel.</summary>
+    public List<string> ConditionModifiers { get; set; }
+
+    /// <summary>Provenance/confidence: "auto" (classifier candidate) / "confirmed" (verified in-game) /
+    /// "admin" (admin override). A label is a CANDIDATE until confirmed — the false-positive safeguard.</summary>
+    public string ConditionSource { get; set; }
+
+    /// <summary>v0.113.0 (B5): the primary source unit's level (UnitLevel) — drives the tier band.
+    /// Null when no source NPC. Baked by tools/merge_tier_into_metadata.py from the prefab dump.</summary>
+    public int? SourceLevel { get; set; }
+
+    /// <summary>v0.113.0 (B5): level-derived difficulty tier (T1&lt;30 / T2 30-46 / T3 47-63 / T4 64+).
+    /// "-"/null when unmapped. For "captured from X (tier)" display + tier-gating.</summary>
+    public string SourceTier { get; set; }
+
+    /// <summary>v0.113.0 (B5): the primary source unit is a VBlood boss (VBloodUnit component).</summary>
+    public bool IsVBlood { get; set; }
 }
 
 internal sealed class NpcRef
@@ -549,4 +680,11 @@ internal sealed class AbilityInfo
     public bool HasOverrideEntry { get; set; }
     public bool Incompatible { get; set; }
     public string IncompatibleReason { get; set; }
+    public string Condition { get; set; }                 // v0.107.0 activation condition (works-but-conditional)
+    public string ConditionDescriptor { get; set; }
+    public List<string> ConditionModifiers { get; set; }
+    public string ConditionSource { get; set; }
+    public int? SourceLevel { get; set; }                 // v0.113.0 (B5) source-unit level / tier
+    public string SourceTier { get; set; }
+    public bool IsVBlood { get; set; }
 }
