@@ -196,7 +196,29 @@ internal static class ApiCommands
     //   client-localization gap; the server can't fix the native card). Full card data (desc/cooldown/cast/
     //   condition/…) is still per-ability via `api info-guid <guid>`. Only Beelz-bound slots appear in `api
     //   slots`, so BCH scopes its card to these and leaves VANILLA slots' native tooltips untouched. Additive.
-    const int ApiVersion = 28;
+    // v29 (v0.132.0): `api info` / `api info-guid` — `forms=` now lists ONLY allowed forms (a "!Form" block used
+    //   to be stripped and shown as allowed, inverting its meaning); NEW `form_blocks=<Form,...|->` and
+    //   `weapon_blocks=<Weapon,...|->` carry the "!" blacklists. A block-only weapon list ("!Sword") now
+    //   classifies as universal (`weapons=Magic`) instead of falling back to the name heuristic. Gate `api>=29`.
+    //   Additive tokens; `forms=` content is a correctness fix.
+    // v30 (v0.133.0): `api info` / `api info-guid` — NEW `damage_mode=Off|Telemetry|Scale` (effective server mode),
+    //   `damage_scale_eff=<F2>` (Defaults/entry DamageScale × Boosted factor a cast would snapshot now),
+    //   `attribution=reliable|unreliable|unknown` (per-hit attribution health; unknown = < 50 hits seen) and
+    //   `summon_power=<F2>` (per-ability summonpower). New settings Damage_Mode/Damage_MinFactor/Damage_MaxFactor/
+    //   Damage_FlatPolicy/Summon_PowerMode stream through `api config`. Additive. Gate `api>=30`.
+    // v31 (v0.134.0): `api info` / `api info-guid` — NEW `maxstacks_override=<int|->`, `projcount_override=<int|->`,
+    //   `knockback_override=<F2|->`, `lifetime_override=<F1|->`, `casttime_override=<F2|->` (the new P3 knobs) and
+    //   `cooldown_mode=runtime|charges` (cooldown rules now apply at runtime to captured BAR casts only — bosses keep
+    //   their shipped cooldowns; `charges` = the ability uses charges so cooldown rules are skipped). Semantics
+    //   change (not wire-breaking): `cooldown_override` + `cooldown_scale` now combine as absolute ?? live×scale,
+    //   then Grant_MinimumCooldownSeconds, and `cooldown_seconds` stays the SHIPPED value. Additive. Gate `api>=31`.
+    // v32 (v0.135.0): incompatibility LOCKS. NEW `api locks` → one `[BEELZ:lock] g=<group> max=<n> m=<a,b,...>` per
+    //   admin-defined group (members SafeToken-encoded: ability GUID, or `cat:<Category>`; unresolved members omitted),
+    //   then `[BEELZ:end] cmd=locks count=<n>`. NEW event `[BEELZ:event] type=ability-locked src=slot|form|mount|cast
+    //   key=<slot#|cast guid> a=<guid> group=<name> locked=1|0` when an ability is kept off (1) / returns to (0) the
+    //   live bar. Grant/hotkey commands refuse a locked bind with a plain-text reply (no new API line). Additive.
+    //   Gate `api>=32`.
+    const int ApiVersion = 32;
 
     [Command("help", description: "List the Beelzebub API/BCH read commands (machine-readable data streams).")]
     public static void Help(ChatCommandContext ctx)
@@ -414,6 +436,8 @@ internal static class ApiCommands
         // BCH so it can render full tooltips without a second round-trip.
         var families = Core.AbilityRules.ClassifyWeaponFamilies(abilityName);
         var forms = Core.AbilityRules.GetFormRestriction(abilityName);
+        var formBlocks = Core.AbilityRules.GetFormBlocks(abilityName);       // v0.132.0
+        var weaponBlocks = Core.AbilityRules.GetWeaponBlocks(abilityName);   // v0.132.0
         bool transformOnly = Core.AbilityRules.IsTransformOnly(abilityName, abilityGuid);
         bool enabled = Core.AbilityRules.IsEnabled(abilityName, abilityGuid);
         float damageScale = Core.AbilityRules.GetDamageScale(abilityName);
@@ -481,6 +505,8 @@ internal static class ApiCommands
             $" range={range}" +
             $" behavior={SafeToken(behavior)}" +
             $" forms={(forms.Count == 0 ? "any" : string.Join(",", forms))}" +
+            $" form_blocks={(formBlocks.Count == 0 ? "-" : string.Join(",", formBlocks))}" +       // v0.132.0 (ApiVersion 29)
+            $" weapon_blocks={(weaponBlocks.Count == 0 ? "-" : string.Join(",", weaponBlocks))}" +
             $" transform_only={(transformOnly ? 1 : 0)}" +
             $" enabled={(enabled ? 1 : 0)}" +
             $" difficulty={difficulty}" +
@@ -503,6 +529,16 @@ internal static class ApiCommands
             $" summon_timeout_override={(Core.AbilityRules.GetSummonTimeout(abilityName) is float sto ? sto.ToString("F1") : "-")}" +
             $" summon_units_override={(Core.AbilityRules.GetSummonUnitsPerCast(abilityName) is int suo ? suo.ToString() : "-")}" +
             $" force_timeout_override={(Core.AbilityRules.GetForceTimeoutSeconds(abilityName) is float fto ? fto.ToString("F1") : "-")}" +
+            $" maxstacks_override={(Core.AbilityRules.GetMaxStacks(abilityName) is int mso ? mso.ToString() : "-")}" +          // v0.134.0 (ApiVersion 31)
+            $" projcount_override={(Core.AbilityRules.GetProjectileCount(abilityName) is int pco ? pco.ToString() : "-")}" +
+            $" knockback_override={(Core.AbilityRules.GetKnockbackScale(abilityName) is float kbo ? kbo.ToString("F2") : "-")}" +
+            $" lifetime_override={(Core.AbilityRules.GetLifetimeSeconds(abilityName) is float lto ? lto.ToString("F1") : "-")}" +
+            $" casttime_override={(Core.AbilityRules.GetCastTimeScale(abilityName) is float cto ? cto.ToString("F2") : "-")}" +
+            $" cooldown_mode={(Services.AbilityCooldownEnforcer.HasCharges(abilityGuid) ? "charges" : "runtime")}" +
+            $" damage_mode={Services.DamageScaler.EffectiveMode}" +                                                          // v0.133.0 (ApiVersion 30)
+            $" damage_scale_eff={Services.DamageScaler.SnapshotFor(abilityName).Scale:F2}" +
+            $" attribution={Services.DamageScaler.Reliability(abilityGuid)}" +
+            $" summon_power={Core.AbilityRules.GetSummonPowerScale(abilityName):F2}" +
             $" free_move_secs={(freeMoveSecs.HasValue ? freeMoveSecs.Value.ToString("F1") : "-")}" +                          // v0.87.0
             $" interrupt_on_hit={(interruptOnHit.HasValue ? (interruptOnHit.Value ? "on" : "off") : "auto")}" +              // v0.87.0
             $" condition={SafeToken(string.IsNullOrEmpty(meta?.Condition) ? "-" : meta.Condition)}" +                       // v0.107.0 (ApiVersion 24)
@@ -1094,6 +1130,20 @@ internal static class ApiCommands
             n++;
         }
         ctx.Reply($"[BEELZ:end] cmd=config count={n}");
+    }
+
+    [Command("locks", description: "Stream the server's incompatibility lock groups (BCH: grey out / badge abilities that can't share a bar). One [BEELZ:lock] line per group.")]
+    public static void Locks(ChatCommandContext ctx)
+    {
+        if (!Core.IsReady) { ctx.Reply("[BEELZ:err] cmd=locks code=not_ready msg=plugin_not_initialized"); return; }
+        int n = 0;
+        foreach (var g in Services.ExclusionService.Groups)
+        {
+            var members = g.Guids.OrderBy(x => x).Select(x => x.ToString()).Concat(g.Categories.OrderBy(c => c).Select(c => "cat:" + c));
+            ctx.Reply($"[BEELZ:lock] g={SafeToken(g.Name)} max={g.Max} m={SafeToken(string.Join(",", members))}");
+            n++;
+        }
+        ctx.Reply($"[BEELZ:end] cmd=locks count={n}");
     }
 
     [Command("cooldowns", description: "Per-category transform cooldown remaining, for cooldown timers (BCH-readable).")]

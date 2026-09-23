@@ -207,12 +207,17 @@ internal static class AbilityCastStartedSystemPatch
         {
             foreach (var evt in events)
             {
+                // v0.132.0: record EVERY player cast (captured + native) for forcetimeout / attribution.
+                Services.CastHistoryService.CastRecord castRec = null;
+                try { castRec = Services.CastHistoryService.RecordCast(evt.Character, evt.AbilityGroup.GetPrefabGuid(), evt.AbilityGroup); }
+                catch (Exception ex) { Core.Log.LogWarning($"[Beelz] cast-history record failed: {ex.Message}"); }
+
                 try { Services.GrantPowerScalingService.OnGrantedCast(evt.Character, evt.AbilityGroup.GetPrefabGuid()); }
                 catch (Exception ex) { Core.Log.LogWarning($"[Beelz] grant power-scale failed: {ex.Message}"); }
 
                 // v0.71.0: enforce a configured cooldown on a granted ability's live slot state
                 // (the prefab cooldown edit doesn't reach granted casts). Records here; applied on tick.
-                try { Services.AbilityCooldownEnforcer.OnCast(evt.Character, evt.AbilityGroup.GetPrefabGuid()); }
+                try { Services.AbilityCooldownEnforcer.OnCast(evt.Character, evt.AbilityGroup.GetPrefabGuid(), castRec); }
                 catch (Exception ex) { Core.Log.LogWarning($"[Beelz] cooldown-enforce record failed: {ex.Message}"); }
 
                 // v0.52.0: attribute an untransformed CAPTURED-ability cast so the spawn patches
@@ -401,7 +406,7 @@ internal static class AbilityCastStartedSystemPatch
                     minion.With((ref Translation t) => t.Value = spawnPos + offset);
                 }
 
-                if (!SummonAllyService.ApplyPlayerAllySetup(minion, caster)) continue;
+                if (!SummonAllyService.ApplyPlayerAllySetup(minion, caster, abilityPrefab._Value)) continue;
 
                 active.SummonedMinions ??= new List<Entity>();
                 active.SummonedMinions.Add(minion);

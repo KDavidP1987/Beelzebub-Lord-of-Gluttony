@@ -270,35 +270,65 @@ internal static class ShapeshiftAbilityService
         // player hasn't built a set for this form, fall back to their UNIVERSAL binds, then first
         // captures (the v0.48.0 behavior) so the feature is still useful before per-form curation.
         var form = FormForBuff(formBuffGuid, new PrefabGUID(formBuffGuid).GetPrefabName());   // v0.80.0: name-aware (skins)
+        var perSlot = BuildFormBar(steamId, form, out bool fromFormBucket);
+        // v0.135.0: incompatibility locks — drop suppressed abilities (the slot keeps its native move).
+        perSlot = ExclusionService.FilterBar(character, "form", perSlot);
+        bool restored = RestoreBarSnapshot(buffEntity);
+        if (perSlot.Count == 0)
+        {
+            if (restored && triggerUpdate && Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+            if (Beelzebub.Config.Settings.VerboseLogging.Value)
+                Core.Log.LogInfo($"[Beelz FORM] {steamId} entered {new PrefabGUID(formBuffGuid).GetPrefabName()} but has no loadout — nothing injected (set up .beelz form-grant {form} first).");
+            return;
+        }
+        ApplyFormBar(buffEntity, steamId, formBuffGuid, form, perSlot, fromFormBucket, triggerUpdate);
+    }
+
+    /// <summary>
+    /// The form bar a player gets in <paramref name="form"/>: their per-form bucket, else universal binds, else first
+    /// captures packed from slot 1 — every path filtered by the kill-switch and the form lock. (Shared with the
+    /// incompatibility-lock loadout so both see the same bar.)
+    /// </summary>
+    public static Dictionary<int, int> BuildFormBar(ulong steamId, ShapeshiftForm form, out bool fromFormBucket)
+    {
         var perSlot = new Dictionary<int, int>();
+        // v0.132.0 FIX: every path (per-form bucket AND both fallbacks) honours the admin kill-switch
+        // (Enabled / hard-block / review gate) and the form lock. The fallbacks used to inject disabled
+        // or form-blocked abilities onto the form bar.
+        bool UsableHere(int ability)
+        {
+            if (ability == 0) return false;
+            string nm = new PrefabGUID(ability).GetPrefabName();
+            return Core.AbilityRules.IsEnabled(nm, ability) && Core.AbilityRules.IsUsableInForm(nm, form);
+        }
         if (form != ShapeshiftForm.None)
             foreach (var (slot, ability) in Core.AbilityRegistry.GetFormSlots(steamId, form))
-                if (ability != 0 && Core.AbilityRules.IsUsableInForm(new PrefabGUID(ability).GetPrefabName(), form))
+                if (UsableHere(ability))
                     perSlot[slot] = ability;   // v0.101.0: skip abilities form-locked out of this form
 
-        bool fromFormBucket = perSlot.Count > 0;
+        fromFormBucket = perSlot.Count > 0;
         if (!fromFormBucket)
         {
             // Fallback: universal binds (slot-accurate), else first captures packed from slot 1.
             foreach (var (slot, ability) in Core.AbilityRegistry.GetSlots(steamId))
-                if (ability != 0) perSlot[slot] = ability;
+                if (UsableHere(ability)) perSlot[slot] = ability;
             if (perSlot.Count == 0)
             {
                 int s = 1;
                 foreach (var c in Core.AbilityRegistry.ListFor(steamId))
                 {
+                    if (!UsableHere(c.AbilityPrefabGuid)) continue;
                     perSlot[s++] = c.AbilityPrefabGuid;
                     if (perSlot.Count >= 6) break;
                 }
             }
         }
-        if (perSlot.Count == 0)
-        {
-            if (Beelzebub.Config.Settings.VerboseLogging.Value)
-                Core.Log.LogInfo($"[Beelz FORM] {steamId} entered {new PrefabGUID(formBuffGuid).GetPrefabName()} but has no loadout — nothing injected (set up .beelz form-grant {form} first).");
-            return;
-        }
+        return perSlot;
+    }
 
+    static void ApplyFormBar(Entity buffEntity, ulong steamId, int formBuffGuid, ShapeshiftForm form,
+        Dictionary<int, int> perSlot, bool fromFormBucket, bool triggerUpdate)
+    {
         try
         {
             // 1. Stop the form from auto-exiting when the player casts an injected (non-form) ability.
@@ -329,6 +359,7 @@ internal static class ShapeshiftAbilityService
             DynamicBuffer<ReplaceAbilityOnSlotBuff> buffer = Core.EntityManager.HasBuffer<ReplaceAbilityOnSlotBuff>(buffEntity)
                 ? Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(buffEntity)
                 : Core.EntityManager.AddBuffer<ReplaceAbilityOnSlotBuff>(buffEntity);
+            SnapshotBar(buffEntity, buffer);   // v0.135.0: native entries, so a re-apply can un-override a slot
 
             var sortedSlots = new List<int>(perSlot.Keys);
             sortedSlots.Sort();
@@ -512,12 +543,13 @@ internal static class ShapeshiftAbilityService
 
         // Saddle loadout = ONLY the player's Mounted-form binds, restricted to the free slots AND to
         // abilities the admin hasn't form-locked OUT of Mounted (e.g. boss abilities that demount).
-        var perSlot = new Dictionary<int, int>();
-        foreach (var (slot, ability) in Core.AbilityRegistry.GetFormSlots(steamId, ShapeshiftForm.Mounted))
-            if (ability != 0 && Array.IndexOf(_mountedSlots, slot) >= 0
-                && Core.AbilityRules.IsUsableInForm(new PrefabGUID(ability).GetPrefabName(), ShapeshiftForm.Mounted))
-                perSlot[slot] = ability;
-        if (perSlot.Count == 0) return;   // empty default — player hasn't set a saddle loadout
+        var perSlot = ExclusionService.FilterBar(character, "mount", BuildMountedBar(steamId));   // v0.135.0: locks
+        bool restored = RestoreBarSnapshot(buffEntity);
+        if (perSlot.Count == 0)   // empty default — player hasn't set a saddle loadout (or it's all locked)
+        {
+            if (restored && triggerUpdate && Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+            return;
+        }
 
         try
         {
@@ -548,6 +580,7 @@ internal static class ShapeshiftAbilityService
             DynamicBuffer<ReplaceAbilityOnSlotBuff> buffer = Core.EntityManager.HasBuffer<ReplaceAbilityOnSlotBuff>(buffEntity)
                 ? Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(buffEntity)
                 : Core.EntityManager.AddBuffer<ReplaceAbilityOnSlotBuff>(buffEntity);
+            SnapshotBar(buffEntity, buffer);   // v0.135.0
 
             // Override the saddle's blank entries for our slots (priority 100 beats the mount's pri-10),
             // and add entries for any free slot it doesn't already declare.
@@ -585,5 +618,56 @@ internal static class ShapeshiftAbilityService
             Core.Log.LogInfo($"[Beelz MOUNT] {steamId} → saddle loadout injected on slot(s) [{string.Join(",", rendered)}] (cast-dismount disabled{(triggerUpdate ? "" : ", in-resolve")}).");
         }
         catch (Exception ex) { Core.Log.LogWarning($"[Beelz MOUNT] ApplyMountedLoadout failed for {steamId}: {ex.Message}"); }
+    }
+
+    /// <summary>The saddle bar: Mounted-form binds on the free slots, kill-switch + form-lock filtered.</summary>
+    public static Dictionary<int, int> BuildMountedBar(ulong steamId)
+    {
+        var perSlot = new Dictionary<int, int>();
+        foreach (var (slot, ability) in Core.AbilityRegistry.GetFormSlots(steamId, ShapeshiftForm.Mounted))
+            if (ability != 0 && Array.IndexOf(_mountedSlots, slot) >= 0
+                && Core.AbilityRules.IsEnabled(new PrefabGUID(ability).GetPrefabName(), ability)   // v0.132.0: kill-switch on the saddle bar too
+                && Core.AbilityRules.IsUsableInForm(new PrefabGUID(ability).GetPrefabName(), ShapeshiftForm.Mounted))
+                perSlot[slot] = ability;
+        return perSlot;
+    }
+
+    // ───────────────────────────────────────────────────────────────────────────────
+    // v0.135.0 — native-bar snapshots. The form/saddle buff INSTANCE's ReplaceAbilityOnSlotBuff entries are
+    // captured before our first edit, so a re-apply (lock added/removed, reload) starts from the native bar and
+    // a slot we no longer override gets its native ability back. Content-only buffer edits (no structural change).
+    // ───────────────────────────────────────────────────────────────────────────────
+    static readonly Dictionary<Entity, ReplaceAbilityOnSlotBuff[]> _barSnapshots = new();
+
+    static void SnapshotBar(Entity buffEntity, DynamicBuffer<ReplaceAbilityOnSlotBuff> buffer)
+    {
+        if (_barSnapshots.ContainsKey(buffEntity)) return;
+        PruneBarSnapshots();
+        var copy = new ReplaceAbilityOnSlotBuff[buffer.Length];
+        for (int i = 0; i < buffer.Length; i++) copy[i] = buffer[i];
+        _barSnapshots[buffEntity] = copy;
+    }
+
+    /// <summary>Put the buff's native entries back (if we snapshotted it). True when a restore happened.</summary>
+    static bool RestoreBarSnapshot(Entity buffEntity)
+    {
+        if (!_barSnapshots.TryGetValue(buffEntity, out var copy)) return false;
+        if (!buffEntity.Exists() || !Core.EntityManager.HasBuffer<ReplaceAbilityOnSlotBuff>(buffEntity))
+        {
+            _barSnapshots.Remove(buffEntity);
+            return false;
+        }
+        var buffer = Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(buffEntity);
+        buffer.Clear();
+        foreach (var e in copy) buffer.Add(e);
+        return true;
+    }
+
+    static void PruneBarSnapshots()
+    {
+        if (_barSnapshots.Count < 32) return;
+        List<Entity> dead = null;
+        foreach (var k in _barSnapshots.Keys) if (!k.Exists()) (dead ??= new()).Add(k);
+        if (dead != null) foreach (var k in dead) _barSnapshots.Remove(k);
     }
 }

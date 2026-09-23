@@ -30,6 +30,20 @@ internal sealed class AbilityRules
             // embedded) instead of the bare built-in deny-list — so curated enabled/weapons/forms/shaping config
             // ships ready and admins can still override it afterward. Falls back to DefaultRules() if absent/bad.
             Current = LoadEmbeddedDefaultRules();
+            ValidateNumerics(Current);
+            // v0.135.0: remember what we seeded from, so a later `.beelz admin reseed merge` can tell admin
+            // edits from shipped values (3-way merge). A failed baseline write only means SAFE-mode merges.
+            try
+            {
+                string ship = EmbeddedDefaultJson();
+                if (ship != null)
+                {
+                    string norm = NormalizedJson(ship);
+                    Current.BaselineHash = HashOf(norm);
+                    File.WriteAllText(BaselineFilePath, norm);
+                }
+            }
+            catch (Exception ex) { Core.Log.LogWarning($"[Beelz RESEED] couldn't write the seed baseline: {ex.Message}"); }
             Save();
             Core.Log.LogInfo($"Created ability rules at {RulesFilePath} from shipped default "
                 + $"({Current.DenyPatterns.Count} deny patterns, {Current.AbilityMap.Count} curated ability(ies)).");
@@ -41,7 +55,9 @@ internal sealed class AbilityRules
             var json = File.ReadAllText(RulesFilePath);
             var dto = JsonSerializer.Deserialize<RulesDto>(json, _json);
             if (dto is null) throw new InvalidOperationException("rules file deserialized to null");
-            Current = NormalizeNulls(dto);
+            var loaded = NormalizeNulls(dto);
+            ValidateNumerics(loaded);   // v0.132.0: validate BEFORE publishing the snapshot
+            Current = loaded;
             Core.Log.LogInfo($"Loaded ability rules from {RulesFilePath}: " +
                 $"deny patterns={Current.DenyPatterns.Count}, allow patterns={Current.AllowPatterns.Count}, " +
                 $"deny guids={Current.DenyGuids.Count}, allow guids={Current.AllowGuids.Count}.");
@@ -51,6 +67,67 @@ internal sealed class AbilityRules
             Core.Log.LogError($"Failed to load ability rules from {RulesFilePath}: {ex}. Using defaults.");
             Current = DefaultRules();
         }
+    }
+
+    /// <summary>v0.132.0 (post-build inspection #4): every numeric per-ability field from a hand-edited / seeded
+    /// file is checked against <see cref="AbilityFieldTable"/> (finite + range) at load. An invalid optional
+    /// value is cleared (null = vanilla); an invalid scale resets to 1.0. Each fix is logged. Runtime, API and
+    /// tuner then only ever see validated values.</summary>
+    static void ValidateNumerics(RulesDto dto)
+    {
+        if (dto?.AbilityMap == null) return;
+        int fixedCount = 0;
+        foreach (var kv in dto.AbilityMap)
+        {
+            var e = kv.Value;
+            if (e == null) continue;
+            float? F(string field, float? v)
+            {
+                if (!v.HasValue || AbilityFieldTable.IsValidValue(field, v.Value)) return v;
+                Core.Log.LogWarning($"[Beelz RULES] {kv.Key}: {field}={v.Value} is invalid/out of range — ignored (cleared).");
+                fixedCount++;
+                return null;
+            }
+            int? I(string field, int? v) => F(field, v) is float f ? (int)f : null;
+            float S(string field, float v)
+            {
+                if (AbilityFieldTable.IsValidValue(field, v)) return v;
+                Core.Log.LogWarning($"[Beelz RULES] {kv.Key}: {field}={v} is invalid/out of range — reset to 1.0.");
+                fixedCount++;
+                return 1.0f;
+            }
+            if (!AbilityFieldTable.IsValidValue("phase", e.Phase))
+            {
+                Core.Log.LogWarning($"[Beelz RULES] {kv.Key}: phase={e.Phase} is out of range — reset to 1.");
+                e.Phase = 1;
+                fixedCount++;
+            }
+            e.DamageScale = S("damagescale", e.DamageScale);
+            e.CooldownScale = S("cooldownscale", e.CooldownScale);
+            e.SummonPowerScale = S("summonpower", e.SummonPowerScale);
+            e.CooldownSeconds = F("cooldown", e.CooldownSeconds);
+            e.MaxRangeOverride = F("range", e.MaxRangeOverride);
+            e.ChargesMax = I("charges", e.ChargesMax);
+            e.ChargeTimeSeconds = F("chargetime", e.ChargeTimeSeconds);
+            e.AoeRadius = F("aoe", e.AoeRadius);
+            e.ProjectileSpeed = F("projspeed", e.ProjectileSpeed);
+            e.LeapHeight = F("leapheight", e.LeapHeight);
+            e.MaxStacks = I("maxstacks", e.MaxStacks);            // v0.134.0
+            e.ProjectileCount = I("projcount", e.ProjectileCount);
+            e.KnockbackScale = F("knockback", e.KnockbackScale);
+            e.LifetimeSeconds = F("lifetime", e.LifetimeSeconds);
+            e.CastTimeScale = F("casttime", e.CastTimeScale);
+            e.EffectDurationSeconds = F("duration", e.EffectDurationSeconds);
+            e.HealingMultiplier = F("healing", e.HealingMultiplier);
+            e.FreeMoveAfterSeconds = F("freelymove", e.FreeMoveAfterSeconds);
+            e.CastMovementSpeed = F("castspeed", e.CastMovementSpeed);
+            e.SummonCap = I("summoncap", e.SummonCap);
+            e.SummonTimeoutSeconds = F("summontimeout", e.SummonTimeoutSeconds);
+            e.SummonUnitsPerCast = I("summonunits", e.SummonUnitsPerCast);
+            e.ForceTimeoutSeconds = F("forcetimeout", e.ForceTimeoutSeconds);
+            e.PowerWindowSeconds = F("powerwindow", e.PowerWindowSeconds);
+        }
+        if (fixedCount > 0) Core.Log.LogWarning($"[Beelz RULES] {fixedCount} invalid numeric value(s) ignored at load — see warnings above.");
     }
 
     /// <summary>
@@ -65,6 +142,7 @@ internal sealed class AbilityRules
             File.WriteAllText(tmp, JsonSerializer.Serialize(Current, _json));
             if (File.Exists(RulesFilePath)) File.Replace(tmp, RulesFilePath, null);
             else File.Move(tmp, RulesFilePath);
+            ExclusionService.Invalidate();   // v0.135.0: lock groups are edited in place
             return true;
         }
         catch (Exception ex)
@@ -215,6 +293,11 @@ internal sealed class AbilityRules
                 if (e.AoeRadius.HasValue) existing.AoeRadius = e.AoeRadius;
                 if (e.ProjectileSpeed.HasValue) existing.ProjectileSpeed = e.ProjectileSpeed;
                 if (e.LeapHeight.HasValue) existing.LeapHeight = e.LeapHeight;
+                if (e.MaxStacks.HasValue) existing.MaxStacks = e.MaxStacks;                   // v0.134.0
+                if (e.ProjectileCount.HasValue) existing.ProjectileCount = e.ProjectileCount;
+                if (e.KnockbackScale.HasValue) existing.KnockbackScale = e.KnockbackScale;
+                if (e.LifetimeSeconds.HasValue) existing.LifetimeSeconds = e.LifetimeSeconds;
+                if (e.CastTimeScale.HasValue) existing.CastTimeScale = e.CastTimeScale;
                 if (e.EffectDurationSeconds.HasValue) existing.EffectDurationSeconds = e.EffectDurationSeconds;
                 if (e.HealingMultiplier.HasValue) existing.HealingMultiplier = e.HealingMultiplier;
                 if (e.SummonCap.HasValue) existing.SummonCap = e.SummonCap;
@@ -227,6 +310,7 @@ internal sealed class AbilityRules
                 if (e.FreeMoveAfterCast) existing.FreeMoveAfterCast = true;
                 if (e.FreeMoveAfterSeconds.HasValue) existing.FreeMoveAfterSeconds = e.FreeMoveAfterSeconds;   // v0.87.0
                 if (e.InterruptOnHit.HasValue) existing.InterruptOnHit = e.InterruptOnHit;                      // v0.87.0
+                if (e.AllowGlobalSharedEdit) existing.AllowGlobalSharedEdit = true;                              // v0.132.0
                 if (!string.IsNullOrWhiteSpace(e.ReviewStatus) && !string.Equals(e.ReviewStatus, "Unreviewed", StringComparison.OrdinalIgnoreCase)) existing.ReviewStatus = e.ReviewStatus;  // v0.111.0
                 if (!string.IsNullOrWhiteSpace(e.ReviewTag)) existing.ReviewTag = e.ReviewTag;  // v0.112.0
             }
@@ -254,6 +338,11 @@ internal sealed class AbilityRules
         e.AoeRadius = null;
         e.ProjectileSpeed = null;
         e.LeapHeight = null;
+        e.MaxStacks = null;          // v0.134.0
+        e.ProjectileCount = null;
+        e.KnockbackScale = null;
+        e.LifetimeSeconds = null;
+        e.CastTimeScale = null;
         e.EffectDurationSeconds = null;
         e.HealingMultiplier = null;
         e.SummonCap = null;
@@ -266,12 +355,13 @@ internal sealed class AbilityRules
         e.CastMovementSpeed = null;
         e.FreeMoveAfterSeconds = null;   // v0.87.0
         e.InterruptOnHit = null;         // v0.87.0
+        e.AllowGlobalSharedEdit = false; // v0.132.0
         e.DamageScale = 1.0f;
         e.CooldownScale = 1.0f;
     }
 
     /// <summary>v0.72.0: reset ONE ability's shaping config to shipped defaults. Clears the rule fields;
-    /// the caller live-restores the baked prefab values via AbilityTuningService.RestoreAbility.</summary>
+    /// the caller live-restores via AbilityTuningService.ReapplyAll (restore all + re-apply every rule).</summary>
     public (bool ok, string message) ResetAbilityDefaults(string nameOrGuid)
     {
         var map = Current?.AbilityMap;
@@ -315,14 +405,24 @@ internal sealed class AbilityRules
             if (resolved == null) return (false, $"No ability prefab found for ID {name}. Use the name or a valid ID from .beelz list / api list.");
             name = resolved;
         }
-        string f = (field ?? "").Trim().ToLowerInvariant();
         string v = (rawValue ?? "").Trim();
         string vl = v.ToLowerInvariant();
+
+        // v0.132.0: one field table resolves every alias to its canonical name and validates numbers
+        // (finite + range) before anything is stored — the same rules the tuner and inspect use.
+        var fd = AbilityFieldTable.Resolve(field);
+        if (fd == null) return (false, "Unknown field. Valid: " + AbilityFieldTable.ValidNames() + ".");
+        string f = fd.Name;
+        if ((fd.Kind is AbilityFieldTable.Kind.Float or AbilityFieldTable.Kind.Int) && !AbilityFieldTable.IsClearToken(v)
+            && !AbilityFieldTable.TryParseNumber(fd, v, out _, out string numErr))
+            return (false, numErr);
 
         if (!Current.AbilityMap.TryGetValue(name, out var e)) { e = new AbilityEntry(); Current.AbilityMap[name] = e; }
 
         switch (f)
         {
+            case "allowglobalsharededit":
+                { var b = ParseOnOff(vl); if (b == null) return (false, "allowglobalsharededit expects on|off."); e.AllowGlobalSharedEdit = b.Value; break; }
             case "enabled":
                 { var b = ParseOnOff(vl); if (b == null) return (false, "enabled expects on|off."); e.Enabled = b.Value; break; }
             case "transformonly":
@@ -382,6 +482,29 @@ internal sealed class AbilityRules
                 { if (vl is "clear" or "none" or "null") { e.LeapHeight = null; break; }
                   if (!TryParseFloat(v, out float lh) || lh < 0f) return (false, "leapheight expects a leap/travel height >= 0 (vanilla boss leaps are ~250; try ~20-40 to keep the caster grounded), or clear. (Needs Abilities_ApplyConfig; the edit is GLOBAL.)");
                   e.LeapHeight = lh; break; }
+            // v0.134.0 knobs (baked, near-chain only, value-only; see docs/ABILITY_CONFIG.md)
+            case "maxstacks": case "stacks":
+                { if (vl is "clear" or "none" or "null") { e.MaxStacks = null; break; }
+                  if (!int.TryParse(v, out int msv) || msv < 1 || msv > 255) return (false, "maxstacks expects a whole number 1-255 (how many times the ability's buff can stack), or clear.");
+                  e.MaxStacks = msv; break; }
+            case "projcount": case "projectilecount": case "projectiles":
+                { if (vl is "clear" or "none" or "null") { e.ProjectileCount = null; break; }
+                  if (!int.TryParse(v, out int pcv) || pcv < 1 || pcv > 16) return (false, "projcount expects a whole number 1-16 (projectiles per volley; capped at 3x the ability's own count), or clear.");
+                  e.ProjectileCount = pcv; break; }
+            case "knockback": case "knockbackscale":
+                { if (vl is "clear" or "none" or "null") { e.KnockbackScale = null; break; }
+                  if (!TryParseFloat(v, out float kbv) || kbv < 0f || kbv > 10f) return (false, "knockback expects a multiplier 0-10 (1.0 = no change, 0 = no push), or clear.");
+                  e.KnockbackScale = kbv; break; }
+            case "lifetime": case "spawnlifetime":
+                { if (vl is "clear" or "none" or "null") { e.LifetimeSeconds = null; break; }
+                  if (!TryParseFloat(v, out float lfv) || lfv < 0.1f || lfv > 600f) return (false, "lifetime expects seconds 0.1-600 (how long the ability's projectiles/areas last; buff length is 'duration'), or clear.");
+                  e.LifetimeSeconds = lfv; break; }
+            case "casttime": case "casttimescale":
+                { if (vl is "clear" or "none" or "null") { e.CastTimeScale = null; break; }
+                  if (!TryParseFloat(v, out float ctsv) || ctsv < 0.1f || ctsv > 10f) return (false, "casttime expects a multiplier 0.1-10 (1.0 = no change; EXPERIMENTAL), or clear.");
+                  string refusal = AbilityTuningService.CastTimeRefusal(ResolveAbilityGuid(name));
+                  if (refusal != null) return (false, $"casttime can't apply to this ability ({refusal}) — channels, hold-to-cast and charge abilities time themselves.");
+                  e.CastTimeScale = ctsv; break; }
             case "duration": case "effectduration":
                 { if (vl is "clear" or "none" or "null") { e.EffectDurationSeconds = null; break; }
                   if (!TryParseFloat(v, out float ed) || ed < 0f) return (false, "duration expects the buff/debuff duration in seconds >= 0, or clear. (Needs Abilities_ApplyConfig; the edit is GLOBAL.)");
@@ -403,13 +526,16 @@ internal sealed class AbilityRules
                   if (!int.TryParse(v, out int su) || su < 0) return (false, "summonunits expects an integer >= 0 (max UNITS one cast of this ability summons; 0 = the ability's natural count), or clear. Separate from summoncap (which limits concurrent USES).");
                   e.SummonUnitsPerCast = su; break; }
             case "forcetimeout": case "effecttimeout": case "bufftimeout":
-                { if (vl is "clear" or "none" or "null") { e.ForceTimeoutSeconds = null; break; }
-                  if (!TryParseFloat(v, out float fto) || fto < 0f) return (false, "forcetimeout expects seconds >= 0 (force this ability's otherwise-INDEFINITE spawned effects/buffs to expire after this long — adds a lifetime where there is none), or clear. (Needs Abilities_ApplyConfig; GLOBAL baked edit.)");
-                  e.ForceTimeoutSeconds = fto; break; }
+                { if (vl is "clear" or "none" or "null") { e.ForceTimeoutSeconds = null; CastHistoryService.Invalidate(); break; }
+                  if (!TryParseFloat(v, out float fto) || fto < 0f) return (false, "forcetimeout expects seconds >= 0 (expire this ability's otherwise-INDEFINITE buffs after this long when a PLAYER casts it — runtime only, no prefab edit), or clear.");
+                  e.ForceTimeoutSeconds = fto; CastHistoryService.Invalidate(); break; }
             case "powerwindow": case "powerwindowseconds": case "dmgwindow":
                 { if (vl is "clear" or "none" or "null") { e.PowerWindowSeconds = null; break; }
                   if (!TryParseFloat(v, out float pw) || pw < 0f) return (false, "powerwindow expects seconds >= 0 — how long the granted-cast power buff lasts, so a power-scaled DoT/AoE that ticks AFTER the cast is still boosted (0/clear = default 1.5s). NOTE: only affects power-scaled damage; flat boss DoTs (fixed per-tick values) cannot be scaled by any power buff.");
                   e.PowerWindowSeconds = pw; break; }
+            case "summonpower":
+                { if (!TryParseFloat(v, out float sp) || sp <= 0f) return (false, "summonpower expects a number > 0 (1.0 = no change) — scales this summon's power under Summon_PowerMode=OwnerRelative.");
+                  e.SummonPowerScale = sp; break; }
             case "category":
                 { if (vl is "clear" or "none" or "null" or "auto") { e.Category = null; break; }
                   if (!Enum.TryParse<AbilityCategory>(v, ignoreCase: true, out var cat)) return (false, "category expects one of: Travel, Aoe, Projectile, Melee, Summon, Buff, WeaponSpell, Spell, Other (or clear).");
@@ -426,7 +552,7 @@ internal sealed class AbilityRules
             case "notes":
                 { e.Notes = v; break; }
             default:
-                return (false, "Unknown field. Valid: enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, damagescale, cooldownscale, cooldown, range, charges, chargetime, aoe, projspeed, leapheight, duration, healing, forcetimeout, powerwindow, summoncap, summontimeout, summonunits, category, reviewstatus, reviewtag, interruptible, interruptonhit, freemove, freelymove, castspeed, notes.");
+                return (false, "Unknown field. Valid: " + AbilityFieldTable.ValidNames() + ".");
         }
         bool saved = Save();
         return (true, Persisted(saved, $"Set {f}={v} for '{name}'. (.beelz admin reload re-applies cast tuning if changed.)"));
@@ -443,6 +569,10 @@ internal sealed class AbilityRules
         {
             bool block = raw.StartsWith("!");
             string tok = block ? raw.Substring(1).Trim() : raw;
+            // v0.132.0: DualHammers is cut content (no obtainable weapon, never detected) — reject it so an
+            // admin can't gate an ability to a weapon nobody can wield.
+            if (Enum.TryParse<WeaponFamily>(tok, ignoreCase: true, out var dh) && dh == WeaponFamily.DualHammers)
+            { error = "DualHammers is unreleased content no player can wield — pick another weapon (or use '!' blocks / 'any')."; return list; }
             if (!Enum.TryParse<WeaponFamily>(tok, ignoreCase: true, out var fam) || fam == WeaponFamily.None)
             { error = $"Unknown weapon family '{raw}'. Valid: Sword, GreatSword, Axe, Mace, Spear, Daggers, Crossbow, Longbow, Pistols, Reaper, Whip, Claws, Pollaxe, Slashers, TwinBlades, Unarmed, FishingPole, Magic — prefix with '!' to BLOCK a weapon (e.g. !Sword), or 'any' to clear."; return list; }
             list.Add((block ? "!" : "") + fam.ToString());
@@ -572,7 +702,30 @@ internal sealed class AbilityRules
         TransformOnlyPatterns = dto.TransformOnlyPatterns ?? new List<string>(),
         TransformOnlyGuids = dto.TransformOnlyGuids ?? new List<int>(),
         TransformMap = NormalizeTransformMap(dto.TransformMap),
+        ExclusionGroups = NormalizeExclusionGroups(dto.ExclusionGroups),
+        BaselineHash = dto.BaselineHash,
     };
+
+    // v0.135.0: Max >= 1, members trimmed + de-duplicated (case-insensitive). Unresolved members are KEPT (an
+    // ability name from a future build / typo stays visible in `lock list`); ExclusionService warns + ignores them.
+    static Dictionary<string, ExclusionGroupDto> NormalizeExclusionGroups(Dictionary<string, ExclusionGroupDto> raw)
+    {
+        var result = new Dictionary<string, ExclusionGroupDto>(StringComparer.OrdinalIgnoreCase);
+        if (raw == null) return result;
+        foreach (var (name, g) in raw)
+        {
+            if (string.IsNullOrWhiteSpace(name) || g == null) continue;
+            var members = new List<string>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var m in g.Members ?? new List<string>())
+            {
+                string t = (m ?? "").Trim();
+                if (t.Length > 0 && seen.Add(t)) members.Add(t);
+            }
+            result[name.Trim()] = new ExclusionGroupDto { Max = Math.Max(1, g.Max), Members = members, Notes = g.Notes };
+        }
+        return result;
+    }
 
     // v0.53.0: drop invalid/empty-pattern overrides and clamp rates to [0,1] (they're probabilities).
     static List<RateOverride> NormalizeDropRateOverrides(List<RateOverride> raw)
@@ -696,6 +849,11 @@ internal sealed class AbilityRules
                 AoeRadius = entry.AoeRadius,
                 ProjectileSpeed = entry.ProjectileSpeed,
                 LeapHeight = entry.LeapHeight,
+                MaxStacks = entry.MaxStacks,                // v0.134.0 — preserve across reload
+                ProjectileCount = entry.ProjectileCount,
+                KnockbackScale = entry.KnockbackScale,
+                LifetimeSeconds = entry.LifetimeSeconds,
+                CastTimeScale = entry.CastTimeScale,
                 EffectDurationSeconds = entry.EffectDurationSeconds,
                 HealingMultiplier = entry.HealingMultiplier,
                 SummonCap = entry.SummonCap,                          // v0.79.0 — preserve across reload
@@ -740,6 +898,45 @@ internal sealed class AbilityRules
             Core.Log?.LogWarning($"[Beelz] embedded ability_rules.default.json load failed: {ex.Message} — using built-in deny-list default.");
         }
         return DefaultRules();
+    }
+
+    // ---- v0.135.0: reseed support --------------------------------------------------------------------
+    /// <summary>The shipped default this server was last seeded/merged from (3-way merge base).</summary>
+    public string BaselineFilePath => Path.Combine(Path.GetDirectoryName(RulesFilePath) ?? "", "ability_rules.baseline.json");
+
+    /// <summary>The raw embedded Resources/ability_rules.default.json text, or null.</summary>
+    internal static string EmbeddedDefaultJson()
+    {
+        var asm = System.Reflection.Assembly.GetExecutingAssembly();
+        using var stream = asm.GetManifestResourceStream("Beelzebub.Resources.ability_rules.default.json");
+        if (stream == null) return null;
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
+    }
+
+    /// <summary>Round-trip a rules file through the DTO + normalizer so all three merge inputs share one shape
+    /// (defaults filled, nulls normalized, legacy keys migrated). BaselineHash is dropped. Throws on bad JSON.</summary>
+    internal static string NormalizedJson(string raw)
+    {
+        var dto = JsonSerializer.Deserialize<RulesDto>(raw, _json) ?? throw new InvalidOperationException("rules JSON deserialized to null");
+        var n = NormalizeNulls(dto);
+        n.BaselineHash = null;
+        return JsonSerializer.Serialize(n, _json);
+    }
+
+    /// <summary>Stable content hash of a normalized rules JSON (canonical form, so formatting doesn't matter).</summary>
+    internal static string HashOf(string normalizedJson)
+    {
+        var node = System.Text.Json.Nodes.JsonNode.Parse(normalizedJson) as System.Text.Json.Nodes.JsonObject;
+        node?.Remove(Beelzebub.Logic.RulesMerge.BaselineHashKey);
+        return Beelzebub.Logic.RulesMerge.Sha256(System.Text.Encoding.UTF8.GetBytes(Beelzebub.Logic.RulesMerge.Canon(node)));
+    }
+
+    /// <summary>Parse + validate a candidate rules JSON exactly as Load would (throws when unusable).</summary>
+    internal static void ValidateCandidate(string json)
+    {
+        var dto = JsonSerializer.Deserialize<RulesDto>(json, _json) ?? throw new InvalidOperationException("merged rules deserialized to null");
+        ValidateNumerics(NormalizeNulls(dto));
     }
 
     static RulesDto DefaultRules() => new()
@@ -787,13 +984,18 @@ internal sealed class AbilityRules
             && entry.Weapons is { Count: > 0 })
         {
             var parsed = new List<WeaponFamily>(entry.Weapons.Count);
+            bool anyBlock = false;
             foreach (var w in entry.Weapons)
             {
-                if (w.StartsWith("!")) continue;   // v0.101.0: "!weapon" is a BLOCK entry, not part of the allow-list
+                if (w.StartsWith("!")) { anyBlock = true; continue; }   // v0.101.0: "!weapon" is a BLOCK entry, not part of the allow-list
                 if (Enum.TryParse(w, ignoreCase: true, out WeaponFamily fam))
                     parsed.Add(fam);
             }
             if (parsed.Count > 0) return parsed;
+            // v0.132.0 FIX: a BLOCK-only list ("!Sword") means "universal minus the blocked weapons". It used
+            // to fall through to the name heuristic below, so '!Sword' on a heuristic-Axe ability made it
+            // Axe-only. Universal here; the blocks are enforced by IsWeaponBlocked at every grant site.
+            if (anyBlock) return new[] { WeaponFamily.Magic };
         }
         return new[] { WeaponFamilyClassifier.Classify(abilityName, adminOverrides: null) };
     }
@@ -843,10 +1045,32 @@ internal sealed class AbilityRules
         var parsed = new List<ShapeshiftForm>(entry.Forms.Count);
         foreach (var f in entry.Forms)
         {
-            string name = f.StartsWith("!") ? f.Substring(1) : f;
-            if (Enum.TryParse(name, ignoreCase: true, out ShapeshiftForm sf)) parsed.Add(sf);
+            // v0.132.0 FIX: "!Form" is a BLOCK, not a restriction — it used to be stripped and reported as an
+            // allowed form (so `forms !Mounted` read as "Mounted only"). Blocks: see GetFormBlocks.
+            if (f.StartsWith("!")) continue;
+            if (Enum.TryParse(f, ignoreCase: true, out ShapeshiftForm sf)) parsed.Add(sf);
         }
         return parsed;
+    }
+
+    /// <summary>v0.132.0: the "!"-blocked forms of an ability (usable everywhere except these).</summary>
+    public IReadOnlyList<ShapeshiftForm> GetFormBlocks(string abilityName)
+    {
+        var list = new List<ShapeshiftForm>();
+        if (Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var entry) && entry.Forms != null)
+            foreach (var f in entry.Forms)
+                if (f.StartsWith("!") && Enum.TryParse(f.Substring(1), ignoreCase: true, out ShapeshiftForm sf)) list.Add(sf);
+        return list;
+    }
+
+    /// <summary>v0.132.0: the "!"-blocked weapons of an ability (usable on every weapon except these).</summary>
+    public IReadOnlyList<WeaponFamily> GetWeaponBlocks(string abilityName)
+    {
+        var list = new List<WeaponFamily>();
+        if (Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var entry) && entry.Weapons != null)
+            foreach (var w in entry.Weapons)
+                if (w.StartsWith("!") && Enum.TryParse(w.Substring(1), ignoreCase: true, out WeaponFamily fam)) list.Add(fam);
+        return list;
     }
 
     /// <summary>
@@ -921,6 +1145,11 @@ internal sealed class AbilityRules
         if (e.AoeRadius.HasValue) p.Add($"aoe={e.AoeRadius.Value:0.##}");
         if (e.ProjectileSpeed.HasValue) p.Add($"projspeed={e.ProjectileSpeed.Value:0.##}");
         if (e.LeapHeight.HasValue) p.Add($"leapheight={e.LeapHeight.Value:0.##}");
+        if (e.MaxStacks.HasValue) p.Add($"maxstacks={e.MaxStacks.Value}");
+        if (e.ProjectileCount.HasValue) p.Add($"projcount={e.ProjectileCount.Value}");
+        if (e.KnockbackScale.HasValue) p.Add($"knockback={e.KnockbackScale.Value:0.##}");
+        if (e.LifetimeSeconds.HasValue) p.Add($"lifetime={e.LifetimeSeconds.Value:0.##}");
+        if (e.CastTimeScale.HasValue) p.Add($"casttime={e.CastTimeScale.Value:0.##}");
         if (e.EffectDurationSeconds.HasValue) p.Add($"duration={e.EffectDurationSeconds.Value:0.##}");
         if (e.HealingMultiplier.HasValue) p.Add($"healing={e.HealingMultiplier.Value:0.##}");
         if (e.ForceTimeoutSeconds.HasValue) p.Add($"forcetimeout={e.ForceTimeoutSeconds.Value:0.##}");
@@ -933,6 +1162,7 @@ internal sealed class AbilityRules
         if (e.FreeMoveAfterCast) p.Add("freemove=true");
         if (e.FreeMoveAfterSeconds.HasValue) p.Add($"freelymove={e.FreeMoveAfterSeconds.Value:0.##}");
         if (e.CastMovementSpeed.HasValue) p.Add($"castspeed={e.CastMovementSpeed.Value:0.##}");
+        if (e.AllowGlobalSharedEdit) p.Add("allowglobalsharededit=true");
         if (!string.IsNullOrWhiteSpace(e.Category)) p.Add("category=" + e.Category);
         if (!string.IsNullOrWhiteSpace(e.ReviewStatus) && !string.Equals(e.ReviewStatus, "Unreviewed", StringComparison.OrdinalIgnoreCase)) p.Add("reviewstatus=" + e.ReviewStatus);
         if (!string.IsNullOrWhiteSpace(e.ReviewTag)) p.Add("reviewtag=" + e.ReviewTag);
@@ -956,9 +1186,17 @@ internal sealed class AbilityRules
         // v0.118.0 — confirmed crash / permanent-character-break abilities from the v0.100 tester CRITICAL list.
         // Honored even in Capture_InclusiveMode (which testers run). Recoverable-stuck ones are data-blocked
         // (Enabled=false in ability_rules.default.json) instead, so they can be un-blocked for fix-research.
-        // v0.129.0 — UN-hard-blocked (tester could not reproduce on the current build; now data-enabled):
+        // v0.129.0 — UN-hard-blocked (tester could not reproduce at the time; were data-enabled):
         //   Dracula Bolt Spray 1957691133, Morgana Swarm -1980019894 + Orb Barrage 1242557903,
-        //   Leandra ShadowStep 1325722355 + TrippleBolt -1795148379. Kept below: still-confirmed crashers.
+        //   Leandra ShadowStep 1325722355 + TrippleBolt -1795148379.
+        // v0.132.0 — RE-BLOCKED 4 of those 5 after the V-Blood boss testing round (2026-06-14):
+        //   the Morgana pair CRASHES THE SERVER when chained (Swarm -> Orb Barrage), and the Leandra
+        //   pair KILLS THE PLAYER regardless of HP (+ minions that never despawn until death). Blocked
+        //   pending KDPen's deeper review. (Dracula Bolt Spray 1957691133 stays data-only / under review.)
+        -1980019894,   // AB_Blackfang_Morgana_TravelToPosition_Swarm — SERVER crash combo (with 1242557903)
+        1242557903,    // AB_Blackfang_Morgana_TravelingOrbBarrage — SERVER crash combo (with -1980019894)
+        1325722355,    // AB_Undead_BishopOfShadows_ShadowStep (Leandra) — kills player regardless of HP
+        -1795148379,   // AB_Undead_BishopOfShadows_TrippleBolt (Leandra) — kills player regardless of HP
         1485838951,    // AB_Gloomrot_Technician_Fiddle — GAME crash (vanilla sword-E while bound)
         1322698651,    // AB_Undead_ArenaChampion_TwinbladeThrow (Gaius) — GAME crash
         -485230865,    // Undead_ArenaChampion_CorpseBuff (Gaius) — locks in place, aggro off
@@ -967,6 +1205,18 @@ internal sealed class AbilityRules
         // v0.127.0 — gaps found in the 2026-06-05 crash/break re-audit (the baseline had blocked the
         // applied BUFF, not the capturable ABILITY a player actually grabs):
         -89125940,     // AB_Undead_AreanaChampion_CorpseBuff_AbilityGroup (Gaius) — the CAPTURABLE ability that applies the permanent locked/phased/invisible CorpseBuff (-485230865 above is only the buff, not captured)
+        // v0.136.0 — tester baseline (V-Blood + NPC Discord audit): crash / character-break abilities that were
+        // still capturable in the shipped defaults. Mirrored as Enabled=false/Blocked by tools/apply_tester_baseline.py.
+        1074442576,    // AB_Sommelier_BarrelDance — destroys neighbouring plots
+        22199616,      // AB_Sommelier_HorizontalBarrel — destroys neighbouring plots
+        1129782597,    // AB_Sommelier_HorizontalBarrel_Hard — destroys neighbouring plots
+        2073002423,    // AB_Militia_BellRinger_RingBell — GAME crash with vanilla sword-E (same class as Technician Fiddle)
+        1431473799,    // AB_IceRanger_TowerOfFrost (Elena) — stuck in the sky; leapheight can't reach its shared launch buff
+        2057952818,    // AB_IceRanger_TowerOfFrost_LowHealth (Elena) — same
+        906463896,     // AB_CastleMan_HolyBeam — effect only removable by dying
+        583436571,     // AB_CastleMan_HolyBeam_Hard — effect only removable by dying
+        874909393,     // AB_CastleMan_TrippleSpinningCross — effect only removable by dying
+        2030404176,    // AB_WerewolfChieftain_OpenTheCages — needs admin removal
     };
 
     /// <summary>v0.101.0: is this a confirmed server-crashing ability we hard-block everywhere?</summary>
@@ -1083,9 +1333,24 @@ internal sealed class AbilityRules
         => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.SummonTimeoutSeconds : null;
     public int? GetSummonUnitsPerCast(string abilityName)
         => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.SummonUnitsPerCast : null;
+    // v0.134.0 knobs
+    public int? GetMaxStacks(string abilityName)
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.MaxStacks : null;
+    public int? GetProjectileCount(string abilityName)
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.ProjectileCount : null;
+    public float? GetKnockbackScale(string abilityName)
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.KnockbackScale : null;
+    public float? GetLifetimeSeconds(string abilityName)
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.LifetimeSeconds : null;
+    public float? GetCastTimeScale(string abilityName)
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.CastTimeScale : null;
     public float? GetForceTimeoutSeconds(string abilityName)
         => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.ForceTimeoutSeconds : null;
     /// <summary>v0.120.0: per-ability granted-cast power-window seconds (null = default window).</summary>
+    public float GetSummonPowerScale(string abilityName)
+        => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) && e != null
+            && float.IsFinite(e.SummonPowerScale) && e.SummonPowerScale > 0f ? e.SummonPowerScale : 1f;
+
     public float? GetPowerWindowSeconds(string abilityName)
         => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.PowerWindowSeconds : null;
     /// <summary>v0.80.0: per-ability max units per cast (0/none = the ability's natural count).</summary>
@@ -1111,10 +1376,9 @@ internal sealed class AbilityRules
         => Current.AbilityMap != null && Current.AbilityMap.TryGetValue(abilityName ?? "", out var e) ? e.Category : null;
 
     /// <summary>
-    /// Per-ability cooldown multiplier (1.0 = no change). v0.44.0: LIVE for FORCE-CASTS —
-    /// <c>.beelz cast &lt;hotkey|index&gt;</c> multiplies the ability's own cooldown by this
-    /// before enforcing it (floor 1s). Native spell-BAR slot cooldowns are still V Rising's
-    /// own (scaling those needs a cooldown-component hook — a follow-up).
+    /// Per-ability cooldown multiplier (1.0 = no change): the entry's value, else Defaults.CooldownScale.
+    /// v0.134.0: applied to captured BAR casts by AbilityCooldownEnforcer (× the live cooldown, so gear CDR still
+    /// counts) and to `.beelz cast` force-casts — both via Logic.CooldownMath (absolute `cooldown` wins).
     /// </summary>
     public float GetCooldownScale(string abilityName)
     {
@@ -1440,6 +1704,23 @@ internal sealed class AbilityRules
         // kill-switch + difficulty + tier + notes. Hot-reloadable via .beelz admin reload.
         // See `docs/ABILITY_MAP_FORMAT.md` for usage.
         public Dictionary<string, TransformEntry> TransformMap { get; set; } = new();
+
+        // v0.135.0: admin-defined INCOMPATIBILITY LOCKS. Key = group name. "At most Max of these Members in one
+        // player's active loadout at once." Members are ability names / numeric IDs / `cat:<Category>`. Ships
+        // EMPTY — which combos to lock is the admin's call. See ExclusionService + docs/ABILITY_CONFIG.md.
+        public Dictionary<string, ExclusionGroupDto> ExclusionGroups { get; set; } = new();
+
+        // v0.135.0: `.beelz admin reseed` bookkeeping — SHA-256 of the shipped baseline this file was last
+        // seeded/merged from. Missing or mismatched → merge runs in SAFE mode. Never edit by hand.
+        public string BaselineHash { get; set; }
+    }
+
+    /// <summary>v0.135.0: one incompatibility-lock group (see <see cref="RulesDto.ExclusionGroups"/>).</summary>
+    public sealed class ExclusionGroupDto
+    {
+        public int Max { get; set; } = 1;
+        public List<string> Members { get; set; } = new();
+        public string Notes { get; set; }
     }
 
     /// <summary>
@@ -1649,6 +1930,13 @@ internal sealed class AbilityRules
         // vanilla boss leaps are ~250, which flings a player caster sky-high; lower it to keep grounded).
         // Edited on the spawned phase buff during ApplyAll, capture/restore-safe like the fields above.
         public float? LeapHeight { get; set; }
+        // v0.134.0 knobs — baked on the NEAR chain (group, casts, their direct spawns), value-only, from captured
+        // originals, under the shared-prefab guard. null = leave the shipped value.
+        public int? MaxStacks { get; set; }           // Buff.MaxStacks on the ability's own buffs (1..255)
+        public int? ProjectileCount { get; set; }     // Count on fan/multishot/cluster patterns (≤ min(orig×3, 16))
+        public float? KnockbackScale { get; set; }    // × knockback Range and Duration
+        public float? LifetimeSeconds { get; set; }   // LifeTime.Duration of spawned projectiles/areas (never buffs)
+        public float? CastTimeScale { get; set; }     // EXPERIMENTAL × MaxCastTime+PostCastTime (not channels/hold/charges)
         // v0.68.0 (Stage 2b): downstream effect shaping (walked from Group→Cast→SpawnPrefab).
         // - EffectDurationSeconds: ABSOLUTE override of the duration of buffs/debuffs this ability
         //   applies (ApplyBuffOnGameplayEvent.OverrideDuration). Idempotent (set, not multiplied).
@@ -1680,6 +1968,12 @@ internal sealed class AbilityRules
         // DoTs (fixed per-tick values with no power coefficient) cannot be scaled by ANY power buff — their
         // damage lives in a blob asset that's not editable. See docs/ABILITY_CHANGE_IMPACT.md.
         public float? PowerWindowSeconds { get; set; }
+        // v0.133.0: multiplier on a captured SUMMON's power under Summon_PowerMode=OwnerRelative
+        // (minion power = owner power × Transform_SummonPowerFactor × this). 1.0 = no change.
+        public float SummonPowerScale { get; set; } = 1.0f;
+        // v0.132.0: opt-in to baked edits on chain prefabs SHARED with other abilities/bosses. Honoured only
+        // when every owning chain is fully decoded; the affected groups are logged when it applies.
+        public bool AllowGlobalSharedEdit { get; set; }
         // v0.51.0: admin override for the wire `cat=` badge. One of the AbilityCategory names
         // (Travel/Aoe/Projectile/Melee/Summon/Buff/WeaponSpell/Spell/Other). Empty/null = use
         // the name heuristic (Categorization.ClassifyAbility). Highest precedence.

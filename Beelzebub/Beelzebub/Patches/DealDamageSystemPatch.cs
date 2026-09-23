@@ -10,7 +10,9 @@ using Unity.Entities;
 namespace Beelzebub.Patches;
 
 /// <summary>
-/// W5 (partial): telemetry on damage events from Beelzebub-granted abilities.
+/// W5: damage events. v0.133.0: the prefix now also drives per-hit damage scaling for captured casts
+/// (<see cref="Services.DamageScaler"/>, Damage_Mode) — the "readonly fields" note below is historical: the
+/// event is scaled by writing a modified COPY with SetComponentData.
 ///
 /// **Current state:** observe only. The DealDamageEvent struct's fields
 /// (SpellSource, Target, MainType, MainFactor, ResourceModifier, Modifier,
@@ -36,7 +38,9 @@ namespace Beelzebub.Patches;
 [HarmonyPatch(typeof(DealDamageSystem), nameof(DealDamageSystem.OnUpdate))]
 internal static class DealDamageSystemPatch
 {
+    // v0.133.0: explicit priority — scale before other mods' prefixes read the event (Plugin logs any co-patchers).
     [HarmonyPrefix]
+    [HarmonyPriority(Priority.First)]
     public static void OnUpdatePrefix(DealDamageSystem __instance)
     {
         if (!Core.IsReady) return;
@@ -48,7 +52,10 @@ internal static class DealDamageSystemPatch
         //       their summons' AggroBuffer. Always on when SummonsAreAllies.
         bool aggroEnabled = Beelzebub.Config.Settings.Transform_SummonsAreAllies.Value;
         bool telemetryEnabled = Beelzebub.Config.Settings.VerboseLogging.Value;
-        if (!aggroEnabled && !telemetryEnabled) return;
+        // v0.133.0 (P2): per-hit damage attribution/scaling for captured casts (Damage_Mode != Off).
+        var damageMode = Services.DamageScaler.EffectiveMode;
+        bool damageEnabled = damageMode != Logic.DamageMode.Off;
+        if (!aggroEnabled && !telemetryEnabled && !damageEnabled) return;
 
         NativeArray<Entity> entities;
         try
@@ -66,6 +73,12 @@ internal static class DealDamageSystemPatch
             for (int i = 0; i < entities.Length; i++)
             {
                 Entity entity = entities[i];
+                // Scale BEFORE anything else reads the event, so every consumer this frame sees one value.
+                if (damageEnabled)
+                {
+                    try { Services.DamageScaler.Process(entity, damageMode); }
+                    catch (Exception ex) { Core.Log.LogError($"[Beelz DMG] damage scaling on {entity}: {ex}"); }
+                }
                 if (aggroEnabled)
                 {
                     try { RouteAggro(entity); }
@@ -130,18 +143,34 @@ internal static class DealDamageSystemPatch
         Services.SummonAllyService.HandleHordeEnteringCombat(steamId, ownerPlayer);
     }
 
-    static Entity ResolveOwningPlayer(Entity start)
+    /// <summary>The owning player via EntityOwner (v0.133.0: one shared cycle-safe ≤ 8-hop walk for damage,
+    /// forcetimeout and aggro — rev 6.1 #15).</summary>
+    internal static Entity ResolveOwningPlayer(Entity start) => Services.DamageScaler.ResolveOwningPlayer(start, out _);
+
+    /// <summary>v0.133.0: report the per-target HP change of traced hits (observational truth table).</summary>
+    /// <summary>Startup: name any OTHER mod patching DealDamageSystem.OnUpdate (ordering matters for Damage_Mode=Scale).</summary>
+    internal static void LogCoPatchers(string ownId)
     {
-        Entity current = start;
-        for (int hop = 0; hop < 4; hop++)
+        try
         {
-            if (!current.Exists()) return Entity.Null;
-            if (current.IsPlayer()) return current;
-            if (!current.TryGetComponent<EntityOwner>(out var eo)) return Entity.Null;
-            if (eo.Owner == current) return Entity.Null;
-            current = eo.Owner;
+            var m = AccessTools.Method(typeof(DealDamageSystem), nameof(DealDamageSystem.OnUpdate));
+            var info = m == null ? null : Harmony.GetPatchInfo(m);
+            if (info == null) return;
+            var others = new List<string>();
+            foreach (var p in info.Prefixes) if (p.owner != ownId) others.Add($"{p.owner} (prefix, priority {p.priority})");
+            foreach (var p in info.Postfixes) if (p.owner != ownId) others.Add($"{p.owner} (postfix)");
+            if (others.Count > 0)
+                Core.Log.LogInfo($"[Beelz DMG] other patches on DealDamageSystem.OnUpdate: {string.Join(", ", others)}. Beelzebub's prefix runs at Priority.First.");
         }
-        return Entity.Null;
+        catch (Exception ex) { Core.Log.LogWarning($"[Beelz DMG] co-patcher scan failed: {ex.Message}"); }
+    }
+
+    [HarmonyPostfix]
+    public static void OnUpdatePostfix()
+    {
+        if (!Core.IsReady) return;   // FlushProbes is a no-op unless Telemetry/trace recorded probes
+        try { Services.DamageScaler.FlushProbes(); }
+        catch (Exception ex) { Core.Log.LogWarning($"[Beelz DMG] probe flush failed: {ex.Message}"); }
     }
 
     static void Observe(Entity eventEntity)

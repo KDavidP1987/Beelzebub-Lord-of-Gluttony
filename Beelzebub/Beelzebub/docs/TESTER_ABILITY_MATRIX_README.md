@@ -5,6 +5,11 @@ ability set (1816).** Fill the blanks as a group, then send it back.
 
 Regenerate anytime with `tools/build_tester_matrix_csv.py` (keeps prepopulated data, picks up new abilities).
 
+> **v0.136.0 — the results now ship.** The working copy's `FINAL:` verdicts and `Phase 2: Cfg …` recommendations
+> (`Reference Data/TESTING DATA/TESTER_ABILITY_MATRIX.xlsx`) are applied to the shipped defaults by
+> `tools/apply_tester_baseline.py --write` (Hard → blocked, Soft with a config fix → fix pre-set, Soft without
+> one → `Enabled: false`). Re-run it after the matrix changes, then rebuild.
+
 ## Columns
 
 **Identity (don't edit):** `Ability`, `ID` (PrefabGUID — the key we tune by), `UnitName` (who you capture it from).
@@ -57,6 +62,38 @@ ability's actual values from the prefab).
 ones we've blocked from the first test wave — confirm or correct them.
 
 **`Notes`** — anything else: how it behaves, what it *should* do, balance thoughts, fix ideas.
+
+## Tester-feedback audit columns (cols 65–68, added 2026-06-10)
+
+These four columns are the **enable/disable baseline** distilled from every tester report in
+`Reference Data/beelz-vblood/` (the V-Blood/boss Discord threads) + `Reference Data/BEELZ Testing.xlsx`
+(Domino's NPC sheet), reconciled against the existing `TESTER_ABILITY_BASELINE.md` verdicts and the coded
+hard-block list. **456 abilities had tester feedback and are annotated; the ~1,360 untested rows are left
+blank** (per the decision to keep untested abilities enabled by default — only flag what testers actually hit).
+
+| Column | Meaning |
+|---|---|
+| `TesterVerdict` | the raw tester signal — `GOOD`/`TUNE`/`REVIEW`/`NEEDS-WORK`/`NOT-USABLE`/`WORKS-NOT-USABLE` (v0.100 legend) or `good`/`tune`/`works-unsure`/`needs-work`/`broken`/`great`/`exploit`/`stuck`/`crash-break` (newer v0.131 threads). |
+| `TesterFinding` | one-line summary of what the tester observed (`[Unit] Ability: finding`). |
+| `Recommendation` | **`Enable`** (ship enabled by default), **`Soft-Disable`** (ship `Enabled=false`, admin can opt in), or **`Hard-Disable`** (code-locked, cannot be enabled). |
+| `DisableType` | blank for Enable · **`Soft (default config)`** · **`Hard (code-locked)`**. |
+
+**How the recommendation was derived:**
+- **Enable** — works well / fun, with or without tuning (`GOOD`, `TUNE`, and `REVIEW` items a tester explicitly
+  praised). "Needs tuning" (locked-in-place, cooldown) does **not** demote to disabled — those are config fixes.
+- **Soft-Disable** — functional-but-not-worth-shipping-on (animation-only, no-damage, doesn't-summon,
+  underwhelming duplicates, "unsure if usable"), recoverable launch/stuck (fling-to-sky, fall-asleep, escapable
+  invisibility, off-map fly), and **balance exploits** (Rat Vanguard, Gargoyle Wing Shield, Tailor Shapeshift,
+  Corpse Pile Dig, Matka one-shot Mosquito). All reversible by an admin.
+- **Hard-Disable** — the 7 confirmed **crash / permanent-character-break** abilities already in the code
+  hard-block list: Sir Erwin Mountup (server crash), Technician Fiddle + Gaius Twinblade Throw (game crash),
+  Gaius Corpse Buff ×2 + Cassius Leap Strike (permanent stuck/T-pose), Spider Baneling Explode Poison
+  (permanent invisibility). *(Candidate to add: Militia Bell Ringer "Ring Bell" — same sword-E crash class as
+  Fiddle, flagged in the NPC sheet but not yet code-locked.)*
+
+**Tally:** 173 Enable · 276 Soft-Disable · 7 Hard-Disable. This is an audit/recommendation layer — it does **not**
+change the `Enabled` column or the shipped `ability_rules.default.json`; applying it to the mod data is a
+separate follow-up. Regenerate with `_matrix_build.py` at the workspace root.
 
 ## What's already prepopulated
 - Existing weapon/form restrictions (`Y`/`N`).

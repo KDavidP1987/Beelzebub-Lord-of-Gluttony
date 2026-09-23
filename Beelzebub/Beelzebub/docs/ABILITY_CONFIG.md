@@ -29,6 +29,10 @@ There are **two** config surfaces:
 - **"Nerf one ability's damage / change its cooldown."** Add an `AbilityMap` entry with
   `"DamageScale"` / `"CooldownScale"`.
 - **"Restrict an ability to specific weapons."** Add `"Weapons": ["Reaper", "Sword"]` to its entry.
+- **"These two abilities together break the game."** Lock them: `.beelz admin lock add nocombo "Ability A, Ability B"`
+  — a player can then only have one of them on their active bar + hotkeys at a time (§6).
+- **"Pick up the new shipped defaults without losing my edits."** `.beelz admin reseed preview`, then
+  `.beelz admin reseed merge` (§7).
 
 ---
 
@@ -60,13 +64,24 @@ Other relevant **global** keys:
   fields. Set false only to disable ALL baked ability-config edits. These edits are server-wide and
   also affect the source NPC/boss's copy of the ability (intended).
 
-**(v0.65) Per-ability absolute cooldown & range** (require `Abilities_ApplyConfig` — baked, GLOBAL edits):
-- `.beelz admin ability <name> cooldown <seconds>` — set an exact cooldown (`clear` to remove).
-- `.beelz admin ability <name> range <distance>` — set the max cast range (`clear` to remove).
-- (Shortcuts: `.beelz admin tune <name> cooldown <s>` / `... range <d>`.)
-- `Grant_MinimumCooldownSeconds` — **global** floor applied to every ability's cooldown (0 = off).
-- These also surface to BloodCraftHub as `cooldown_override=` / `range_override=` on `api info` and
-  `catalog-ability` (ApiVersion 12).
+**Cooldowns (runtime since v0.134.0 — no game-data edit, bosses keep their own cooldowns):**
+- `.beelz admin ability <name> cooldown <seconds>` — exact cooldown for a PLAYER's captured bar cast (`clear` to remove).
+- `.beelz admin ability <name> cooldownscale <x>` — multiply the live cooldown instead (gear/buff cooldown
+  reduction still counts, because the scale applies to the cooldown the game actually started).
+- `Grant_MinimumCooldownSeconds` — **global** floor for captured bar casts (0 = off).
+- Precedence per cast: `cooldown` if set, else live cooldown × `cooldownscale` (else `Defaults.CooldownScale`),
+  then the floor. `.beelz cast` force-casts use the same math on their own tracker (minimum 1 s).
+- **Abilities with no cooldown of their own (v0.136.0):** an absolute `cooldown` on such an ability is
+  *started* by Beelzebub on the player's slot at cast time (the game would never start one), then re-applied
+  for a few seconds if the game's cast-end clears it. Still player slot state only — no prefab edit.
+- **Limits:** charge-based abilities are skipped (tune `charges` / `chargetime` instead); `cooldownscale` and the
+  floor can only *raise* a cooldown the game starts (× 0 is still 0) — use an absolute `cooldown` for an ability
+  with no cooldown; transforms keep their native cooldowns (their `CooldownScale` lives in `TransformMap`).
+- **Shipped presets (v0.136.0):** the default rules carry the Discord tester baseline — ~210 abilities with a
+  pre-set fix (`freelymove` / `cooldown` / `damagescale` / `leapheight` / summon limits), ~300 soft-disabled
+  (`Enabled: false`, re-enable any time), and 10 more code hard-blocks. Each touched entry has a
+  `[v0.136 baseline]` note. Regenerate with `tools/apply_tester_baseline.py --write`.
+- **(v0.65) Range:** `.beelz admin ability <name> range <distance>` — max cast range (baked, `clear` to remove).
 
 **(v0.67) More server-wide shaping** (also `Abilities_ApplyConfig`, default ON):
 - `.beelz admin ability <name> charges <n>` / `chargetime <seconds>` — charge-based abilities
@@ -88,8 +103,20 @@ Other relevant **global** keys:
 - Surfaced to BCH as `duration_override` / `heal_mult` (ApiVersion 14).
 - *(Reaches an ability's primary spawned effect; deeply-nested effects may not respond — verify in-game.)*
 
-> **Coming next (multi-ability rules):** *stack limits* (per-ability summon cap), *incompatible-ability
-> locks* (block conflicting binds), and *chain triggers* (one ability auto-firing another).
+**(v0.133.0) Damage — section `[Damage]` in the .cfg:**
+
+| Key | Default | Meaning |
+|---|---|---|
+| `Damage_Mode` | `Off` | `Off` = the legacy power window around a captured cast. `Telemetry` = also attribute every hit to the cast that caused it and count what per-hit scaling *would* do — changes nothing (`.beelz admin damage-stats`). `Scale` = per-hit: the power part of each attributed hit from a captured cast × (`Defaults` / ability `DamageScale`, × `Grant_PowerScalingFactor` when Boosted). No power window. |
+| `Damage_MinFactor` / `Damage_MaxFactor` | `0` / `0` | Floor / cap on the final power factor of a scaled hit (0 = off). Min must be ≤ Max. |
+| `Damage_FlatPolicy` | `Unchanged` | The flat (non-power) part of a hit: `Unchanged` or `Scaled`. %-of-max-HP damage is never scaled. |
+| `Damage_ProvenanceRetentionSeconds` | `120` | How long a cast stays matchable to late-spawning damage sources (min 30). |
+| `Summon_PowerMode` | `OwnerRelative` (new servers) / `Legacy` (existing) | `OwnerRelative` = a captured summon's power = your power × `Transform_SummonPowerFactor` × the ability's `summonpower`. `Legacy` = the unit's own stats × the factor. |
+
+Damage always follows the caster's own Spell/Physical power (level, gear, potions); only PLAYER casts of
+CAPTURED abilities are touched, so bosses stay vanilla. A hit that can't be tied to exactly one cast stays
+vanilla. **Recommended rollout:** run `Telemetry` for a session, check `.beelz admin damage-stats`
+(attribution should read *reliable*), then switch to `Scale`.
 
 ---
 
@@ -118,15 +145,17 @@ Other relevant **global** keys:
   ],
 
   "AbilityMap": { /* per-ability — see §4 */ },
-  "TransformMap": { /* per-unit transform tuning — see §5 */ }
+  "TransformMap": { /* per-unit transform tuning — see §5 */ },
+  "ExclusionGroups": { /* incompatibility locks — see §6 (ships empty) */ }
 }
 ```
 
 - **Allow-lists win:** if `AllowPatterns` or `AllowGuids` is non-empty it becomes an exclusive
   whitelist (honored even in inclusive mode — it's a deliberate restriction).
 - **`Defaults`** lets you set one global baseline instead of an entry per ability. A per-ability
-  entry overrides it. `DamageScale` flows through the granted-cast power window; `CooldownScale`
-  flows through `.beelz cast` force-casts (see the cooldown note in §4).
+  entry overrides it. `DamageScale` flows through the granted-cast power window (or per hit when
+  `Damage_Mode=Scale`); `CooldownScale` multiplies the live cooldown of captured bar casts and `.beelz cast`
+  force-casts (see the cooldown notes in §2).
 - **Transform-only lists** mark abilities reservable for transforms. Resolution is
   per-ability `AbilityMap[...].TransformOnly` → `TransformOnlyGuids` → `TransformOnlyPatterns`
   (substring). All three are **only enforced** when `Grant_EnforceTransformOnly = true`.
@@ -167,39 +196,106 @@ All fields optional; omit any you don't want to change.
 }
 ```
 
-| Field | Type | Default | Effect |
-|---|---|---|---|
-| `Enabled` | bool | `true` | **Hard kill-switch.** `false` blocks both capture and use, always. |
-| `DamageScale` | float | `1.0` | Granted-cast damage multiplier (× the global `Grant_PowerScalingFactor` when `Boosted`). |
-| `CooldownScale` | float | `1.0` | Cooldown multiplier. **Applies to `.beelz cast` force-casts today;** native spell-bar slot cooldowns remain the game's own (a deeper hook is tracked). |
-| `Weapons` | string[] | `[]` | Allowed weapon families. Empty = universal. Valid: Sword, GreatSword, Axe, Mace, Spear, Daggers, Crossbow, Longbow, Pistols, Reaper, Whip, Claws, Pollaxe, Slashers, TwinBlades, Unarmed, FishingPole, Magic. |
-| `TransformOnly` | bool | `false` | Reserve for transforms — **only enforced when `Grant_EnforceTransformOnly = true`**. |
-| `Difficulty` | string | `"Basic"` | Capture gate vs. `Server_DifficultyMode` (ignored in inclusive mode). |
-| `Phase` | int | `1` | Boss multi-phase grouping for transform loadouts. |
-| `AllowDenied` | bool | `false` | Force this ability past the deny lists (still honors `Enabled`). |
-| `Interruptible` / `FreeMoveAfterCast` / `CastMovementSpeed` | bool?/bool/float? | unset | Cast tuning (needs `Abilities_ApplyConfig`). ⚠ edits the ability's **shared** cast data, so the source NPC/boss cast changes too. |
-| `Category` | string | unset | Override the BCH category badge (`Travel`/`Aoe`/`Projectile`/`Melee`/`Summon`/`Buff`/`WeaponSpell`/`Spell`/`Other`). Omit = auto-classify from the name. |
+### Every field (generated from `Services/AbilityFieldTable.cs` — the one table the commands, validation and this doc share)
 
-**Set any of these live, no file editing (v0.53.0):**
+**Scope:** *Rule* = capture/availability/curation. *Runtime* = applies to PLAYER casts only, no game-data
+edit, live immediately. *Baked* = a GLOBAL prefab edit re-applied by the tuner (also changes the source
+NPC/boss cast). Numbers outside the range are rejected by the commands and ignored (with a warning) if
+hand-edited into the JSON.
+
+| Field | Aliases | Scope | Values | Meaning |
+|---|---|---|---|---|
+| `enabled` |  | Rule | on / off | on\|off — admin kill-switch (capture + use) |
+| `weapons` |  | Rule | see meaning | weapon allow-list (sword,axe) and/or !blocks (!sword); 'any' clears |
+| `forms` |  | Rule | see meaning | form allow-list (wolf) and/or !blocks (!mounted); 'any' clears |
+| `transformonly` |  | Rule | on / off | on\|off — only usable while transformed |
+| `difficulty` |  | Rule | see meaning | Basic\|Brutal capture gate |
+| `phase` |  | Rule | see meaning | boss phase this ability belongs to (>=1) |
+| `allowdenied` |  | Rule | on / off | on\|off — force-allow past deny patterns |
+| `category` |  | Rule | see meaning | Travel\|Aoe\|Projectile\|Melee\|Summon\|Buff\|WeaponSpell\|Spell\|Other\|clear |
+| `reviewstatus` | `review`, `status` | Rule | see meaning | Unreviewed\|Reviewed\|Approved\|Blocked\|Hidden |
+| `reviewtag` | `tag`, `audittag` | Rule | see meaning | free-text audit tag |
+| `notes` |  | Rule | see meaning | free-text note |
+| `damagescale` |  | Runtime | 0.01 – 100 | damage multiplier on captured casts (1.0 = no change) |
+| `cooldownscale` |  | Runtime | 0.01 – 100 | cooldown multiplier on captured casts (1.0 = no change) |
+| `forcetimeout` | `effecttimeout`, `bufftimeout` | Runtime | 0 – 3600 | seconds — expire this ability's otherwise-indefinite buffs cast by a PLAYER (no prefab edit) |
+| `powerwindow` | `powerwindowseconds`, `dmgwindow` | Runtime | 0 – 600 | seconds the granted-cast power buff lasts (0 = default 1.5s) |
+| `summoncap` | `summonlimit`, `maxsummons` | Runtime | 0 – 100 | max simultaneous uses of this summon (0 = unlimited) |
+| `summontimeout` | `summonlifetime`, `summonduration` | Runtime | 0 – 36000 | seconds before this ability's summons despawn (0 = never) |
+| `summonpower` | `summonpowerscale` | Runtime | 0.01 – 100 | summon power multiplier (Summon_PowerMode=OwnerRelative: minion power = owner power × Transform_SummonPowerFactor × this) |
+| `cooldown` | `cooldownseconds`, `cd` | Runtime | 0 – 3600 | absolute cooldown seconds on captured bar casts (wins over cooldownscale; still floored by Grant_MinimumCooldownSeconds) |
+| `summonunits` | `summonunitspercast`, `unitspercast` | Runtime | 0 – 100 | max units one cast summons (0 = natural count) |
+| `range` | `maxrange` | Baked | 0 – 500 | max cast range + projectile travel distance |
+| `charges` | `maxcharges` | Baked | 0 – 100 | max charges (abilities that already use charges) |
+| `chargetime` | `chargeuptime` | Baked | 0 – 3600 | recharge seconds per charge |
+| `aoe` | `aoeradius`, `radius` | Baked | 0 – 100 | area-of-effect max radius |
+| `projspeed` | `projectilespeed` | Baked | 0 – 500 | projectile speed |
+| `leapheight` | `travelheight` | Baked | 0 – 1000 | leap/travel apex height (vanilla boss leaps ~250) |
+| `duration` | `effectduration` | Baked | 0 – 3600 | applied buff/debuff duration seconds |
+| `healing` | `healmult`, `healingmultiplier` | Baked | 0 – 100 | healing multiplier (1.0 = no change) |
+| `interruptible` | `interrupt` | Baked | on / off / clear | on\|off\|clear — player can self-cancel the cast |
+| `interruptonhit` | `interruptattack`, `breakonhit` | Baked | on / off / clear | on\|off\|clear — cast cancels when the caster is hit |
+| `freemove` |  | Baked | on / off | on\|off — free movement when the cast finishes |
+| `freelymove` | `freemovesecs`, `freemoveafter` | Baked | 0 – 60 | seconds into the cast before movement is freed |
+| `castspeed` | `castmovementspeed` | Baked | 0 – 1 | move speed during the cast (0 = rooted .. 1 = full) |
+| `maxstacks` | `stacks` | Baked | 1 – 255 | how many times the ability's own buff can stack (1-255) |
+| `projcount` | `projectilecount`, `projectiles` | Baked | 1 – 16 | projectiles per volley on fan/multishot/cluster abilities (capped at 3x the ability's own count, max 16) |
+| `knockback` | `knockbackscale` | Baked | 0 – 10 | knockback multiplier (distance + push time; 1.0 = no change, 0 = none) |
+| `lifetime` | `spawnlifetime` | Baked | 0.1 – 600 | seconds the ability's projectiles/areas last (buff length is 'duration') |
+| `casttime` | `casttimescale` | Baked | 0.1 – 10 | EXPERIMENTAL cast-time multiplier (windup + recovery; not channels/hold-to-cast/charges) |
+| `allowglobalsharededit` | `sharededit` | Baked | on / off | on\|off — allow baked edits on prefabs SHARED with other abilities/bosses (only when the chain is fully decoded) |
+
+**Shared-prefab guard (v0.132.0).** An ability's chain (group → casts → projectiles/areas/buffs/summons) is
+mapped once at startup across *every* ability, bosses included. A *Baked* edit is **skipped** on any prefab
+another ability also reaches, unless every ability that reaches it asks for the same value, or the entry sets
+`allowglobalsharededit on` (which logs every other ability it changes). Conflicting values on a shared prefab
+are rejected for all of them. A chain that couldn't be fully mapped never gets shared edits (no override).
+`.beelz admin ability-inspect <ability>` shows the chain, the live numbers (incl. damage factors), what is
+shared, and which writes were skipped.
+
+**`forcetimeout` is runtime-only (v0.132.0).** It no longer edits game data: when a player's captured cast
+spawns a buff with no finite lifetime, that buff instance is removed after N seconds. A buff that could also
+come from another ability the player just cast is left alone (never guessed). The previous build's
+prefab-level timeout is cleared by the server restart that installs this version.
+
+**Stuck-state abilities ship disabled *with* a safety timer (v0.135.0).** The Fall Asleep family (8 s),
+Cassius's High Lord Leap Strike (4 s) and Gaius's Corpse Buff ability (6 s) stay `Enabled=false`, but now
+carry a `forcetimeout`, so an admin who deliberately enables one gets the timer too. Run
+`.beelz admin reseed merge` to pick this up on an existing server.
+
+**New in v0.134.0 — `maxstacks`, `projcount`, `knockback`, `lifetime`, `casttime`.** Baked, near-chain only,
+from captured originals, under the shared-prefab guard. `projcount` works on fan / multishot / cluster
+patterns and is capped at 3× the ability's own count (max 16). `lifetime` touches projectiles and hit areas
+only — a buff's length is `duration`. `casttime` is **experimental** and refuses channels, hold-to-cast and
+charge abilities (the command says why).
+
+**Known limit — Elena's Tower of Frost `leapheight`:** its launch buff is shared with the Overseer boss, so
+the shared-prefab guard skips it and the tune has no effect. `ability-inspect` shows the skip.
+
+**Set any field live, no file editing:**
 ```
-.beelz admin ability <name> <field> <value>
+.beelz admin ability <name|id> <field> <value> [<field> <value> ...]   (up to 5 pairs; omit to READ)
+.beelz admin tune <name|id> <knob> <value|clear>                        (shaping knobs only)
 ```
-`field` is any column above: `enabled`, `weapons`, `forms`, `transformonly`, `difficulty`,
-`phase`, `allowdenied`, `damagescale`, `cooldownscale`, `category`, `interruptible`, `freemove`,
-`castspeed`, `notes`. Lists take a comma value or `any` to clear (e.g. `weapons Reaper,Sword`);
-toggles take `on|off`; `interruptible`/`castspeed`/`category` take `clear` to unset. Examples:
+Lists take a comma value or `any` to clear (e.g. `weapons Reaper,Sword`, `forms !mounted`); toggles take
+`on|off`; numeric/tri-state fields take `clear` to unset. Examples:
 ```
 .beelz admin ability AB_Vampire_Reaper_SpinSlash_AbilityGroup enabled off
-.beelz admin ability AB_Blackfang_Morgana_CrossWindSlash_AbilityGroup category Melee
-.beelz admin ability AB_Some_Spell_AbilityGroup weapons Reaper,Sword
-.beelz admin ability AB_Some_Spell_AbilityGroup damagescale 1.25
+.beelz admin ability AB_Some_Spell_AbilityGroup weapons !Sword
+.beelz admin tune AB_BatVampire_SummonMinions_AbilityGroup leapheight 30
+.beelz admin ability-inspect AB_Some_Spell_AbilityGroup
+.beelz admin ability-inspect export          (every ability → inspect_export.csv)
 ```
+**After a restart:** baked edits are re-applied at startup from `ability_rules.json`. Lowering or
+clearing a baked field restores the shipped value and re-applies all rules live (`reload`, `tune`,
+`ability … defaults`); a restart always guarantees a clean baseline.
+
 Other in-game shortcuts:
 - `.beelz admin deny|undeny|allow|unallow <pattern>` — name-pattern capture filters.
 - `.beelz admin denyguid|allowguid <add|remove> <guid>` — GUID capture filters.
 - `.beelz admin transformonly <add|remove> <pattern|guid>` — bulk transform-only reservation.
 - `.beelz admin default <damagescale|cooldownscale> <value>` — the global `Defaults` block (§3).
-- `.beelz admin tune <ability> <interrupt|freemove|castspeed> <on|off|0..1>` — cast-tuning shortcut.
+- `.beelz admin tune <ability> <knob> <value|clear>` — shaping shortcut (any Baked/Runtime knob above).
 - `.beelz admin reload` — re-read the file (for hand-edits) and re-apply cast tuning.
 
 All command edits persist to `ability_rules.json` immediately (no reload needed); `reload` is only
@@ -232,11 +328,78 @@ remains a JSON edit (then `.beelz admin reload`).
 
 ---
 
-## 6. Precedence summary
+## 6. Incompatibility locks — `ExclusionGroups` (v0.135.0)
+
+Some ability *combinations* break balance even when each ability is fine alone. A **lock group** says
+"at most **Max** of these abilities may be in one player's active loadout at once". None ship — which
+combinations to lock is your call.
+
+```jsonc
+"ExclusionGroups": {
+  "nocombo":   { "Max": 1, "Members": ["AB_Gargoyle_WingShield_AbilityGroup", "830495620"], "Notes": "immortality stack" },
+  "onesummon": { "Max": 1, "Members": ["cat:Summon"] }
+}
+```
+
+- **Members** are ability prefab names, numeric IDs, or `cat:<Category>` (Travel, Aoe, Projectile,
+  Summon, Buff, WeaponSpell, Spell, Melee, Other — the same category `ability-inspect` / the catalog shows,
+  including your `category` overrides). A member that doesn't resolve is kept in the file, warned about in the
+  log, and ignored.
+- **Active loadout** = the bar that's actually live (the form bar in a form, the saddle bar when mounted,
+  otherwise your weapon bar) in slot order, then your hotkeys in name order. **Earlier wins**; the same
+  ability bound twice counts once; an ability in several groups must fit in all of them. Transforms are exempt.
+- **Scope: Beelzebub-granted abilities only.** Vanilla spells/weapon skills you pick in the game's own spellbook
+  aren't counted (a `cat:` group counts only granted abilities). Admin `set-slot` is an override: the bind is saved
+  with a warning, and the lock still keeps it off the live bar.
+- **Enforcement:** `grant` / `weapon-grant` / `form-grant` / `hotkey set` refuse a bind that would be
+  locked; every bar resolve (login, weapon swap, form/mount entry, reload) keeps a locked ability off the bar
+  (the slot shows its normal ability); `.beelz cast` refuses a locked ability. The player gets a 🔒 message
+  naming the group and what it's holding, and 🔓 when it comes back. **Saved binds are never deleted** —
+  remove the lock (or the other ability) and it returns by itself. Admin `set-slot` still saves the bind and
+  warns that it's locked.
+
+```
+.beelz admin lock add <group> "<member, member, ...>"   (new groups start at max 1)
+.beelz admin lock max <group> <n>
+.beelz admin lock remove <group> [member]
+.beelz admin lock list
+.beelz admin lock check <player>
+```
+Every lock command saves the file and re-checks every online player immediately. BloodCraftHub reads the
+groups with `.beelz api locks` (ApiVersion 32).
+
+---
+
+## 7. Picking up new shipped defaults — `.beelz admin reseed` (v0.135.0)
+
+`ability_rules.json` is seeded from the shipped default only when it doesn't exist, so later curation fixes
+didn't reach existing servers. `reseed` closes that gap:
+
+| Command | Effect |
+|---|---|
+| `.beelz admin reseed preview` | Dry run: what a merge would add / adopt / remove, and any conflicts. Writes nothing. |
+| `.beelz admin reseed merge` | 3-way merge against the default you were last seeded from (`ability_rules.baseline.json`): shipped changes land where you never changed the old default; your edits are kept; if both changed, **yours wins** and it's listed as a conflict. |
+| `.beelz admin reseed replace CONFIRM` | Overwrite with the shipped default — your curation is lost. |
+
+- Servers seeded before v0.135.0 have no baseline, so the first `merge` runs in **SAFE mode**: it only adds
+  entries you don't have and adopts shipped `Enabled=false` crash-blocks. Afterwards the baseline exists and
+  later merges are full 3-way.
+- Every write keeps a timestamped backup (`ability_rules.json.bak-YYYYMMDD-HHMMSS`), is validated before it
+  replaces the file, restores the backup on failure, and then reloads + re-applies tuning and locks.
+- Two server keys naming the same ability → the merge is refused until you remove one.
+- Don't hand-edit `BaselineHash` in the file; it ties the file to its baseline.
+
+---
+
+## 8. Precedence summary
 
 1. **Capture eligible?** allow-list → (inclusive mode? junk filter : deny lists + difficulty) → `Enabled`.
 2. **Grantable to the bar?** `Enabled` → (`Grant_EnforceTransformOnly` && `TransformOnly`).
 3. **On which weapon bar?** explicit weapon-bucket placement is honored as-is; the universal
    bucket is filtered by `Weapons` (`Magic`/empty = any).
-4. **How strong / how long the cooldown?** per-ability `DamageScale`/`CooldownScale`, else
-   `Defaults.*`, then the global `Grant_PowerScaling*`.
+4. **Locked out?** the active loadout is resolved against `ExclusionGroups` (§6) — a locked ability stays
+   off the live bar and can't be force-cast.
+5. **How strong?** per-ability `DamageScale`, else `Defaults.DamageScale`, × `Grant_PowerScalingFactor`
+   when Boosted — through the power window (`Damage_Mode=Off`) or per hit (`Scale`).
+6. **How long the cooldown?** per-ability `cooldown`, else live cooldown × (`cooldownscale` or
+   `Defaults.CooldownScale`), then `Grant_MinimumCooldownSeconds` (captured bar casts only).

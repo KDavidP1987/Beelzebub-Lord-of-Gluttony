@@ -18,12 +18,70 @@
 > in the BCH workspace.
 >
 > **Canonical source of truth for the wire API:**
-> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 28`). If this doc
+> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 32`). If this doc
 > and that file ever disagree, the file wins — and this doc should be corrected.
 
 ---
 
-# ⭐ BCH CATCH-UP: v0.100 → v0.131 (read this first) ⭐
+# ⭐ BCH CATCH-UP: v0.100 → v0.135 (read this first) ⭐
+
+> **🆕 v0.135 — ApiVersion 32 (gate `api>=32`). INCOMPATIBILITY LOCKS. Additive.**
+> - **New read:** `.beelz api locks` → one line per admin-defined lock group, then an end line:
+>   `[BEELZ:lock] g=<group> max=<n> m=<member,member,...>` … `[BEELZ:end] cmd=locks count=<n>`.
+>   `g=` and `m=` are SafeToken-encoded (spaces→`_`, `=`→`-`). Each member is an ability GUID (int) or
+>   `cat:<Category>` (Travel/Aoe/Projectile/Summon/Buff/WeaponSpell/Spell/Melee/Other — the same `cat=` values the
+>   catalog emits). Members that don't resolve on the server are omitted. Meaning: at most `max` of the members may
+>   be on one player's live bar + hotkeys at once. Ships empty (`count=0`) unless the admin adds groups.
+> - **New event:** `[BEELZ:event] type=ability-locked src=slot|form|mount|cast key=<slot#|guid> a=<guid> group=<name>
+>   locked=1|0` — sent when a bar resolve keeps an ability OFF the live bar (`locked=1`) or lets it back (`locked=0`);
+>   `src=cast` when `.beelz cast` refuses a locked ability. Only CHANGES are sent.
+> - **Behaviour (no wire change):** `grant` / `weapon-grant` / `form-grant` / `hotkey set` REFUSE a bind that a lock
+>   would suppress (plain-text reply starting with 🔒); `.beelz cast` refuses a locked ability. The player's saved
+>   binds are never deleted — a locked slot shows its vanilla ability and comes back when the lock is lifted. So
+>   `api slots` may list a bind that isn't currently rendered; use the event/`api locks` to badge it.
+> - **What BCH should do (api>=32):** read `api locks` on load (and after `ability-locked` events); badge/grey an
+>   ability card whose GUID/category is in a group that's already full on the player's bar; show the 🔒 refusal text
+>   as-is. On `api<32` do nothing.
+> - Also (admin chat, no wire): `.beelz admin lock add|max|remove|list|check`, `.beelz admin reseed preview|merge|replace CONFIRM`.
+>
+> **🆕 v0.134 — ApiVersion 31 (gate `api>=31`). New tuning knobs + runtime cooldowns. Additive.**
+> - **New tokens on `api info` / `api info-guid`:** `maxstacks_override=<int|->`, `projcount_override=<int|->`,
+>   `knockback_override=<F2|->`, `lifetime_override=<F1|->`, `casttime_override=<F2|->`, and
+>   `cooldown_mode=runtime|charges` (`charges` = the ability uses charges, so cooldown rules are skipped for it).
+> - **Semantics change (same tokens, not wire-breaking):** cooldown rules now apply at RUNTIME to captured BAR casts
+>   only (bosses keep their shipped cooldowns). Effective cooldown = `cooldown_override` if set, else the live
+>   cooldown × `cooldown_scale`, then the server floor `Grant_MinimumCooldownSeconds`. `cooldown_seconds` stays the
+>   SHIPPED value — compute the displayed cooldown with that precedence.
+> - **What BCH should do (api>=31):** show the new overrides on the ability card when not `-`; for the cooldown
+>   label use the precedence above (skip it when `cooldown_mode=charges`).
+>
+> **🆕 v0.133 — ApiVersion 30 (gate `api>=30`). Per-hit damage. Additive.**
+> - **New tokens on `api info` / `api info-guid`:** `damage_mode=Off|Telemetry|Scale` (effective server mode),
+>   `damage_scale_eff=<F2>` (the factor a cast would snapshot now), `attribution=reliable|unreliable|unknown`
+>   (per-hit attribution health; `unknown` = too few hits seen), `summon_power=<F2>`.
+> - New settings stream through `api config` automatically: `Damage_Mode`, `Damage_MinFactor`, `Damage_MaxFactor`,
+>   `Damage_FlatPolicy`, `Damage_ProvenanceRetentionSeconds`, `Summon_PowerMode`.
+> - **What BCH should do (api>=30):** optional — show `damage_scale_eff` as the ability's damage multiplier and flag
+>   `attribution=unreliable` in admin views. No parser change is required to keep working.
+
+> **🆕 v0.132 — ApiVersion 29 (gate `api>=29`). `api info` / `api info-guid`: form/weapon BLOCKS.**
+> - **Changed (correctness fix, same token):** `forms=<Form,...|any>` now lists ONLY the ALLOWED forms. Before,
+>   a `!Form` block (e.g. `forms !Mounted` = "everywhere except mounted") was stripped of its `!` and shown as
+>   *allowed* — the opposite meaning. A block-only rule now emits `forms=any`.
+> - **New (additive):** `form_blocks=<Form,...|->` and `weapon_blocks=<Weapon,...|->` — the `!` blacklists.
+>   Token shape: comma list of the same names as `forms=` / `weapons=`, `-` = none. Example:
+>   `... forms=any form_blocks=Mounted weapon_blocks=Sword,Axe ...`
+> - **Behaviour fix:** a block-only weapon list (`weapons !Sword`) now classifies as universal (`weapons=Magic`)
+>   minus the blocks, instead of falling back to the name heuristic.
+> - **`force_timeout_override=`** keeps its token, but the server now applies it at RUNTIME to the player's own
+>   buff instances (no prefab edit). No BCH change needed.
+> - **What BCH should do:** when `api>=29`, render "usable in: <forms> except <form_blocks>" and
+>   "not with: <weapon_blocks>" on the ability card; on `api<29` keep treating `forms=` as before (it may contain
+>   inverted blocks — show nothing rather than a wrong badge).
+> - Also new (admin chat, no wire tokens): `.beelz admin ability-inspect <ability> [export]` — read-only view of
+>   every tunable number in the chain (incl. damage factors) + shared-prefab info. Not an `api` command; BCH may
+>   relay it as plain text for admins.
+
 
 > **🆕 v0.131 (ApiVersion still 28, no wire change) — NEW recovery command `.beelz admin cleanse <player> [buffNameOrGuid]`.**
 > Strips stuck STATE buffs (invisible/phased/immaterial that survive respawn+relog) from a player; omit the buff
@@ -91,8 +149,12 @@ v0.120.0 callout below.
 | 26 | 0.113.0 | **source-tier** tokens: `source_level=` / `source_tier=` / `is_vblood=` |
 | 27 | 0.116.0 | **catalog filters extended** — `tag` / `reviewstatus` / `tier` / `vblood` filter keys |
 | 28 | 0.119.0 | **`api slots` carries `label=`** (friendly ability name per slot) — for the hover CARD |
+| 29 | 0.132.0 | `form_blocks=` / `weapon_blocks=` on `api info`; `forms=` lists allowed forms only |
+| 30 | 0.133.0 | `damage_mode=` / `damage_scale_eff=` / `attribution=` / `summon_power=` on `api info` |
+| 31 | 0.134.0 | `maxstacks_override=` / `projcount_override=` / `knockback_override=` / `lifetime_override=` / `casttime_override=` / `cooldown_mode=` on `api info`; runtime cooldown semantics |
+| 32 | 0.135.0 | **`api locks`** (`[BEELZ:lock]`) + `type=ability-locked` event — incompatibility locks |
 
-Gate each feature on `api>=N`. `api version` returns `[BEELZ:version] api=28 plugin=0.120.0 ready=…`.
+Gate each feature on `api>=N`. `api version` returns `[BEELZ:version] api=32 plugin=0.135.0 ready=…`.
 
 ## 2. New per-row tokens on `catalog-ability` AND `api info` (all additive)
 

@@ -223,12 +223,43 @@ internal static class BeelzCommands
         if (!Core.AbilityRules.IsEnabled(abilityName, abilityGuid)) { ctx.Reply($"'{abilityName}' is currently disabled by the server admin."); return; }
         if (Core.AbilityRules.IsTransformOnlyEnforced(abilityName, abilityGuid)) { ctx.Reply($"'{abilityName}' is reserved for .beelz transform."); return; }
 
-        // Per-ability cooldown — the ability's own cooldown (min 1s anti-spam).
+        // v0.132.0 FIX: on-demand casts honour the same Weapons / Forms restrictions as the bar. In a
+        // shapeshift form (or mounted) the form lock applies; otherwise the wielded weapon must be allowed
+        // (allow-list + "!weapon" blocks). If no equip buff is found the weapon check is skipped.
+        var caster = ctx.Event.SenderCharacterEntity;
+        var form = Beelzebub.Services.ShapeshiftAbilityService.IsMounted(steamId)
+            ? Beelzebub.Services.ShapeshiftForm.Mounted
+            : Beelzebub.Services.ShapeshiftAbilityService.GetCurrentForm(caster);
+        if (form != Beelzebub.Services.ShapeshiftForm.None)
+        {
+            if (!Core.AbilityRules.IsUsableInForm(abilityName, form)) { ctx.Reply($"'{abilityName}' can't be used in {form} form (server rule)."); return; }
+        }
+        else
+        {
+            var weapon = Beelzebub.Services.SlotApply.CurrentWeapon(caster);
+            if (weapon == Beelzebub.Services.WeaponFamily.None)
+            {
+                // Unarmed is detected as Unarmed; None means the equip buff couldn't be read — fail closed
+                // for abilities with a weapon rule (post-build inspection #6).
+                if (Beelzebub.Services.SlotApply.IsWeaponRestricted(abilityGuid))
+                { ctx.Reply($"'{abilityName}' has a weapon rule and your current weapon couldn't be detected — swap/re-equip your weapon and try again."); return; }
+            }
+            else if (!Beelzebub.Services.SlotApply.IsGrantCompatible(abilityGuid, weapon))
+            { ctx.Reply($"'{abilityName}' can't be used with {weapon} (server weapon rule)."); return; }
+        }
+
+        // v0.135.0: incompatibility locks — the ability must survive the resolve over your live bar + hotkeys.
+        { string lockMsg = Beelzebub.Services.ExclusionService.CheckCast(caster, abilityGuid);
+          if (lockMsg != null) { ctx.Reply($"🔒 {lockMsg}."); return; } }
+
+        // Per-ability cooldown for force-casts. v0.134.0: the same precedence as bar casts (Logic.CooldownMath):
+        // absolute `cooldown` ?? the ability's own cooldown × cooldownscale, then Grant_MinimumCooldownSeconds;
+        // always at least 1s (anti-spam).
         var info = Core.AbilityMetadata?.Resolve(abilityGuid);
-        double cd = info?.CooldownSeconds ?? 0;
-        // v0.44.0: per-ability CooldownScale (ability_rules.json) is now LIVE for force-casts —
-        // admins can lengthen/shorten an on-demand ability's cooldown. Floor applied after scaling.
-        cd *= Core.AbilityRules.GetCooldownScale(abilityName);
+        float baseCd = (float)(info?.CooldownSeconds ?? 0);
+        double cd = Logic.CooldownMath.Resolve(baseCd, Core.AbilityRules.GetCooldownOverride(abilityName),
+            Core.AbilityRules.GetCooldownScale(abilityName),
+            System.Math.Max(0f, Beelzebub.Config.Settings.Grant_MinimumCooldownSeconds.Value), hasCharges: Services.AbilityCooldownEnforcer.HasCharges(abilityGuid)) ?? baseCd;
         if (cd < 1.0) cd = 1.0;
         string label = (info != null && !string.IsNullOrEmpty(info.Name)) ? info.Name : abilityName;
         var key = (steamId, abilityGuid);
@@ -568,6 +599,11 @@ internal static class BeelzCommands
             return;
         }
 
+        // v0.135.0: incompatibility locks (against the bar you'd see on your current weapon).
+        { string lockMsg = Beelzebub.Services.ExclusionService.CheckBind(steamId,
+              Core.AbilityRegistry.GetSlotsResolved(steamId, Beelzebub.Services.SlotApply.CurrentWeapon(ctx.Event.SenderCharacterEntity)), slot, ability._Value);
+          if (lockMsg != null) { ctx.Reply($"🔒 {lockMsg}. Not bound — unslot the other ability first (see .beelz admin lock list)."); return; } }
+
         Core.AbilityRegistry.SetSlot(steamId, slot, ability._Value);
         Core.Persistence.RequestSave();
 
@@ -835,6 +871,10 @@ internal static class BeelzCommands
             return;
         }
 
+        // v0.135.0: incompatibility locks (against that weapon's bar).
+        { string lockMsg = Beelzebub.Services.ExclusionService.CheckBind(steamId, Core.AbilityRegistry.GetSlotsResolved(steamId, weapon), slot, ability._Value);
+          if (lockMsg != null) { ctx.Reply($"🔒 {lockMsg}. Not bound — unslot the other ability first (see .beelz admin lock list)."); return; } }
+
         Core.AbilityRegistry.SetSlot(steamId, weapon, slot, ability._Value);
         Core.Persistence.RequestSave();
 
@@ -960,6 +1000,10 @@ internal static class BeelzCommands
             ctx.Reply($"'{abilityName}' is form-locked out of {form} (it doesn't work there). Pick a different ability for this slot.");
             return;
         }
+
+        // v0.135.0: incompatibility locks (against that form's bar).
+        { string lockMsg = Beelzebub.Services.ExclusionService.CheckBind(steamId, Core.AbilityRegistry.GetFormSlots(steamId, form), slot, ability._Value);
+          if (lockMsg != null) { ctx.Reply($"🔒 {lockMsg}. Not bound — unslot the other ability first (see .beelz admin lock list)."); return; } }
 
         Core.AbilityRegistry.SetFormSlot(steamId, form, slot, ability._Value);
         Core.Persistence.RequestSave();

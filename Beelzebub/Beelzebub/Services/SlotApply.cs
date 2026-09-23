@@ -22,6 +22,10 @@ namespace Beelzebub.Services;
 /// </summary>
 internal static class SlotApply
 {
+    /// <summary>v0.132.0: the weapon family the player is wielding right now (None if no equip buff found).</summary>
+    public static WeaponFamily CurrentWeapon(Entity character)
+        => TryFindEquipBuff(character, out _, out string equipName) ? DetectFamily(equipName) : WeaponFamily.None;
+
     /// <summary>Find the player's active equip-buff entity (weapon, unarmed, or fishing pole).</summary>
     static bool TryFindEquipBuff(Entity character, out Entity buffEntity, out string equipName)
     {
@@ -94,6 +98,23 @@ internal static class SlotApply
     ///   - Otherwise: no.
     /// Also enforces Enabled and TransformOnly (kill-switch + transform-reserved bypass).
     /// </summary>
+    /// <summary>v0.132.0: does the ability have an admin-CONFIGURED weapon rule (a Weapons allow-list or !block)?
+    /// Name-heuristic classification doesn't count. Used to fail closed when the caster's weapon can't be
+    /// determined (post-build inspection r2 #2).</summary>
+    public static bool IsWeaponRestricted(int abilityGuid)
+    {
+        string name = new PrefabGUID(abilityGuid).GetPrefabName();
+        var map = Core.AbilityRules?.Current?.AbilityMap;
+        if (string.IsNullOrEmpty(name) || map == null || !map.TryGetValue(name, out var e) || e?.Weapons == null) return false;
+        foreach (var w in e.Weapons)
+        {
+            string t = (w ?? "").Trim();
+            if (t.Length == 0 || t.Equals("any", StringComparison.OrdinalIgnoreCase) || t.Equals("Magic", StringComparison.OrdinalIgnoreCase)) continue;
+            return true;   // a concrete allow-list entry or a "!Weapon" block
+        }
+        return false;
+    }
+
     public static bool IsGrantCompatible(int abilityGuid, WeaponFamily weapon)
     {
         var ability = new PrefabGUID(abilityGuid);
@@ -120,12 +141,15 @@ internal static class SlotApply
     /// name-derived family (the heuristic that silently dropped Reaper-bucket binds). Still
     /// respects the admin kill-switch and the transform-only reservation.
     /// </summary>
-    public static bool IsGrantUsable(int abilityGuid)
+    /// v0.132.0: also re-checks an explicit "!weapon" BLOCK at injection time — the player's chosen
+    /// bucket overrides the name heuristic, but not an admin blacklist for that weapon.
+    public static bool IsGrantUsable(int abilityGuid, WeaponFamily weapon = WeaponFamily.None)
     {
         var ability = new PrefabGUID(abilityGuid);
         string name = ability.GetPrefabName();
         if (!Core.AbilityRules.IsEnabled(name, abilityGuid)) return false;
         if (Core.AbilityRules.IsTransformOnlyEnforced(name, abilityGuid)) return false;
+        if (Core.AbilityRules.IsWeaponBlocked(name, weapon)) return false;
         return true;
     }
 
@@ -159,8 +183,20 @@ internal static class SlotApply
 
         if (!TryFindEquipBuff(character, out Entity buffEntity, out string equipName)) return false;
         var weapon = DetectFamily(equipName);
-        bool ok = explicitWeaponBucket ? IsGrantUsable(ability._Value) : IsGrantCompatible(ability._Value, weapon);
+        bool ok = explicitWeaponBucket ? IsGrantUsable(ability._Value, weapon) : IsGrantCompatible(ability._Value, weapon);
         if (!ok) return false;
+
+        // v0.135.0: incompatibility locks — the saved bind stays; the live bar resolve decides what shows.
+        if (ExclusionService.Any)
+        {
+            var (_, liveBar) = ExclusionService.ActiveBar(character);
+            liveBar[slot] = ability._Value;
+            if (ExclusionService.CheckProspective(character.GetSteamId(), liveBar, ExclusionService.SlotKey(slot)) != null)
+            {
+                RestoreResolvedGrants(character);   // resolve the whole bar (reports + drops the locked one)
+                return false;
+            }
+        }
 
         int slotBufLen = SlotBufferLength(character);
         if (slot >= slotBufLen)
@@ -278,7 +314,11 @@ internal static class SlotApply
 
         List<int> yielded = null;
         List<int> injectedSlots = null;
+        List<int> lockedSlots = null;
         int injected = 0;
+        // v0.135.0: pass 1 decides which binds are eligible (valid / live / compatible / not yielded); the
+        // incompatibility locks then resolve over that bar, and pass 2 injects only the survivors.
+        var eligible = new List<(int slot, int abilityGuid, bool weaponSpecific)>();
         foreach (var (slot, entry) in slots)
         {
             // v0.61.0: never hand the engine a slot it can't index. A slot outside the bindable
@@ -298,7 +338,7 @@ internal static class SlotApply
             }
 
             // Explicit weapon-bucket binds are honored as-is; universal binds stay family-filtered.
-            bool ok = entry.weaponSpecific ? IsGrantUsable(entry.abilityGuid) : IsGrantCompatible(entry.abilityGuid, weapon);
+            bool ok = entry.weaponSpecific ? IsGrantUsable(entry.abilityGuid, weapon) : IsGrantCompatible(entry.abilityGuid, weapon);
             if (!ok) continue;
 
             if (ShouldYieldSlot(character, steamId, weapon, slot, entry.abilityGuid))
@@ -308,7 +348,28 @@ internal static class SlotApply
                 (yielded ??= new List<int>()).Add(slot);
                 continue;
             }
+            eligible.Add((slot, entry.abilityGuid, entry.weaponSpecific));
+        }
 
+        var bar = new Dictionary<int, int>();
+        foreach (var e in eligible) bar[e.slot] = e.abilityGuid;
+        var lockNotices = new List<Action>();   // chat = structural; run after the buffer work below
+        var keptBar = ExclusionService.FilterBar(character, "slot", bar, lockNotices);
+
+        foreach (var (slot, abilityGuid, weaponSpecific) in eligible)
+        {
+            var entry = (abilityGuid, weaponSpecific);
+            if (!keptBar.ContainsKey(slot))
+            {
+                // Locked out: drop our override so the slot shows its vanilla base; the saved bind is untouched.
+                if (RemoveSlotEntries(buffer, slot)) (lockedSlots ??= new List<int>()).Add(slot);
+                continue;
+            }
+
+            // v0.135.0: strip this slot's entries first (as ApplyGrant does) so a re-resolve — now frequent via lock
+            // edits / reload / reseed — never stacks duplicate overrides on the equip buff.
+            bool copyCd = ShouldCopyCooldown(character, slot, entry.abilityGuid);
+            RemoveSlotEntries(buffer, slot);
             buffer.Add(new ReplaceAbilityOnSlotBuff
             {
                 Slot = slot,
@@ -319,7 +380,7 @@ internal static class SlotApply
                 // a high cooldown (e.g. a 60s configured Ice Nova) BLEEDS onto the newly-placed ability
                 // (the "all my abilities suddenly have a long cooldown" report). Cooldown follows the
                 // ABILITY, not the slot.
-                CopyCooldown = ShouldCopyCooldown(character, slot, entry.abilityGuid),
+                CopyCooldown = copyCd,
                 // v0.120.0: configurable so an admin can make Beelzebub win (or yield) a slot another
                 // mod (e.g. Bloodcraft) also writes. Default 0 = legacy/neutral. See Settings.Interop_*.
                 Priority = Beelzebub.Config.Settings.Interop_SlotInjectionPriority.Value,
@@ -336,6 +397,9 @@ internal static class SlotApply
         if (yielded != null)
             foreach (int slot in yielded)
                 RestoreSlotBaseValue(character, equipBuff, slot);
+        if (lockedSlots != null)
+            foreach (int slot in lockedSlots)
+                RestoreSlotBaseValue(character, equipBuff, slot);
 
         // v0.63.0 (#5): mark freshly-injected slots dirty so the client HUD refreshes without a
         // weapon swap. Matters for the non-equip-event callers (`.beelz refresh`, login re-apply,
@@ -344,6 +408,11 @@ internal static class SlotApply
         if (injectedSlots != null)
             foreach (int slot in injectedSlots)
                 MarkSlotDirty(character, slot);
+
+        foreach (var notice in lockNotices)
+        {
+            try { notice(); } catch (Exception ex) { Core.Log.LogWarning($"[Beelz LOCK] notice failed: {ex.Message}"); }
+        }
 
         return injected;
     }

@@ -66,8 +66,10 @@ internal static class SummonAllyService
     /// Apply the full player-ally setup to a freshly-spawned minion. Returns true
     /// if the minion is now in a state where it should fight alongside the player.
     /// Safe to call multiple times on the same entity (idempotent component writes).
+    /// v0.133.0: <paramref name="abilityGuid"/> = the summon ability credited with this minion (0 = unknown), used
+    /// by Summon_PowerMode=OwnerRelative for the per-ability `summonpower` scale.
     /// </summary>
-    public static bool ApplyPlayerAllySetup(Entity minion, Entity playerCharacter)
+    public static bool ApplyPlayerAllySetup(Entity minion, Entity playerCharacter, int abilityGuid = 0)
     {
         if (!minion.Exists() || !playerCharacter.Exists()) return false;
 
@@ -239,7 +241,7 @@ internal static class SummonAllyService
             // level-40-boss add stays level-40-weak as the player out-levels it.
             // Match the player's UnitLevel (survivability + level-appropriate
             // damage modifier) + apply the admin power factor to its stats/health.
-            ScaleSummonToPlayer(minion, playerCharacter);
+            ScaleSummonToPlayer(minion, playerCharacter, abilityGuid);
 
             // v0.23.16 (B2 diagnostic): log post-setup component state per summon
             // so we can confirm setup was complete when verbose-logging is on.
@@ -284,7 +286,7 @@ internal static class SummonAllyService
     ///     damage-output, since UnitLevel mainly drives the level-difference modifier).
     /// Best-effort + fully guarded — never throws into the caller.
     /// </summary>
-    static void ScaleSummonToPlayer(Entity minion, Entity playerCharacter)
+    static void ScaleSummonToPlayer(Entity minion, Entity playerCharacter, int abilityGuid)
     {
         try
         {
@@ -297,6 +299,27 @@ internal static class SummonAllyService
             }
 
             float factor = Beelzebub.Config.Settings.Transform_SummonPowerFactor.Value;
+
+            // v0.133.0: OwnerRelative — the minion's power follows its OWNER's current Physical/Spell power
+            // (level, gear, potions), × the global factor × the ability's `summonpower`. Health is untouched.
+            // Only when the minion is credited to exactly one ability (abilityGuid != 0); otherwise Legacy.
+            bool ownerRelative = abilityGuid != 0 && string.Equals((Beelzebub.Config.Settings.Summon_PowerMode?.Value ?? "").Trim(),
+                "OwnerRelative", StringComparison.OrdinalIgnoreCase);
+            if (ownerRelative && minion.Has<UnitStats>() && playerCharacter.TryGetComponent<UnitStats>(out var owner))
+            {
+                float per = Core.AbilityRules.GetSummonPowerScale(new PrefabGUID(abilityGuid).GetPrefabName());
+                float mult = (factor > 0f ? factor : 1f) * per;
+                float phys = owner.PhysicalPower._Value * mult, spell = owner.SpellPower._Value * mult;
+                minion.With((ref UnitStats st) =>
+                {
+                    st.PhysicalPower._Value = phys;
+                    st.SpellPower._Value = spell;
+                });
+                if (Beelzebub.Config.Settings.VerboseLogging.Value)
+                    Core.Log.LogInfo($"[Beelz SUMMON] owner-relative power on {minion}: phys={phys:0.#} spell={spell:0.#} (×{mult:0.##})");
+                return;
+            }
+
             if (factor > 0f && System.Math.Abs(factor - 1f) > 0.001f)
             {
                 if (minion.Has<UnitStats>())

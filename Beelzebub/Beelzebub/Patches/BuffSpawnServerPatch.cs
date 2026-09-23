@@ -171,6 +171,23 @@ internal static class BuffSpawnServerPatch
             catch (Exception ex) { Core.Log.LogWarning($"[Beelz] form-enrich/orphan scan failed: {ex.Message}"); }
         }
 
+        // v0.132.0: runtime forcetimeout — time attributed, indefinite buff instances from captured casts.
+        // Independent of the summons config; skipped entirely when no forcetimeout rule exists.
+        if (CastHistoryService.AnyForceTimeout)
+        {
+            try
+            {
+                var ftEnts = __instance.EntityQueries[0].ToEntityArray(Allocator.Temp);
+                try
+                {
+                    for (int i = 0; i < ftEnts.Length; i++)
+                        if (ftEnts[i].Exists()) CastHistoryService.OnBuffSpawned(ftEnts[i]);
+                }
+                finally { ftEnts.Dispose(); }
+            }
+            catch (Exception ex) { Core.Log.LogWarning($"[Beelz TIMEOUT] buff scan failed: {ex.Message}"); }
+        }
+
         if (!Beelzebub.Config.Settings.Transform_SummonsAreAllies.Value) return;
 
         NativeArray<Entity> entities;

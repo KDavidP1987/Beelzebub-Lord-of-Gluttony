@@ -61,6 +61,10 @@ internal static class GrantPowerScalingService
         // Only scale abilities the player obtained from Beelzebub (leaves innate spells/weapons alone).
         if (!Core.AbilityRegistry.HasCaptured(steamId, abilityGroup._Value)) return;
 
+        // v0.133.0: a cast that took the PER-HIT path (Damage_Mode=Scale at cast time) never opens a window —
+        // the path is frozen in its CastHistory snapshot, so an in-flight cast is never scaled twice.
+        if (CastHistoryService.Latest(steamId, abilityGroup._Value)?.Damage.PerHit == true) return;
+
         float scale = ComputeEffectiveScale(abilityGroup);
         if (Math.Abs(scale - 1f) < 0.001f) return; // PlayerScaled / no per-ability tweak → vanilla handles it
 

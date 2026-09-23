@@ -12,7 +12,7 @@ using VampireCommandFramework;
 namespace Beelzebub.Commands;
 
 [CommandGroup("beelz admin")]
-internal static class AdminCommands
+internal static partial class AdminCommands
 {
     /// <summary>
     /// Audit-log line for every admin grant/revoke/force action. Goes to BepInEx\LogOutput.log.
@@ -40,14 +40,18 @@ internal static class AdminCommands
         ctx.Reply("=== Beelzebub ADMIN commands === (player commands: .beelz commands)");
         ctx.Reply("-- RULES / CAPTURE FILTERS --");
         ctx.Reply(".beelz admin rules / reload — show / re-read the ability rules");
-        ctx.Reply(".beelz admin ability <name> [<field> <value> ...] — set per-ability rule(s) live, up to 5 pairs; omit field to READ current config. Fields: enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, damagescale, cooldownscale, cooldown, range, charges, chargetime, aoe, projspeed, duration, healing, summoncap, summontimeout, summonunits, forcetimeout, category, reviewstatus, reviewtag, condition, interrupt/interruptonhit/freemove/freelymove/castspeed, notes");
+        ctx.Reply(".beelz admin ability <name> [<field> <value> ...] — set per-ability rule(s) live, up to 5 pairs; omit field to READ current config. Fields: " + AbilityFieldTable.ValidNames() + ", condition");
         ctx.Reply(".beelz admin ability-set <id> \"(field=value)(field2=value2)...\" — BULK-set MANY fields in one command (parens or ;-separated; handles spaces/commas)");
         ctx.Reply(".beelz admin ability <id> defaults  /  .beelz admin ability all defaults — reset one/every ability's shaping config to shipped baseline");
         ctx.Reply(".beelz admin transform-set <CHAR_unit> <field> <value> — set a per-unit transform rule (enabled, difficulty, tier, damagescale, cooldownscale, healthscale, speedscale, fullreplace, powerscalingmode, notes)");
         ctx.Reply(".beelz admin default <damagescale|cooldownscale> <value> — server-wide scaling baseline");
-        ctx.Reply(".beelz admin tune <ability> <interrupt|freemove|castspeed|cooldown|range|charges|chargetime|aoe|projspeed|leapheight|duration|healing> <value> / tune-list — ability shaping shortcut, ONE field per command (Abilities_ApplyConfig, default ON)");
+        ctx.Reply(".beelz admin tune <ability> <knob> <value|clear> / tune-list — shaping shortcut, ONE knob per command. Knobs: " + AbilityFieldTable.TunableNames());
+        ctx.Reply(".beelz admin damage-stats [ability|reset] · damage-trace on|off — per-hit damage attribution counters + truth-table log (Damage_Mode)");
+        ctx.Reply(".beelz admin ability-inspect <ability> | export — read-only: every number in the ability's chain (incl. damage factors), shared parts, skipped tunes; export = all abilities to inspect_export.csv");
         ctx.Reply(".beelz admin deny|undeny|allow|unallow <pattern> · denyguid|allowguid <add|remove> <guid> · transformonly <add|remove> <pattern|guid> — capture/reservation filters");
         ctx.Reply(".beelz admin freeze-captures <on|off|status> — master CaptureOnKill toggle");
+        ctx.Reply(".beelz admin lock add <group> \"<a, b, ...>\" · lock max <group> <n> · lock remove <group> [member] · lock list · lock check <player> — incompatibility locks (at most N of a group on one player's bar + hotkeys; members = names/IDs/cat:<Category>)");
+        ctx.Reply(".beelz admin reseed preview|merge|replace CONFIRM — pick up this build's shipped ability defaults (merge keeps your edits; backup kept)");
         ctx.Reply("-- TRANSFORM CONFIG --");
         ctx.Reply(".beelz admin transform mode|duration|cooldown <regular|vblood> <...> — transform tuning");
         ctx.Reply(".beelz admin transform show — current transform settings · difficulty [basic|brutal] — server gating");
@@ -140,6 +144,7 @@ internal static class AdminCommands
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
         Core.AbilityRules.Load();
         Beelzebub.Services.BestiaryService.InvalidateTotals();   // v0.86.0 (Bug B): deny/allow changes can shift the capturable total
+        CastHistoryService.Invalidate();   // v0.132.0: pick up hand-edited forcetimeout rules now (running timers keep their snapshot)
         // v0.46.0: re-apply ability cast-tuning from the freshly-loaded rules (no-op unless
         // Abilities_ApplyConfig). Lets admins hand-edit Interruptible/FreeMoveAfterCast and
         // reload without a server restart.
@@ -149,10 +154,13 @@ internal static class AdminCommands
         string tuneNote = Beelzebub.Config.Settings.Abilities_ApplyConfig.Value
             ? $" Ability tuning re-applied to {tuned} cast prefab(s)."
             : " (Ability tuning disabled — set Abilities_ApplyConfig to use it.)";
-        ctx.Reply($"Rules reloaded from {Core.AbilityRules.RulesFilePath}.{tuneNote}");
+        // v0.135.0: hand-edited lock groups take effect on every online bar now.
+        ExclusionService.Invalidate();
+        int rechecked = ExclusionService.ReapplyAllOnline();
+        ctx.Reply($"Rules reloaded from {Core.AbilityRules.RulesFilePath}.{tuneNote} Locks re-checked for {rechecked} online player(s).");
     }
 
-    [Command("tune", description: "Shape an ability server-wide: interrupt on|off, interruptonhit on|off, freemove on|off, freelymove <seconds>, castspeed <0..1>, cooldown <seconds>, range <distance>, charges <n>, chargetime <seconds>, aoe <radius>, projspeed <speed>, leapheight <height> (lower a boss leap's apex so a player caster isn't flung sky-high; vanilla ~250), duration <seconds>, healing <multiplier>, summoncap <n>, summontimeout <seconds>, forcetimeout <seconds>. Applies when Abilities_ApplyConfig is on (default). ONE field per command. Usage: .beelz admin tune <ability name> <knob> <value|clear>", adminOnly: true)]
+    [Command("tune", description: "Shape an ability server-wide (ONE knob per command). Baked (global prefab edit, also changes the source NPC; skipped on prefabs shared with other abilities unless allowglobalsharededit): range, charges, chargetime, aoe, projspeed, leapheight, duration, healing, interruptible, interruptonhit, freemove, freelymove, castspeed, maxstacks, projcount, knockback, lifetime, casttime (experimental). Runtime (player casts only, no prefab edit): cooldown, forcetimeout, powerwindow, summoncap, summontimeout, summonpower, summonunits. See values with .beelz admin ability-inspect <ability>. Usage: .beelz admin tune <ability name|ID> <knob> <value|clear>", adminOnly: true)]
     public static void Tune(ChatCommandContext ctx, string ability, string knob, string value)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
@@ -175,143 +183,94 @@ internal static class AdminCommands
             return;
         }
 
-        var map = Core.AbilityRules.Current.AbilityMap;
-        if (!map.TryGetValue(name, out var e)) { e = new AbilityRules.AbilityEntry(); map[name] = e; }
-
-        string k = (knob ?? "").Trim().ToLowerInvariant();
-        string v = (value ?? "").Trim().ToLowerInvariant();
-        bool? onOff = v is "on" or "true" or "1" ? true : v is "off" or "false" or "0" ? false : (bool?)null;
-        bool clear = v is "clear" or "none" or "null";
-
-        switch (k)
+        // v0.132.0: `tune` is a thin shortcut over the ONE field parser (AbilityFieldTable + SetAbilityField) —
+        // same aliases, validation and messages as `.beelz admin ability`. Only shaping knobs are offered here.
+        var fd = AbilityFieldTable.Resolve(knob);
+        if (fd == null || !fd.Tunable)
         {
-            case "interrupt":
-                if (onOff == null) { ctx.Reply("interrupt expects on|off."); return; }
-                e.Interruptible = onOff.Value;
-                break;
-            case "interruptonhit": case "interruptattack": case "breakonhit":   // v0.87.0
-                if (onOff == null) { ctx.Reply("interruptonhit expects on|off (cancel the cast when the caster is hit)."); return; }
-                e.InterruptOnHit = onOff.Value;
-                break;
-            case "freemove":
-                if (onOff == null) { ctx.Reply("freemove expects on|off."); return; }
-                e.FreeMoveAfterCast = onOff.Value;
-                break;
-            case "freelymove": case "freemovesecs": case "freemoveafter":         // v0.87.0
-                if (clear) { e.FreeMoveAfterSeconds = null; break; }
-                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float fms) || fms < 0f)
-                { ctx.Reply("freelymove expects seconds >= 0 — free to move that many seconds INTO the cast (the cast continues), or 'clear'."); return; }
-                e.FreeMoveAfterSeconds = fms;
-                break;
-            case "castspeed":
-                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float f) || f < 0f)
-                { ctx.Reply("castspeed expects a number >= 0 (0 = rooted during cast, 1 = full speed)."); return; }
-                e.CastMovementSpeed = f;
-                break;
-            case "cooldown": case "cd":
-                if (clear) { e.CooldownSeconds = null; break; }
-                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float cd) || cd < 0f)
-                { ctx.Reply("cooldown expects an absolute time in seconds >= 0, or 'clear'."); return; }
-                e.CooldownSeconds = cd;
-                break;
-            case "range": case "maxrange":
-                if (clear) { e.MaxRangeOverride = null; break; }
-                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float rg) || rg < 0f)
-                { ctx.Reply("range expects a max cast distance >= 0, or 'clear'."); return; }
-                e.MaxRangeOverride = rg;
-                break;
-            case "charges": case "maxcharges":
-                if (clear) { e.ChargesMax = null; break; }
-                if (!int.TryParse(v, out int mc) || mc < 0) { ctx.Reply("charges expects an integer >= 0, or 'clear'."); return; }
-                e.ChargesMax = mc;
-                break;
-            case "chargetime": case "chargeuptime":
-                if (clear) { e.ChargeTimeSeconds = null; break; }
-                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float ctv) || ctv < 0f)
-                { ctx.Reply("chargetime expects seconds >= 0 (recharge per charge), or 'clear'."); return; }
-                e.ChargeTimeSeconds = ctv;
-                break;
-            case "aoe": case "aoeradius": case "radius":
-                if (clear) { e.AoeRadius = null; break; }
-                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float ar) || ar < 0f)
-                { ctx.Reply("aoe expects an area radius >= 0, or 'clear'."); return; }
-                e.AoeRadius = ar;
-                break;
-            case "projspeed": case "projectilespeed":
-                if (clear) { e.ProjectileSpeed = null; break; }
-                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float ps) || ps < 0f)
-                { ctx.Reply("projspeed expects a projectile speed >= 0, or 'clear'."); return; }
-                e.ProjectileSpeed = ps;
-                break;
-            case "leapheight": case "travelheight":
-                if (clear) { e.LeapHeight = null; break; }
-                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float lh) || lh < 0f)
-                { ctx.Reply("leapheight expects a leap/travel height >= 0 (vanilla boss leaps ~250; try ~20-40), or 'clear'."); return; }
-                e.LeapHeight = lh;
-                break;
-            case "duration": case "effectduration":
-                if (clear) { e.EffectDurationSeconds = null; break; }
-                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float ed) || ed < 0f)
-                { ctx.Reply("duration expects the buff/debuff duration in seconds >= 0, or 'clear'."); return; }
-                e.EffectDurationSeconds = ed;
-                break;
-            case "healing": case "healmult":
-                if (clear) { e.HealingMultiplier = null; break; }
-                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float hm) || hm < 0f)
-                { ctx.Reply("healing expects a multiplier >= 0 (1.0 = no change), or 'clear'."); return; }
-                e.HealingMultiplier = hm;
-                break;
-            case "summoncap": case "summonlimit":
-                if (clear) { e.SummonCap = null; break; }
-                if (!int.TryParse(v, out int sc) || sc < 0)
-                { ctx.Reply("summoncap expects an integer >= 0 (0 = unlimited), or 'clear'. Overrides the global summon cap for this ability."); return; }
-                e.SummonCap = sc;
-                break;
-            case "summontimeout": case "summonlifetime":
-                if (clear) { e.SummonTimeoutSeconds = null; break; }
-                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float st) || st < 0f)
-                { ctx.Reply("summontimeout expects seconds >= 0 (0 = never expires), or 'clear'. Overrides the global summon timeout for this ability."); return; }
-                e.SummonTimeoutSeconds = st;
-                break;
-            case "summonunits": case "unitspercast":
-                if (clear) { e.SummonUnitsPerCast = null; break; }
-                if (!int.TryParse(v, out int su) || su < 0)
-                { ctx.Reply("summonunits expects an integer >= 0 (max UNITS one cast summons; 0 = natural count), or 'clear'. Separate from summoncap (concurrent USES)."); return; }
-                e.SummonUnitsPerCast = su;
-                break;
-            case "forcetimeout": case "bufftimeout":
-                if (clear) { e.ForceTimeoutSeconds = null; break; }
-                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float fto) || fto < 0f)
-                { ctx.Reply("forcetimeout expects seconds >= 0 — force this ability's otherwise-INDEFINITE effects/buffs to expire after this long (adds a lifetime where there is none), or 'clear'."); return; }
-                e.ForceTimeoutSeconds = fto;
-                break;
-            case "powerwindow": case "dmgwindow":
-                if (clear) { e.PowerWindowSeconds = null; break; }
-                if (!float.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float pw) || pw < 0f)
-                { ctx.Reply("powerwindow expects seconds >= 0 — how long the granted-cast power buff lasts so a POWER-SCALED DoT/AoE that ticks after the cast is still boosted (0/clear = default 1.5s). Only affects power-scaled damage; flat boss DoTs can't be scaled."); return; }
-                e.PowerWindowSeconds = pw;
-                break;
-            default:
-                ctx.Reply("Unknown knob. Use: interrupt | interruptonhit | freemove | freelymove | castspeed | cooldown | range | charges | chargetime | aoe | projspeed | leapheight | duration | healing | summoncap | summontimeout | summonunits | forcetimeout | powerwindow.");
-                return;
+            ctx.Reply("Unknown knob. Use: " + AbilityFieldTable.TunableNames() + ".");
+            return;
         }
-        Core.AbilityRules.Save();
+        string k = fd.Name;
+        string v = (value ?? "").Trim();
+        var (setOk, setMsg) = Core.AbilityRules.SetAbilityField(name, k, v);
+        if (!setOk) { ctx.Reply(setMsg); return; }
 
+        if (fd.Scope != AbilityFieldTable.Scope.Baked)
+        {
+            // Runtime knobs (forcetimeout / powerwindow / summon*) never touch prefabs — live immediately.
+            ctx.Reply($"Tuned '{name}': {k}={v}. Runtime setting — applies to player casts immediately (no prefab edit).");
+            Audit(ctx, "tune", 0, name, $"{k}={v} runtime");
+            return;
+        }
         if (!Beelzebub.Config.Settings.Abilities_ApplyConfig.Value)
         {
             ctx.Reply($"Saved {k}={v} for '{name}', but Abilities_ApplyConfig is OFF — set it true (it applies on next load / reload).");
             return;
         }
         int applied = AbilityTuningService.ReapplyAll();   // v0.120.0: restore-then-reapply so lowering/clearing this field takes effect now, not next restart
-        ctx.Reply($"Tuned '{name}': {k}={v}. Re-applied to {applied} cast prefab(s). NOTE: this is a GLOBAL prefab edit — the original NPC/boss cast of this ability changes too.");
+        ctx.Reply($"Tuned '{name}': {k}={v}. Re-applied to {applied} prefab(s). NOTE: this is a GLOBAL prefab edit — the original NPC/boss cast of this ability changes too. Prefabs shared with OTHER abilities are skipped (see .beelz admin ability-inspect {name}).");
         // v0.73.0: warn when charges can't apply (the ability has no charge system).
-        if ((k == "charges" || k == "maxcharges" || k == "chargetime" || k == "chargeuptime")
+        if ((k == "charges" || k == "chargetime")
             && !AbilityTuningService.AbilityChainHasCharges(name))
             ctx.Reply("NOTE: this ability has no charge system, so this won't apply. Charges can only be tuned on abilities that already use charges (e.g. dashes).");
         // v0.76.0: cooldown on a charge-based ability is governed by recharge, not AbilityCooldownData.
-        if ((k == "cooldown" || k == "cd") && AbilityTuningService.AbilityChainHasCharges(name))
+        if (k == "cooldown" && AbilityTuningService.AbilityChainHasCharges(name))
             ctx.Reply("NOTE: this ability is charge-based — its delay is the charge RECHARGE, not a cooldown. Use 'chargetime' (recharge seconds) and/or 'charges' instead.");
         Audit(ctx, "tune", 0, name, $"{k}={v} applied={applied}");
+    }
+
+    [Command("ability-inspect", description: "Read-only: every tunable number in an ability's chain (cooldown, cast time, charges, range, projectile, lifetime, AoE, hit radius/targets, DAMAGE factors, heals, buff duration/stacks, knockback, max stacks, projectile/minion counts, spell-mod targets) + which prefabs are shared with other abilities + warnings. 'export' writes ALL abilities to inspect_export.csv. Usage: .beelz admin ability-inspect <ability name|ID> | .beelz admin ability-inspect export", adminOnly: true)]
+    public static void AbilityInspect(ChatCommandContext ctx, string ability)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        if (!AbilityChainGraph.Built) AbilityChainGraph.Build();
+        string a = (ability ?? "").Trim();
+        if (a.Equals("export", StringComparison.OrdinalIgnoreCase))
+        {
+            var (ok, msg) = AbilityInspectService.ExportAll();
+            ctx.Reply(msg);
+            Core.Log.LogInfo($"[Beelz INSPECT] {msg}");
+            Audit(ctx, "ability-inspect", 0, "export", ok ? "ok" : "FAILED");
+            return;
+        }
+        string key = Beelzebub.Services.AbilityRules.ResolveAbilityKey(a) ?? a;
+        int guid = Beelzebub.Services.AbilityRules.ResolveAbilityGuid(key);
+        if (guid == 0) { ctx.Reply($"No ability prefab found for '{a}'. Use the ID or exact prefab name from .beelz list."); return; }
+        foreach (var line in AbilityInspectService.Describe(guid)) ctx.Reply(line);
+    }
+
+    [Command("damage-stats", description: "Per-hit damage attribution/scaling counters (Damage_Mode). Usage: .beelz admin damage-stats [ability name|ID] | .beelz admin damage-stats reset", adminOnly: true)]
+    public static void DamageStats(ChatCommandContext ctx, string ability = "")
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        string a = (ability ?? "").Trim();
+        if (a.Equals("reset", StringComparison.OrdinalIgnoreCase))
+        {
+            DamageScaler.ResetCounters();
+            ctx.Reply("Damage counters reset.");
+            return;
+        }
+        ctx.Reply(DamageScaler.Summary());
+        if (a.Length > 0)
+        {
+            int guid = Beelzebub.Services.AbilityRules.ResolveAbilityGuid(Beelzebub.Services.AbilityRules.ResolveAbilityKey(a) ?? a);
+            if (guid == 0) { ctx.Reply($"No ability prefab found for '{a}'."); return; }
+            ctx.Reply($"{AbilityChainGraph.Name(guid)}: {DamageScaler.Describe(guid)}");
+            return;
+        }
+        var top = DamageScaler.AllCounters.OrderByDescending(kv => kv.Value.Attributed + kv.Value.Ambiguous + kv.Value.Unmatched).Take(10).ToList();
+        if (top.Count == 0) { ctx.Reply("No captured-ability hits seen yet (Damage_Mode must be Telemetry or Scale)."); return; }
+        foreach (var (g, c) in top)
+            ctx.Reply($"{AbilityChainGraph.Name(g)}: attributed={c.Attributed} ambiguous={c.Ambiguous} unmatched={c.Unmatched} would-scale={c.WouldScale} scaled={c.Scaled} ({DamageScaler.Reliability(g)})");
+    }
+
+    [Command("damage-trace", description: "Log every attributed captured-ability hit + the target's HP change (truth table for testing Damage_Mode). Not saved; off after restart. Usage: .beelz admin damage-trace on|off", adminOnly: true)]
+    public static void DamageTrace(ChatCommandContext ctx, string onOff)
+    {
+        bool on = (onOff ?? "").Trim().Equals("on", StringComparison.OrdinalIgnoreCase);
+        DamageScaler.Trace = on;
+        ctx.Reply($"Damage trace {(on ? "ON — see the server log for [Beelz DMG] lines" : "OFF")}. Mode: {DamageScaler.EffectiveMode}.");
     }
 
     [Command("tune-list", description: "List every ability with ANY shaping/tuning set (cooldown, range, charges, aoe, projspeed, duration, healing, forcetimeout, summons, scales, interrupt, freemove/freelymove, castspeed). Usage: .beelz admin tune-list", adminOnly: true)]
@@ -341,6 +300,11 @@ internal static class AdminCommands
             if (e.LeapHeight.HasValue) parts += $" leapheight={e.LeapHeight.Value:F1}";
             if (e.EffectDurationSeconds.HasValue) parts += $" duration={e.EffectDurationSeconds.Value:F1}s";
             if (e.HealingMultiplier.HasValue) parts += $" healing={e.HealingMultiplier.Value:F2}";
+            if (e.MaxStacks.HasValue) parts += $" maxstacks={e.MaxStacks.Value}";                 // v0.134.0
+            if (e.ProjectileCount.HasValue) parts += $" projcount={e.ProjectileCount.Value}";
+            if (e.KnockbackScale.HasValue) parts += $" knockback={e.KnockbackScale.Value:F2}";
+            if (e.LifetimeSeconds.HasValue) parts += $" lifetime={e.LifetimeSeconds.Value:F1}s";
+            if (e.CastTimeScale.HasValue) parts += $" casttime={e.CastTimeScale.Value:F2}";
             if (e.ForceTimeoutSeconds.HasValue) parts += $" forcetimeout={e.ForceTimeoutSeconds.Value:F1}s";
             if (e.PowerWindowSeconds.HasValue) parts += $" powerwindow={e.PowerWindowSeconds.Value:F1}s";
             if (e.SummonCap.HasValue) parts += $" summoncap={e.SummonCap.Value}";
@@ -625,7 +589,7 @@ internal static class AdminCommands
     // Closes the gap where per-ability/per-unit/global-default fields were hand-edit-only.
     // ---------------------------------------------------------------------
 
-    [Command("ability", description: "Set ANY per-ability rule live. Usage: .beelz admin ability <name|id> [<field> <value> ...] — set UP TO 5 fields at once; OMIT field/value to READ every current setting. weapons/forms take a WHITELIST (e.g. 'sword,axe' or 'wolf') or '!X' to BLACKLIST (e.g. 'forms !mounted' = usable everywhere except mounted). Fields: enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, damagescale, cooldownscale, cooldown, range, charges, chargetime, aoe, projspeed, duration, healing, summoncap, summontimeout, summonunits, forcetimeout, category, interruptible, interruptonhit, freemove, freelymove, castspeed, notes. (weapons/forms take a comma list or 'any' to clear; cooldown/range/charges/aoe/projspeed/duration/healing/forcetimeout/freelymove/interruptonhit are baked edits applied when Abilities_ApplyConfig is on, default; forcetimeout makes otherwise-indefinite effects expire; freelymove frees movement N seconds into a cast; interruptonhit cancels the cast when the caster is hit; summoncap/summontimeout/summonunits govern summons.) CURATION: reviewstatus <Unreviewed|Reviewed|Approved|Blocked|Hidden>, reviewtag <type>, condition <Aimed|CloseRange|Summon|SelfCast|Movement|clear> (confirms an activation condition in-game -> conditionSource=confirmed, saved to the override file). RESET: .beelz admin ability <id> defaults — clear one ability's shaping config back to shipped baseline; .beelz admin ability all defaults — reset every ability.", adminOnly: true)]
+    [Command("ability", description: "Set ANY per-ability rule live. Usage: .beelz admin ability <name|id> [<field> <value> ...] — set UP TO 5 fields at once; OMIT field/value to READ every current setting. weapons/forms take a WHITELIST (e.g. 'sword,axe' or 'wolf') or '!X' to BLACKLIST (e.g. 'forms !mounted' = usable everywhere except mounted). Fields: enabled, weapons, forms, transformonly, difficulty, phase, allowdenied, damagescale, cooldownscale, cooldown, range, charges, chargetime, aoe, projspeed, duration, healing, maxstacks, projcount, knockback, lifetime, casttime, summoncap, summontimeout, summonunits, summonpower, forcetimeout, powerwindow, leapheight, allowglobalsharededit, category, interruptible, interruptonhit, freemove, freelymove, castspeed, notes. (weapons/forms take a comma list or 'any' to clear; cooldown/cooldownscale apply at runtime to captured bar casts only; range/charges/chargetime/aoe/projspeed/leapheight/duration/healing/maxstacks/projcount/knockback/lifetime/casttime/freelymove/interruptonhit are baked edits applied when Abilities_ApplyConfig is on, default, and are skipped on prefabs shared with other abilities unless allowglobalsharededit on; forcetimeout (runtime, player casts only) makes the player's otherwise-indefinite effects from this ability expire; freelymove frees movement N seconds into a cast; interruptonhit cancels the cast when the caster is hit; summoncap/summontimeout/summonunits govern summons.) CURATION: reviewstatus <Unreviewed|Reviewed|Approved|Blocked|Hidden>, reviewtag <type>, condition <Aimed|CloseRange|Summon|SelfCast|Movement|clear> (confirms an activation condition in-game -> conditionSource=confirmed, saved to the override file). RESET: .beelz admin ability <id> defaults — clear one ability's shaping config back to shipped baseline; .beelz admin ability all defaults — reset every ability.", adminOnly: true)]
     public static void AbilitySet(ChatCommandContext ctx, string ability, string field = null, string value = null,
         string field2 = null, string value2 = null, string field3 = null, string value3 = null,
         string field4 = null, string value4 = null, string field5 = null, string value5 = null)
@@ -662,7 +626,7 @@ internal static class AdminCommands
             var (rok, rmsg) = Core.AbilityRules.ResetAbilityDefaults(ability);
             ctx.Reply(rmsg);
             if (!rok) return;
-            if (apply) { AbilityTuningService.RestoreAbility(ability); AbilityTuningService.ApplyAll(); }
+            if (apply) AbilityTuningService.ReapplyAll();   // v0.132.0: restore all + re-apply every rule (shared prefabs keep other owners' values)
             else ctx.Reply("(Abilities_ApplyConfig is OFF — baseline takes effect on next load.)");
             Audit(ctx, "ability-defaults", 0, ability ?? "", "reset");
             return;
@@ -707,8 +671,9 @@ internal static class AdminCommands
             if (ok)
             {
                 if (IsBakedTuningField(pfl)) anyBaked = true;
-                if (pfl.Contains("charge")) chargeTouched = true;
-                if (pfl is "cooldown" or "cd") cooldownTouched = true;
+                string canon = AbilityFieldTable.Resolve(pfl)?.Name ?? pfl;
+                if (canon is "charges" or "chargetime") chargeTouched = true;
+                if (canon == "cooldown") cooldownTouched = true;
             }
         }
         ctx.Reply(string.Join("  |  ", results));
@@ -725,7 +690,7 @@ internal static class AdminCommands
         Audit(ctx, "ability-set", 0, ability ?? "", string.Join(",", pairs.ConvertAll(x => $"{x.field}={x.value}")));
     }
 
-    [Command("ability-set", description: "BULK-set many ability config fields in ONE command. Group each setting as (field=value) — or separate with ';' — so values can contain spaces/commas (weapon lists, notes) without breaking. Usage: .beelz admin ability-set <name|id> \"(cooldown=30)(weapons=sword,axe)(reviewstatus=Approved)(notes=big strong nuke)\"  OR  .beelz admin ability-set <id> \"cooldown=30; range=50; reviewstatus=Approved\". WRAP the whole list in \"quotes\" if any value has spaces. Same field names as .beelz admin ability (enabled, weapons, forms, transformonly, difficulty, phase, cooldown, range, charges, chargetime, aoe, projspeed, duration, healing, summoncap, summontimeout, summonunits, forcetimeout, category, reviewstatus, reviewtag, condition, interruptible, interruptonhit, freemove, freelymove, castspeed, notes).", adminOnly: true)]
+    [Command("ability-set", description: "BULK-set many ability config fields in ONE command. Group each setting as (field=value) — or separate with ';' — so values can contain spaces/commas (weapon lists, notes) without breaking. Usage: .beelz admin ability-set <name|id> \"(cooldown=30)(weapons=sword,axe)(reviewstatus=Approved)(notes=big strong nuke)\"  OR  .beelz admin ability-set <id> \"cooldown=30; range=50; reviewstatus=Approved\". WRAP the whole list in \"quotes\" if any value has spaces. Same field names as .beelz admin ability (enabled, weapons, forms, transformonly, difficulty, phase, cooldown, range, charges, chargetime, aoe, projspeed, duration, healing, summoncap, summontimeout, summonunits, forcetimeout, powerwindow, leapheight, allowglobalsharededit, category, reviewstatus, reviewtag, condition, interruptible, interruptonhit, freemove, freelymove, castspeed, notes).", adminOnly: true)]
     public static void AbilitySetBulk(ChatCommandContext ctx, string ability, string configs)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
@@ -781,14 +746,9 @@ internal static class AdminCommands
     /// re-applies? Only these warrant a live re-tune; capture/availability rules (enabled/weapons/forms/…) and
     /// scale fields applied at cast time do not — re-tuning on them is wasted work + log noise.
     /// </summary>
-    static bool IsBakedTuningField(string f) => f switch
-    {
-        "cooldown" or "cd" or "range" or "charges" or "chargetime" or "aoe" or "projspeed"
-        or "duration" or "effectduration" or "healing" or "healmult" or "healingmultiplier"
-        or "forcetimeout" or "freelymove" or "interruptonhit" or "interruptible"
-        or "freemove" or "castspeed" => true,
-        _ => false,
-    };
+    /// v0.132.0: driven by the field table — fixes the missing `leapheight` and every alias (e.g. `maxrange`,
+    /// `radius`, `projectilespeed`, `travelheight`), which previously only applied after a restart.
+    static bool IsBakedTuningField(string f) => AbilityFieldTable.IsBaked(f);
 
     [Command("transform-set", description: "Set a per-unit transform rule live. Usage: .beelz admin transform-set <CHAR_unit> <field> <value>. Fields: enabled, difficulty, tier, damagescale, cooldownscale, healthscale, speedscale, fullreplace, powerscalingmode, notes. (SlotTemplate is edited in ability_rules.json.)", adminOnly: true)]
     public static void TransformSet(ChatCommandContext ctx, string unit, string field, string value)
@@ -2100,6 +2060,8 @@ internal static class AdminCommands
         }
 
         string warnings = "";
+        string lockNote = ExclusionService.CheckBind(steamId, Core.AbilityRegistry.GetSlotsResolved(steamId, SlotApply.CurrentWeapon(character)), slot, abilityGuid);
+        if (lockNote != null) warnings += $" [LOCKED: {lockNote} — saved, but kept off the bar while the lock applies]";
         if (transformOnly) warnings += " [WARNING: ability is TransformOnly — fires only during transform]";
         if (!enabled) warnings += " [WARNING: ability has Enabled=false — admin override]";
         string applyHint = appliedNow ? "Applied to spell bar live." : "Will activate next time the player wields a compatible weapon.";
@@ -2141,6 +2103,8 @@ internal static class AdminCommands
         }
 
         string warnings = "";
+        string lockNote = ExclusionService.CheckBind(steamId, Core.AbilityRegistry.GetSlotsResolved(steamId, weapon), slot, abilityGuid);
+        if (lockNote != null) warnings += $" [LOCKED: {lockNote} — saved, but kept off the bar while the lock applies]";
         if (transformOnly) warnings += " [WARNING: ability is TransformOnly]";
         if (!enabled) warnings += " [WARNING: ability has Enabled=false — admin override]";
         string applyHint = appliedNow ? "Applied live." : $"Activates next time the player wields {weapon}.";

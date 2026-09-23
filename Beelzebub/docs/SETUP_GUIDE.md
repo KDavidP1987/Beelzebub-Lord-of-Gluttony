@@ -77,7 +77,7 @@ DropChance_Transform_VBlood  = 0.01   # same for V-Bloods
 ```
 
 Higher = more captures per kill. Set `1.0` for "always" (legacy behavior).
-Per-ability overrides live in `ability_rules.json` (see `ABILITY_MAP_FORMAT.md`).
+Per-ability overrides live in `ability_rules.json` (see `Beelzebub/docs/ABILITY_CONFIG.md`; the older `ABILITY_MAP_FORMAT.md` is superseded).
 
 ### Server difficulty mode (TX4)
 
@@ -144,7 +144,7 @@ VerboseLogging = false   # per-capture log lines, per-filter-reject reason. Nois
 Lives at `BepInEx/config/kdpen.Beelzebub/ability_rules.json`. **Auto-created
 on first run from defaults**, then admin-curated.
 
-For full schema docs see `ABILITY_MAP_FORMAT.md`. Quick orientation:
+For full schema docs see `Beelzebub/docs/ABILITY_CONFIG.md` (supersedes `ABILITY_MAP_FORMAT.md`). Quick orientation:
 
 - `DenyPatterns` / `DenyGuids` — global filter. Defaults strip filler
   (`_Idle_`, `_MeleeAttack_`, `_Spawn_`, etc.) and brutal-only duplicates (`_Hard_`).

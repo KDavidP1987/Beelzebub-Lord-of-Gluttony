@@ -179,7 +179,7 @@ internal static class LinkMinionToOwnerOnSpawnSystemPatch
             }
         }
 
-        if (!SummonAllyService.ApplyPlayerAllySetup(minion, playerCharacter)) return;
+        if (!SummonAllyService.ApplyPlayerAllySetup(minion, playerCharacter, abilityGuid ?? 0)) return;
 
         active.SummonedMinions ??= new System.Collections.Generic.List<Entity>();
         active.SummonedMinions.Add(minion);

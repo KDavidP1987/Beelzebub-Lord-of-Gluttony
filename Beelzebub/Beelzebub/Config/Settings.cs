@@ -265,8 +265,24 @@ internal static class Settings
     // Beelzebub win deterministically. See Initialize() + docs/INTEROP_BLOODCRAFT.md.
     public static ConfigEntry<int> Interop_SlotInjectionPriority { get; private set; }
 
+    // v0.133.0 (P2): per-hit damage for captured casts. See Initialize() + docs/ABILITY_CONFIG.md.
+    public static ConfigEntry<string> Damage_Mode { get; private set; }
+    public static ConfigEntry<float> Damage_MinFactor { get; private set; }
+    public static ConfigEntry<float> Damage_MaxFactor { get; private set; }
+    public static ConfigEntry<string> Damage_FlatPolicy { get; private set; }
+    public static ConfigEntry<float> Damage_ProvenanceRetentionSeconds { get; private set; }
+    public static ConfigEntry<string> Summon_PowerMode { get; private set; }
+
     public static void Initialize(ConfigFile config)
     {
+        // v0.133.0: an EXISTING .cfg that predates Summon_PowerMode migrates to Legacy (today's behaviour);
+        // a fresh config gets OwnerRelative. Read before any Bind writes the file.
+        string priorCfg = "";
+        try { if (System.IO.File.Exists(config.ConfigFilePath)) priorCfg = System.IO.File.ReadAllText(config.ConfigFilePath); }
+        catch { /* unreadable → treat as fresh */ }
+        bool existingCfg = priorCfg.Contains("CaptureOnKill");
+        bool hadSummonPowerMode = priorCfg.Contains("Summon_PowerMode");
+
         CaptureOnKill = config.Bind(
             "Capture", nameof(CaptureOnKill), true,
             "Master switch. When false, no abilities are captured from kills.");
@@ -697,12 +713,58 @@ internal static class Settings
 
         Grant_MinimumCooldownSeconds = config.Bind(
             "Abilities", nameof(Grant_MinimumCooldownSeconds), 0f,
-            "v0.65.0: GLOBAL minimum cooldown (seconds) floored onto EVERY ability whose baked cooldown " +
-            "is lower — stops spammy low/zero-cooldown captured abilities server-wide. 0 = off (default). " +
-            "Requires Abilities_ApplyConfig (default ON; it's a baked-prefab edit applied at load + on `.beelz admin " +
-            "reload`). WARNING: GLOBAL — it also raises the source NPC/boss cooldown of any ability below " +
-            "the floor. A per-ability absolute cooldown (`.beelz admin ability <name> cooldown <sec>`) is " +
-            "still floored by this value.");
+            "Minimum cooldown (seconds) for captured abilities cast from a player's bar — stops spammy " +
+            "low/zero-cooldown captures. 0 = off (default). v0.134.0: applied at RUNTIME to captured bar casts only " +
+            "(bosses and native abilities keep their own cooldowns; nothing is baked). Applied after the per-ability " +
+            "`cooldown` / `cooldownscale`. Charge-based abilities are not affected.");
+
+        Damage_Mode = config.Bind(
+            "Damage", nameof(Damage_Mode), "Off",
+            "v0.133.0: how DamageScale reaches captured-ability damage. " +
+            "'Off' (default) = the legacy power window (a brief Physical+Spell power buff around the cast). " +
+            "'Telemetry' = ALSO attribute every hit to the cast that caused it and log/count what per-hit " +
+            "scaling WOULD do, changing nothing (use `.beelz admin damage-stats`). " +
+            "'Scale' = per-hit: multiply the power term (MainFactor) of each attributed hit from a captured " +
+            "cast by Defaults × ability DamageScale (× Grant_PowerScalingFactor when Boosted), clamped by " +
+            "Damage_MinFactor/MaxFactor; no power window is opened. Damage still follows the caster's own " +
+            "Spell/Physical power (level, gear, potions). Only player casts of CAPTURED abilities are touched — " +
+            "bosses stay vanilla. Hits that can't be tied to exactly one cast stay vanilla. If the game rejects " +
+            "the write, the mod falls back to Telemetry by itself and says so in the log + damage-stats.");
+
+        Damage_MinFactor = config.Bind(
+            "Damage", nameof(Damage_MinFactor), 0f,
+            "v0.133.0: floor on the FINAL power factor of a scaled hit (Scale mode). 0 = off. " +
+            "Must be <= Damage_MaxFactor when both are set (otherwise both are ignored, with a warning).");
+
+        Damage_MaxFactor = config.Bind(
+            "Damage", nameof(Damage_MaxFactor), 0f,
+            "v0.133.0: cap on the FINAL power factor of a scaled hit (Scale mode) — tames outlier boss " +
+            "abilities. 0 = off.");
+
+        Damage_FlatPolicy = config.Bind(
+            "Damage", nameof(Damage_FlatPolicy), "Unchanged",
+            "v0.133.0: the FLAT (non-power) damage term of an attributed hit. 'Unchanged' (default) or " +
+            "'Scaled' (× the same scale). %-of-max-HP damage is never scaled.");
+
+        Damage_ProvenanceRetentionSeconds = config.Bind(
+            "Damage", nameof(Damage_ProvenanceRetentionSeconds), 120f,
+            "v0.133.0: how long (seconds) a cast stays matchable to NEW damage sources (projectiles, zones, " +
+            "DoTs spawned later). A source matched once keeps its match for its whole life, so this only bounds " +
+            "late-spawning parts. Minimum 30. Longer = more memory and more chance of an ambiguous (vanilla) hit.");
+
+        Summon_PowerMode = config.Bind(
+            "Damage", nameof(Summon_PowerMode), "OwnerRelative",
+            "v0.133.0: how a captured summon's power is set. 'OwnerRelative' = the minion's Physical/Spell " +
+            "power = YOUR power × Transform_SummonPowerFactor × the ability's summonpower (health untouched), " +
+            "so summons weaken with you after a level reset. 'Legacy' = the old behaviour: the unit's own baked " +
+            "stats × Transform_SummonPowerFactor (health included). Existing servers are migrated to Legacy.");
+        if (existingCfg && !hadSummonPowerMode)
+        {
+            Summon_PowerMode.Value = "Legacy";
+            Plugin.PluginLog?.LogWarning("[Beelz] Summon_PowerMode added as 'Legacy' to keep this server's summon strength " +
+                "unchanged. Set it to 'OwnerRelative' in the .cfg (or `.beelz admin set Summon_PowerMode OwnerRelative`) " +
+                "to make summons follow the owner's power.");
+        }
 
         Interop_SlotInjectionPriority = config.Bind(
             "Interop", nameof(Interop_SlotInjectionPriority), 0,

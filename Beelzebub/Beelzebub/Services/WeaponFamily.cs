@@ -3,12 +3,14 @@ namespace Beelzebub.Services;
 /// <summary>
 /// W1: classification of a captured ability by the weapon family that it
 /// naturally belongs to. Determines how slot precedence resolves the ability:
-///   - Magic / Unarmed: treated as universal — usable from any spell slot,
+///   - Magic / None: treated as universal — usable from any spell slot,
 ///     wins on slots that don't have a weapon-specific grant for the
 ///     currently-equipped weapon.
-///   - A concrete weapon family (Sword, Crossbow, ...): wins ONLY when the
-///     player is wielding that weapon. Lets a player build a "sword loadout"
-///     that activates only with a sword.
+///   - A concrete weapon family (Sword, Crossbow, ..., and Unarmed): wins ONLY
+///     when the player is wielding that weapon (Unarmed = fists only). Lets a
+///     player build a "sword loadout" that activates only with a sword.
+///     (v0.132.0: comment corrected — SlotApply.IsGrantCompatible has always
+///     treated Unarmed as concrete, not universal.)
 ///
 /// Source: name-substring inference (see WeaponFamilyClassifier) + admin
 /// curation in `ability_rules.json`'s `WeaponFamilyMap`. We can't read this

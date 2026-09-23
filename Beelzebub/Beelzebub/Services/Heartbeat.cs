@@ -105,6 +105,9 @@ public class HeartbeatBehaviour : MonoBehaviour
         {
             try { Services.ShapeshiftAbilityService.TickPendingForms(); }
             catch { /* never let a form-apply hiccup kill the heartbeat */ }
+            // v0.132.0: runtime forcetimeout — expire timed buff instances on the frame they're due.
+            try { Services.CastHistoryService.Tick(); }
+            catch { /* never let a timeout hiccup kill the heartbeat */ }
         }
         Heartbeat.Pulse();
     }

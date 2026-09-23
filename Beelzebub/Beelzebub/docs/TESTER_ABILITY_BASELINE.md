@@ -1,5 +1,23 @@
 # Per-ability tester baseline (v0.100.0) — worksheet
 
+> **STATUS — 2026-06-10: enable/disable AUDIT COMPLETE.** This worksheet (v0.100 verdicts, A–Z) plus the newer
+> v0.131 boss threads (Dantos, Henry/Professor, Jakira, Mairwyn, Matka, Sir Magnus, Stavros, Vincent, Voltatia,
+> Willfred, Solarus, Ziva, Elena Ice Ranger) and the NPC sheet (`Reference Data/BEELZ Testing.xlsx`) were all
+> folded into **`TESTER_ABILITY_MATRIX.csv`** as four columns: `TesterVerdict`, `TesterFinding`,
+> `Recommendation` (Enable / Soft-Disable / Hard-Disable), `DisableType` (Soft = default config / Hard = code-locked).
+> **456 abilities annotated → 173 Enable · 276 Soft-Disable · 7 Hard-Disable.** Untested abilities left enabled
+> (only tested rows flagged). See `TESTER_ABILITY_MATRIX_README.md` (cols 65–68) for the taxonomy and the exact
+> derivation rule; regenerate with `_matrix_build.py` at the workspace root.
+>
+> **Decisions baked in (KDPen, 2026-06-10):** untested → leave enabled; balance exploits (Rat Vanguard, Gargoyle
+> Wing Shield, Tailor Shapeshift, Corpse Pile Dig, Matka one-shot Mosquito) → Soft (admin can enable); this pass
+> was **spreadsheet-only** — `ability_rules.default.json` and the code hard-block list were NOT changed.
+>
+> **Open follow-ups when you return:** (1) apply the 276 Soft recs as `Enabled=false` in
+> `ability_rules.default.json` + rebuild → re-seed (mind the recurring re-seed gap); (2) add **Bell Ringer "Ring
+> Bell"** `2073002423` to `AbilityRules.cs _hardBlockedGuids` (same sword-E crash class as Fiddle — flagged Hard
+> in the matrix but not yet code-locked); (3) refresh the OneDrive `.xlsx` copy from the CSV if you keep one.
+
 Every ability the testers reviewed, with their verdict + finding. Source: `Reference Data/beelz-vblood`.
 Verdict legend: **GOOD** (✅ ship as-is) · **TUNE** (✅🔧) · **REVIEW** (❓ / ✅❓ keep?) · **WORKS-NOT-USABLE**
 (✅❌ e.g. animation-only) · **NEEDS-WORK** (🔧) · **NOT-USABLE** (❌ broken/nothing/crash/stuck).

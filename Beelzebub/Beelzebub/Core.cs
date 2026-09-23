@@ -123,6 +123,10 @@ internal static class Core
             // v0.46.0: apply curated cast-tuning (interrupt + post-cast movement unlock) to the
             // ability CAST prefabs. No-op unless Abilities_ApplyConfig. Runs here because the
             // prefab map + ability rules are both loaded above; re-runs on `.beelz admin reload`.
+            // v0.132.0: build the ability chain graph first — the tuner, shared-prefab guard, forcetimeout
+            // tracker and ability-inspect all read it. Built before any prefab mutation.
+            try { Services.AbilityChainGraph.Build(); }
+            catch (System.Exception ex) { Log.LogWarning($"[Beelz] ability chain graph build failed: {ex.Message}"); }
             try { Services.AbilityTuningService.ApplyAll(); }
             catch (System.Exception ex) { Log.LogWarning($"[Beelz] ability-tuning apply failed: {ex.Message}"); }
 
@@ -132,6 +136,7 @@ internal static class Core
             catch (System.Exception ex) { Log.LogWarning($"[Beelz] mount-disrupt neutralize failed: {ex.Message}"); }
 
             IsReady = true;
+            Patches.DealDamageSystemPatch.LogCoPatchers(MyPluginInfo.PLUGIN_GUID);   // v0.133.0
             // v0.81.0: start the per-frame heartbeat driver (idle-safe summon timeout + cooldown enforcement).
             try { Services.Heartbeat.StartTimer(); }
             catch (System.Exception ex) { Log.LogWarning($"[Beelz] heartbeat StartTimer failed: {ex.Message}"); }

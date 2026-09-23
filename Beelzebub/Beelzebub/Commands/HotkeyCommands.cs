@@ -73,6 +73,10 @@ internal static class HotkeyCommands
             return;
         }
 
+        // v0.135.0: incompatibility locks (a bar ability always wins over a hotkey).
+        { string lockMsg = Beelzebub.Services.ExclusionService.CheckHotkey(ctx.Event.SenderCharacterEntity, name, ability._Value);
+          if (lockMsg != null) { ctx.Reply($"🔒 {lockMsg}. Not bound — unslot the other ability first (see .beelz admin lock list)."); return; } }
+
         Core.AbilityRegistry.SetHotkey(steamId, name, ability._Value);
         Core.Persistence.RequestSave();
         ctx.Reply($"Hotkey '{name}' bound to {abilityName}. Fire it with .beelz cast {name} (or a BloodCraftHub button).");

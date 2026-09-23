@@ -265,6 +265,24 @@ fires on edits to those Resources files (and the condition pipeline) and surface
 the rebuild reminder. The hook is a backstop (`.claude/` is gitignored, local-only); this CLAUDE.md
 rule + `Beelzebub/Beelzebub/docs/ABILITY_DATA_EDITING.md` are the authoritative, shared process.
 
+## Decision presentation — always in plan mode, with options + a recommendation
+
+Whenever work reaches a point where the user must make one or more decisions
+(design direction, scope, trade-offs, conflicting data, anything not answerable
+from the code/docs/research), **enter plan mode** and present the decisions there —
+never as loose prose questions mid-execution. Each decision must list:
+
+1. **The decision** — one line, plus why it matters (what depends on it).
+2. **Options** — every realistic option (typically 2–4), each with its concrete
+   trade-off / consequence.
+3. **Recommendation** — the option Claude recommends and why.
+4. **Status** — mark decisions the user has already settled as *Resolved* (with
+   their answer) so the list shows convergence.
+
+Group all open decisions in one plan-mode presentation rather than dripping them.
+This applies to every workflow in this workspace (including skill-driven ones
+like claudex-loop's interrogation phase).
+
 ## Git workflow
 
 Once the repo is initialized:

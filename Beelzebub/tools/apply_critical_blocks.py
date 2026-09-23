@@ -21,6 +21,9 @@ NAMES = os.path.join(HERE, '..', 'Beelzebub', 'Resources', 'prefab_names.tsv')
 #   • RECONFIGURED instead of blocked (launch → leapheight clamp + cooldown, see ability_rules.default.json):
 #     Elena ToF 1431473799 / 2057952818, Toad King Poison Leap 1790744720 / Swallow 1292896032 / Spit
 #     -1238687119, Gargoyle Fly -382913708 / 1563014858 / 1551140710, Ziva Jetpack -1770586075.
+# ⚠️ v0.132.0 — RE-BLOCKED 4 of the 5 unblocked above after the V-Blood boss testing round (2026-06-14):
+#   the Morgana pair CRASHES THE SERVER when chained, and the Leandra pair KILLS THE PLAYER regardless of
+#   HP. Re-added below + to HARDBLOCK. (Dracula Bolt Spray 1957691133 stays data-only / under review.)
 # What remains below = still-blocked confirmed crashers + character-breaks + the 2 OP exploits.
 CRITICALS = [
     (1485838951,  None,                 'crash',   'GAME CRASH (Gloomrot Technician Fiddle) when vanilla sword-E used while bound - tester v0.100'),
@@ -29,6 +32,11 @@ CRITICALS = [
     (-891106318,  None,                 'stuck',   'STUCK: permanent invisibility on respawn (Spider Baneling Explode Poison) - tester v0.100'),
     (-485230865,  None,                 'stuck',   'CHARACTER-BREAK: locks in place, aggro off (Gaius Corpse Buff - the BUFF) - tester v0.100'),
     (-89125940,   None,                 'stuck',   'CHARACTER-BREAK: permanent locked/phased/invisible, survives relog (Gaius Corpse Buff ABILITY GROUP) - re-audit 2026-06-05'),
+    # v0.132.0 — re-blocked after V-Blood testing round (2026-06-14):
+    (-1980019894, None,                 'crash',   'SERVER CRASH when chained into Traveling Orb Barrage (Morgana Travel-To-Position Swarm) - V-Blood testing 2026-06-14'),
+    (1242557903,  None,                 'crash',   'SERVER CRASH when used after Travel-To-Position Swarm (Morgana Traveling Orb Barrage) - V-Blood testing 2026-06-14'),
+    (1325722355,  None,                 'stuck',   'KILLS PLAYER regardless of HP; minions never despawn until death (Leandra Bishop of Shadows ShadowStep) - V-Blood testing 2026-06-14'),
+    (-1795148379, None,                 'stuck',   'KILLS PLAYER regardless of HP; minions never despawn until death (Leandra Bishop of Shadows TrippleBolt) - V-Blood testing 2026-06-14'),
     # v0.129.0 — OP exploits (balance, data-block only, NOT hard-block):
     (1460741503,  None,                 'exploit', 'EXPLOIT: immortality + heal (Gargoyle Wing Shield) - 2026-06-05'),
     (830495620,   None,                 'exploit', 'EXPLOIT: infinite-invuln summons (Rat Vanguard) - 2026-06-05'),
@@ -40,7 +48,12 @@ FALLASLEEP_KEYWORD = 'FallAsleep'
 # Capture_InclusiveMode, which testers run). Recoverable-stuck ones (space-launch / OOB / Fall-Asleep) are
 # data-blocked only (Enabled=false), so they can be unblocked for fix-research.
 # v0.129.0: pruned to match the C# _hardBlockedGuids after the re-test unblocks (Dracula/Morgana/Leandra removed).
-HARDBLOCK = {1485838951, 1322698651, -485230865, 938684260, -891106318, -89125940}
+# v0.132.0: re-added Morgana pair (server-crash combo) + Leandra pair (kills player) after V-Blood testing.
+HARDBLOCK = {1485838951, 1322698651, -485230865, 938684260, -891106318, -89125940,
+             -1980019894, 1242557903, 1325722355, -1795148379,
+             # v0.136.0 — tester baseline hard-blocks (data side written by tools/apply_tester_baseline.py):
+             1074442576, 22199616, 1129782597, 2073002423, 1431473799, 2057952818,
+             906463896, 583436571, 874909393, 2030404176}
 
 
 def load_g2n():

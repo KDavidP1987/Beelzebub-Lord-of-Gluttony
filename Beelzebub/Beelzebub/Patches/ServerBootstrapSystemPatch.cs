@@ -44,6 +44,11 @@ internal static class ServerBootstrapSystemPatch
             ulong steamId = user.PlatformId;
             if (steamId == 0) return;
 
+            // v0.132.0: drop the player's cast history + forcetimeout timers.
+            try { Beelzebub.Services.CastHistoryService.OnDisconnect(steamId); } catch { }
+            try { Beelzebub.Services.AbilityCooldownEnforcer.OnDisconnect(steamId); } catch { }   // v0.134.0
+            try { Beelzebub.Services.ExclusionService.OnDisconnect(steamId); } catch { }          // v0.135.0
+
             // v0.83.0 (#10): session-based pity resets on logout.
             if (Beelzebub.Config.Settings.Capture_PitySessionBased.Value && Core.AbilityRegistry.ClearPity(steamId))
             {
