@@ -162,9 +162,11 @@ reached v0.40 — don't repeat that):
    `BuildToDist` target) **and** lives on GitHub. The Conventional-Commits git
    log is the deeper technical history — there is intentionally no second
    changelog file to keep in sync.
-3. **`README.md`** — the Thunderstore mod page (front page) and GitHub landing
-   page. (`thunderstore.toml`'s `description` is the short listing tagline, ≤250
-   chars.)
+3. **`README.md`** — the Thunderstore mod page (front page). (`thunderstore.toml`'s
+   `description` is the short listing tagline, ≤250 chars.) The **GitHub landing page**
+   is the repo-root `README.md`, GENERATED from it by `python Beelzebub/tools/sync_github_readme.py`
+   — never hand-edit the root copy; edit the Thunderstore README and re-run the script in the
+   same release commit.
 
 **On every version bump, in that one commit:**
 - Sync both version fields.
