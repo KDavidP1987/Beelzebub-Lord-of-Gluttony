@@ -335,3 +335,8 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
   REAPPLY Data row beside its context) — patches re-made in 3e333de, then `--only D23,D28` (the two items whose patches changed):
   `harness: ok, 12 faults, 12 clauses (not run: D1 D2 D3 D4 D5 D11 D12 D13 D14 D15 D16 D17 D18 D19 D20 D22 D24 D25 D26 D27 D29 D30 D31), patch tree 0bd1cf8e55abed87ad2bcffbe29d1e081e1add30`
 - fixes: 5eae953, 41139ef, 3e333de
+
+### Step 9 · review round 2 · 2026-09-30 · reviewed 6516eab (`git diff 5401c27..6516eab`, code + tests)
+- Codex verdict: CLEAN — C1, C2, S2, S5, S7, S8 confirmed fixed, no new finding (no false-unclean on a normal reset:
+  buffs queued with DestroyTag are not listed).
+- Step 9 code review closed after round 2.
