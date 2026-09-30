@@ -71,6 +71,29 @@ public static class BarResetPlanner
     public static bool ClearsHotkeys(BarResetScope scope) => scope == BarResetScope.Purge;
 }
 
+/// <summary>v0.137.0 (bar-reset D32) — which bar slots the held weapon OWNS: the slots its equip-buff PREFAB carries a
+/// row for (Sword: 0, 1, 4). The EmptyPush used to push Empty onto all nine slots with the equip buff as source; on a
+/// slot the weapon does not own (2 Space, 3, 5 R, 6 C, 7 T, 8) that mod masks the stored base (the Space dash) and
+/// blocks the spellbook pick, grows by one per reset, and survives a restart (bar-raw, 2026-09-30).</summary>
+public static class SlotOwnership
+{
+    /// <summary>Hard cap on PopSlotMods' re-pop rounds for one slot.</summary>
+    public const int MaxPopRounds = 16;
+
+    /// <summary>The distinct slots 0-<paramref name="maxSlot"/> with a prefab row, ascending. Null rows → none.</summary>
+    public static List<int> PushTargets(IEnumerable<int> prefabRowSlots, int maxSlot) =>
+        (prefabRowSlots ?? Enumerable.Empty<int>()).Where(s => s >= 0 && s <= maxSlot).Distinct().OrderBy(s => s).ToList();
+
+    /// <summary>A gear-sourced Empty mod on a slot the weapon does not own is a leak (counts as other, never clean).
+    /// An unknown owned set leaks nothing — the readback already marks those slots unreadable.</summary>
+    public static bool IsLeakedEmpty(SlotModEntry e, int slot, bool gearSource, ISet<int> owned) =>
+        gearSource && e.SetToGuid == 0 && owned != null && !owned.Contains(slot);
+
+    /// <summary>Pop the slot again while its GroupGuid mod count keeps falling and the cap is not reached.</summary>
+    public static bool PopAgain(int previousCount, int currentCount, int roundsDone) =>
+        currentCount > 0 && currentCount < previousCount && roundsDone < MaxPopRounds;
+}
+
 /// <summary>Gear-sourced = the modification source's prefab name starts with EquipBuff or Item_ (the same test
 /// DestroyOwnedAbilitySlotOrphans uses). Known limitation: a foreign override named that way counts as gear.</summary>
 public static class GearRule

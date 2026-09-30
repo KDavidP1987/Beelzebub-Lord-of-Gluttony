@@ -609,6 +609,19 @@ internal static class SlotApply
         return true;
     }
 
+    /// <summary>bar-reset D32: the bar slots 0-<paramref name="maxSlot"/> the held weapon owns (its equip-buff PREFAB
+    /// rows). False when there is no held equip buff or its prefab rows cannot be read.</summary>
+    public static bool TryGetOwnedSlots(Entity character, int maxSlot, out HashSet<int> owned)
+    {
+        owned = null;
+        if (!TryFindEquipBuff(character, out Entity equipBuff, out _)) return false;
+        if (!TryGetPrefabRows(equipBuff, out var rows)) return false;
+        var slots = new List<int>(rows.Count);
+        foreach (var r in rows) slots.Add(r.Slot);
+        owned = new HashSet<int>(Beelzebub.Logic.SlotOwnership.PushTargets(slots, maxSlot));
+        return true;
+    }
+
     static List<Beelzebub.Logic.EquipRow> ToEquipRows(IEnumerable<ReplaceAbilityOnSlotBuff> rows)
     {
         var list = new List<Beelzebub.Logic.EquipRow>();
@@ -651,8 +664,8 @@ internal static class SlotApply
     /// <summary>
     /// Reapply: after the mod pop and the Empty push, set each slot that has a row on the held equip buff (the weapon's
     /// own kit, slots 0-8) back through the engine's own setter, the equip buff as the (gear) source. Slots without a row
-    /// are left on the Empty push, which resolves to their stored base — pushing the base itself would pin it and block
-    /// a later spellbook re-pick until a weapon swap. Every run pops these and re-adds them, so the per-slot gear count
+    /// get no mod at all and resolve to their stored base: pushing the base would pin it and block a later spellbook
+    /// re-pick until a weapon swap, and an Empty push there MASKS the base (the Space dash — bar-raw, D32). Every run pops these and re-adds them, so the per-slot gear count
     /// stays equal run to run. Returns the number of slots set.
     /// </summary>
     public static int ReapplyEquipRows(Entity character)

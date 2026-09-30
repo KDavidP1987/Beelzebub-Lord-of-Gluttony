@@ -210,11 +210,13 @@ internal sealed class BarResetService : IBarResetOps
 
     public int PopSlotMods() => TransformBuffService.PopSlotModifications(_character);
 
-    /// <summary>A slot whose Empty push threw is an ERR for the step, never a short count that reads as success.</summary>
+    /// <summary>Pushes Empty onto the weapon's OWN slots only (D32). Unknown prefab rows, or a slot whose push threw, is
+    /// an ERR for the step, never a short count that reads as success.</summary>
     public int EmptyPush()
     {
-        int pushed = TransformBuffService.ForceResetAbilitySlots(RequireEquipBuff());
-        if (pushed < BarMaxSlot + 1) throw new InvalidOperationException($"pushed {pushed}/{BarMaxSlot + 1} slots");
+        int pushed = TransformBuffService.ForceResetAbilitySlots(RequireEquipBuff(), out int expected);
+        if (expected < 0) throw new InvalidOperationException("the weapon's prefab rows are unknown");
+        if (pushed < expected) throw new InvalidOperationException($"pushed {pushed}/{expected} weapon slots");
         return pushed;
     }
 

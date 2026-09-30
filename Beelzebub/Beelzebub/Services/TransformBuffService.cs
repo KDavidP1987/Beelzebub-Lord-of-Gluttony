@@ -779,10 +779,27 @@ internal static class TransformBuffService
     /// the bar is stuck (only another Priority-99 transform changes it). Modify clears each slot
     /// authoritatively and networks the change to the client, forcing a clean re-resolve from the
     /// current equipment + spellbook. Returns the number of slots cleared.
+    ///
+    /// v0.137.0 (bar-reset D32): ONLY the slots the held weapon owns (its equip-buff prefab rows) are pushed. The Empty
+    /// mod this adds is sourced by the equip buff and never replaces an earlier one; on a slot the weapon does not own
+    /// (2 Space, 3, 5 R, 6 C, 7 T, 8) it masked the stored base (the Space dash) and blocked the spellbook pick, one more
+    /// per call, surviving a restart (bar-raw, 2026-09-30). Unknown prefab rows → nothing is pushed.
     /// </summary>
-    public static int ForceResetAbilitySlots(Entity character)
+    public static int ForceResetAbilitySlots(Entity character) => ForceResetAbilitySlots(character, out _);
+
+    /// <param name="expected">the number of slots the weapon owns, or -1 when its prefab rows cannot be read.</param>
+    public static int ForceResetAbilitySlots(Entity character, out int expected)
     {
+        expected = -1;
         if (!character.Exists() || !Core.EntityManager.HasBuffer<BuffBuffer>(character)) return 0;
+        if (!SlotApply.TryGetOwnedSlots(character, 8, out var owned))
+        {
+            Core.Log.LogWarning("[Beelz] ForceResetAbilitySlots: the held weapon's prefab rows are unknown; no slot pushed.");
+            return 0;
+        }
+        expected = owned.Count;
+        var targets = new List<int>(owned);
+        targets.Sort();
 
         // ModifyAbilityGroupOnSlot needs a modification-source buff; the equipped-weapon buff is
         // always present (even Unarmed) and is the natural owner of the player's weapon slots.
@@ -805,14 +822,14 @@ internal static class TransformBuffService
 
         int cleared = 0;
         var sgm = Core.ServerGameManager;
-        for (int slot = 0; slot <= 8; slot++)
+        foreach (int slot in targets)
         {
             try { sgm.ModifyAbilityGroupOnSlot(equipBuff, character, slot, PrefabGUID.Empty); cleared++; }
             catch (Exception ex) { Core.Log.LogWarning($"[Beelz] ForceResetAbilitySlots slot {slot} failed: {ex.Message}"); }
         }
 
         if (Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
-        Core.Log.LogInfo($"[Beelz] resetbar: force-cleared {cleared} ability slot(s) via ModifyAbilityGroupOnSlot (authoritative client push).");
+        Core.Log.LogInfo($"[Beelz] resetbar: force-cleared {cleared}/{owned.Count} weapon slot(s) [{string.Join(",", targets)}] via ModifyAbilityGroupOnSlot (authoritative client push).");
         return cleared;
     }
 
@@ -1027,19 +1044,35 @@ internal static class TransformBuffService
                 skipped++;
                 continue;
             }
-            foreach (int id in d.ModIdsToPop)
+            int slotPopped = 0;
+            void Pop(int id)
             {
-                try { sgm.RemoveAbilityGroupModificationOnSlot(character, idx, ModificationId.NewId(id)); popped++; }
+                try { sgm.RemoveAbilityGroupModificationOnSlot(character, idx, ModificationId.NewId(id)); popped++; slotPopped++; }
                 catch (Exception ex)
                 {
                     Core.Log.LogWarning($"[Beelz PURGE] slot[{idx}] remove ModId {id} failed: {ex.Message}");
                     failures.Add($"slot {idx} mod {id}");
                 }
             }
+            foreach (int id in d.ModIdsToPop) Pop(id);
             if (d.ModIdsToPop.Count == 0) continue;
             if (!slot.Exists()) { failures.Add($"slot {idx} entity gone after the pop"); continue; }
             // Destroy backstop only for a slot the pop did not clear (a readable dump that still has mods).
             var after = ParseSlot(reg, em, slot);
+            // D32: a stack of the same mod id (the leaked weapon-buff Empties) can need several pops — pop again while
+            // the count keeps falling, capped; [Beelz LEAK] records what each bar slot went through.
+            int prev = parse.Entries.Count, rounds = 1;
+            while (after.Readable && Beelzebub.Logic.SlotOwnership.PopAgain(prev, after.Entries.Count, rounds))
+            {
+                prev = after.Entries.Count;
+                foreach (var e in after.Entries) Pop(e.ModId);
+                rounds++;
+                if (!slot.Exists()) break;
+                after = ParseSlot(reg, em, slot);
+            }
+            if (idx <= 8)
+                Core.Log.LogInfo($"[Beelz LEAK] target={character.GetSteamId()} slot={idx} before={parse.Entries.Count} popped={slotPopped} after={(after.Readable ? after.Entries.Count.ToString() : "unreadable")} rounds={rounds}");
+            if (!slot.Exists()) { failures.Add($"slot {idx} entity gone after the pop"); continue; }
             if (!after.Readable) { failures.Add($"slot {idx} dump unreadable after the pop"); skipped++; continue; }
             if (after.HasMods)
                 foreach (var (i, v) in d.SourcesToDestroy) toDestroy.Add(new Entity { Index = i, Version = v });
@@ -1091,6 +1124,8 @@ internal static class TransformBuffService
         var all = SnapshotSlots(character);
         var own = new HashSet<Entity> { character };
         foreach (var (_, se) in all) if (se != Entity.Null) own.Add(se);
+        // D32: a weapon-buff Empty on a slot the weapon does not own is a leak — counted as other, never clean
+        SlotApply.TryGetOwnedSlots(character, maxSlot, out var owned);
         foreach (var (idx, slot) in all)
         {
             if (idx > maxSlot) break;
@@ -1103,7 +1138,9 @@ internal static class TransformBuffService
             {
                 bool engineOwn = own.Contains(new Entity { Index = e.SourceIndex, Version = e.SourceVersion });
                 string n = engineOwn ? "character" : SourcePrefabName(e);
-                if (engineOwn || Beelzebub.Logic.GearRule.IsGearSource(n)) { gear++; if (!names.Contains(n)) names.Add(n); }
+                bool gearSource = !engineOwn && Beelzebub.Logic.GearRule.IsGearSource(n);
+                if (Beelzebub.Logic.SlotOwnership.IsLeakedEmpty(e, idx, gearSource, owned)) other++;
+                else if (engineOwn || gearSource) { gear++; if (!names.Contains(n)) names.Add(n); }
                 else other++;
             }
             list.Add(new SlotModReading(idx, gear, other, false, names));

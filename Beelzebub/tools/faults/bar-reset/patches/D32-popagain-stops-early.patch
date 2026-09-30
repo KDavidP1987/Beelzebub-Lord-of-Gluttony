@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
+--- a/Beelzebub/Beelzebub/Logic/BarReset.cs
++++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
+@@ -91,7 +91,7 @@
+ 
+     /// <summary>Pop the slot again while its GroupGuid mod count keeps falling and the cap is not reached.</summary>
+     public static bool PopAgain(int previousCount, int currentCount, int roundsDone) =>
+-        currentCount > 0 && currentCount < previousCount && roundsDone < MaxPopRounds;
++        false;
+ }
+ 
+ /// <summary>Gear-sourced = the modification source's prefab name starts with EquipBuff or Item_ (the same test

@@ -2349,6 +2349,199 @@
      "replace": ""
     }
    ]
+  },
+  {
+   "id": "D32-unowned-slot-pushed",
+   "item": "D32",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotOwnershipTests",
+   "clauses": [
+    "a slot with no prefab row",
+    "is a push target"
+   ],
+   "patch": "D32-unowned-slot-pushed.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "(prefabRowSlots ?? Enumerable.Empty<int>())",
+     "replace": "(prefabRowSlots ?? Enumerable.Empty<int>()).Append(2)"
+    }
+   ]
+  },
+  {
+   "id": "D32-above-bar-pushed",
+   "item": "D32",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotOwnershipTests",
+   "clauses": [
+    "or one above maxSlot, is a push target"
+   ],
+   "patch": "D32-above-bar-pushed.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": ".Where(s => s >= 0 && s <= maxSlot)",
+     "replace": ".Where(s => s >= 0)"
+    }
+   ]
+  },
+  {
+   "id": "D32-duplicate-pushed",
+   "item": "D32",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotOwnershipTests",
+   "clauses": [
+    "a duplicated row slot is pushed twice"
+   ],
+   "patch": "D32-duplicate-pushed.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": ".Where(s => s >= 0 && s <= maxSlot).Distinct()",
+     "replace": ".Where(s => s >= 0 && s <= maxSlot)"
+    }
+   ]
+  },
+  {
+   "id": "D32-null-yields-target",
+   "item": "D32",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotOwnershipTests",
+   "clauses": [
+    "a null row list yields a target"
+   ],
+   "patch": "D32-null-yields-target.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "(prefabRowSlots ?? Enumerable.Empty<int>())",
+     "replace": "(prefabRowSlots ?? new[] { 0 })"
+    }
+   ]
+  },
+  {
+   "id": "D32-leak-missed",
+   "item": "D32",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotOwnershipTests",
+   "clauses": [
+    "a gear Empty mod on a slot the weapon does not own is not leaked"
+   ],
+   "patch": "D32-leak-missed.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "gearSource && e.SetToGuid == 0 && owned != null && !owned.Contains(slot);",
+     "replace": "false;"
+    }
+   ]
+  },
+  {
+   "id": "D32-owned-slot-leaked",
+   "item": "D32",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotOwnershipTests",
+   "clauses": [
+    "or one on an owned slot"
+   ],
+   "patch": "D32-owned-slot-leaked.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "gearSource && e.SetToGuid == 0 && owned != null && !owned.Contains(slot);",
+     "replace": "gearSource && e.SetToGuid == 0 && owned != null;"
+    }
+   ]
+  },
+  {
+   "id": "D32-non-empty-leaked",
+   "item": "D32",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotOwnershipTests",
+   "clauses": [
+    "a non-Empty gear mod"
+   ],
+   "patch": "D32-non-empty-leaked.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "gearSource && e.SetToGuid == 0 && owned != null && !owned.Contains(slot);",
+     "replace": "gearSource && owned != null && !owned.Contains(slot);"
+    }
+   ]
+  },
+  {
+   "id": "D32-non-gear-leaked",
+   "item": "D32",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotOwnershipTests",
+   "clauses": [
+    "a non-gear mod"
+   ],
+   "patch": "D32-non-gear-leaked.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "gearSource && e.SetToGuid == 0 && owned != null && !owned.Contains(slot);",
+     "replace": "e.SetToGuid == 0 && owned != null && !owned.Contains(slot);"
+    }
+   ]
+  },
+  {
+   "id": "D32-unknown-owned-leaked",
+   "item": "D32",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotOwnershipTests",
+   "clauses": [
+    "or any mod with an unknown owned set is"
+   ],
+   "patch": "D32-unknown-owned-leaked.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "gearSource && e.SetToGuid == 0 && owned != null && !owned.Contains(slot);",
+     "replace": "gearSource && e.SetToGuid == 0 && (owned == null || !owned.Contains(slot));"
+    }
+   ]
+  },
+  {
+   "id": "D32-popagain-stops-early",
+   "item": "D32",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotOwnershipTests",
+   "clauses": [
+    "PopAgain stops while the count is still falling below the cap"
+   ],
+   "patch": "D32-popagain-stops-early.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "currentCount > 0 && currentCount < previousCount && roundsDone < MaxPopRounds;",
+     "replace": "false;"
+    }
+   ]
+  },
+  {
+   "id": "D32-popagain-no-progress",
+   "item": "D32",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotOwnershipTests",
+   "clauses": [
+    "or continues when the count did not fall"
+   ],
+   "patch": "D32-popagain-no-progress.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "currentCount > 0 && currentCount < previousCount && roundsDone < MaxPopRounds;",
+     "replace": "currentCount > 0 && currentCount <= previousCount && roundsDone < MaxPopRounds;"
+    }
+   ]
+  },
+  {
+   "id": "D32-popagain-no-cap",
+   "item": "D32",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotOwnershipTests",
+   "clauses": [
+    "or the cap is reached"
+   ],
+   "patch": "D32-popagain-no-cap.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "currentCount > 0 && currentCount < previousCount && roundsDone < MaxPopRounds;",
+     "replace": "currentCount > 0 && currentCount < previousCount;"
+    }
+   ]
   }
  ]
 }

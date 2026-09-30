@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
+--- a/Beelzebub/Beelzebub/Logic/BarReset.cs
++++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
+@@ -87,7 +87,7 @@
+     /// <summary>A gear-sourced Empty mod on a slot the weapon does not own is a leak (counts as other, never clean).
+     /// An unknown owned set leaks nothing — the readback already marks those slots unreadable.</summary>
+     public static bool IsLeakedEmpty(SlotModEntry e, int slot, bool gearSource, ISet<int> owned) =>
+-        gearSource && e.SetToGuid == 0 && owned != null && !owned.Contains(slot);
++        gearSource && e.SetToGuid == 0 && (owned == null || !owned.Contains(slot));
+ 
+     /// <summary>Pop the slot again while its GroupGuid mod count keeps falling and the cap is not reached.</summary>
+     public static bool PopAgain(int previousCount, int currentCount, int roundsDone) =>

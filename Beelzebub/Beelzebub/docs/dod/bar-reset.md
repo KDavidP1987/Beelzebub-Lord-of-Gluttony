@@ -353,6 +353,8 @@ Nothing to migrate (probe 3.4).
   - `Beelzebub/Beelzebub.Tests/EquipRowsTests.cs`
   - `Beelzebub/Beelzebub.Tests/BarResetReplyTests.cs`
   - `Beelzebub/Beelzebub.Tests/ReplyChunksTests.cs`
+  - `Beelzebub/Beelzebub.Tests/SlotOwnershipTests.cs`
+  - `CLAUDE.md` (Development procedure 5-6: the release-candidate session's server procedure)
   - `Beelzebub/Beelzebub/Services/BarResetService.cs`
   - `Beelzebub/Beelzebub/Services/AbilityRegistry.cs`
   - `Beelzebub/Beelzebub/Services/SlotApply.cs`
