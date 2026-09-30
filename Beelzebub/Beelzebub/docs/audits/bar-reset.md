@@ -255,3 +255,8 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
   - `Beelzebub/.gitignore` ignores `manifest.json` and `logs/`: the manifest and fixture logs were never committed. A
     faults-dir `.gitignore` re-includes them, and the harness FAILs on any untracked file in its dir.
   - four plants did not reach their check (D13 empty set, D28 script writers, D29 empty/good tree) and were re-aimed.
+- D19 on 91b1bd5 (`fault_harness.py bar-reset --only D19`; the preflight baseline printed PREFLIGHT OK on the v0.136.0 tree):
+  `harness: ok, 4 faults, 4 clauses` — toml version, CHANGELOG entry, README status line and a `.beelz slot ` reply each
+  made preflight print PREFLIGHT FAILED, and it passed again after each revert. Together with the run above: 135 faults,
+  117 clauses, every test/cmd item except D22 (deferred to build step 10). D19's patches name v0.136.0 and are re-made
+  with `--make` against the release commit in step 10.
