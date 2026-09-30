@@ -970,11 +970,14 @@ internal static class TransformBuffService
         foreach (var (idx, slot) in slots)
         {
             if (slot == Entity.Null || !slot.Exists()) continue;
-            var parse = Beelzebub.Logic.SlotModDump.ParseGroupGuid(FormatEntityModifications(reg, em, slot));
+            var parse = ParseSlot(reg, em, slot);
             var d = Beelzebub.Logic.SlotPurgeDecision.Decide(parse, SourcePrefabName, IsProtected);
             if (d.Skipped)
             {
+                // Nothing popped or destroyed (D24) — and the step fails: the readback only covers the bar, so an
+                // unreadable slot outside it would otherwise leave the reset looking clean.
                 Core.Log.LogWarning($"[Beelz PURGE] slot[{idx}] {slot} dump unreadable — slot skipped.");
+                failures.Add($"slot {idx} dump unreadable");
                 continue;
             }
             foreach (int id in d.ModIdsToPop)
@@ -989,8 +992,9 @@ internal static class TransformBuffService
             if (d.ModIdsToPop.Count == 0) continue;
             if (!slot.Exists()) { failures.Add($"slot {idx} entity gone after the pop"); continue; }
             // Destroy backstop only for a slot the pop did not clear (a readable dump that still has mods).
-            var after = Beelzebub.Logic.SlotModDump.ParseGroupGuid(FormatEntityModifications(reg, em, slot));
-            if (after.Readable && after.HasMods)
+            var after = ParseSlot(reg, em, slot);
+            if (!after.Readable) { failures.Add($"slot {idx} dump unreadable after the pop"); continue; }
+            if (after.HasMods)
                 foreach (var (i, v) in d.SourcesToDestroy) toDestroy.Add(new Entity { Index = i, Version = v });
         }
         foreach (Entity src in toDestroy)
@@ -1003,7 +1007,11 @@ internal static class TransformBuffService
                 destroyed++;
                 Core.Log.LogInfo($"[Beelz PURGE] destroyed modification source {src} ({(string.IsNullOrEmpty(sn) ? "no prefab" : sn)}).");
             }
-            catch (Exception ex) { Core.Log.LogWarning($"[Beelz PURGE] destroy source {src} failed: {ex.Message}"); }
+            catch (Exception ex)
+            {
+                Core.Log.LogWarning($"[Beelz PURGE] destroy source {src} failed: {ex.Message}");
+                failures.Add($"destroy {src}");
+            }
         }
         if (Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
         // Every slot was processed first; a failure then makes the whole step an ERR (never a silent partial pop).
@@ -1033,7 +1041,7 @@ internal static class TransformBuffService
         {
             if (idx > maxSlot) break;
             if (slot == Entity.Null || !slot.Exists()) continue;   // no slot entity → nothing can modify it
-            var parse = Beelzebub.Logic.SlotModDump.ParseGroupGuid(FormatEntityModifications(reg, Core.EntityManager, slot));
+            var parse = ParseSlot(reg, Core.EntityManager, slot);
             if (!parse.Readable) { list.Add(new SlotModReading(idx, 0, 0, true, new List<string>())); continue; }
             int gear = 0, other = 0;
             var names = new List<string>();
@@ -1054,20 +1062,33 @@ internal static class TransformBuffService
     /// — returns the human-readable per-entity modification dump (or "" on any failure). Used by
     /// <see cref="PurgeAbilitySlotModifications"/> for both diagnostics and id/source harvesting.
     /// </summary>
-    static string FormatEntityModifications(ModificationsRegistry reg, EntityManager em, Entity entity)
+    static string FormatEntityModifications(ModificationsRegistry reg, EntityManager em, Entity entity) =>
+        TryFormatEntityModifications(reg, em, entity, out string dump) ? dump : "";
+
+    /// <summary>v0.137.0 (bar-reset D24): the dump, or false when the engine formatter throws — the bar-reset callers
+    /// treat that as Unreadable (an empty string would parse as a readable dump with no mods, i.e. falsely clean).</summary>
+    static bool TryFormatEntityModifications(ModificationsRegistry reg, EntityManager em, Entity entity, out string dump)
     {
         try
         {
             var sb = new Il2CppSystem.Text.StringBuilder();
             reg.GetFormattedEntityModificationsMessage(sb, em, entity);
-            return sb.ToString();
+            dump = sb.ToString();
+            return true;
         }
         catch (Exception ex)
         {
             Core.Log.LogWarning($"[Beelz PURGE] FormatEntityModifications({entity}) failed: {ex.Message}");
-            return "";
+            dump = "";
+            return false;
         }
     }
+
+    /// <summary>The slot's GroupGuid parse; a formatter failure yields an Unreadable parse.</summary>
+    static Beelzebub.Logic.SlotModParse ParseSlot(ModificationsRegistry reg, EntityManager em, Entity slot) =>
+        TryFormatEntityModifications(reg, em, slot, out string dump)
+            ? Beelzebub.Logic.SlotModDump.ParseGroupGuid(dump)
+            : Beelzebub.Logic.SlotModParse.Failed();
 
     // v0.137.0 (bar-reset D1): the dump is parsed by the pure, unit-tested Logic/SlotModDump — GroupGuid field
     // only (never CopyCooldown / SpellModsSource). These thin adapters keep the purge call sites unchanged.

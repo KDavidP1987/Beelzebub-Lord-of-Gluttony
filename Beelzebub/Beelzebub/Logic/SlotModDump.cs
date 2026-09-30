@@ -19,6 +19,10 @@ public sealed class SlotModParse
     public List<SlotModEntry> Entries { get; } = new();
     public bool Readable { get; internal set; } = true;
     public bool HasMods => Entries.Count > 0;
+
+    /// <summary>A read that failed before any text was parsed (the engine formatter threw): Unreadable, no entries —
+    /// never the readable-and-empty result an empty dump gives.</summary>
+    public static SlotModParse Failed() => new() { Readable = false };
 }
 
 public static class SlotModDump

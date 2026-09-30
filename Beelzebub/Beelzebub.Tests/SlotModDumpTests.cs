@@ -47,6 +47,19 @@ public class SlotModDumpTests
     }
 
     [Fact]
+    public void Failed_read_fails_when_it_is_readable_or_lets_the_slot_be_purged()
+    {
+        // A formatter exception must never look like an empty (readable, unmodified) dump.
+        var p = SlotModParse.Failed();
+        Assert.False(p.Readable);
+        Assert.Empty(p.Entries);
+        var d = SlotPurgeDecision.Decide(p, _ => "AB_Werewolf_Buff", _ => false);
+        Assert.True(d.Skipped);
+        Assert.Empty(d.ModIdsToPop);
+        Assert.Empty(d.SourcesToDestroy);
+    }
+
+    [Fact]
     public void Parse_fails_when_an_unparseable_ModId_line_is_readable()
     {
         string dump =

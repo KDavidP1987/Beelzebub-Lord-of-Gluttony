@@ -138,3 +138,19 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
   - F5 ACCEPTED (advisory) — the post-pop dump now checks the slot entity still exists; a vanished one is a failure.
 - compile / tests: Release build 0 errors (no deploy); `dotnet test` 109 passed
 - not unit-testable (IL2CPP game calls): verified in the release-candidate session (D6-D10, D30)
+
+### Step 6 · review round 2 · 2026-09-30 · reviewed 8fb6f3b
+- Codex verdict: REVISE — 3 blocking (the first run could not read the repo from its sandbox and returned no verdict;
+  it was rerun with the diff and the files pasted into the prompt, from the repo root):
+  - F1 ACCEPTED — a `DestroyUtility.Destroy` exception in the backstop was logged and dropped; it is now a pop failure
+    (step ERR).
+  - F2 ACCEPTED — `FormatEntityModifications` turned an engine exception into "", which parses as a readable dump with
+    no mods (falsely clean). New `TryFormatEntityModifications` + `SlotModParse.Failed()`: PopSlotMods and the readback
+    treat a formatter failure as Unreadable. Test `Failed_read_fails_when_it_is_readable_or_lets_the_slot_be_purged`
+    (planted: `Failed()` returning a readable parse → the test failed; restored → passed).
+  - F3 ACCEPTED — an unreadable slot above 8 was skipped by PopSlotMods and never reached the 0-8 readback; any skipped
+    (or unreadable-after-pop) slot is now a pop failure, so the reset is not clean. D24's "neither popped nor destroyed"
+    still holds for that slot.
+- /code-review: waived for this round — the reviewed diff is the ~50-line round-1 fix already covered line by line by
+  the Codex pass; round 3 runs both reviewers on the round-2 fix.
+- compile / tests: Release build 0 errors (no deploy); `dotnet test` 110 passed
