@@ -201,3 +201,10 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
 - left in place on purpose: `TransformBuffService.PurgeAbilitySlotModifications` and `ForceAbilityBarReinit` have no
   callers now; removed after the release-candidate session so a rollback stays a plain revert
 - not unit-testable here (IL2CPP / VCF): the handlers themselves — verified in the release-candidate session (D6-D8)
+
+### Step 8 · 2026-09-30 · recovery guide, backlog
+- files: `docs/RECOVERY_GUIDE.md` rewritten to the one flow (admin bar → resetbar / purge → reset-character only after a
+  purge and a relog; respawn and reset-character keep the Steam-keyed binds; known limits: mounted rows, unreadable
+  slots, next-tick patch); `docs/BACKLOG.md` new (clearbar-fullreset, transform-chain-guard, docs-consolidation,
+  dev-snapshot, mounted-bar-reset). `ApiVersion = 33` and the handoff v0.137 entry landed with steps 1-4 (f0f346c).
+- checker: docs ok, paths ok (44)
