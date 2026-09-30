@@ -154,3 +154,23 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
 - /code-review: waived for this round — the reviewed diff is the ~50-line round-1 fix already covered line by line by
   the Codex pass; round 3 runs both reviewers on the round-2 fix.
 - compile / tests: Release build 0 errors (no deploy); `dotnet test` 110 passed
+
+### Step 6 · review round 3 (final) · 2026-09-30 · reviewed 08a2b2f
+- Codex verdict: READY (no findings).
+- Fresh-context subagent review (in place of /code-review: the working tree already holds step-7 changes, so the
+  reviewer read the commits only) — nothing blocking, 3 advisory:
+  - A1 ACCEPTED as a watched risk, no code change — one routinely unreadable dump on a non-bar slot would make
+    PopSlotMods ERR on every reset. D24 says any unreadable slot is never clean, so the ERR stays; the per-slot
+    `[Beelz PURGE] slot[n] … dump unreadable` warning is the diagnostic (CLAUDE.md "diagnostic before fix"), and D30
+    fails on a PopSlotMods ERR in the release-candidate session, which then becomes a `defect` fix.
+  - A2 ACCEPTED, fixed — the destroy backstop could destroy a source that also drives a skipped (unreadable) slot;
+    with any skipped slot the backstop is now not run (logged). Not unit-testable (IL2CPP entity calls); verified by
+    the Release build and read-through.
+  - A3 REJECTED for this diff — `SlotPurgeDecision.Decide` pops character/slot-sourced mods too; this predates the
+    reviewed commit and follows the plan ("pop EVERY GroupGuid mod … gear too"); the D7/D10 session checks
+    (`gear=` stable, weapon skills present) are its evidence.
+  - cosmetic (`"no prefab"` label never prints): no behavioural effect, left.
+- Step-7 test hygiene found in the same pass: two planted faults on BarResetReply did not exercise their tests
+  (surrogate input too short; a plant that broke compilation) — input fixed, both replanted and caught.
+- compile / tests: Release build 0 errors (no deploy); `dotnet test` 110 passed on the committed tree
+- Step 6 post-audit CLOSED after 3 rounds.

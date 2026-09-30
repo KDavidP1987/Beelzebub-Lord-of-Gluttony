@@ -964,7 +964,7 @@ internal static class TransformBuffService
         bool IsProtected(Beelzebub.Logic.SlotModEntry e) =>
             protectedSet.Contains(new Entity { Index = e.SourceIndex, Version = e.SourceVersion });
 
-        int popped = 0, destroyed = 0;
+        int popped = 0, destroyed = 0, skipped = 0;
         var failures = new List<string>();
         var toDestroy = new HashSet<Entity>();
         foreach (var (idx, slot) in slots)
@@ -978,6 +978,7 @@ internal static class TransformBuffService
                 // unreadable slot outside it would otherwise leave the reset looking clean.
                 Core.Log.LogWarning($"[Beelz PURGE] slot[{idx}] {slot} dump unreadable — slot skipped.");
                 failures.Add($"slot {idx} dump unreadable");
+                skipped++;
                 continue;
             }
             foreach (int id in d.ModIdsToPop)
@@ -993,9 +994,16 @@ internal static class TransformBuffService
             if (!slot.Exists()) { failures.Add($"slot {idx} entity gone after the pop"); continue; }
             // Destroy backstop only for a slot the pop did not clear (a readable dump that still has mods).
             var after = ParseSlot(reg, em, slot);
-            if (!after.Readable) { failures.Add($"slot {idx} dump unreadable after the pop"); continue; }
+            if (!after.Readable) { failures.Add($"slot {idx} dump unreadable after the pop"); skipped++; continue; }
             if (after.HasMods)
                 foreach (var (i, v) in d.SourcesToDestroy) toDestroy.Add(new Entity { Index = i, Version = v });
+        }
+        // An unreadable slot's sources are unknown, so any source queued here might also drive it: with a skipped
+        // slot the destroy pass is not run at all (D24 — nothing is destroyed for an unreadable slot).
+        if (skipped > 0 && toDestroy.Count > 0)
+        {
+            Core.Log.LogWarning($"[Beelz PURGE] {skipped} unreadable slot(s) — destroy backstop skipped for {toDestroy.Count} source(s).");
+            toDestroy.Clear();
         }
         foreach (Entity src in toDestroy)
         {
