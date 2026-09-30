@@ -230,3 +230,8 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
   - A7 ACCEPTED — the RemoveAllFormsAndShapeshifts doc comment is back on its method.
 - compile / tests: Release build 0 errors (no deploy); `dotnet test` 122 passed; checker commands / text / auth ok
 - not unit-testable (VCF handlers, IL2CPP): A2 A3 A5 A6 — verified by build and read-through; D6-D8 in the session
+
+### Step 7 · review round 2 · 2026-09-30 · reviewed c4e3664
+- Codex verdict: READY (no findings) — the round-1 fixes F1 A1 A2 A3 A5 A6 checked against the pasted handlers.
+- /code-review: waived — round 1's fresh-context subagent covered this surface; the round-2 diff is its own fixes.
+- Step 7 post-audit CLOSED after 2 rounds.
