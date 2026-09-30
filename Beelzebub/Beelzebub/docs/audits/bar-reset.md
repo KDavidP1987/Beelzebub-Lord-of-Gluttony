@@ -260,3 +260,21 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
   made preflight print PREFLIGHT FAILED, and it passed again after each revert. Together with the run above: 135 faults,
   117 clauses, every test/cmd item except D22 (deferred to build step 10). D19's patches name v0.136.0 and are re-made
   with `--make` against the release commit in step 10.
+
+### Step 5 · review round 1 · 2026-09-30 · reviewed e28c66f
+- Codex verdict: REVISE — 6 blocking, 1 advisory:
+  - F1 ACCEPTED — D2's stays-silent clause had no patch; it now plants a changed expected order into the order test.
+  - F2 REJECTED — D22 is deferred by the plan itself (build step 5: faults are planted once their targets exist); the
+    summary line names it, and the harness FAILs once the rollback line exists and a D22 entry still has no patch.
+  - F3 ACCEPTED (partly) — the hash check is `check_bar_reset.py audit`'s job (D21 splits it); the harness now also
+    refuses uncommitted changes in its faults dir and prints the patch tree it ran. `audit` now reads the LAST recorded
+    tree (the record is append-only; it read the first).
+  - F4 ACCEPTED (partly) — one patch per entry is enforced; D20/D30 patches may only touch the tracked fixture logs. Whether a
+    patch plants the clause it claims stays a review item (this record lists every patch by name in the manifest).
+  - F5 ACCEPTED — the snapshot bytes are restored even when the apply, the command or the revert fails; a non-line-ending
+    difference is reported as REVERT FAILED.
+  - F6 ACCEPTED — "caught" needs the command's own verdict: its last line (`<sub>: FAIL …`, `PREFLIGHT FAILED`) or dotnet's
+    `Failed!` summary; MSB/NU/NETSDK errors count as a broken build.
+  - F7 REJECTED — D23 needs a plant that creates an untracked file; the harness already requires that file to be absent.
+- planted faults: `python Beelzebub/tools/fault_harness.py bar-reset --skip D19` on c5e4dc7:
+  `harness: ok, 132 faults, 113 clauses, 5 deferred (D22: gate not met) (not run: D19), patch tree f4a3529b2df93662f06e7d39ebd1f6186b350d81`

@@ -477,16 +477,18 @@ def check_audit(root: str) -> str:
     if not rec.strip():
         raise CheckFail("no input: audit record is empty")
     bad = [f"lacks '{m}'" for m in ("## Pre-audit", "## Post-audit", "Codex verdict:", "planted faults:") if m not in rec]
-    h = re.search(r"planted faults:.*?patch tree ([0-9a-f]{40})", rec, re.S)
+    # the record is append-only: the LAST patch tree recorded after `planted faults:` is the current evidence
+    start = rec.find("planted faults:")
+    trees = re.findall(r"patch tree ([0-9a-f]{40})", rec[start:]) if start >= 0 else []
     if not re.search(r"harness: ok, \d+ faults", rec):
         bad.append("no 'harness: ok' output recorded")
-    if not h:
+    if not trees:
         bad.append("no patch tree hash recorded")
     else:
         try:
             cur = git(root, "rev-parse", f"HEAD:{FAULTS}").strip()
-            if cur != h.group(1):
-                bad.append(f"recorded patch tree {h.group(1)[:12]} != HEAD {cur[:12]} (re-run the harness)")
+            if cur != trees[-1]:
+                bad.append(f"recorded patch tree {trees[-1][:12]} != HEAD {cur[:12]} (re-run the harness)")
         except CheckFail as e:
             bad.append(str(e))
     if bad:
