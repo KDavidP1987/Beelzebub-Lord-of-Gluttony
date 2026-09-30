@@ -9,4 +9,4 @@ diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/B
 +    public static bool ClearsHotkeys(BarResetScope scope) => scope != BarResetScope.AdminLoadouts;
  }
  
- /// <summary>Gear-sourced = the modification source's prefab name starts with EquipBuff or Item_ (the same test
+ /// <summary>v0.137.0 (bar-reset D32) — which bar slots the held weapon OWNS: the slots its equip-buff PREFAB carries a

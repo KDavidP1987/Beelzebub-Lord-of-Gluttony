@@ -1,12 +1,12 @@
 diff --git a/Beelzebub/Beelzebub/docs/dod/bar-reset.md b/Beelzebub/Beelzebub/docs/dod/bar-reset.md
 --- a/Beelzebub/Beelzebub/docs/dod/bar-reset.md
 +++ b/Beelzebub/Beelzebub/docs/dod/bar-reset.md
-@@ -182,7 +182,7 @@
+@@ -183,7 +183,7 @@
  `check_bar_reset.py data` (D28):
  - artifact: state.json binds · owner: the server · location: `BepInEx/config/kdpen.Beelzebub/state.json` · retention: cleared entries are gone once SaveBindings succeeds (D27) · copies: one, plus `state.json.tmp` during the write — `TrySaveSync` deletes the `.tmp` (best effort) in its catch when `WriteAllText`/`Replace`/`Move` fails; if that delete also fails, the next save's `WriteAllText` overwrites it, so at most one `.tmp` exists and it is never read at boot
  - artifact: [Beelz RESET] line · owner: the server · location: `BepInEx/LogOutput.log` · retention: overwritten at the next boot · copies: one prior boot in `LogOutput.1.log` (D16)
 -- artifact: [Beelz BAR] line · owner: the server · location: `BepInEx/LogOutput.log` · retention: overwritten at the next boot · copies: one prior boot in `LogOutput.1.log` (D6)
 +- artifact: [Beelz BAR] line · owner: the server · location: `BepInEx/LogOutput.log` · copies: one prior boot in `LogOutput.1.log` (D6)
  - artifact: [Beelz REAPPLY] line · owner: the server · location: `BepInEx/LogOutput.log` · retention: overwritten at the next boot · copies: one prior boot in `LogOutput.1.log` (assumption S-2)
- - artifact: [Beelz FORM] line · owner: the server · location: `BepInEx/LogOutput.log` · retention: overwritten at the next boot · copies: one prior boot in `LogOutput.1.log` (D4, D30)
- - artifact: [Beelz PURGE] unreadable-dump warning · owner: the server · location: `BepInEx/LogOutput.log` · retention: overwritten at the next boot · copies: one prior boot in `LogOutput.1.log` (D1, D24)
+ - artifact: [Beelz BARRAW] line · owner: the server · location: `BepInEx/LogOutput.log` · retention: overwritten at the next boot · copies: one prior boot in `LogOutput.1.log` (build step 10 diagnostic)
+ - artifact: [Beelz LEAK] line · owner: the server · location: `BepInEx/LogOutput.log` · retention: overwritten at the next boot · copies: one prior boot in `LogOutput.1.log` (D32 pop-loop evidence)
