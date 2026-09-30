@@ -298,3 +298,40 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
     bullet and backticks, so an anchored match would reject the real records; the status and the tree are already
     read from one line, and the last such line wins.
 - Step 5 post-audit closed.
+
+### Step 9 · post-audit of steps 1-8 · review round 1 · 2026-09-30 · reviewed 5401c27 (`git diff 3fbc2d4..5401c27`)
+- preflight on 5401c27: PREFLIGHT OK (10 checks; build 0 errors; tests 130 passed; bar-reset config/commands/text/auth/docs/audit/paths/data ok)
+- harness on 5401c27: `harness: ok, 132 faults, 113 clauses, 5 deferred (D22: gate not met) (not run: D19), patch tree f4a3529b2df93662f06e7d39ebd1f6186b350d81`
+- Codex verdict: REVISE — 2 blocking, both ACCEPTED:
+  - C1 — `Clean` ignored `Readback.OverrideBuffs`: a carrier/form/shapeshift buff that survives DestroyOverrideSources
+    re-patches the bar through its own ReplaceAbilityOnSlotBuff, which no slot reading shows. Clean now also requires
+    no override buff left; `ListOverrideBuffs` skips buffs already queued with DestroyTag (SafeDestroyBuff only queues,
+    so the same-frame readback would otherwise list every buff it just destroyed); the reply names the buff (D24).
+  - C2 — a RevertTransform that throws was followed by ClearSavedBindings dropping the transform record, so a retry
+    no longer planned the revert. `IBarResetOps.ClearSavedBindings(keepTransformRecord)`; the runner passes true
+    when this run's RevertTransform failed (D12).
+- fresh-context subagent (/code-review role): no blocking; 8 advisory:
+  - S1 ACCEPTED — same as C1.
+  - S2 ACCEPTED — EmptyPush swallowed per-slot errors and returned a short count; it is now an ERR below 9 pushed slots.
+  - S3 REJECTED as a change, ACCEPTED as a documented limitation — ClearEquipEntries removes every slot 0-7 row the
+    equip-buff prefab does not carry, including another mod's; the code cannot tell whose row it is. Business rules 4.
+  - S4 REJECTED — "gear mods popped and not restored": the weapon's own mods come back through Reapply (D7's PASS is the
+    visible weapon skills, before and after a swap and a relog), and a pre-reset gear count cannot be compared because
+    Beelzebub's injected rows are themselves equip-buff (gear) sourced. `admin bar` prints every gear source per slot
+    (D6), so a non-weapon `Item_*` source lost in the in-game session would show there.
+  - S5 ACCEPTED — a failed TrySaveSync now also calls RequestSave, so the heartbeat retries the write.
+  - S6 REJECTED — the transform cooldown started by RevertTransform is Business rules 6 ("cooldowns are left alone");
+    the release notes say so.
+  - S7 ACCEPTED — RevertTransform passed "bar reset (<scope>)", a new transform-ended reason with parentheses; it now
+    passes the pre-0.137 reasons (resetbar / admin reset-loadouts / admin purge), so the BCH wire is unchanged.
+  - S8 ACCEPTED — assumption S-2's per-slot reapply diagnostic is logged as `[Beelz REAPPLY] slot= before= after=`
+    (own tag: `[Beelz RESET]` lines are schema-checked by D30; Data row added); Interfaces drops the stale
+    RestoreResolvedGrants.
+- planted once by hand before trusting them: `Runner_fails_when_a_surviving_override_buff_is_clean`,
+  `Runner_fails_when_a_failed_revert_drops_the_transform_record`, `ForReset_fails_when_a_surviving_override_buff_is_not_named`
+  — each failed with its fault, passed restored; tests 133 passed. Harness entries D12-failed-revert-drops-record,
+  D24-override-buff-clean, D24-override-buff-unnamed added; patches re-made (144 entries).
+- harness on 41139ef (`--skip D19`): 134 of 135 caught; `D28-row-lacks-field: patch does not apply` (its patch predated the
+  REAPPLY Data row beside its context) — patches re-made in 3e333de, then `--only D23,D28` (the two items whose patches changed):
+  `harness: ok, 12 faults, 12 clauses (not run: D1 D2 D3 D4 D5 D11 D12 D13 D14 D15 D16 D17 D18 D19 D20 D22 D24 D25 D26 D27 D29 D30 D31), patch tree 0bd1cf8e55abed87ad2bcffbe29d1e081e1add30`
+- fixes: 5eae953, 41139ef, 3e333de
