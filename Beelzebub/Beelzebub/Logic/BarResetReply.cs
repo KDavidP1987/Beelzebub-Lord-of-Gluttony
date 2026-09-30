@@ -35,7 +35,7 @@ public static class BarResetReply
 
         var lines = new List<string>();
         if (!r.Online)
-            lines.Add($"{whose} saved binds cleared ({binds} bind(s){hot}). Offline: the live bar resets on next login.");
+            lines.Add($"{whose} saved binds cleared ({binds} bind(s){hot}). Offline: the live bar resets on next login; if it is still stuck then, run this again while they are online.");
         else if (!r.LiveReady)
             lines.Add($"{whose} saved binds cleared ({binds} bind(s){hot}), but the {NotReachable}.");
         else if (r.Clean)
@@ -102,8 +102,8 @@ public static class BarResetReply
     static string Slots(List<int> slots) =>
         string.Join(", ", slots.Take(MaxListed).Select(SlotLabel)) + (slots.Count > MaxListed ? $", … (+{slots.Count - MaxListed})" : "");
 
-    /// <summary>A player name: LogSafe (32 characters, no control characters or brackets) and no `<` `>`.</summary>
-    static string Name(string s) => LogSafe.Field(s).Replace("<", "").Replace(">", "");
+    /// <summary>A player name for any reply: LogSafe (32 characters, no control characters or brackets) and no `<` `>`.</summary>
+    public static string Name(string s) => LogSafe.Field(s).Replace("<", "").Replace(">", "");
 
     /// <summary>Free text (prefab names, set lists): control characters, `[` `]` `<` `>` removed, capped.</summary>
     static string Text(string s, int max)

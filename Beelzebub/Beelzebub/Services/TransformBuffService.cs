@@ -630,15 +630,6 @@ internal static class TransformBuffService
         return removed;
     }
 
-    /// <summary>
-    /// v0.43.9: hardened teardown for `.beelz resetbar`. Unlike <see cref="Remove"/>
-    /// (which looks each buff up by identifier via TryGetBuff — and can MISS a buff that
-    /// is actually present), this walks the character's live <see cref="BuffBuffer"/>
-    /// directly and destroys: our carrier buff, every registered boss/native form buff,
-    /// and ANY buff whose prefab name contains "Shapeshift" or "_Transformation_" (a stuck
-    /// vanilla shapeshift / boss-phase form that left the player wearing a creature bar).
-    /// The player's EquipBuff_Weapon is never touched. Returns the number destroyed.
-    /// </summary>
     /// <summary>A buff that can drive the bar: our carrier, a boss-form buff, or any shapeshift/transformation buff —
     /// never the weapon equip buff. Shared by <see cref="RemoveAllFormsAndShapeshifts"/> and the read-only
     /// <see cref="ListOverrideBuffs"/> so `admin bar` shows exactly what a reset destroys.</summary>
@@ -668,6 +659,15 @@ internal static class TransformBuffService
         return names;
     }
 
+    /// <summary>
+    /// v0.43.9: hardened teardown for `.beelz resetbar`. Unlike <see cref="Remove"/>
+    /// (which looks each buff up by identifier via TryGetBuff — and can MISS a buff that
+    /// is actually present), this walks the character's live <see cref="BuffBuffer"/>
+    /// directly and destroys: our carrier buff, every registered boss/native form buff,
+    /// and ANY buff whose prefab name contains "Shapeshift" or "_Transformation_" (a stuck
+    /// vanilla shapeshift / boss-phase form that left the player wearing a creature bar).
+    /// The player's EquipBuff_Weapon is never touched. Returns the number destroyed.
+    /// </summary>
     public static int RemoveAllFormsAndShapeshifts(Entity character)
     {
         if (!character.Exists() || !Core.EntityManager.HasBuffer<BuffBuffer>(character)) return 0;

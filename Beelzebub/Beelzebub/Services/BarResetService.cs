@@ -25,12 +25,14 @@ internal sealed class BarResetService : IBarResetOps
     readonly Entity _character;
     readonly ulong _steamId;
     readonly BarResetScope _scope;
+    readonly bool _notLive;
 
-    BarResetService(Entity character, ulong steamId, BarResetScope scope)
+    BarResetService(Entity character, ulong steamId, BarResetScope scope, bool notLive)
     {
         _character = character;
         _steamId = steamId;
         _scope = scope;
+        _notLive = notLive;
     }
 
     static int _runCounter;
@@ -48,7 +50,7 @@ internal sealed class BarResetService : IBarResetOps
         bool transform = Core.AbilityRegistry.GetActiveTransform(steamId) is not null;
         var steps = BarResetPlanner.Plan(scope, online, liveReady, transform);
 
-        var result = BarResetRunner.Run(new BarResetService(character, steamId, scope), steps, online, liveReady);
+        var result = BarResetRunner.Run(new BarResetService(character, steamId, scope, online && !liveReady), steps, online, liveReady);
         sw.Stop();
 
         int run = ++_runCounter;
@@ -82,11 +84,12 @@ internal sealed class BarResetService : IBarResetOps
         var binds = BindOrigins(character, steamId);
         var injected = SlotApply.InjectedRowSlots(character, out var anyRow);
         var mods = TransformBuffService.ReadSlotMods(character, BarMaxSlot).ToDictionary(m => m.Slot);
+        bool noEquip = injected == null && !SlotApply.HasEquipBuff(character);   // mid-swap / respawn: rows unknown
 
         for (int slot = 0; slot <= BarMaxSlot; slot++)   // the bar only (Business rules 5)
         {
             mods.TryGetValue(slot, out var m);
-            bool rowsUnknown = injected == null && anyRow.Contains(slot);
+            bool rowsUnknown = injected == null && (noEquip || anyRow.Contains(slot));
             int resolved = SlotApply.CurrentSlotResolvedGuid(character, slot);
             readback.Slots.Add(new BarSlotReading
             {
@@ -164,7 +167,10 @@ internal sealed class BarResetService : IBarResetOps
     public int ClearSavedBindings()
     {
         int n = Core.AbilityRegistry.ClearAllLoadouts(_steamId);   // universal + weapon + form binds, transform loadouts, baseline
-        if (Core.AbilityRegistry.GetActiveTransform(_steamId) is not null)
+        // An online character whose live bar is unreachable gets no RevertTransform, so its record is KEPT: dropping it
+        // would leave the form buff and summons with nothing left to end them. The reset is not clean (Unreadable) and
+        // the reply sends the admin to relog/respawn and re-run, which reverts it.
+        if (!_notLive && Core.AbilityRegistry.GetActiveTransform(_steamId) is not null)
         {
             Core.AbilityRegistry.ClearActiveTransform(_steamId);    // an active or parked (disconnect-grace) record
             n++;

@@ -208,3 +208,25 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
   slots, next-tick patch); `docs/BACKLOG.md` new (clearbar-fullreset, transform-chain-guard, docs-consolidation,
   dev-snapshot, mounted-bar-reset). `ApiVersion = 33` and the handoff v0.137 entry landed with steps 1-4 (f0f346c).
 - checker: docs ok, paths ok (44)
+
+### Step 7 · review round 1 · 2026-09-30 · reviewed 44498e2
+- Codex verdict: REVISE — 1 blocking:
+  - F1 ACCEPTED — the confirm prompts and the no-match reply interpolated the typed `player` / looked-up name raw (a
+    long or `<`-bearing token could exceed VCF's 512 bytes and throw, or inject markup). They now go through
+    `BarResetReply.Name` (made public) + `Cap`. Test `Name_fails_when_markup_control_characters_or_long_names_pass_through`
+    (planted: angle stripping removed → failed; restored → passed).
+- Fresh-context subagent review — nothing blocking, 7 advisory:
+  - A1 ACCEPTED — an offline purge cannot pop the leaked slot mods (live-only), yet the reply promised the bar resets;
+    it now adds "if it is still stuck then, run this again while they are online".
+  - A2 ACCEPTED — an online target with `liveReady=false` got no RevertTransform but lost its transform record, stranding
+    the form buff/summons; ClearSavedBindings now keeps the record in that case (the reset is Unreadable, not clean, and
+    the reply sends the admin to relog/respawn and re-run).
+  - A3 ACCEPTED — `.beelz admin purge CONFIRM` bound CONFIRM as a name fragment; that shape is now refused with the
+    correct usage.
+  - A4 REJECTED — `you` meaning the sender is the deliberate convention of purge / bar / rebuildbar (and the command
+    descriptions say "default: you"); a player whose name starts with "you" is reached with a longer fragment.
+  - A5 ACCEPTED — with no equip buff, `admin bar` printed `row=no`; every slot's rows are now reported unreadable then.
+  - A6 ACCEPTED — `admin bar` writes an `Audit` line (offline, binds, rows, other).
+  - A7 ACCEPTED — the RemoveAllFormsAndShapeshifts doc comment is back on its method.
+- compile / tests: Release build 0 errors (no deploy); `dotnet test` 122 passed; checker commands / text / auth ok
+- not unit-testable (VCF handlers, IL2CPP): A2 A3 A5 A6 — verified by build and read-through; D6-D8 in the session

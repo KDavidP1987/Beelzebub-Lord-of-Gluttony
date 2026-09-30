@@ -380,7 +380,7 @@ internal static partial class AdminCommands
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
         if (!TryBarTarget(ctx, player, out var character, out ulong steamId, out string fullName)) return;
         if (!Beelzebub.Logic.BarResetInput.IsConfirm(confirm))
-        { ctx.Reply($"This clears ALL of {fullName}'s slot/form/transform loadouts and resets their bar (captures, unlocks and hotkeys kept). Re-run: .beelz admin reset-loadouts {player} CONFIRM"); return; }
+        { ctx.Reply(Beelzebub.Logic.BarResetReply.Cap($"This clears ALL of {Beelzebub.Logic.BarResetReply.Name(fullName)}'s slot/form/transform loadouts and resets their bar (captures, unlocks and hotkeys kept). Re-run: .beelz admin reset-loadouts {Beelzebub.Logic.BarResetReply.Name(player)} CONFIRM")); return; }
 
         var result = BarResetService.FullReset(character, steamId, fullName, Beelzebub.Logic.BarResetScope.AdminLoadouts);
         foreach (string line in Beelzebub.Logic.BarResetReply.ForReset(result, Beelzebub.Logic.BarResetScope.AdminLoadouts, fullName))
@@ -401,7 +401,7 @@ internal static partial class AdminCommands
         }
         character = EntityExtensions.FindCharacterByName(player, out steamId, out name);
         if (character != Entity.Null) return true;
-        ctx.Reply($"No (or ambiguous) player match for '{player}'.");
+        ctx.Reply(Beelzebub.Logic.BarResetReply.Cap($"No (or ambiguous) player match for '{Beelzebub.Logic.BarResetReply.Name(player)}'."));
         return false;
     }
 
@@ -1260,6 +1260,7 @@ internal static partial class AdminCommands
         foreach (string line in Beelzebub.Logic.BarResetReply.ForBar(readback, fullName)) ctx.Reply(line);
         if (!readback.Offline)
             foreach (string line in Beelzebub.Logic.BarResetLog.FormatBar(readback, fullName, steamId)) Core.Log.LogInfo(line);
+        Audit(ctx, "bar", steamId, fullName, $"offline={(readback.Offline ? 1 : 0)} binds={readback.Binds} rows={readback.Rows} other={(readback.Unreadable ? "unreadable" : readback.Other.ToString())}");
     }
 
     [Command("respawn", description: "Respawn a player's character AT THEIR CURRENT SPOT — V Rising rebuilds the character fresh, which fixes a stuck/frozen ability bar (the bear-form bug). Inventory, equipment, blood, and progress are preserved (same as dying + respawning). Usage: .beelz admin respawn [player] (default: you)", adminOnly: true)]
@@ -1386,10 +1387,13 @@ internal static partial class AdminCommands
     public static void Purge(ChatCommandContext ctx, string player = null, string confirm = null)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        // `.beelz admin purge CONFIRM` binds CONFIRM as the player: never search for a player named like the token.
+        if (confirm == null && Beelzebub.Logic.BarResetInput.IsConfirm(player))
+        { ctx.Reply("Name the player: .beelz admin purge PLAYER CONFIRM (use 'you' for yourself)."); return; }
         if (!TryBarTarget(ctx, player, out var character, out ulong steamId, out string fullName)) return;
         if (!Beelzebub.Logic.BarResetInput.IsConfirm(confirm))
         {
-            ctx.Reply($"This resets ALL of {fullName}'s Beelzebub bar integration to vanilla (transform, every slot/form/weapon/hotkey/loadout binding, leaked slot mods) — captures and unlocks are KEPT. Re-run: .beelz admin purge {(string.IsNullOrWhiteSpace(player) ? "you" : player)} CONFIRM");
+            ctx.Reply(Beelzebub.Logic.BarResetReply.Cap($"This resets ALL of {Beelzebub.Logic.BarResetReply.Name(fullName)}'s Beelzebub bar integration to vanilla (transform, every slot/form/weapon/hotkey/loadout binding, leaked slot mods) — captures and unlocks are KEPT. Re-run: .beelz admin purge {(string.IsNullOrWhiteSpace(player) ? "you" : Beelzebub.Logic.BarResetReply.Name(player))} CONFIRM"));
             return;
         }
 

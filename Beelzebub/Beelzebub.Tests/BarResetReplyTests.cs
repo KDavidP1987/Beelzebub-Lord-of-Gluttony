@@ -112,6 +112,18 @@ public class BarResetReplyTests
     }
 
     [Fact]
+    public void Name_fails_when_markup_control_characters_or_long_names_pass_through()
+    {
+        string n = BarResetReply.Name("<color=red>\n[b]" + new string('x', 80));
+        Assert.DoesNotContain("<", n);
+        Assert.DoesNotContain(">", n);
+        Assert.DoesNotContain("\n", n);
+        Assert.DoesNotContain("[", n);
+        Assert.True(n.Length <= LogSafe.MaxNameLength, n);
+        Assert.Equal("?", BarResetReply.Name(null));
+    }
+
+    [Fact]
     public void ForBar_fails_when_offline_does_not_print_the_saved_state()
     {
         var rb = new BarReadback { Offline = true, SavedSets = { "universal: slots 2" }, Transform = "none", Hotkeys = 1 };
