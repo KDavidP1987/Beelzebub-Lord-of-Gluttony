@@ -106,19 +106,22 @@ Beelzebub/
 │   ├── Plugin.cs               ← entry point (BasePlugin.Load)
 │   ├── Patches/                ← Harmony patches (death-event hook, ability cast patches, ...)
 │   ├── Services/               ← AbilityGrantService, PlayerAbilityStateService, ...
-│   ├── Commands/               ← VCF commands (.beelz grant, .beelz slot, .beelz list, ...)
+│   ├── Commands/               ← VCF commands (.beelz grant, .beelz list, .beelz resetbar, ...)
+│   ├── Logic/                  ← PURE decision logic (no IL2CPP) — linked into Beelzebub.Tests
 │   ├── Config/Settings.cs      ← BepInEx config bindings
+│   ├── docs/                   ← main docs: dod/ (plans), audits/, RECOVERY_GUIDE, BCH handoff, CHANGELOG_FULL, ...
 │   └── thunderstore.toml       ← Thunderstore manifest (versionNumber synced to csproj)
+├── Beelzebub.Tests/            ← xUnit over Logic/*.cs; part of Beelzebub.sln
 ├── Beelzebub.sln
-├── tools/                      ← (TBD) bump-version.ps1, preflight.ps1, package-release.ps1
-└── docs/                       ← (TBD) ARCHITECTURE, LESSONS_LEARNED as they grow
+├── tools/                      ← preflight.ps1 (release gate), sync_github_readme.py, ability-data pipeline (*.py)
+└── docs/                       ← older docs (SUMMON_AS_ALLY, SETUP_GUIDE, ...) + plans/ (archived pre-dod plans)
 ```
 
 - Plugin GUID: `kdpen.Beelzebub`
 - Target framework: `net6.0`, IL2CPP via `BepInEx.Unity.IL2CPP` 6.0.0-be.733,
   V Rising types via `VampireReferenceAssemblies`, commands via
   `VRising.VampireCommandFramework`.
-- Repo: **not yet initialized**. Will be its own git repo separate from BCH.
+- Repo: git, repo root = this workspace root; GitHub `KDavidP1987/Beelzebub-Lord-of-Gluttony`. Separate from BCH.
 
 ## Build & local deploy
 
@@ -160,8 +163,11 @@ reached v0.40 — don't repeat that):
 2. **`CHANGELOG.md`** — player-facing release notes. This **one file is both**
    changelogs: it ships to Thunderstore (auto-staged to `dist/` by the
    `BuildToDist` target) **and** lives on GitHub. The Conventional-Commits git
-   log is the deeper technical history — there is intentionally no second
-   changelog file to keep in sync.
+   log is the deeper technical history. The shipped file keeps the **10 newest
+   versions** (preflight caps it at 64 KB — Thunderstore rejects huge files); on
+   each release add the entry to BOTH `CHANGELOG.md` and the complete archive
+   `Beelzebub/Beelzebub/docs/CHANGELOG_FULL.md`, then drop the oldest entry from
+   `CHANGELOG.md`.
 3. **`README.md`** — the Thunderstore mod page (front page). (`thunderstore.toml`'s
    `description` is the short listing tagline, ≤250 chars.) The **GitHub landing page**
    is the repo-root `README.md`, GENERATED from it by `python Beelzebub/tools/sync_github_readme.py`
@@ -185,8 +191,14 @@ so it's local-only); **this CLAUDE.md rule is the authoritative, shared process.
 
 ## Things to watch out for
 
-These will grow as the project hits real gotchas. Empty for now — first
-entry will come from the POC attempt.
+Grows as the project hits real gotchas.
+
+- **The action bar is five layers deep** — a slot resolves through: (L1) saved Steam-keyed bindings in
+  `AbilityRegistry`/`state.json`; (L2) `ReplaceAbilityOnSlotBuff` rows on the live `EquipBuff_Weapon_*`;
+  (L3) form/carrier/orphan override buffs; (L4) `ModificationsRegistry` GroupGuid mods (only popped by id —
+  `ModifyAbilityGroupOnSlot` ADDS a mod, it never removes one); (L5) automatic re-inject on weapon equip,
+  login and form enter. A reset that skips a layer "doesn't work" — the spells come back from the layer it
+  skipped. All bar resets go through `BarResetService` (v0.137); diagnose with `.beelz admin bar <player>`.
 
 - **IL2CPP, not Mono**: use `Il2CppInterop` patterns. Static field
   initializers that touch `ComponentType.ReadOnly(Il2CppType.Of<T>())` will
@@ -285,21 +297,62 @@ Group all open decisions in one plan-mode presentation rather than dripping them
 This applies to every workflow in this workspace (including skill-driven ones
 like claudex-loop's interrogation phase).
 
-## Git workflow
+## Development procedure (adopted 2026-09-30 from Nyarlathotep's lessons)
 
-Once the repo is initialized:
+Per feature: **plan → pre-audit → build step → post-audit**, one commit per step and per review round.
+
+1. **Plan** with the `dod` skill (store `Beelzebub/Beelzebub/docs/dod/`, see the pointer block below). Codex
+   (codex-review / claudex-loop) reviews the plan until APPROVED/READY. Anything unforeseen during the build is
+   an `amend` (typed: discovered/defect/requested/…) **before** it is built.
+2. **Tests**: new decision logic goes in pure `Beelzebub/Beelzebub/Logic/*.cs` with xUnit tests in
+   `Beelzebub.Tests`. Name controls `X_fails_when_<defect>` and **plant each new control's fault once**
+   (break the code, see the test fail, restore) before trusting it.
+3. **Post-audit per step** → `Beelzebub/Beelzebub/docs/audits/<slug>.md` (template in `docs/audits/README.md`):
+   Release build, tests, `pwsh Beelzebub/tools/preflight.ps1`, `/code-review`, and a fresh read-only Codex pass on
+   the diff — up to 3 rounds, every finding ACCEPTED/REJECTED with a reason. Finish or explicitly waive each round.
+4. **Diagnostic before fix.** When an in-game check fails and the cause is not proven, the next build adds a log
+   line / read-only command that names the reason — record it as an amendment — and only then a fix. (Lesson of
+   `docs/CHAIN_AUDIT.md`: eight versions went into an untested theory.)
+5. **In-game test requests** are numbered steps with the server address (127.0.0.1:9876), the exact quoted
+   `.beelz` commands, and a one-line PASS condition per step.
+6. **After every in-game session**, before any restart: `pwsh Beelzebub/tools/preflight.ps1 -LogCheck`, then read
+   every `[Error]`/`[Warning]` in BOTH logs — `BepInEx/LogOutput.log` and the game's `logs/NyarDev.log` (Unity
+   errors are not in BepInEx's log). Copy both logs before a restart — a reboot overwrites them (a stuck-bar
+   session's evidence was lost this way on 2026-09-29). The dev server is shared with Nyarlathotep: never stop
+   or restart it without the owner's go-ahead.
+7. **Release gate**: `pwsh Beelzebub/tools/preflight.ps1` must print PREFLIGHT OK before a `chore(release)`
+   commit (versions, CHANGELOG entry + size cap, README status + root-README sync, ApiVersion banner, audit
+   markers, build, tests). The preflight build never deploys.
+8. **Handoff state lives in the repo** (the dod plan's Log + the audit record). Keep ONE current-state memory.
+
+Playwright is available globally; it fits only the web-facing surfaces here (checking the GitHub/Thunderstore
+pages after a release) — the mod itself is server-side.
+
+<!-- dod:begin v1 -->
+## Definition of Done plans
+dod-store: Beelzebub/Beelzebub/docs/dod
+Plans live in the store above (index: `README.md` there). Before building anything that has a plan there,
+read the plan and follow its `## Build plan`; check items only with evidence; record anything the plan
+did not foresee as an amendment before building it; never edit `## Baseline`. Before claiming a feature
+is finished, run the `dod` skill's `status` on it. At the end of every work session, run `status` on the
+open plans, record anything unforeseen with `amend` before building it, and update any audit or gap
+document in the same pass. Trigger policy: auto — when the user asks to plan, design, or build a feature or function in this
+project, use the `dod` skill to plan it first unless they decline.
+<!-- dod:end -->
+
+## Git workflow
 
 - Conventional Commits, same style as BCH:
   `feat|fix|chore|docs|refactor|test|build|ci|perf|style|revert(scope)?: subject`
 - Release commits: `chore(release): vX.Y.Z`.
-- `gh` CLI is already authenticated as `KDavidP1987` for the user; new
-  GitHub repo creation will be needed before first push.
+- `gh` CLI is authenticated as `KDavidP1987`; origin is `KDavidP1987/Beelzebub-Lord-of-Gluttony`.
+- One commit per build step and per review round — never fold several versions into one release commit.
 
 ## Session-start sanity checks
 
 When starting a new session in this workspace, before making changes:
 
-1. `cd Beelzebub && git status` (once repo exists) — confirm clean state.
+1. `git status` at the workspace root — confirm clean state; `dod` brief (SessionStart hook) shows open plans.
 2. If you're about to edit a file under `Learning Mods/`, `Prefabs/`, or
    `Reference Data/`, STOP — those paths are reference-only.
 3. If the user is asking for a feature that involves BCH integration,

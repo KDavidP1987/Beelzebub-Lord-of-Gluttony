@@ -5,6 +5,7 @@ Generate the GitHub landing page (repo-root README.md) from the Thunderstore REA
 The Thunderstore README stays the single hand-edited source. This script copies it, rewrites its links for the
 repo root, and adds the GitHub-only sections (download links, building from source, repo layout, docs index).
 Run it whenever the Thunderstore README changes (every release): python tools/sync_github_readme.py
+`--check` only compares (exit 1 when out of sync); tools/preflight.ps1 uses it.
 """
 import os, re, sys
 
@@ -107,6 +108,7 @@ def main():
     out = header + s
     old = open(OUT, encoding='utf-8').read() if os.path.exists(OUT) else None
     if out == old: print('README.md already in sync'); return
+    if '--check' in sys.argv: sys.exit('README.md is OUT OF SYNC - run: python Beelzebub/tools/sync_github_readme.py')
     open(OUT, 'w', encoding='utf-8').write(out)
     print('WROTE', OUT)
 
