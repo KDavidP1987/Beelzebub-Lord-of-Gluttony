@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review — Action-bar reset that clears every layer</title>
+<style>
+:root { color-scheme: light dark; --bg:#fbfbfa; --fg:#1b1b1a; --dim:#55534e; --line:#d9d7d1; --card:#ffffff;
+  --ok:#1b5e3a; --warn:#7a4a00; --accent:#1f4f82; }
+@media (prefers-color-scheme: dark) { :root { --bg:#16181a; --fg:#eceae5; --dim:#a8a49c; --line:#33363a;
+  --card:#1e2124; --ok:#7fd8a4; --warn:#e8b765; --accent:#8fbde8; } }
+* { box-sizing: border-box; }
+/* plan text carries long unbroken tokens — a review-page URL in a Log note, a path, a hostile string with no
+   space in it — and at 375 px one of those is what pushes the document wider than the window (D20) */
+body, p, td, th, li, caption { overflow-wrap: anywhere; }
+body { margin:0; padding:1.5rem 1rem 4rem; background:var(--bg); color:var(--fg); max-width:60rem;
+  font:16px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+h1 { font-size:1.5rem; line-height:1.25; margin:0 0 .25rem; }
+h2 { font-size:1.15rem; margin:2.25rem 0 .5rem; padding-bottom:.25rem; border-bottom:1px solid var(--line); }
+h3 { font-size:1rem; margin:1.25rem 0 .35rem; color:var(--dim); }
+p { margin:.4rem 0; }
+code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:.9em; }
+.sub { color:var(--dim); margin:0 0 1rem; }
+.absent { color:var(--dim); font-style:italic; }
+.legend { color:var(--dim); }
+.scroll { overflow-x:auto; }
+table { border-collapse:collapse; width:100%; min-width:32rem; }
+caption { text-align:left; color:var(--dim); padding:.25rem 0; }
+th, td { text-align:left; vertical-align:top; padding:.35rem .5rem; border-bottom:1px solid var(--line); }
+th { color:var(--dim); font-weight:600; white-space:nowrap; }
+td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+tr:target td { background:var(--card); outline:2px solid var(--accent); }
+ul.tree { list-style:none; margin:0; padding:0; }
+ul.tree li { padding:.2rem 0; border-bottom:1px solid var(--line); display:flex; gap:.5rem; flex-wrap:wrap; }
+ul.tree li span.pkg { font-weight:600; }
+ul.tree li.lvl2 { padding-left:1.25rem; }
+ul.tree li .pct { margin-left:auto; font-variant-numeric:tabular-nums; color:var(--dim); }
+a { color:var(--accent); }
+a:focus-visible { outline:3px solid var(--accent); outline-offset:2px; border-radius:2px; }
+.k { display:inline-block; min-width:5.5rem; color:var(--dim); }
+.done { color:var(--ok); } .open { color:var(--warn); }
+ol.said { margin:.25rem 0 .75rem; padding-left:1.25rem; }
+ol.said li { padding:.15rem 0; }
+.declared { border-left:3px solid var(--warn); padding:.35rem .6rem; margin:.5rem 0; color:var(--fg); }
+</style>
+</head>
+<body>
+<h1>Review — Action-bar reset that clears every layer</h1>
+
+<p class="sub"><span class="mono">bar-reset</span> · draft · size L · parent none · 30 item(s)</p>
+
+<p class="legend mono">legend: D item · A amendment · S assumption · F review finding · P proposal · W work package · n.m layer.probe</p>
+
+<p class="legend">Every probe of this plan's rubric is below with the plan's own answer. The author's own marking is not on this page — form your own before you look at theirs.</p>
+
+<h2 id="L1">1. Purpose &amp; typical use</h2>
+<p class="absent">the plan writes no numbered sentences under Purpose &amp; typical use for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 1</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">1.1</td><td>Who uses it (role, frequency) and the one sentence they would say when they want it.</td><td><span class="open">no answer</span></td></tr><tr><td class="mono">1.2</td><td>The job it does for them — the outcome, not the mechanism.</td><td><span class="open">no answer</span></td></tr><tr><td class="mono">1.3</td><td>What exists today that it replaces, extends, or must coexist with.</td><td><span class="open">no answer</span></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L2">2. Actors &amp; permissions</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 2</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">2.1 ⛔</td><td>Every actor that can reach it (including unauthenticated, service accounts, admins) and what each may do.</td><td><a href="#D15">D15</a> <a href="#D13">D13</a></td></tr><tr><td class="mono">2.2</td><td>What happens on the unauthorized path — silent deny, error, redirect, audit entry.</td><td><a href="#D15">D15</a></td></tr><tr><td class="mono">2.3</td><td>Ownership: who may see, change, or delete what someone else created, and what happens when ownership changes hands — a holder replaced mid-flight, a closed thing legitimately reopened.</td><td><a href="#D16">D16</a> <a href="#D17">D17</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L3">3. Inputs, outputs &amp; data</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 3</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">3.1</td><td>Every input: shape, limits, validation, and the response to invalid input.</td><td><a href="#D25">D25</a> <a href="#D15">D15</a></td></tr><tr><td class="mono">3.2</td><td>Every output and side effect, including what other systems receive.</td><td><a href="#D16">D16</a> <a href="#D18">D18</a></td></tr><tr><td class="mono">3.3 ⛔</td><td>Persistence: what is stored, where, who owns it, how long it is kept, how it is deleted — for every artifact the feature produces, including by-products (logs, working directories, intermediates), and which of them exist only once.</td><td><a href="#D28">D28</a> <a href="#D27">D27</a> <a href="#D16">D16</a> <a href="#D5">D5</a></td></tr><tr><td class="mono">3.4</td><td>Migration of existing data, if the shape changes.</td><td>state.json shape unchanged, nothing migrates</td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L4">4. Business rules &amp; invariants</h2>
+<h3>What the plan says under “Business rules”</h3>
+<ol class="said"><li>Layer order is fixed (D2): saved binds are cleared before live layers so the re-inject hooks (weapon equip `ReplaceAbilityOnSlotSystemPatch`, login `TransformService.ReconcileOrphanBuffs`, form enter `ShapeshiftAbilityService`) find nothing to put back; equip rows are removed before mods are popped so no removed row is re-applied; exactly one Empty push happens, after the pop (D2, D10).</li><li>Scope table (D3): PlayerReset = AdminLoadouts = binds + transform loadouts + baseline; Purge = that + hotkeys. Captures, transform unlocks and presets are never touched by any reset (`.beelz clear` and `admin wipe-all` stay the only ways to delete them). Precedence when a caller could mean two scopes: the command decides — the scope is a fixed argument of each command, never inferred; the owner decides exceptions (D3).</li><li>Form bar precedence (D4): form binds &gt; universal binds &gt; captures (only with `Forms_AutoFillFromCaptures`).</li><li>&quot;Gear-sourced&quot; (D6, D10) means a modification whose source entity&#39;s prefab name starts with `EquipBuff` or `Item_` — the same test `DestroyOwnedAbilitySlotOrphans` uses today; every other source is &quot;other-sourced&quot;. Known limitation (accepted): a foreign override whose source prefab happens to be named `Item_*`/`EquipBuff*` is treated as gear and kept; `admin bar` prints each kept source&#39;s prefab name so an admin can see it (D6).</li><li>&quot;Every X&quot; sets (probe 4.5): *every slot* for PopSlotMods and the log readback = every index of the character&#39;s `AbilityGroupSlotBuffer` (computed at run time; the buffer holds about 296); the chat readback shows only bar slots 0-8 and says how many other slots had mods (D6, D24). *Every admin or targeting command* = computed by parsing all `Commands/*.cs` at check time, not a hand list, so a new alias is caught (D15). *Every changed path* = `git diff` plus `git status --porcelain=v1 --untracked-files=all`, so new, untracked and generated tracked files count; ignored build outputs (`bin/`, `obj/`, `dist/`) are declared, not diffed (D23).</li><li>Temporal: a transform &quot;parked&quot; by the disconnect grace (`BeginReconnectGrace`) counts as active for RevertTransform (D2); for an offline target ClearSavedBindings drops its record so login does not revive it (D11); cooldowns are not a reset concern and are left alone.</li><li>Weapon skills come back without a swap (decided 2026-09-30): D7 is a release condition. The in-game session runs on an uncommitted **release candidate** (version already 0.137.0, PREFLIGHT OK) before the `chore(release)` commit exists; if any of D6–D10 fails, no release commit is made — the fix is recorded as a `defect` amendment, committed as its own step, and the candidate is rebuilt and re-tested. The contract is not relaxed to &quot;swap&quot;. The release commit, and so the rollback range (D22), is created only after D30 passes on the session log.</li><li>Durable means saved: a reset reports clean only after `TrySaveSync` wrote `state.json` (D27).</li></ol>
+<div class="scroll">
+<table><caption>probes of layer 4</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">4.1</td><td>Calculations, thresholds, and policies stated precisely enough to write a test from, and which document is authoritative for a threshold stated in two places.</td><td><a href="#D2">D2</a> <a href="#D3">D3</a> <a href="#D7">D7</a></td></tr><tr><td class="mono">4.2</td><td>Invariants that must never be violated (uniqueness, ordering, balance, totals).</td><td><a href="#D2">D2</a> <a href="#D10">D10</a></td></tr><tr><td class="mono">4.3</td><td>Temporal rules — time zones, cut-offs, expiry, retroactive changes.</td><td><a href="#D2">D2</a></td></tr><tr><td class="mono">4.4 ⛔</td><td>Precedence when rules conflict, and who decides an exception.</td><td><a href="#D3">D3</a> <a href="#D4">D4</a> <a href="#D7">D7</a> <a href="#D30">D30</a></td></tr><tr><td class="mono">4.5</td><td>(rubric 2) “Every X” sets: for every rule of the form “every X”, how X is computed, what valid content the computation misses, who checks the computation — and, when a tool derives X (a grep, a diff, a directory walk), whether that tool can see every member at the moment it runs: a file not yet tracked, a file this build creates, a path the tool excludes.</td><td><a href="#D6">D6</a> <a href="#D15">D15</a> <a href="#D23">D23</a> <a href="#D24">D24</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L5">5. Internal interfaces</h2>
+<p class="absent">the plan writes no numbered sentences under Interfaces for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 5</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">5.1</td><td>What it reads from other features/modules, with paths or symbols.</td><td><a href="#D1">D1</a> <a href="#D6">D6</a></td></tr><tr><td class="mono">5.2</td><td>What it writes to or changes about other features, and what breaks there if this is wrong.</td><td><a href="#D7">D7</a> <a href="#D8">D8</a> <a href="#D13">D13</a></td></tr><tr><td class="mono">5.3</td><td>Shared types, events, schemas or contracts it introduces or alters — each field enumerated against what the code emits or reads, not against the prose that describes it.</td><td><a href="#D1">D1</a> <a href="#D2">D2</a> <a href="#D16">D16</a> <a href="#D30">D30</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L6">6. External dependencies &amp; contracts</h2>
+<p class="absent">the plan writes no numbered sentences under Interfaces for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 6</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">6.1</td><td>Every external API, service, package, or vendor it depends on — version, quota, cost — and every input contract sampled across all its record types, not only the ones the feature expects.</td><td><a href="#D1">D1</a> <a href="#D18">D18</a></td></tr><tr><td class="mono">6.2 ⛔</td><td>Behaviour when each dependency is slow, down, rate-limited, or returns garbage, including internal collaborators — sibling agents and your own tools.</td><td><a href="#D12">D12</a> <a href="#D24">D24</a> <a href="#D27">D27</a></td></tr><tr><td class="mono">6.3</td><td>Sandbox / test-mode behaviour and how it is kept out of production.</td><td><a href="#D12">D12</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L7">7. States &amp; lifecycle</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 7</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">7.1</td><td>Empty, first-run, loading, partial, and error states.</td><td><a href="#D11">D11</a> <a href="#D9">D9</a> <a href="#D24">D24</a></td></tr><tr><td class="mono">7.2</td><td>Concurrent use — two users, two tabs, a retry racing the original — and which of these actors is you: the planner, the orchestrator, the build tooling.</td><td><a href="#D10">D10</a></td></tr><tr><td class="mono">7.3</td><td>Stale data, cancel, undo, and re-entry after interruption, and what a correction invalidates.</td><td><a href="#D7">D7</a> <a href="#D6">D6</a> <a href="#D10">D10</a> <a href="#D16">D16</a> <a href="#D30">D30</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L8">8. Minimal stretch</h2>
+<h3>What the plan says under “Use cases”</h3>
+<ol class="said"><li>Equip a Sword.</li><li>`.beelz admin give PerpetualChaos &lt;unitGuid&gt; &lt;abilityGuid&gt;` twice, with two enabled abilities (unit and ability GUID) from `.beelz api catalog abilities`; `.beelz list` then shows them as index 0 and 1.</li><li>`.beelz grant 1 0` and `.beelz grant 4 1` — slots 1 and 4 show the two spells.</li><li>(D8 only) `.beelz hotkey set test 0` — `.beelz hotkey list` shows one entry.</li></ol>
+<div class="scroll">
+<table><caption>probes of layer 8</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">8.1</td><td>The least a user can do: empty input, one item, defaults only, skipping optional steps.</td><td><a href="#D11">D11</a> <a href="#D10">D10</a> <a href="#D25">D25</a></td></tr><tr><td class="mono">8.2</td><td>The feature used once and never again — does anything leak, linger, or nag.</td><td><a href="#D5">D5</a> <a href="#D16">D16</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L9">9. Maximal stretch</h2>
+<h3>What the plan says under “Use cases”</h3>
+<ol class="said"><li>Equip a Sword.</li><li>`.beelz admin give PerpetualChaos &lt;unitGuid&gt; &lt;abilityGuid&gt;` twice, with two enabled abilities (unit and ability GUID) from `.beelz api catalog abilities`; `.beelz list` then shows them as index 0 and 1.</li><li>`.beelz grant 1 0` and `.beelz grant 4 1` — slots 1 and 4 show the two spells.</li><li>(D8 only) `.beelz hotkey set test 0` — `.beelz hotkey list` shows one entry.</li></ol>
+<div class="scroll">
+<table><caption>probes of layer 9</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">9.1</td><td>Volume: 100× the expected count, size, or rate — what degrades and how.</td><td><a href="#D3">D3</a> <a href="#D16">D16</a></td></tr><tr><td class="mono">9.2</td><td>Abuse and misuse: hostile input, automation, the clever workaround a power user will try.</td><td><a href="#D16">D16</a> <a href="#D15">D15</a></td></tr><tr><td class="mono">9.3</td><td>Repeated or parallel use of the same action — idempotency, duplicates, double-submit.</td><td><a href="#D10">D10</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L10">10. Security &amp; privacy</h2>
+<p class="absent">the plan writes no numbered sentences under Security for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 10</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">10.1 ⛔</td><td>Authorization checked on every path, including indirect ones (jobs, webhooks, exports) — and an allowed program&#39;s options that change what runs (`git --upload-pack`, `npm --script-shell`, `node --require`) are the same boundary as the program itself.</td><td><a href="#D13">D13</a> <a href="#D15">D15</a></td></tr><tr><td class="mono">10.2</td><td>Injection and unsafe content on every input that reaches a query, shell, template, or URL.</td><td><a href="#D1">D1</a> <a href="#D16">D16</a></td></tr><tr><td class="mono">10.3 ⛔</td><td>Secrets and credentials: where they live, how they rotate, what must never be logged.</td><td><a href="#D16">D16</a></td></tr><tr><td class="mono">10.4</td><td>Personal data: what is collected, minimised, exposed in logs or exports, and the audit trail.</td><td><a href="#D16">D16</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L11">11. Design &amp; UX</h2>
+<p class="absent">the plan writes no numbered sentences under Design for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 11</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">11.1</td><td>Where it lives in the product and how a user discovers it.</td><td><a href="#D6">D6</a> <a href="#D17">D17</a></td></tr><tr><td class="mono">11.2</td><td>Feedback: progress, success, failure, and empty-result messaging in the product&#39;s voice.</td><td><a href="#D7">D7</a> <a href="#D16">D16</a> <a href="#D24">D24</a></td></tr><tr><td class="mono">11.3</td><td>Accessibility (keyboard, screen reader, contrast) and small-screen behaviour.</td><td><a href="#D6">D6</a></td></tr><tr><td class="mono">11.4</td><td>(rubric 2) Activation: how the feature is invoked or activated when nobody asks for it — a trigger, a pointer line, a hook, a schedule — and what shows it was; the should-not-activate cases are unrelated to the feature&#39;s purpose, never adjacent to it — an agent that has just finished an adjacent task invokes it for a good reason.</td><td><a href="#D13">D13</a> <a href="#D4">D4</a> <a href="#D16">D16</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L12">12. Failure handling &amp; observability</h2>
+<p class="absent">the plan writes no numbered sentences under Failure &amp; observability for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 12</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">12.1</td><td>What the user sees for each failure class, and what they can do next.</td><td><a href="#D12">D12</a> <a href="#D24">D24</a></td></tr><tr><td class="mono">12.2</td><td>What is logged or measured, with enough context to debug without reproducing.</td><td><a href="#D6">D6</a> <a href="#D16">D16</a></td></tr><tr><td class="mono">12.3</td><td>How you would know in production that it is broken — the alert or the dashboard.</td><td><a href="#D16">D16</a> <a href="#D20">D20</a></td></tr><tr><td class="mono">12.4 ⛔</td><td>(rubric 2) Failing case: for every check the plan introduces, the input that makes it report a failure, the input it must stay silent on, and what it prints on an empty input — which must not read as a pass; one evidence command per gating probe, able to fail for its stated `fails when`; and a selftest fixture spells what the real input spells and plants the state the real run produces, never a corrected copy of either.</td><td><a href="#D21">D21</a> <a href="#D29">D29</a> <a href="#D30">D30</a> <a href="#D1">D1</a> <a href="#D19">D19</a> <a href="#D20">D20</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L13">13. Performance &amp; scale</h2>
+<p class="absent">the plan writes no numbered sentences under Performance for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 13</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">13.1</td><td>The latency or throughput budget, and the hot path that decides it.</td><td><a href="#D16">D16</a></td></tr><tr><td class="mono">13.2</td><td>Limits and pagination — what is bounded and what happens at the bound, the case a limit came from, and the valid case it excludes.</td><td><a href="#D6">D6</a> <a href="#D16">D16</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L14">14. Rollout &amp; compatibility</h2>
+<p class="absent">the plan writes no numbered sentences under Rollout for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 14</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">14.1</td><td>How it ships: flag, staged, all at once; who can turn it off.</td><td><a href="#D5">D5</a> <a href="#D22">D22</a></td></tr><tr><td class="mono">14.2</td><td>Backward compatibility with existing clients, data, and integrations.</td><td><a href="#D18">D18</a></td></tr><tr><td class="mono">14.3 ⛔</td><td>Rollback: the exact steps to undo it, whether they are still possible after data has been written, and the commit range they cover when the change is committed more than once.</td><td><a href="#D22">D22</a> <a href="#D27">D27</a></td></tr><tr><td class="mono">14.4 ⛔</td><td>(rubric 2) Paths walked: every path the change ships, writes or regenerates, found by walking the Build plan step by step — generated indexes, tooling, fixtures, notes, ignored and generated files, the shipped files a release has to touch, the paths the review process itself writes (review pages, re-review records) and the plan store itself.</td><td><a href="#D23">D23</a></td></tr></tbody>
+</table>
+</div>
+
+<h2 id="L15">15. Out of scope</h2>
+<p class="absent">the plan writes no numbered sentences under Out of scope for this layer</p>
+<div class="scroll">
+<table><caption>probes of layer 15</caption>
+<thead><tr><th scope="col">probe</th><th scope="col">what it asks</th><th scope="col">the plan&#39;s answer</th></tr></thead>
+<tbody><tr><td class="mono">15.1</td><td>What was explicitly considered and excluded, so a builder does not fill the gap by guessing.</td><td><span class="open">no answer</span></td></tr><tr><td class="mono">15.2</td><td>What is deferred to a later item, and the slug or issue it lives in.</td><td><span class="open">no answer</span></td></tr></tbody>
+</table>
+</div>
+
+<h2>Items in full</h2>
+
+<h3 id="D1"><span class="mono">D1</span> Mod-dump parser is pure and tested</h3>
+<p>`Logic/SlotModDump.cs` parses the engine&#39;s modification dump into GroupGuid entries (mod id, set-to prefab, source entity index:version), ignores every other field section, and reports `Unreadable` when the text contains a `[ModId` line it cannot parse; `TransformBuffService` uses it instead of its private parsers</p>
+<p class="mono">test: Beelzebub.Tests/SlotModDumpTests.cs (fails when: a `[ModId]` line under `- AbilityGroupSlot.CopyCooldown` is returned as a GroupGuid entry, an empty dump yields any entry, or an unparseable `[ModId` line yields Readable)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D2"><span class="mono">D2</span> One fixed reset order</h3>
+<p>`Logic/BarReset.cs` `BarResetPlanner.Plan(scope, online, liveReady, transformActiveOrParked)` returns, for an online character whose live components are present (`liveReady`), the steps in this order: RevertTransform, ClearSavedBindings, ClearHotkeys (Purge only), SaveBindings, ClearEquipEntries, DestroyOverrideSources, PopSlotMods, EmptyPush, Reapply, Readback — RevertTransform only when a transform is active or parked; ClearSavedBindings also drops the active/parked transform record</p>
+<p class="mono">test: Beelzebub.Tests/BarResetTests.cs (fails when: ClearEquipEntries is missing or ordered after PopSlotMods, SaveBindings comes before ClearSavedBindings, or EmptyPush appears more than once; stays silent on the documented order; an unknown scope value throws instead of returning an empty plan, or the runner reports an empty plan as Clean=true — an empty plan is an error result, `Clean=false`)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D3"><span class="mono">D3</span> Scope keeps the right data</h3>
+<p>`PlayerReset` (resetbar) and `AdminLoadouts` (reset-loadouts) clear universal/weapon/form binds, transform loadouts and the slot baseline and keep captures, unlocks, hotkeys and presets; `Purge` also clears hotkeys; no scope clears captures, unlocks or presets</p>
+<p class="mono">test: Beelzebub.Tests/BarResetTests.cs (fails when: PlayerReset plans ClearHotkeys, or Purge omits it)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D4"><span class="mono">D4</span> Form bar skips captures by default</h3>
+<p>`Logic/FormBarFill.cs` returns form binds first, else universal binds, else (only when `autoFillFromCaptures` is true) the first six usable captures; `ShapeshiftAbilityService.BuildFormBar` calls it and logs one `[Beelz FORM] form=&lt;name&gt; source=&lt;form|universal|captures|native&gt;` line from the result&#39;s `Source`</p>
+<p class="mono">test: Beelzebub.Tests/FormBarFillTests.cs (fails when: the result&#39;s Source is not `native` for an empty bar, with no form or universal binds and autoFill=false any capture is returned, or a form bind loses to a universal bind on the same slot; empty inputs return an empty bar)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D5"><span class="mono">D5</span> Config key defaults off</h3>
+<p>`Config/Settings.cs` binds `Forms_AutoFillFromCaptures` in section `Forms`, default `false`</p>
+<p class="mono">cmd: `python Beelzebub/tools/check_bar_reset.py config` → `config: ok` (fails when: the Bind call is missing, or its default is true — the check prints FAIL, never ok, when it finds no Bind call)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D6"><span class="mono">D6</span> Bar diagnostic</h3>
+<p>`.beelz admin bar [player]` (adminOnly) prints, for the bar slots 0-8, one line each: resolved ability name, saved bind (universal/weapon/form), Beelzebub row on the equip buff yes/no, override buffs, GroupGuid mods split gear-sourced (with the source prefab name it kept) vs other-sourced (or `unreadable`); for an offline target it prints instead one line `offline: live bar resets on next login` then one line per saved set (universal, each weapon, each form) with its bound slots, the transform record and the hotkey count; the log gets one `[Beelz BAR]` line (D16 `FormatBar`) covering every slot of the character&#39;s `AbilityGroupSlotBuffer` that has any GroupGuid mod; it changes nothing</p>
+<p class="mono">manual: Test fixture steps 1-3, then (a) `.beelz admin bar PerpetualChaos` twice; PASS when 9 slot lines (1-6, primary, ultimate and the remaining bar slot) are printed, slots 1 and 4 show source `bind` with the Sword set, every other shown slot shows `none`, each gear-sourced mod names its source prefab, and the two `[Beelz BAR]` log lines are identical (read-only: nothing changed between them); (b) `.beelz hotkey list` before and after (a) is identical; (c) with a second account logged out after `.beelz grant 2 0` and `.beelz hotkey set test 0`, `.beelz admin bar &lt;that name&gt;`; PASS when it prints the `offline:` line, the universal/weapon/form sets with slot 2 bound, the transform record (`none`) and `hotkeys=1`, and a later login shows slot 2 still bound</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D7"><span class="mono">D7</span> resetbar returns the bar to vanilla</h3>
+<p>after `.beelz resetbar CONFIRM` the readback shows no saved bind, no Beelzebub equip row and no other-sourced mod on any slot, and the weapon&#39;s own skills are on the bar without a weapon swap; it is tested on the release candidate before the `chore(release)` commit and a failure blocks that commit (Business rules 7)</p>
+<p class="mono">manual: Test fixture steps 1-3, `.beelz resetbar CONFIRM`, then `.beelz admin bar PerpetualChaos`; PASS when it shows 0 binds and 0 other-sourced mods, the weapon skills are visible before any swap, and they stay after a weapon swap and a relog</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D8"><span class="mono">D8</span> purge clears the held weapon at once</h3>
+<p>after `.beelz admin purge PerpetualChaos CONFIRM` bound spells leave the live bar immediately (no weapon swap) and hotkeys are gone</p>
+<p class="mono">manual: Test fixture steps 1-4, `.beelz admin purge PerpetualChaos CONFIRM`; PASS when the two slots show vanilla abilities without a swap and `.beelz hotkey list` is empty</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D9"><span class="mono">D9</span> Forms stay clean after a reset</h3>
+<p>with no form or universal binds, entering a native form after resetbar shows the form&#39;s own kit, not captured abilities</p>
+<p class="mono">manual: after D7, shapeshift to Wolf; PASS when the bar shows only Wolf abilities</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D10"><span class="mono">D10</span> No mod pile-up</h3>
+<p>running resetbar three times in a row leaves every slot&#39;s other-sourced mod count at 0 and the gear-sourced count equal to its value after the first run</p>
+<p class="mono">manual: Test fixture steps 1-3, `.beelz resetbar CONFIRM` ×3 with `.beelz admin bar PerpetualChaos` after each; PASS when the per-slot counts do not grow</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D11"><span class="mono">D11</span> Offline target is safe</h3>
+<p>for an offline character the planner returns only ClearSavedBindings (which drops a parked transform record too), ClearHotkeys (Purge only) and SaveBindings, and the reply says the live bar resets on next login; an online character with `liveReady=false` (its `BuffBuffer`, `AbilityGroupSlotBuffer` or held `EquipBuff_Weapon_*` missing, e.g. mid-respawn) gets the same saved-only plan plus Readback, and the result is `Clean=false`, `Unreadable=true`, reply &quot;live bar not reachable — relog or respawn, then .beelz admin bar&quot;</p>
+<p class="mono">test: Beelzebub.Tests/BarResetTests.cs (fails when: any live step is planned for online=false, an offline plan with a parked transform omits ClearSavedBindings or SaveBindings, or online with liveReady=false plans a live step or yields Clean=true)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D12"><span class="mono">D12</span> A failing step does not stop the rest</h3>
+<p>`BarResetRunner.Run(IBarResetOps, steps)` runs every step, catches each exception, records it as that step&#39;s failure and continues</p>
+<p class="mono">test: Beelzebub.Tests/BarResetTests.cs (fails when: a fake ops whose ClearEquipEntries throws makes PopSlotMods or Readback not run)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D13"><span class="mono">D13</span> Commands share one path</h3>
+<p>`resetbar`, `admin reset-loadouts` and `admin purge` call `BarResetService.FullReset`; under `Commands/` the only reset entry points allowed are `BarResetService.FullReset` and `BarResetService.ReadBar` (allowlist) — every other reset-layer symbol is rejected, the set being every member of `IBarResetOps` (read from `Logic/BarReset.cs` at check time), every public `BarResetService` member other than the two, and `RemoveInjectedRows`, `ReapplyEquipRows`, `PopSlotModifications`, `ForceResetAbilitySlots`, `PurgeAbilitySlotModifications`, `ClearAllLoadouts`, `ClearAllSlots`, `RestoreSlotBaseValue`, `TrySaveSync`; the only exempt methods are the `LEGACY:` handlers of `clearslotmods` and `rebuildslots`</p>
+<p class="mono">cmd: `python Beelzebub/tools/check_bar_reset.py commands` → `commands: ok, &lt;n&gt; symbols` (fails when: a non-exempt method under Commands/ references any symbol in the set, including a new IBarResetOps member, or FullReset is called fewer than 3 times — zero call sites or an empty symbol set prints FAIL)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D14"><span class="mono">D14</span> Dead and misleading text removed</h3>
+<p>`admin rebuildbar` runs the `admin bar` handler instead of `ForceAbilityBarReinit`; `clearslotmods` and `rebuildslots` descriptions start with `LEGACY:`; no reply names the non-existent `.beelz slot`</p>
+<p class="mono">cmd: `python Beelzebub/tools/check_bar_reset.py text` → `text: ok` (fails when: Commands/ calls ForceAbilityBarReinit, a string contains &quot;.beelz slot &quot; or &quot;.beelz slot.&quot;, or either LEGACY prefix is missing)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D15"><span class="mono">D15</span> Targeting commands are admin-only</h3>
+<p>every `[Command]` in a class whose `[CommandGroup]` is `beelz admin`, and every `[Command]` anywhere whose method has a parameter named `player` or `target`, carries `adminOnly: true`; player commands `resetbar`/`clearbar` take no target parameter; every caller of `BarResetService.FullReset` or `ReadBar` anywhere under `Beelzebub/Beelzebub/` is the `ResetBar` handler (self only, target = the sender&#39;s own character) or a method carrying `adminOnly: true`</p>
+<p class="mono">cmd: `python Beelzebub/tools/check_bar_reset.py auth` → `auth: ok, &lt;n&gt; admin commands` (fails when: one such command lacks adminOnly: true, resetbar gains a player parameter, a patch, hook, service or API handler calls FullReset or ReadBar, or fewer than 50 admin commands are parsed — a parse that finds none prints FAIL)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D16"><span class="mono">D16</span> Reset log line has a fixed schema</h3>
+<p>`Logic/BarResetLog.Format(result, targetName, steamId, elapsedMs)` returns exactly one line `[Beelz RESET] run=&lt;n&gt; scope=&lt;s&gt; target=&lt;name&gt; (&lt;steamId&gt;) ms=&lt;n&gt; steps=&lt;Step:count|Step:ERR&gt; ... survivors=&lt;slots|none|unreadable&gt;` plus ` slow=1` when ms &gt; 250, the name passed through `LogSafe` (control characters and `[`/`]` removed, capped at 32 characters), and no field outside that list; `BarResetLog.FormatBar(readback, targetName, steamId)` returns exactly one line `[Beelz BAR] target=&lt;name&gt; (&lt;steamId&gt;) binds=&lt;n&gt; rows=&lt;n&gt; gear=&lt;n&gt; other=&lt;n|unreadable&gt; slots=&lt;i:bind|none:gear:other,...|none&gt;` — above 400 characters the slots list is split into continuation lines ending ` part=&lt;k&gt;/&lt;n&gt;`, each with the same target prefix, and `FormatLate(targetName, steamId, runId, slot)` returns `[Beelz RESET] late-survivor target=&lt;name&gt; (&lt;steamId&gt;) run=&lt;runId&gt; slot=&lt;n&gt;` where `runId` is the `run=&lt;n&gt;` field also printed on that reset&#39;s summary line</p>
+<p class="mono">test: Beelzebub.Tests/BarResetLogTests.cs (fails when: a name containing a newline yields two lines, a step is missing, survivors=none is printed for an unreadable readback, ms=300 lacks slow=1, or FormatBar prints other=0 for an unreadable slot)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D17"><span class="mono">D17</span> Recovery guide rewritten</h3>
+<p>`docs/RECOVERY_GUIDE.md` gives one ordered flow — `.beelz admin bar` → `.beelz resetbar CONFIRM` or `.beelz admin purge` → (only if survivors remain) `.beelz admin reset-character` after a purge — and states that `respawn` and `reset-character` both keep the Steam-keyed binds, so neither is a bar fix on its own</p>
+<p class="mono">cmd: `python Beelzebub/tools/check_bar_reset.py docs` → `docs: ok` (fails when: the guide lacks any of the three commands, lists them out of order, or still calls reset-character or respawn &quot;guaranteed clean&quot;)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D18"><span class="mono">D18</span> BCH handoff and ApiVersion</h3>
+<p>`ApiVersion` is 33; the handoff banner reads `ApiVersion = 33` and a v0.137 entry names `Forms_AutoFillFromCaptures`, `admin bar` and `api&gt;=33`</p>
+<p class="mono">cmd: `python Beelzebub/tools/check_bar_reset.py docs` → `docs: ok` (fails when: ApiCommands.cs and the banner disagree, or the entry lacks the key or the gate)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D19"><span class="mono">D19</span> Release gate passes</h3>
+<p>version 0.137.0 in csproj and toml, CHANGELOG entries in both changelog files, README status line, root README regenerated, and `check_bar_reset.py all` inside preflight</p>
+<p class="mono">cmd: `pwsh Beelzebub/tools/preflight.ps1` → PREFLIGHT OK (fails when: the csproj and toml versions differ, CHANGELOG.md has no [0.137.0] entry, the README status line names another version, or any check_bar_reset subcheck fails)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D20"><span class="mono">D20</span> Session logs clean</h3>
+<p>after the in-game session, before any restart</p>
+<p class="mono">cmd: `pwsh Beelzebub/tools/preflight.ps1 -LogCheck -LogDir &lt;dir&gt;` (default: the dev server&#39;s two logs) → 0 Beelzebub stack frames in both logs (fails when: LogOutput.log contains a line starting &quot;at Beelzebub.&quot; or either log is missing or empty)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D21"><span class="mono">D21</span> Planted faults are re-runnable</h3>
+<p>`Beelzebub/tools/fault_harness.py bar-reset` reads `Beelzebub/tools/faults/bar-reset/manifest.json` (one entry per patch: D-item, evidence command, the exact `fails when` clause it plants), and checks it against this plan: every `test`/`cmd` item (D1 D2 D3 D4 D5 D11 D12 D13 D14 D15 D16 D17 D18 D19 D20 D22 D23 D24 D25 D26 D27 D28 D29 D30) and every clause of its `fails when:` has a patch; each patch is a real source or fixture change applied with `git apply` — never a runtime argument (D19: toml version changed, `[0.137.0]` entry removed, README status line changed, a `.beelz slot ` reply added; D20: an `at Beelzebub.` line added to, or the whole of, the tracked fixture `Beelzebub/tools/faults/bar-reset/logs/LogOutput.log` emptied, run with `-LogDir` on that fixture dir; D30: each defect clause planted into the tracked fixture `Beelzebub/tools/faults/bar-reset/logs/session.log`); it runs the entry&#39;s command expecting a non-zero exit, reverts with `git apply -R` and expects zero; the audit record stores its output and the patch-directory hash</p>
+<p class="mono">cmd: `python Beelzebub/tools/fault_harness.py bar-reset` → `harness: ok, &lt;n&gt; faults, &lt;k&gt; clauses` (fails when: a patch&#39;s command still exits 0 while planted, fails after revert, an automated item or one of its fails-when clauses has no manifest entry, a manifest entry&#39;s command is not that item&#39;s evidence command, or the working tree is dirty for a patched file; zero patches found prints FAIL)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D22"><span class="mono">D22</span> Rollback range resolves</h3>
+<p>after the `chore(release): v0.137.0` commit, a follow-up `docs(audit)` commit adds to the audit record `rollback: git revert --no-edit &lt;first&gt;^..&lt;release&gt;` with both full SHAs; `check_bar_reset.py rollback` resolves both with `git rev-parse`, requires `&lt;release&gt;` to be the commit whose subject is `chore(release): v0.137.0`, requires `&lt;first&gt;` to be an ancestor of it and a descendant of 3fbc2d4, and checks that `PersistenceService` still writes `Version = 8`</p>
+<p class="mono">cmd: `python Beelzebub/tools/check_bar_reset.py rollback` → `rollback: ok` (fails when: a SHA does not resolve, the release subject differs, the order is wrong, the state version changed, or no rollback line exists)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D23"><span class="mono">D23</span> Only declared paths changed</h3>
+<p>every path in `git diff --name-only 3fbc2d4..HEAD` plus `git status --porcelain=v1 --untracked-files=all` (excluding the owner&#39;s own `Beelzebub/Beelzebub/docs/V0136_ABILITY_TEST_PLAN.xlsx` and `_matrix_build.py`) appears in Rollout › Paths walked</p>
+<p class="mono">cmd: `python Beelzebub/tools/check_bar_reset.py paths` → `paths: ok, &lt;n&gt; paths` (fails when: a changed or untracked path is not in the list; zero parsed list entries prints FAIL)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D24"><span class="mono">D24</span> Unreadable is never clean</h3>
+<p>when any slot&#39;s dump is `Unreadable`, `BarResetResult.Clean` is false, PopSlotMods skips that slot and destroys no source for it, and the reply says &quot;could not read slot mods&quot;</p>
+<p class="mono">test: Beelzebub.Tests/BarResetTests.cs (fails when: a fake readback returning Unreadable produces Clean=true or a destroy call for that slot)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D25"><span class="mono">D25</span> Input rules are one function</h3>
+<p>`Logic/BarResetInput.IsConfirm(token)` accepts only `CONFIRM` (trimmed, case-insensitive) and every reset command uses it; a missing or other token changes nothing and replies with the exact command to re-run</p>
+<p class="mono">test: Beelzebub.Tests/BarResetInputTests.cs (fails when: `confirm`, ` CONFIRM ` is rejected, or `CONFIRMED`, empty or null is accepted)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D26"><span class="mono">D26</span> Deferred work has a home</h3>
+<p>`Beelzebub/Beelzebub/docs/BACKLOG.md` lists each item under Out of scope with the slug it will be planned under</p>
+<p class="mono">cmd: `python Beelzebub/tools/check_bar_reset.py docs` → `docs: ok` (fails when: BACKLOG.md is missing or lacks any of clearbar-fullreset, transform-chain-guard, docs-consolidation, dev-snapshot)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D27"><span class="mono">D27</span> A failed save is never clean</h3>
+<p>SaveBindings calls a new `PersistenceService.TrySaveSync()` (returns false instead of swallowing the error); false or an exception makes that step ERR, `Clean=false`, and the reply says &quot;not saved — binds may return after a restart, run it again&quot;</p>
+<p class="mono">test: Beelzebub.Tests/BarResetTests.cs (fails when: a fake ops whose SaveBindings returns false yields Clean=true, or later live steps do not run)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D28"><span class="mono">D28</span> Every artifact has a retention row</h3>
+<p>each artifact the feature writes (state.json binds, `[Beelz RESET]`, `[Beelz BAR]`, the Audit line, the cfg key, log copies, review files, audit record, deployed DLL) has a row in Design › Data naming owner, location, retention and copies</p>
+<p class="mono">cmd: `python Beelzebub/tools/check_bar_reset.py data` → `data: ok, &lt;n&gt; artifacts` (fails when: a row lacks one of the four fields, a declared producer has no matching row — producers are found by scanning the files in Rollout › Paths walked for a `[Beelz &lt;TAG&gt;` log literal, a `Config.Bind(` key, `File.Write`/`File.Replace`, `open(...,&#39;w&#39;)`, `mkdtemp` or a `bin/`/`dist/` output; zero parsed rows prints FAIL)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D29"><span class="mono">D29</span> The checker checks itself</h3>
+<p>`check_bar_reset.py selftest` runs each of the subcommands config, commands, text, auth, docs, audit, paths, data, rollback and session (never itself) against three generated fixture trees in a temp dir — empty (each must FAIL with &quot;no input&quot;), one planted defect per subcommand (must FAIL), and a good tree (must print ok) — then deletes the trees</p>
+<p class="mono">cmd: `python Beelzebub/tools/check_bar_reset.py selftest` → `selftest: ok, 30 cases` (fails when: any subcommand prints ok on the empty or defect tree, or FAIL on the good tree)</p>
+<p class="absent">no evidence line yet</p>
+<h3 id="D30"><span class="mono">D30</span> Session log proves the in-game steps</h3>
+<p>`check_bar_reset.py session &lt;log&gt;` reads a copied `LogOutput.log` from the release-candidate session and checks, in order: D6 — two consecutive identical `[Beelz BAR]` lines for PerpetualChaos whose `slots=` show `bind` on slots 1 and 4; D7 — a `[Beelz RESET] scope=PlayerReset` line with `survivors=none`, a following `[Beelz BAR]` with `binds=0 rows=0 other=0`, and no `late-survivor` line for that target; D8 — a `[Beelz RESET] scope=Purge` line with `survivors=none` and `ClearHotkeys:1`; D9 — a `[Beelz FORM] form=Wolf source=native` line after the D7 reset; D10 — three consecutive PlayerReset runs whose `[Beelz BAR]` lines keep `other=0` and the same `gear=`</p>
+<p class="mono">cmd: `python Beelzebub/tools/check_bar_reset.py session %TEMP%/beelz-logs-&lt;date&gt;/LogOutput.log` → `session: ok D6 D7 D8 D9 D10` (fails when: any of the five line groups is missing, a BAR line after a reset shows `other=` above 0 or `unreadable`, the two D6 lines differ, a D10 `gear=` value changes, or a `late-survivor` line follows the D7 reset; an empty or missing log prints FAIL no input)</p>
+<p class="absent">no evidence line yet</p>
+</body>
+</html>
