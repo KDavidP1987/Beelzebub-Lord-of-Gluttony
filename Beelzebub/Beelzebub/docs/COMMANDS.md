@@ -137,6 +137,7 @@ conditionSource=confirmed).
 | Command | What it does |
 |---|---|
 | `.beelz admin bar [player]` | **Start here.** Read-only: each bar slot (primary, 1-6, ultimate, 8) with its resolved ability, saved bind, Beelzebub weapon row, gear vs other slot mods, plus override buffs. Offline: the saved sets, transform record and hotkey count. Changes nothing. `rebuildbar` is an alias. |
+| `.beelz admin bar-raw [player]` | DIAGNOSTIC, read-only: logs each bar slot's raw engine modification dump (current and Base ability, every slot change with the ability it sets and its source) to LogOutput.log as `[Beelz BARRAW]` lines. Player must be online. Changes nothing. |
 | `.beelz admin purge <player> CONFIRM` | The same layered reset as `reset-loadouts`, plus all hotkeys (ends + un-parks any transform, clears every slot/form/weapon/hotkey binding and every leaked slot modification). Captures + transform unlocks are KEPT; the player re-slots afterward. Works offline too (saved state now, live bar on next login). |
 | `.beelz admin respawn <player>` | Respawn in place (keeps progress). Keeps the Steam-keyed binds, so it is not a bar fix on its own. |
 | `.beelz admin rebuildslots\|clearslotmods <player>` | LEGACY slot levers — use `purge`. |

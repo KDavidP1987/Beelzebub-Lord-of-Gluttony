@@ -1263,6 +1263,20 @@ internal static partial class AdminCommands
         Audit(ctx, "bar", steamId, fullName, $"offline={(readback.Offline ? 1 : 0)} binds={readback.Binds} rows={readback.Rows} other={(readback.Unreadable ? "unreadable" : readback.Other.ToString())}");
     }
 
+    [Command("bar-raw", description: "DIAGNOSTIC (read-only): log each bar slot's raw engine modification dump — current and Base ability, every GroupGuid change with the ability it sets and its source prefab — to LogOutput.log as [Beelz BARRAW] lines. Changes nothing. Usage: .beelz admin bar-raw [player] (default: you)", adminOnly: true)]
+    public static void BarRaw(ChatCommandContext ctx, string player = null)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        if (!TryBarTarget(ctx, player, out var character, out ulong steamId, out string fullName)) return;
+        if (!BarResetService.IsOnline(character)) { ctx.Reply("bar-raw needs the player online (it reads the live slots)."); return; }
+        int n = 0;
+        string who = Beelzebub.Logic.LogSafe.Field(fullName);
+        foreach (var (slot, lines) in TransformBuffService.RawSlotDumps(character))
+            foreach (string line in lines) { Core.Log.LogInfo($"[Beelz BARRAW] target={who} ({steamId}) slot={slot} {line}"); n++; }
+        ctx.Reply($"bar-raw: logged {n} line(s) for {Beelzebub.Logic.BarResetReply.Name(fullName)} to LogOutput.log ([Beelz BARRAW]).");
+        Audit(ctx, "bar-raw", steamId, fullName, $"lines={n}");
+    }
+
     [Command("respawn", description: "Respawn a player's character AT THEIR CURRENT SPOT — V Rising rebuilds the character fresh, which fixes a stuck/frozen ability bar (the bear-form bug). Inventory, equipment, blood, and progress are preserved (same as dying + respawning). Usage: .beelz admin respawn [player] (default: you)", adminOnly: true)]
     public static void Respawn(ChatCommandContext ctx, string player = null)
     {

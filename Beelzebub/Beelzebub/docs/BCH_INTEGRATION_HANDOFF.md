@@ -32,7 +32,8 @@
 >   BCH: show it in the settings panel like any other bool; nothing else to consume.
 > - **New admin command (plain chat, not an API line):** `.beelz admin bar [player]` — read-only per-slot readout of
 >   the bar (saved bind, Beelzebub equip row, override buffs, gear- vs other-sourced engine mods). BCH may expose it in
->   the admin panel as a text dump; do not parse it.
+>   the admin panel as a text dump; do not parse it. `.beelz admin bar-raw [player]` (same, admin-only) writes the raw
+>   per-slot engine dump to the server log only (one chat line: `bar-raw: logged <n> line(s) …`); nothing for BCH to parse.
 > - **Behaviour (no wire change):** `.beelz resetbar CONFIRM`, `.beelz admin reset-loadouts <player> CONFIRM` and
 >   `.beelz admin purge <player> CONFIRM` now run one layered reset (saved binds → equip rows → form/orphan sources →
 >   engine mods → one Empty push → re-apply the weapon's skills), so spells leave the live bar at once with no weapon

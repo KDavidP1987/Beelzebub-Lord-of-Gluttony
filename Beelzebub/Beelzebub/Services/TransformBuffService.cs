@@ -959,6 +959,32 @@ internal static class TransformBuffService
         return slots;
     }
 
+    /// <summary>v0.137.0 DIAGNOSTIC (read-only, `admin bar-raw`): for each bar slot 0-<paramref name="maxSlot"/>, the
+    /// engine's raw modification dump lines (current + Base GroupGuid, every modification) followed by one parsed line
+    /// per GroupGuid mod naming the set ability and the source prefab. Changes nothing.</summary>
+    public static List<(int Slot, List<string> Lines)> RawSlotDumps(Entity character, int maxSlot = 8)
+    {
+        var result = new List<(int, List<string>)>();
+        if (!character.Exists() || !Core.EntityManager.HasBuffer<AbilityGroupSlotBuffer>(character)) return result;
+        var reg = Core.ServerGameManager.Modifications;
+        foreach (var (idx, slot) in SnapshotSlots(character))
+        {
+            if (idx > maxSlot) break;
+            var lines = new List<string>();
+            if (slot == Entity.Null || !slot.Exists()) { lines.Add("no slot entity"); result.Add((idx, lines)); continue; }
+            if (!TryFormatEntityModifications(reg, Core.EntityManager, slot, out string dump)) { lines.Add("dump failed"); result.Add((idx, lines)); continue; }
+            foreach (var raw in dump.Split('\n'))
+                if (raw.Trim().Length > 0) lines.Add(raw.Trim());
+            foreach (var e in Beelzebub.Logic.SlotModDump.ParseGroupGuid(dump).Entries)
+            {
+                string set = e.SetToGuid == 0 ? "Empty" : (new PrefabGUID(e.SetToGuid).GetPrefabName() ?? e.SetToGuid.ToString());
+                lines.Add($"parsed mod={e.ModId} set={set} source={e.SourceIndex}:{e.SourceVersion} {SourcePrefabName(e)}");
+            }
+            result.Add((idx, lines));
+        }
+        return result;
+    }
+
     static string SourcePrefabName(Beelzebub.Logic.SlotModEntry e)
     {
         var src = new Entity { Index = e.SourceIndex, Version = e.SourceVersion };
