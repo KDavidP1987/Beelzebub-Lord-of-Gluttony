@@ -340,3 +340,5 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
 - Codex verdict: CLEAN — C1, C2, S2, S5, S7, S8 confirmed fixed, no new finding (no false-unclean on a normal reset:
   buffs queued with DestroyTag are not listed).
 - Step 9 code review closed after round 2.
+- D19 on a9eb3a1 (preflight baseline: `audit: ok`):
+  `harness: ok, 4 faults, 4 clauses (not run: D1 D2 D3 D4 D5 D11 D12 D13 D14 D15 D16 D17 D18 D20 D22 D23 D24 D25 D26 D27 D28 D29 D30 D31), patch tree 0bd1cf8e55abed87ad2bcffbe29d1e081e1add30`
