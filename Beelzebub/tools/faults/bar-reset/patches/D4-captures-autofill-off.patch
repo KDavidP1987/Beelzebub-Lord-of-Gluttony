@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/FormBarFill.cs b/Beelzebub/Beelzebub/Logic/FormBarFill.cs
+--- a/Beelzebub/Beelzebub/Logic/FormBarFill.cs
++++ b/Beelzebub/Beelzebub/Logic/FormBarFill.cs
+@@ -44,7 +44,7 @@
+             if (ability != 0 && usable(ability)) bar[slot] = ability;
+         if (bar.Count > 0) return new FormBarFillResult(bar, FormBarSource.Universal);
+ 
+-        if (autoFillFromCaptures)
++        if (true)
+         {
+             int s = 1;
+             foreach (int ability in captures ?? Array.Empty<int>())

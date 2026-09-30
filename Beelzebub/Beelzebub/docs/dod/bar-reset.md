@@ -191,7 +191,7 @@ removes entries (D22 checks the version). Artifacts and retention (probe 3.3) �
 - artifact: audit record · owner: the repo · location: `docs/audits/bar-reset.md` · retention: tracked, append-only · copies: one (D21, D22)
 - artifact: selftest fixture trees · owner: check_bar_reset.py · location: a `tempfile.mkdtemp()` dir · retention: deleted before selftest exits, also on failure · copies: one per run (D29)
 - artifact: fault-harness output · owner: the repo · location: pasted into `docs/audits/bar-reset.md` · retention: tracked, append-only · copies: one per run (D21)
-- artifact: fault patches · owner: the repo · location: `Beelzebub/tools/faults/bar-reset/` · retention: tracked, kept with the plan · copies: one (D21)
+- artifact: fault patches · owner: the repo (written by `fault_harness.py --make`) · location: `Beelzebub/tools/faults/bar-reset/` · retention: tracked, kept with the plan · copies: one (D21)
 - artifact: test and build outputs · owner: dotnet · location: `bin/`, `obj/`, `Beelzebub.Tests/bin`, `dist/` (gitignored) · retention: overwritten by each build · copies: one
 - artifact: deployed DLL · owner: the server admin · location: `BepInEx/plugins/Beelzebub.dll` · retention: replaced by the next deploy · copies: one
 Nothing to migrate (probe 3.4).

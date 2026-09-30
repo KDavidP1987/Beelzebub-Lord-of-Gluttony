@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Commands/AdminCommands.cs b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
+--- a/Beelzebub/Beelzebub/Commands/AdminCommands.cs
++++ b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
+@@ -11,7 +11,7 @@
+ 
+ namespace Beelzebub.Commands;
+ 
+-[CommandGroup("beelz admin")]
++[CommandGroup(name: "beelz admin")]
+ internal static partial class AdminCommands
+ {
+     /// <summary>

@@ -1,0 +1,14 @@
+diff --git a/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md b/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md
+--- a/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md
++++ b/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md
+@@ -38,8 +38,8 @@
+ For an **offline** player it prints `offline: live bar resets on next login`, their saved sets, the transform
+ record and the hotkey count.
+ 
+-### 2. Reset: `.beelz resetbar CONFIRM` (the player) or `.beelz admin purge <player> CONFIRM` (an admin)
+-- **`.beelz resetbar CONFIRM`** — the player's own reset: ends any transform, clears every universal / weapon /
++### 2. Reset: `.beelz resetbar YES` (the player) or `.beelz admin purge <player> CONFIRM` (an admin)
++- **`.beelz resetbar YES`** — the player's own reset: ends any transform, clears every universal / weapon /
+   form bind, removes Beelzebub weapon rows, destroys override sources, pops every leaked slot modification and
+   re-applies the weapon's own rows. The weapon's skills are back **without a weapon swap**. Keeps captures, unlocks,
+   hotkeys and presets.

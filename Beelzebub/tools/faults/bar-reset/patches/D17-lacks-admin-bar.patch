@@ -1,0 +1,39 @@
+diff --git a/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md b/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md
+--- a/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md
++++ b/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md
+@@ -28,7 +28,7 @@
+ 
+ ## The flow — in this order
+ 
+-### 1. Look first: `.beelz admin bar <player>`
++### 1. Look first: `.beelz admin show <player>`
+ Read-only; changes nothing. For each bar slot (primary, 1-6, ultimate, 8) it shows the ability the slot resolves
+ to, the saved bind (`universal`, `weapon:Sword`, `form:Wolf` or `none`), whether a Beelzebub row sits on the
+ weapon, and the slot modifications split into **gear** (the weapon's and jewellery's own — normal) and **other**
+@@ -52,7 +52,7 @@
+ its saved binds cleared now; the live bar resets on their next login.
+ 
+ If the reply says `live bar not reachable`, the character was mid-respawn or mid-load: have them relog or
+-respawn, then run `.beelz admin bar <player>` again.
++respawn, then run `.beelz admin show <player>` again.
+ 
+ ### 3. Only if slots stay overridden after a purge and a relog: `.beelz admin reset-character <player> CONFIRM-RESET`
+ Unbinds the player's Steam ID and kicks them; on next login they create a new character. Their collection is
+@@ -67,7 +67,7 @@
+   Steam-keyed and re-apply on the next equip or login, so respawn alone brings a bad bind straight back.
+ - **`.beelz admin reset-character`** — same reason, see step 3.
+ - **`.beelz admin rebuildslots` / `clearslotmods`** are LEGACY levers (single-layer). Use `purge`.
+-- **`.beelz admin rebuildbar`** is now an alias of `.beelz admin bar`.
++- **`.beelz admin rebuildbar`** is now an alias of `.beelz admin show`.
+ 
+ ## Known limits (v0.137)
+ 
+@@ -75,7 +75,7 @@
+ - A slot whose engine modification dump cannot be read is reported `unreadable` and never called clean; the reset
+   does not touch it. Report it with the `[Beelz PURGE]` / `[Beelz RESET]` log lines.
+ - A stuck source destroyed by the reset is patched by the engine one tick later; the same run can still list that
+-  slot. Run `.beelz admin bar <player>` again.
++  slot. Run `.beelz admin show <player>` again.
+ 
+ ## Back up / transfer / restore a collection
+ 

@@ -1,0 +1,8 @@
+diff --git a/Beelzebub/tools/faults/bar-reset/logs/session.log b/Beelzebub/tools/faults/bar-reset/logs/session.log
+--- a/Beelzebub/tools/faults/bar-reset/logs/session.log
++++ b/Beelzebub/tools/faults/bar-reset/logs/session.log
+@@ -11,4 +11,3 @@
+ [Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=0 rows=0 gear=9 other=0 slots=none
+ [Info   :Beelzebub] [Beelz RESET] run=3 scope=PlayerReset target=PerpetualChaos (76561198000000001) ms=9 steps=ClearSavedBindings:0,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,EmptyPush:6,Reapply:0,Readback:0 survivors=none clean=1
+ [Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=0 rows=0 gear=9 other=0 slots=none
+-[Info   :Beelzebub] [Beelz RESET] run=4 scope=Purge target=PerpetualChaos (76561198000000001) ms=9 steps=ClearSavedBindings:2,ClearHotkeys:1,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,EmptyPush:6,Reapply:0,Readback:0 survivors=none clean=1

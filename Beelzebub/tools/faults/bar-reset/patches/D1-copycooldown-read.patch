@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/SlotModDump.cs b/Beelzebub/Beelzebub/Logic/SlotModDump.cs
+--- a/Beelzebub/Beelzebub/Logic/SlotModDump.cs
++++ b/Beelzebub/Beelzebub/Logic/SlotModDump.cs
+@@ -49,7 +49,7 @@
+             string t = raw.Trim();
+             if (_headerRx.IsMatch(t))
+             {
+-                inGroupGuid = t.StartsWith(GroupGuidField, StringComparison.Ordinal);
++                inGroupGuid = t.StartsWith(GroupGuidField, StringComparison.Ordinal) || t.StartsWith("- AbilityGroupSlot.CopyCooldown", StringComparison.Ordinal);
+                 continue;
+             }
+             if (!inGroupGuid || !t.StartsWith("[ModId", StringComparison.Ordinal)) continue;

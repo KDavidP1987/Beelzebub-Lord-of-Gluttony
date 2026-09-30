@@ -545,11 +545,13 @@ def check_data(root: str) -> str:
                 if names and not any(n in blob for n in names):
                     bad.append(f"{rel} writes {', '.join(sorted(names))} with no row")
         elif rel.endswith(".py"):
-            if re.search(r"open\([^)]*['\"]w", txt) or "mkdtemp" in txt:
-                if os.path.basename(rel) not in blob and "mkdtemp" in txt:
-                    bad.append(f"{rel} writes files with no row naming it")
-        elif rel.endswith(".csproj") and "bin/" not in blob:
-            bad.append(f"{rel} builds outputs with no bin/ row")
+            # a script that writes files (open(..., 'w') or a mkdtemp dir) needs a row naming the script
+            if (re.search(r"open\([^)]*['\"]w", txt) or "mkdtemp" in txt) and os.path.basename(rel) not in blob:
+                bad.append(f"{rel} writes files with no row naming it")
+        elif rel.endswith(".csproj"):
+            for out in ("bin/", "dist/"):   # BuildToServer / BuildToDist outputs
+                if out not in blob:
+                    bad.append(f"{rel} builds outputs with no {out} row")
     if bad:
         raise CheckFail("; ".join(bad[:6]))
     return f"data: ok, {len(rows)} artifacts"

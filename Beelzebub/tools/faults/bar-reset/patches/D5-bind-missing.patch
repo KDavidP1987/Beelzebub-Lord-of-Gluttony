@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Config/Settings.cs b/Beelzebub/Beelzebub/Config/Settings.cs
+--- a/Beelzebub/Beelzebub/Config/Settings.cs
++++ b/Beelzebub/Beelzebub/Config/Settings.cs
+@@ -855,7 +855,7 @@
+             "vanilla form behavior. It changes vanilla form behavior for every player when on. The " +
+             "form buff keeps its own RemoveOnDisconnect, so logging out still exits the form cleanly.");
+ 
+-        Forms_AutoFillFromCaptures = config.Bind(
++        Forms_AutoFillFromCaptures = BindLater(config,
+             "Forms", nameof(Forms_AutoFillFromCaptures), false,
+             "v0.137.0: when you enter a shapeshift form with NO per-form binds (.beelz form-grant) and NO universal " +
+             "binds, put your first six captured abilities on the form bar. Default false: the form keeps its own " +

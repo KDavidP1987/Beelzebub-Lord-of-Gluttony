@@ -1,0 +1,10 @@
+diff --git a/Beelzebub/tools/README.md b/Beelzebub/tools/README.md
+--- a/Beelzebub/tools/README.md
++++ b/Beelzebub/tools/README.md
+@@ -1,4 +1,6 @@
+ # Beelzebub build-time tooling
++
++<!-- planted -->
+ 
+ Scripts that produce data SHIPPED with the mod. None of these are required at
+ runtime — the game itself never makes HTTP requests.

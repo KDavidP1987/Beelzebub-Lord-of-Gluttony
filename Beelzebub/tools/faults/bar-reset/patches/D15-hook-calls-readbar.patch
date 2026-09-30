@@ -1,0 +1,11 @@
+diff --git a/Beelzebub/Beelzebub/Plugin.cs b/Beelzebub/Beelzebub/Plugin.cs
+--- a/Beelzebub/Beelzebub/Plugin.cs
++++ b/Beelzebub/Beelzebub/Plugin.cs
+@@ -13,6 +13,7 @@
+ [BepInDependency("gg.deca.VampireCommandFramework")]
+ public class Plugin : BasePlugin
+ {
++    static void Hook() => Services.BarResetService.ReadBar(default, 0);
+     internal static Harmony Harmony;
+     internal static ManualLogSource PluginLog;
+     internal static Plugin Instance { get; private set; }

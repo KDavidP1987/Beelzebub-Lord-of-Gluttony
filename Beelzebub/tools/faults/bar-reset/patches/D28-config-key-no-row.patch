@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/docs/dod/bar-reset.md b/Beelzebub/Beelzebub/docs/dod/bar-reset.md
+--- a/Beelzebub/Beelzebub/docs/dod/bar-reset.md
++++ b/Beelzebub/Beelzebub/docs/dod/bar-reset.md
+@@ -184,7 +184,7 @@
+ - artifact: [Beelz PURGE] unreadable-dump warning · owner: the server · location: `BepInEx/LogOutput.log` · retention: overwritten at the next boot · copies: one prior boot in `LogOutput.1.log` (D1, D24)
+ - artifact: fault fixture logs · owner: the repo · location: `Beelzebub/tools/faults/bar-reset/logs/` · retention: tracked, kept with the plan · copies: one (D21, D30)
+ - artifact: Audit line · owner: the server · location: `BepInEx/LogOutput.log` · retention: overwritten at the next boot (unchanged behaviour) · copies: one prior boot
+-- artifact: Forms_AutoFillFromCaptures · owner: the server admin · location: `BepInEx/config/kdpen.Beelzebub.cfg` · retention: until an admin edits it · copies: one (D5)
++- artifact: form auto-fill key · owner: the server admin · location: `BepInEx/config/kdpen.Beelzebub.cfg` · retention: until an admin edits it · copies: one (D5)
+ - artifact: session log copies · owner: the project owner · location: `%TEMP%\beelz-logs-<date>\` · retention: deleted by the owner after the audit entry is written · copies: one
+ - artifact: review prompts · owner: the dod script · location: `%TEMP%\dod-review-*.txt` · retention: swept by the script after 24 h · copies: one per round
+ - artifact: review page · owner: the repo · location: `docs/dod/bar-reset.review.html` · retention: tracked, replaced each round · copies: one (D23)

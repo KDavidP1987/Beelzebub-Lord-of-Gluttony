@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Commands/AdminCommands.cs b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
+--- a/Beelzebub/Beelzebub/Commands/AdminCommands.cs
++++ b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
+@@ -75,7 +75,7 @@
+         ctx.Reply(".beelz admin bar [player] — READ-ONLY: what drives each bar slot (start here for a stuck bar)");
+         ctx.Reply(".beelz admin purge <player> CONFIRM — reset the bar to vanilla + clear hotkeys (captures/unlocks kept; player re-slots after)");
+         ctx.Reply(".beelz admin respawn <player> — respawn in place (keeps progress; keeps binds, so not a bar fix on its own)");
+-        ctx.Reply(".beelz admin rebuildslots / clearslotmods <player> — LEGACY slot levers (use purge)");
++        ctx.Reply(".beelz admin rebuildslots / clearslotmods <player> — LEGACY slot levers (use purge, then .beelz slot 1)");
+         ctx.Reply(".beelz admin unmount <player> — force-dismount + clear stuck mount buffs (re-applies grants)");
+         ctx.Reply(".beelz admin cleanse <player> [buffNameOrGuid] — strip stuck STATE buffs (invisible/phased/immaterial that survive respawn+relog); omit buff to remove the known ones");
+         ctx.Reply(".beelz admin buffs <player> — DIAGNOSTIC: dump buffs + slot overrides to the server log");

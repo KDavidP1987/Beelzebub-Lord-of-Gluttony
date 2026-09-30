@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
+--- a/Beelzebub/Beelzebub/Logic/BarReset.cs
++++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
+@@ -68,7 +68,7 @@
+     }
+ 
+     /// <summary>Scope table: only Purge clears hotkeys; no scope clears captures, unlocks or presets.</summary>
+-    public static bool ClearsHotkeys(BarResetScope scope) => scope == BarResetScope.Purge;
++    public static bool ClearsHotkeys(BarResetScope scope) => scope != BarResetScope.AdminLoadouts;
+ }
+ 
+ /// <summary>Gear-sourced = the modification source's prefab name starts with EquipBuff or Item_ (the same test

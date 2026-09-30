@@ -1,0 +1,2 @@
+# patches and fixture logs are applied byte-for-byte (some target CRLF files): never convert line endings
+* -text

@@ -1,0 +1,6 @@
+diff --git a/Beelzebub/undeclared-fault.txt b/Beelzebub/undeclared-fault.txt
+new file mode 100644
+--- /dev/null
++++ b/Beelzebub/undeclared-fault.txt
+@@ -0,0 +1 @@
++planted by the bar-reset fault harness

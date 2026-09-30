@@ -130,6 +130,23 @@ public class BarResetTests
         Assert.False(r.Clean);
     }
 
+    // Every required layer on its own: a plan short of any ONE of them is never clean (not only a plan missing all).
+    [Theory]
+    [InlineData(S.ClearSavedBindings)]
+    [InlineData(S.SaveBindings)]
+    [InlineData(S.ClearEquipEntries)]
+    [InlineData(S.DestroyOverrideSources)]
+    [InlineData(S.PopSlotMods)]
+    [InlineData(S.EmptyPush)]
+    [InlineData(S.Reapply)]
+    [InlineData(S.Readback)]
+    public void Runner_fails_when_a_plan_missing_one_required_layer_is_clean(S missing)
+    {
+        var plan = BarResetPlanner.Plan(BarResetScope.PlayerReset, true, true, false).Where(s => s != missing).ToList();
+        var r = BarResetRunner.Run(new FakeOps(), plan, true, true);
+        Assert.False(r.Clean, $"a plan without {missing} was reported clean");
+    }
+
     [Fact]
     public void Runner_is_clean_for_a_good_reset()
     {

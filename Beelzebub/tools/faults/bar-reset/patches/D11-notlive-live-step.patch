@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
+--- a/Beelzebub/Beelzebub/Logic/BarReset.cs
++++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
+@@ -50,7 +50,7 @@
+         var steps = new List<BarResetStep>();
+         if (!Enum.IsDefined(typeof(BarResetScope), scope)) return steps;
+ 
+-        bool live = online && liveReady;
++        bool live = online;
+         if (live && transformActiveOrParked) steps.Add(BarResetStep.RevertTransform);
+         steps.Add(BarResetStep.ClearSavedBindings);
+         if (ClearsHotkeys(scope)) steps.Add(BarResetStep.ClearHotkeys);

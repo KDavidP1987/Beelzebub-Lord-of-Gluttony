@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/SlotModDump.cs b/Beelzebub/Beelzebub/Logic/SlotModDump.cs
+--- a/Beelzebub/Beelzebub/Logic/SlotModDump.cs
++++ b/Beelzebub/Beelzebub/Logic/SlotModDump.cs
+@@ -29,7 +29,7 @@
+ {
+     // A field header is `- <Component>.<Field>:` (any component); the GroupGuid section ends at the next one. A
+     // bare "- " sub-line is not a header, so it can never end the section early and hide later [ModId lines.
+-    static readonly Regex _headerRx = new(@"^- [A-Za-z_]\w*\.[A-Za-z_]\w*:", RegexOptions.Compiled | RegexOptions.CultureInvariant);
++    static readonly Regex _headerRx = new(@"^- AbilityGroupSlot\.[A-Za-z_]\w*:", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+     // Exact field token: "- AbilityGroupSlot.GroupGuid:" (never GroupGuidBackup or another GroupGuid* field).
+     const string GroupGuidField = "- AbilityGroupSlot.GroupGuid:";
+ 

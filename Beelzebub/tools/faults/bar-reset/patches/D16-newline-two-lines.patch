@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarResetLog.cs b/Beelzebub/Beelzebub/Logic/BarResetLog.cs
+--- a/Beelzebub/Beelzebub/Logic/BarResetLog.cs
++++ b/Beelzebub/Beelzebub/Logic/BarResetLog.cs
+@@ -20,7 +20,7 @@
+         var sb = new StringBuilder(Math.Min(value.Length, MaxNameLength));
+         foreach (char c in value)
+         {
+-            if (char.IsControl(c) || c == '[' || c == ']' || c == '\u2028' || c == '\u2029') continue;
++            if (c == '[' || c == ']' || c == '\u2028' || c == '\u2029') continue;
+             sb.Append(c);
+             if (sb.Length >= MaxNameLength) break;
+         }

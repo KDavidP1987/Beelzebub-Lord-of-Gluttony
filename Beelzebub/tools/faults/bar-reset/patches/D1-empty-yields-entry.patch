@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/SlotModDump.cs b/Beelzebub/Beelzebub/Logic/SlotModDump.cs
+--- a/Beelzebub/Beelzebub/Logic/SlotModDump.cs
++++ b/Beelzebub/Beelzebub/Logic/SlotModDump.cs
+@@ -41,7 +41,7 @@
+     public static SlotModParse ParseGroupGuid(string dump)
+     {
+         var result = new SlotModParse();
+-        if (string.IsNullOrEmpty(dump)) return result;
++        if (string.IsNullOrEmpty(dump)) { result.Entries.Add(new SlotModEntry(1, 0, 0, 0)); return result; }
+ 
+         bool inGroupGuid = false;
+         foreach (string raw in dump.Split('\n'))

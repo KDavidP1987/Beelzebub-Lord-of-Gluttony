@@ -1,0 +1,17 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
+--- a/Beelzebub/Beelzebub/Logic/BarReset.cs
++++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
+@@ -224,11 +224,11 @@
+         }
+ 
+         bool readbackRan = r.Readback != null && !r.Steps.Any(s => s.Step == BarResetStep.Readback && s.Failed);
+-        r.Unreadable = online && (!liveReady || !readbackRan || r.Readback.Unreadable);
++        r.Unreadable = online && (!readbackRan || r.Readback.Unreadable);
+         // An empty plan (unknown scope) never runs SaveBindings, so r.Saved alone makes it an error result; a plan
+         // that skipped a live layer (not planner-made) can never be clean either.
+         bool complete = RequiredForClean.All(req => r.Steps.Any(s => s.Step == req));
+-        r.Clean = online && liveReady && complete
++        r.Clean = online && complete
+                   && !r.AnyStepFailed && r.Saved
+                   && readbackRan && !r.Unreadable
+                   && r.Survivors.Count == 0;

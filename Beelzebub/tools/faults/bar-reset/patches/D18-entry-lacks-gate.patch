@@ -1,0 +1,21 @@
+diff --git a/Beelzebub/Beelzebub/docs/BCH_INTEGRATION_HANDOFF.md b/Beelzebub/Beelzebub/docs/BCH_INTEGRATION_HANDOFF.md
+--- a/Beelzebub/Beelzebub/docs/BCH_INTEGRATION_HANDOFF.md
++++ b/Beelzebub/Beelzebub/docs/BCH_INTEGRATION_HANDOFF.md
+@@ -25,7 +25,7 @@
+ 
+ # ⭐ BCH CATCH-UP: v0.100 → v0.137 (read this first) ⭐
+ 
+-> **🆕 v0.137 — ApiVersion 33 (gate `api>=33`). ONE LAYERED BAR RESET. Additive — no `[BEELZ:*]` line changes shape.**
++> **🆕 v0.137 — ApiVersion 33 (gate `api 33+`). ONE LAYERED BAR RESET. Additive — no `[BEELZ:*]` line changes shape.**
+ > - **New config key:** `Forms_AutoFillFromCaptures` (section `Forms`, bool, default **false**) appears in `.beelz api
+ >   config` as an ordinary `[BEELZ:config]` line. When false (the new default) a shapeshift form with no per-form and no
+ >   universal binds keeps its own kit; when true the first six captures fill the form bar (the pre-0.137 behavior).
+@@ -38,7 +38,7 @@
+ >   engine mods → one Empty push → re-apply the weapon's skills), so spells leave the live bar at once with no weapon
+ >   swap. `api slots` after a reset shows empty buckets, as before. `admin rebuildbar` now prints the `admin bar`
+ >   readout; `clearslotmods` / `rebuildslots` are marked `LEGACY:` in their help text.
+-> - **What BCH should do:** on `api>=33`, nothing is required. Optional: list `Forms_AutoFillFromCaptures` in the
++> - **What BCH should do:** on `api 33+`, nothing is required. Optional: list `Forms_AutoFillFromCaptures` in the
+ >   config view, and add `admin bar` to the admin tooling list.
+ 
+ > **🆕 v0.135 — ApiVersion 32 (gate `api>=32`). INCOMPATIBILITY LOCKS. Additive.**

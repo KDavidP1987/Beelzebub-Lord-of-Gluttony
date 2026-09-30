@@ -1,0 +1,11 @@
+diff --git a/Beelzebub/Beelzebub/Services/Heartbeat.cs b/Beelzebub/Beelzebub/Services/Heartbeat.cs
+--- a/Beelzebub/Beelzebub/Services/Heartbeat.cs
++++ b/Beelzebub/Beelzebub/Services/Heartbeat.cs
+@@ -24,6 +24,7 @@
+ /// </summary>
+ internal static class Heartbeat
+ {
++    static void Sweep() => BarResetService.FullReset(default, 0, "", Beelzebub.Logic.BarResetScope.Purge);
+     static DateTime _last = DateTime.MinValue;
+     static readonly TimeSpan MinInterval = TimeSpan.FromSeconds(1);
+ 

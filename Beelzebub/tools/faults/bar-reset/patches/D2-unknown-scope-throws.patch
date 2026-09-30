@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
+--- a/Beelzebub/Beelzebub/Logic/BarReset.cs
++++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
+@@ -48,7 +48,7 @@
+     public static List<BarResetStep> Plan(BarResetScope scope, bool online, bool liveReady, bool transformActiveOrParked)
+     {
+         var steps = new List<BarResetStep>();
+-        if (!Enum.IsDefined(typeof(BarResetScope), scope)) return steps;
++        if (!Enum.IsDefined(typeof(BarResetScope), scope)) throw new ArgumentOutOfRangeException(nameof(scope));
+ 
+         bool live = online && liveReady;
+         if (live && transformActiveOrParked) steps.Add(BarResetStep.RevertTransform);

@@ -1,0 +1,11 @@
+diff --git a/Beelzebub/Beelzebub/Logic/EquipRows.cs b/Beelzebub/Beelzebub/Logic/EquipRows.cs
+--- a/Beelzebub/Beelzebub/Logic/EquipRows.cs
++++ b/Beelzebub/Beelzebub/Logic/EquipRows.cs
+@@ -44,7 +44,6 @@
+         {
+             var r = prefab[i];
+             if (have.TryGetValue(r, out int n) && n > 0) { have[r] = n - 1; continue; }
+-            missing.Add(i);
+         }
+         return missing;
+     }

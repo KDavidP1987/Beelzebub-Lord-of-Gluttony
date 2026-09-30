@@ -1,0 +1,11 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarResetReply.cs b/Beelzebub/Beelzebub/Logic/BarResetReply.cs
+--- a/Beelzebub/Beelzebub/Logic/BarResetReply.cs
++++ b/Beelzebub/Beelzebub/Logic/BarResetReply.cs
+@@ -12,6 +12,7 @@
+ 
+ public static class BarResetReply
+ {
++    static void Dump() => System.IO.File.WriteAllText("bar-dump.txt", "");
+     public const int MaxReplyBytes = 480;
+     public const string NotReachable = "live bar not reachable — relog or respawn, then .beelz admin bar";
+     public const string NotSaved = "not saved — binds may return after a restart, run it again";

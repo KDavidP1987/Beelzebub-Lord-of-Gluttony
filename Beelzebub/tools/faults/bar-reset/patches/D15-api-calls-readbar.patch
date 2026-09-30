@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Commands/ApiCommands.cs b/Beelzebub/Beelzebub/Commands/ApiCommands.cs
+--- a/Beelzebub/Beelzebub/Commands/ApiCommands.cs
++++ b/Beelzebub/Beelzebub/Commands/ApiCommands.cs
+@@ -21,6 +21,8 @@
+ [CommandGroup("beelz api")]
+ internal static class ApiCommands
+ {
++    [Command("bar", description: "x")]
++    public static void ApiBar(ChatCommandContext ctx) => Services.BarResetService.ReadBar(default, 0);
+     // v2 (v0.35.0): `api info` gained weapon_anim/school/cooldown_seconds + real
+     //   descriptions; events gained forget/forget-transform/cleared; transform-ended
+     //   now fires on every revert path.

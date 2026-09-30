@@ -1,0 +1,11 @@
+diff --git a/Beelzebub/Beelzebub/Services/BarResetService.cs b/Beelzebub/Beelzebub/Services/BarResetService.cs
+--- a/Beelzebub/Beelzebub/Services/BarResetService.cs
++++ b/Beelzebub/Beelzebub/Services/BarResetService.cs
+@@ -3,6 +3,7 @@
+ using System.Diagnostics;
+ using System.Linq;
+ using Beelzebub.Logic;
++// planted: [Beelz ZAP] tag with no Data row
+ using ProjectM;
+ using ProjectM.Network;
+ using Stunlock.Core;

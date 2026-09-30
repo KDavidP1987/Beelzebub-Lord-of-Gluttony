@@ -1,0 +1,10 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarResetInput.cs b/Beelzebub/Beelzebub/Logic/BarResetInput.cs
+--- a/Beelzebub/Beelzebub/Logic/BarResetInput.cs
++++ b/Beelzebub/Beelzebub/Logic/BarResetInput.cs
+@@ -10,5 +10,5 @@
+ 
+     /// <summary>Only CONFIRM (trimmed, case-insensitive) confirms a reset; missing or anything else changes nothing.</summary>
+     public static bool IsConfirm(string token) =>
+-        token != null && string.Equals(token.Trim(), ConfirmToken, StringComparison.OrdinalIgnoreCase);
++        token != null && string.Equals(token, ConfirmToken, StringComparison.OrdinalIgnoreCase);
+ }

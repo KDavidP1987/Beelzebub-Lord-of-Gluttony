@@ -1,0 +1,8 @@
+diff --git a/Beelzebub/tools/faults/bar-reset/logs/NyarDev.log b/Beelzebub/tools/faults/bar-reset/logs/NyarDev.log
+deleted file mode 100644
+--- a/Beelzebub/tools/faults/bar-reset/logs/NyarDev.log
++++ /dev/null
+@@ -1,3 +0,0 @@
+-Initialize engine version: 2022.3.x
+-Steam GameServer Initialized!
+-Loaded persistence: 1 players

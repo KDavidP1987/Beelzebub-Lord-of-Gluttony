@@ -1,0 +1,14 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
+--- a/Beelzebub/Beelzebub/Logic/BarReset.cs
++++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
+@@ -57,9 +57,9 @@
+         steps.Add(BarResetStep.SaveBindings);
+         if (live)
+         {
+-            steps.Add(BarResetStep.ClearEquipEntries);
+             steps.Add(BarResetStep.DestroyOverrideSources);
+             steps.Add(BarResetStep.PopSlotMods);
++            steps.Add(BarResetStep.ClearEquipEntries);
+             steps.Add(BarResetStep.EmptyPush);
+             steps.Add(BarResetStep.Reapply);
+         }

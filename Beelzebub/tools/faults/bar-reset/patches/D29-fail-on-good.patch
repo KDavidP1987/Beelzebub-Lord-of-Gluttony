@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/tools/check_bar_reset.py b/Beelzebub/tools/check_bar_reset.py
+--- a/Beelzebub/tools/check_bar_reset.py
++++ b/Beelzebub/tools/check_bar_reset.py
+@@ -752,7 +752,7 @@
+ 
+ GOOD_FILES = {
+     f"{PROJ}/Config/Settings.cs":
+-        'class S { void B() { Forms_AutoFillFromCaptures = config.Bind(\n "Forms", nameof(Forms_AutoFillFromCaptures), false, "x"); } }\n',
++        'class S { void B() { Forms_AutoFillFromCaptures = config.Bind(\n "Forms", nameof(Forms_AutoFillFromCaptures), true, "x"); } }\n',
+     f"{PROJ}/Logic/BarReset.cs": "public interface IBarResetOps\n{\n    int Reapply();\n    bool SaveBindings();\n}\n",
+     f"{PROJ}/Services/BarResetService.cs":
+         "static class BarResetService {\n public static int FullReset(int c) { return 0; }\n public static int ReadBar(int c) { return 0; }\n"

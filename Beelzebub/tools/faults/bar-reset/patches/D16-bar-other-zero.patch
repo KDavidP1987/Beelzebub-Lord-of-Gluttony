@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarResetLog.cs b/Beelzebub/Beelzebub/Logic/BarResetLog.cs
+--- a/Beelzebub/Beelzebub/Logic/BarResetLog.cs
++++ b/Beelzebub/Beelzebub/Logic/BarResetLog.cs
+@@ -72,7 +72,7 @@
+     public static List<string> FormatBar(BarReadback readback, string targetName, ulong steamId)
+     {
+         readback ??= new BarReadback();
+-        string other = readback.Unreadable ? "unreadable" : readback.Other.ToString();
++        string other = readback.Other.ToString();
+         string head = $"[Beelz BAR] target={LogSafe.Field(targetName)} ({steamId}) binds={readback.Binds} rows={readback.Rows} gear={readback.Gear} other={other} slots=";
+ 
+         var cells = readback.Slots

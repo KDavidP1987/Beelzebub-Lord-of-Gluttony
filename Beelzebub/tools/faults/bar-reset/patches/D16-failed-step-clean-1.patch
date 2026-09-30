@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarResetLog.cs b/Beelzebub/Beelzebub/Logic/BarResetLog.cs
+--- a/Beelzebub/Beelzebub/Logic/BarResetLog.cs
++++ b/Beelzebub/Beelzebub/Logic/BarResetLog.cs
+@@ -55,7 +55,7 @@
+         sb.Append(" survivors=").Append(Survivors(result));
+         // clean=1 only for a Clean result: survivors=none alone does not prove a failed save, a thrown step or an
+         // offline (saved-state only) run were clean.
+-        sb.Append(" clean=").Append(result?.Clean == true ? 1 : 0);
++        sb.Append(" clean=").Append(result?.Clean == true || result?.Survivors.Count == 0 ? 1 : 0);
+         if (elapsedMs > SlowMs) sb.Append(" slow=1");
+         return sb.ToString();
+     }

@@ -1,0 +1,14 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
+--- a/Beelzebub/Beelzebub/Logic/BarReset.cs
++++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
+@@ -52,9 +52,9 @@
+ 
+         bool live = online && liveReady;
+         if (live && transformActiveOrParked) steps.Add(BarResetStep.RevertTransform);
++        steps.Add(BarResetStep.SaveBindings);
+         steps.Add(BarResetStep.ClearSavedBindings);
+         if (ClearsHotkeys(scope)) steps.Add(BarResetStep.ClearHotkeys);
+-        steps.Add(BarResetStep.SaveBindings);
+         if (live)
+         {
+             steps.Add(BarResetStep.ClearEquipEntries);

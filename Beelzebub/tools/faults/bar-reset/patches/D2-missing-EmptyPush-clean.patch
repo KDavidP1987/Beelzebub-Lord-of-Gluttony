@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
+--- a/Beelzebub/Beelzebub/Logic/BarReset.cs
++++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
+@@ -239,7 +239,7 @@
+     public static readonly IReadOnlyList<BarResetStep> RequiredForClean = new[]
+     {
+         BarResetStep.ClearSavedBindings, BarResetStep.SaveBindings, BarResetStep.ClearEquipEntries,
+-        BarResetStep.DestroyOverrideSources, BarResetStep.PopSlotMods, BarResetStep.EmptyPush,
++        BarResetStep.DestroyOverrideSources, BarResetStep.PopSlotMods, 
+         BarResetStep.Reapply, BarResetStep.Readback,
+     };
+ 

@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Commands/BeelzCommands.cs b/Beelzebub/Beelzebub/Commands/BeelzCommands.cs
+--- a/Beelzebub/Beelzebub/Commands/BeelzCommands.cs
++++ b/Beelzebub/Beelzebub/Commands/BeelzCommands.cs
+@@ -704,7 +704,7 @@
+     }
+ 
+     [Command("resetbar", description: "Reset your action bar to its vanilla in-game state: ends any active transformation, removes ALL your Beelzebub slot bindings (universal, weapon and form sets) and clears every Beelzebub override on the live bar, so your normal spells and weapon skills return without a weapon swap. Keeps your captured abilities, transform unlocks, hotkeys and presets. Requires confirmation: .beelz resetbar CONFIRM")]
+-    public static void ResetBar(ChatCommandContext ctx, string confirm = null)
++    public static void ResetBar(ChatCommandContext ctx, string confirm = null, string player = null)
+     {
+         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+         // v0.76.0: guard against an accidental wipe of every slot bind — require the CONFIRM token (v0.137: one rule).

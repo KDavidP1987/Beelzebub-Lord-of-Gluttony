@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/README.md b/Beelzebub/Beelzebub/README.md
+--- a/Beelzebub/Beelzebub/README.md
++++ b/Beelzebub/Beelzebub/README.md
+@@ -48,7 +48,7 @@
+ 
+ **Source · issues · roadmap:** [github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony) · **License:** MIT
+ 
+-> **Status:** active early access / **public test build (v0.136.0)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
++> **Status:** active early access / **public test build (v0.135.0)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
+ 
+ ---
+ 

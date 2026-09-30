@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Commands/AdminCommands.cs b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
+--- a/Beelzebub/Beelzebub/Commands/AdminCommands.cs
++++ b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
+@@ -1483,7 +1483,7 @@
+         Audit(ctx, "clearslotmods", steamId, fullName, $"slots={slots} withMods={withMods} cleared={modsCleared} dirtied={dirtied}");
+     }
+ 
+-    [Command("rebuildslots", description: "LEGACY: (use .beelz admin purge) RECOVERY (safe): re-sync a player's active ability slots back to their stored base abilities via the engine's slot-setter — fixes a bar stuck on creature/shapeshift abilities. Values only; never destroys entities. Usage: .beelz admin rebuildslots [player] (default: you)", adminOnly: true)]
++    [Command("rebuildslots", description: "(use .beelz admin purge) RECOVERY (safe): re-sync a player's active ability slots back to their stored base abilities via the engine's slot-setter — fixes a bar stuck on creature/shapeshift abilities. Values only; never destroys entities. Usage: .beelz admin rebuildslots [player] (default: you)", adminOnly: true)]
+     public static void RebuildSlots(ChatCommandContext ctx, string player = null)
+     {
+         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }

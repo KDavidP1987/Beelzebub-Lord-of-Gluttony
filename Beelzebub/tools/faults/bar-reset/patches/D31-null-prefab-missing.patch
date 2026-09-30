@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/EquipRows.cs b/Beelzebub/Beelzebub/Logic/EquipRows.cs
+--- a/Beelzebub/Beelzebub/Logic/EquipRows.cs
++++ b/Beelzebub/Beelzebub/Logic/EquipRows.cs
+@@ -37,7 +37,7 @@
+     /// (e.g. stripped by a pre-0.137 reset). Null prefab → null.</summary>
+     public static List<int> MissingPrefabIndices(IReadOnlyList<EquipRow> live, IReadOnlyList<EquipRow> prefab)
+     {
+-        if (prefab == null) return null;
++        if (prefab == null) return new List<int>();
+         var have = Counts(live ?? new List<EquipRow>());
+         var missing = new List<int>();
+         for (int i = 0; i < prefab.Count; i++)

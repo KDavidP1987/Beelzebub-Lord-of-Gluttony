@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/EquipRows.cs b/Beelzebub/Beelzebub/Logic/EquipRows.cs
+--- a/Beelzebub/Beelzebub/Logic/EquipRows.cs
++++ b/Beelzebub/Beelzebub/Logic/EquipRows.cs
+@@ -21,7 +21,7 @@
+     /// remove nothing and never report the slot clean).</summary>
+     public static List<int> InjectedIndices(IReadOnlyList<EquipRow> live, IReadOnlyList<EquipRow> prefab)
+     {
+-        if (prefab == null) return null;
++        if (prefab == null) prefab = new List<EquipRow>();
+         var budget = Counts(prefab);
+         var injected = new List<int>();
+         for (int i = 0; i < (live?.Count ?? 0); i++)

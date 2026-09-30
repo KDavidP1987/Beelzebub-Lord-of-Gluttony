@@ -1,0 +1,21 @@
+diff --git a/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md b/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md
+--- a/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md
++++ b/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md
+@@ -54,7 +54,7 @@
+ If the reply says `live bar not reachable`, the character was mid-respawn or mid-load: have them relog or
+ respawn, then run `.beelz admin bar <player>` again.
+ 
+-### 3. Only if slots stay overridden after a purge and a relog: `.beelz admin reset-character <player> CONFIRM-RESET`
++### 3. Only if slots stay overridden after a purge and a relog: `.beelz admin reset-char <player> CONFIRM-RESET`
+ Unbinds the player's Steam ID and kicks them; on next login they create a new character. Their collection is
+ kept (Steam-keyed). **Their saved binds are kept too** — so run the purge first (step 2); reset-character alone
+ does not clear a bar.
+@@ -65,7 +65,7 @@
+ 
+ - **`.beelz admin respawn <player>`** rebuilds the character in place (progress kept). The saved binds are
+   Steam-keyed and re-apply on the next equip or login, so respawn alone brings a bad bind straight back.
+-- **`.beelz admin reset-character`** — same reason, see step 3.
++- **`.beelz admin reset-char`** — same reason, see step 3.
+ - **`.beelz admin rebuildslots` / `clearslotmods`** are LEGACY levers (single-layer). Use `purge`.
+ - **`.beelz admin rebuildbar`** is now an alias of `.beelz admin bar`.
+ 

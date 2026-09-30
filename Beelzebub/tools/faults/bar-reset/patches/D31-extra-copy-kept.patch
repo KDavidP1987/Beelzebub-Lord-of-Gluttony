@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/EquipRows.cs b/Beelzebub/Beelzebub/Logic/EquipRows.cs
+--- a/Beelzebub/Beelzebub/Logic/EquipRows.cs
++++ b/Beelzebub/Beelzebub/Logic/EquipRows.cs
+@@ -27,7 +27,7 @@
+         for (int i = 0; i < (live?.Count ?? 0); i++)
+         {
+             var r = live[i];
+-            if (budget.TryGetValue(r, out int n) && n > 0) { budget[r] = n - 1; continue; }
++            if (budget.TryGetValue(r, out int n) && n > 0) { budget[r] = n; continue; }
+             if (r.Slot >= MinSlot && r.Slot <= MaxSlot) injected.Add(i);
+         }
+         return injected;

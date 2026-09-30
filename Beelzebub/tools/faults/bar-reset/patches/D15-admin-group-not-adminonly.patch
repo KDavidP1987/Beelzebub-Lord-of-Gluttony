@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Commands/AdminCommands.cs b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
+--- a/Beelzebub/Beelzebub/Commands/AdminCommands.cs
++++ b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
+@@ -1251,7 +1251,7 @@
+     [Command("rebuildbar", description: "Alias of .beelz admin bar (read-only bar readout; the old init-state toggle is retired). Usage: .beelz admin rebuildbar [player] (default: you)", adminOnly: true)]
+     public static void RebuildBar(ChatCommandContext ctx, string player = null) => Bar(ctx, player);
+ 
+-    [Command("bar", description: "READ-ONLY: show a player's bar slot by slot — the resolved ability, the saved bind, a Beelzebub row on the weapon, override buffs, and slot mods split gear vs other. Offline: their saved sets, transform record and hotkeys. Changes nothing. Usage: .beelz admin bar [player] (default: you)", adminOnly: true)]
++    [Command("bar", description: "READ-ONLY: show a player's bar slot by slot — the resolved ability, the saved bind, a Beelzebub row on the weapon, override buffs, and slot mods split gear vs other. Offline: their saved sets, transform record and hotkeys. Changes nothing. Usage: .beelz admin bar [player] (default: you)")]
+     public static void Bar(ChatCommandContext ctx, string player = null)
+     {
+         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }

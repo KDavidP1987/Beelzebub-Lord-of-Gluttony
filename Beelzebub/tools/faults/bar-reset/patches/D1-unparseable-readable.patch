@@ -1,0 +1,11 @@
+diff --git a/Beelzebub/Beelzebub/Logic/SlotModDump.cs b/Beelzebub/Beelzebub/Logic/SlotModDump.cs
+--- a/Beelzebub/Beelzebub/Logic/SlotModDump.cs
++++ b/Beelzebub/Beelzebub/Logic/SlotModDump.cs
+@@ -65,7 +65,6 @@
+             }
+             else
+             {
+-                result.Readable = false;
+             }
+         }
+         return result;

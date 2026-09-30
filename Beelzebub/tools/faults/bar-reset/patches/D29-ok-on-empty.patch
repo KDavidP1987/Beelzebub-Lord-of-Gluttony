@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/tools/check_bar_reset.py b/Beelzebub/tools/check_bar_reset.py
+--- a/Beelzebub/tools/check_bar_reset.py
++++ b/Beelzebub/tools/check_bar_reset.py
+@@ -298,7 +298,7 @@
+     src = read(root, f"{PROJ}/Config/Settings.cs")
+     m = re.search(r"Forms_AutoFillFromCaptures\s*=\s*config\.Bind\(\s*\"(\w+)\"\s*,\s*nameof\(Forms_AutoFillFromCaptures\)\s*,\s*(\w+)", src)
+     if not m:
+-        raise CheckFail("no input: no Bind call for Forms_AutoFillFromCaptures")
++        return "config: ok"
+     if m.group(1) != "Forms":
+         raise CheckFail(f"bound in section {m.group(1)}, not Forms")
+     if m.group(2) != "false":

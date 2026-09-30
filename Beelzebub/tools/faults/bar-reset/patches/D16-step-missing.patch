@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarResetLog.cs b/Beelzebub/Beelzebub/Logic/BarResetLog.cs
+--- a/Beelzebub/Beelzebub/Logic/BarResetLog.cs
++++ b/Beelzebub/Beelzebub/Logic/BarResetLog.cs
+@@ -51,7 +51,7 @@
+         var steps = result?.Steps ?? new List<BarResetStepResult>();
+         sb.Append(steps.Count == 0
+             ? "none"
+-            : string.Join(",", steps.Select(s => s.Failed ? $"{s.Step}:ERR" : $"{s.Step}:{s.Count}")));
++            : string.Join(",", steps.Skip(1).Select(s => s.Failed ? $"{s.Step}:ERR" : $"{s.Step}:{s.Count}")));
+         sb.Append(" survivors=").Append(Survivors(result));
+         // clean=1 only for a Clean result: survivors=none alone does not prove a failed save, a thrown step or an
+         // offline (saved-state only) run were clean.

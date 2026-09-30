@@ -1,0 +1,11 @@
+diff --git a/Beelzebub/Beelzebub/Logic/FormBarFill.cs b/Beelzebub/Beelzebub/Logic/FormBarFill.cs
+--- a/Beelzebub/Beelzebub/Logic/FormBarFill.cs
++++ b/Beelzebub/Beelzebub/Logic/FormBarFill.cs
+@@ -55,6 +55,7 @@
+             }
+             if (bar.Count > 0) return new FormBarFillResult(bar, FormBarSource.Captures);
+         }
++        bar[0] = 0;
+         return new FormBarFillResult(bar, FormBarSource.Native);
+     }
+ }

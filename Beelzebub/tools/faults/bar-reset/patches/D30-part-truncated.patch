@@ -1,0 +1,10 @@
+diff --git a/Beelzebub/tools/faults/bar-reset/logs/session.log b/Beelzebub/tools/faults/bar-reset/logs/session.log
+--- a/Beelzebub/tools/faults/bar-reset/logs/session.log
++++ b/Beelzebub/tools/faults/bar-reset/logs/session.log
+@@ -1,6 +1,5 @@
+ [Message:   BepInEx] Loading [Beelzebub 0.137.0]
+ [Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=1:bind:1:0 part=1/2
+-[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=4:bind:1:0 part=2/2
+ [Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=1:bind:1:0 part=1/2
+ [Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=4:bind:1:0 part=2/2
+ [Info   :Beelzebub] [Beelz FORM] target=76561198000000002 form=Wolf source=captures

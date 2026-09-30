@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/docs/dod/bar-reset.md b/Beelzebub/Beelzebub/docs/dod/bar-reset.md
+--- a/Beelzebub/Beelzebub/docs/dod/bar-reset.md
++++ b/Beelzebub/Beelzebub/docs/dod/bar-reset.md
+@@ -173,7 +173,7 @@
+   `Beelzebub.Tests` only (the test csproj links `Logic/*.cs` one way).
+ 
+ ## Design
+-### Data
++### Data model
+ No saved-data shape changes: `state.json` (`PersistenceService`, `Version = 8`) keeps its fields; a reset only
+ removes entries (D22 checks the version). Artifacts and retention (probe 3.3) — one row each, parsed by
+ `check_bar_reset.py data` (D28):

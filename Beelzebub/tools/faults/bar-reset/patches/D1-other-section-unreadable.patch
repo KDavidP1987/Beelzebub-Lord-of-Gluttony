@@ -1,0 +1,11 @@
+diff --git a/Beelzebub/Beelzebub/Logic/SlotModDump.cs b/Beelzebub/Beelzebub/Logic/SlotModDump.cs
+--- a/Beelzebub/Beelzebub/Logic/SlotModDump.cs
++++ b/Beelzebub/Beelzebub/Logic/SlotModDump.cs
+@@ -52,6 +52,7 @@
+                 inGroupGuid = t.StartsWith(GroupGuidField, StringComparison.Ordinal);
+                 continue;
+             }
++            if (!inGroupGuid && t.StartsWith("[ModId", StringComparison.Ordinal)) { result.Readable = false; continue; }
+             if (!inGroupGuid || !t.StartsWith("[ModId", StringComparison.Ordinal)) continue;
+ 
+             var m = _entryRx.Match(t);

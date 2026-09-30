@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Commands/AdminCommands.cs b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
+--- a/Beelzebub/Beelzebub/Commands/AdminCommands.cs
++++ b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
+@@ -1404,7 +1404,7 @@
+             $"binds={result.CountOf(Beelzebub.Logic.BarResetStep.ClearSavedBindings)} hotkeys={result.CountOf(Beelzebub.Logic.BarResetStep.ClearHotkeys)} popped={result.CountOf(Beelzebub.Logic.BarResetStep.PopSlotMods)} clean={(result.Clean ? 1 : 0)}");
+     }
+ 
+-    [Command("clearslotmods", description: "LEGACY: (use .beelz admin purge) RECOVERY: clear orphaned ability-slot MODIFICATIONS on a player's character (the deep cause of a bar frozen on a creature kit) and force the slots to rebuild from base. Run after .beelz clear if a stuck bar survives everything. Usage: .beelz admin clearslotmods [player] (default: you)", adminOnly: true)]
++    [Command("clearslotmods", description: "(use .beelz admin purge) RECOVERY: clear orphaned ability-slot MODIFICATIONS on a player's character (the deep cause of a bar frozen on a creature kit) and force the slots to rebuild from base. Run after .beelz clear if a stuck bar survives everything. Usage: .beelz admin clearslotmods [player] (default: you)", adminOnly: true)]
+     public static void ClearSlotMods(ChatCommandContext ctx, string player = null)
+     {
+         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }

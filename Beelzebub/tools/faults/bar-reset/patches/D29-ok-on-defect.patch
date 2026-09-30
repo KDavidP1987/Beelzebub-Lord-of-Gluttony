@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/tools/check_bar_reset.py b/Beelzebub/tools/check_bar_reset.py
+--- a/Beelzebub/tools/check_bar_reset.py
++++ b/Beelzebub/tools/check_bar_reset.py
+@@ -855,7 +855,7 @@
+         assert a in s, (sub, a)
+         open(p, "w", encoding="utf-8", newline="\n").write(s.replace(a, b, 1))
+     if sub == "config":
+-        sub_in(f"{PROJ}/Config/Settings.cs", "false", "true")
++        sub_in(f"{PROJ}/Config/Settings.cs", "false", "false")
+     elif sub == "commands":
+         sub_in(f"{PROJ}/Commands/BeelzCommands.cs", "{ BarResetService.FullReset(1); }", "{ BarResetService.FullReset(1); BarResetService.RemoveInjectedRows(1); }")
+     elif sub == "text":

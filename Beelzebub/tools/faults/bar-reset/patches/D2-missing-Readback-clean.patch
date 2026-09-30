@@ -1,0 +1,23 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
+--- a/Beelzebub/Beelzebub/Logic/BarReset.cs
++++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
+@@ -223,8 +223,8 @@
+             }
+         }
+ 
+-        bool readbackRan = r.Readback != null && !r.Steps.Any(s => s.Step == BarResetStep.Readback && s.Failed);
+-        r.Unreadable = online && (!liveReady || !readbackRan || r.Readback.Unreadable);
++        bool readbackRan = !r.Steps.Any(s => s.Step == BarResetStep.Readback) || r.Readback != null && !r.Steps.Any(s => s.Step == BarResetStep.Readback && s.Failed);
++        r.Unreadable = online && (!liveReady || !readbackRan || r.Readback?.Unreadable == true);
+         // An empty plan (unknown scope) never runs SaveBindings, so r.Saved alone makes it an error result; a plan
+         // that skipped a live layer (not planner-made) can never be clean either.
+         bool complete = RequiredForClean.All(req => r.Steps.Any(s => s.Step == req));
+@@ -240,7 +240,7 @@
+     {
+         BarResetStep.ClearSavedBindings, BarResetStep.SaveBindings, BarResetStep.ClearEquipEntries,
+         BarResetStep.DestroyOverrideSources, BarResetStep.PopSlotMods, BarResetStep.EmptyPush,
+-        BarResetStep.Reapply, BarResetStep.Readback,
++        BarResetStep.Reapply,
+     };
+ 
+     static int Invoke(IBarResetOps ops, BarResetStep step) => step switch

@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md b/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md
+--- a/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md
++++ b/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md
+@@ -4,7 +4,7 @@
+ fix it in-game — **you never need to wipe the server.** A player's captured abilities and transform unlocks are
+ tied to their **Steam account**, so no step below loses them.
+ 
+-All admin commands are `adminOnly`. `<player>` is the in-game character name (a unique part of it is enough).
++All admin commands are `adminOnly`. The last resort is `.beelz admin reset-character <player> CONFIRM-RESET`. `<player>` is the in-game character name (a unique part of it is enough).
+ 
+ ---
+ 

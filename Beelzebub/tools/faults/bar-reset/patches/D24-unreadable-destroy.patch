@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
+--- a/Beelzebub/Beelzebub/Logic/BarReset.cs
++++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
+@@ -95,7 +95,7 @@
+         Func<SlotModEntry, bool> isProtected)
+     {
+         // Unreadable → touch nothing on this slot (D24); the readback reports it and the reset is never clean.
+-        if (parse == null || !parse.Readable) return new SlotPurgeDecision { Skipped = true };
++        if (parse == null) return new SlotPurgeDecision { Skipped = true };
+         var d = new SlotPurgeDecision();
+         var seen = new HashSet<(int, int)>();
+         foreach (var e in parse.Entries)

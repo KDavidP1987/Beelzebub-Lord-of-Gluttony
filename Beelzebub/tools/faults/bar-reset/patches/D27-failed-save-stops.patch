@@ -1,0 +1,11 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
+--- a/Beelzebub/Beelzebub/Logic/BarReset.cs
++++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
+@@ -204,6 +204,7 @@
+                         bool ok = ops.SaveBindings();
+                         r.Saved = ok;
+                         r.Steps.Add(new BarResetStepResult(step, ok ? 1 : 0, ok ? null : "not saved"));
++                        if (!ok) return r;
+                         break;
+                     case BarResetStep.Readback:
+                         // A null readback is a failed read, never an empty (clean) bar.

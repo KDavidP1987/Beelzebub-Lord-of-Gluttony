@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/CHANGELOG.md b/Beelzebub/Beelzebub/CHANGELOG.md
+--- a/Beelzebub/Beelzebub/CHANGELOG.md
++++ b/Beelzebub/Beelzebub/CHANGELOG.md
+@@ -4,7 +4,7 @@
+ (bundled with the release) and lives in the repo on GitHub. For the full technical
+ history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
+ 
+-## [0.136.0] - 2026-09-23
++## 0.136.0 - 2026-09-23
+ 
+ ### Shipped baseline from the Discord testing round
+ 

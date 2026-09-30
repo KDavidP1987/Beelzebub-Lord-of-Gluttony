@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Commands/BeelzCommands.cs b/Beelzebub/Beelzebub/Commands/BeelzCommands.cs
+--- a/Beelzebub/Beelzebub/Commands/BeelzCommands.cs
++++ b/Beelzebub/Beelzebub/Commands/BeelzCommands.cs
+@@ -109,7 +109,7 @@
+     }
+ 
+     [Command("list", description: "List your captured abilities + slot assignments. Optional filter: vblood | shard | regular. Usage: .beelz list [filter] [page]. Paginated 15/page.")]
+-    public static void List(ChatCommandContext ctx, string arg = null, int page = 1)
++    public static void List(ChatCommandContext ctx, string player = null, int page = 1)
+     {
+         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+ 

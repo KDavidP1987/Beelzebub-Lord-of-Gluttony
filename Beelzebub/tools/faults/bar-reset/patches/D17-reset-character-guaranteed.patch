@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md b/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md
+--- a/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md
++++ b/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md
+@@ -55,7 +55,7 @@
+ respawn, then run `.beelz admin bar <player>` again.
+ 
+ ### 3. Only if slots stay overridden after a purge and a relog: `.beelz admin reset-character <player> CONFIRM-RESET`
+-Unbinds the player's Steam ID and kicks them; on next login they create a new character. Their collection is
++Guaranteed clean: unbinds the player's Steam ID and kicks them; on next login they create a new character. Their collection is
+ kept (Steam-keyed). **Their saved binds are kept too** — so run the purge first (step 2); reset-character alone
+ does not clear a bar.
+ 

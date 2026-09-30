@@ -1,0 +1,33 @@
+diff --git a/Beelzebub/Beelzebub/Commands/AdminCommands.cs b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
+--- a/Beelzebub/Beelzebub/Commands/AdminCommands.cs
++++ b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
+@@ -382,7 +382,7 @@
+         if (!Beelzebub.Logic.BarResetInput.IsConfirm(confirm))
+         { ctx.Reply(Beelzebub.Logic.BarResetReply.Cap($"This clears ALL of {Beelzebub.Logic.BarResetReply.Name(fullName)}'s slot/form/transform loadouts and resets their bar (captures, unlocks and hotkeys kept). Re-run: .beelz admin reset-loadouts {Beelzebub.Logic.BarResetReply.Name(player)} CONFIRM")); return; }
+ 
+-        var result = BarResetService.FullReset(character, steamId, fullName, Beelzebub.Logic.BarResetScope.AdminLoadouts);
++        var result = BarResetService.FullResetLegacy(character, steamId, fullName, Beelzebub.Logic.BarResetScope.AdminLoadouts);
+         foreach (string line in Beelzebub.Logic.BarResetReply.ForReset(result, Beelzebub.Logic.BarResetScope.AdminLoadouts, fullName))
+             ctx.Reply(line);
+         Audit(ctx, "reset-loadouts", steamId, fullName, $"binds={result.CountOf(Beelzebub.Logic.BarResetStep.ClearSavedBindings)} clean={(result.Clean ? 1 : 0)}");
+@@ -1397,7 +1397,7 @@
+             return;
+         }
+ 
+-        var result = BarResetService.FullReset(character, steamId, fullName, Beelzebub.Logic.BarResetScope.Purge);
++        var result = BarResetService.FullResetLegacy(character, steamId, fullName, Beelzebub.Logic.BarResetScope.Purge);
+         foreach (string line in Beelzebub.Logic.BarResetReply.ForReset(result, Beelzebub.Logic.BarResetScope.Purge, fullName))
+             ctx.Reply(line);
+         Audit(ctx, "purge", steamId, fullName,
+diff --git a/Beelzebub/Beelzebub/Commands/BeelzCommands.cs b/Beelzebub/Beelzebub/Commands/BeelzCommands.cs
+--- a/Beelzebub/Beelzebub/Commands/BeelzCommands.cs
++++ b/Beelzebub/Beelzebub/Commands/BeelzCommands.cs
+@@ -721,7 +721,7 @@
+         var boundSlots = new List<int>(Core.AbilityRegistry.GetSlots(steamId).Keys);
+ 
+         // v0.137.0 (bar-reset): the ONE layered reset — saved binds, equip rows, override sources, slot mods, readback.
+-        var result = BarResetService.FullReset(character, steamId, name, Beelzebub.Logic.BarResetScope.PlayerReset);
++        var result = BarResetService.FullResetLegacy(character, steamId, name, Beelzebub.Logic.BarResetScope.PlayerReset);
+         foreach (string line in Beelzebub.Logic.BarResetReply.ForReset(result, Beelzebub.Logic.BarResetScope.PlayerReset, name))
+             ctx.Reply(line);
+ 

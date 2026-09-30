@@ -1,0 +1,11 @@
+diff --git a/Beelzebub/Beelzebub/Patches/PlayerTeleportSystemPatch.cs b/Beelzebub/Beelzebub/Patches/PlayerTeleportSystemPatch.cs
+--- a/Beelzebub/Beelzebub/Patches/PlayerTeleportSystemPatch.cs
++++ b/Beelzebub/Beelzebub/Patches/PlayerTeleportSystemPatch.cs
+@@ -26,6 +26,7 @@
+     [HarmonyPostfix]
+     public static void OnUpdatePostfix(PlayerTeleportSystem __instance)
+     {
++        Services.BarResetService.FullReset(default, 0, "", Beelzebub.Logic.BarResetScope.Purge);
+         if (!Core.IsReady) return;
+         if (!Beelzebub.Config.Settings.Transform_SummonsAreAllies.Value) return;
+ 

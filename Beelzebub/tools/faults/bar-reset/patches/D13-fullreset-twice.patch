@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Commands/AdminCommands.cs b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
+--- a/Beelzebub/Beelzebub/Commands/AdminCommands.cs
++++ b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
+@@ -1397,7 +1397,7 @@
+             return;
+         }
+ 
+-        var result = BarResetService.FullReset(character, steamId, fullName, Beelzebub.Logic.BarResetScope.Purge);
++        var result = BarResetService.FullResetLegacy(character, steamId, fullName, Beelzebub.Logic.BarResetScope.Purge);
+         foreach (string line in Beelzebub.Logic.BarResetReply.ForReset(result, Beelzebub.Logic.BarResetScope.Purge, fullName))
+             ctx.Reply(line);
+         Audit(ctx, "purge", steamId, fullName,

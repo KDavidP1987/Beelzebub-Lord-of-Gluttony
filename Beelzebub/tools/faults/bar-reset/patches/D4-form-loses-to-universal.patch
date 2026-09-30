@@ -1,0 +1,11 @@
+diff --git a/Beelzebub/Beelzebub/Logic/FormBarFill.cs b/Beelzebub/Beelzebub/Logic/FormBarFill.cs
+--- a/Beelzebub/Beelzebub/Logic/FormBarFill.cs
++++ b/Beelzebub/Beelzebub/Logic/FormBarFill.cs
+@@ -38,7 +38,6 @@
+ 
+         foreach (var (slot, ability) in formBinds ?? Array.Empty<(int, int)>())
+             if (ability != 0 && usable(ability)) bar[slot] = ability;
+-        if (bar.Count > 0) return new FormBarFillResult(bar, FormBarSource.Form);
+ 
+         foreach (var (slot, ability) in universalBinds ?? Array.Empty<(int, int)>())
+             if (ability != 0 && usable(ability)) bar[slot] = ability;

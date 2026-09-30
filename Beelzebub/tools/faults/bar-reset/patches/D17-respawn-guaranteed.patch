@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md b/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md
+--- a/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md
++++ b/Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md
+@@ -63,7 +63,7 @@
+ 
+ ## Commands that are NOT a bar fix on their own
+ 
+-- **`.beelz admin respawn <player>`** rebuilds the character in place (progress kept). The saved binds are
++- **`.beelz admin respawn <player>`** rebuilds the character in place (progress kept) and is guaranteed clean. The saved binds are
+   Steam-keyed and re-apply on the next equip or login, so respawn alone brings a bad bind straight back.
+ - **`.beelz admin reset-character`** — same reason, see step 3.
+ - **`.beelz admin rebuildslots` / `clearslotmods`** are LEGACY levers (single-layer). Use `purge`.

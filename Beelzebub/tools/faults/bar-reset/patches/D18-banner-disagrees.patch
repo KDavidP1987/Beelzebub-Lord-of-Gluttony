@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/docs/BCH_INTEGRATION_HANDOFF.md b/Beelzebub/Beelzebub/docs/BCH_INTEGRATION_HANDOFF.md
+--- a/Beelzebub/Beelzebub/docs/BCH_INTEGRATION_HANDOFF.md
++++ b/Beelzebub/Beelzebub/docs/BCH_INTEGRATION_HANDOFF.md
+@@ -18,7 +18,7 @@
+ > in the BCH workspace.
+ >
+ > **Canonical source of truth for the wire API:**
+-> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 33`). If this doc
++> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 32`). If this doc
+ > and that file ever disagree, the file wins — and this doc should be corrected.
+ 
+ ---

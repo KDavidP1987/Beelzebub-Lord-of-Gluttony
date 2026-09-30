@@ -1,0 +1,11 @@
+diff --git a/Beelzebub/tools/faults/bar-reset/logs/LogOutput.log b/Beelzebub/tools/faults/bar-reset/logs/LogOutput.log
+--- a/Beelzebub/tools/faults/bar-reset/logs/LogOutput.log
++++ b/Beelzebub/tools/faults/bar-reset/logs/LogOutput.log
+@@ -1,5 +1,7 @@
+ [Message:   BepInEx] BepInEx 6.0.0-be.733 - VRisingServer
+ [Message:   BepInEx] Loading [Beelzebub 0.137.0]
+ [Info   :Beelzebub] Beelzebub initialized.
++[Error  :Beelzebub] reset threw
++  at Beelzebub.Services.BarResetService.FullReset ()
+ [Info   :Beelzebub] [Beelz RESET] run=1 scope=PlayerReset target=PerpetualChaos (76561198000000001) ms=12 steps=ClearSavedBindings:2,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,EmptyPush:6,Reapply:0,Readback:0 survivors=none clean=1
+ [Warning:Beelzebub] [Beelz PURGE] slot[5] dump unreadable - left untouched

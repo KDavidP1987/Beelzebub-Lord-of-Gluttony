@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarResetLog.cs b/Beelzebub/Beelzebub/Logic/BarResetLog.cs
+--- a/Beelzebub/Beelzebub/Logic/BarResetLog.cs
++++ b/Beelzebub/Beelzebub/Logic/BarResetLog.cs
+@@ -62,7 +62,7 @@
+ 
+     static string Survivors(BarResetResult result)
+     {
+-        if (result == null || result.Unreadable) return "unreadable";
++        if (result == null) return "unreadable";
+         var s = result.Survivors;
+         return s.Count == 0 ? "none" : string.Join(",", s);
+     }

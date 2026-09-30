@@ -1,0 +1,19 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
+--- a/Beelzebub/Beelzebub/Logic/BarReset.cs
++++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
+@@ -150,6 +150,7 @@
+ 
+ public interface IBarResetOps
+ {
++#if NEVER
+     int RevertTransform();
+     int ClearSavedBindings();
+     int ClearHotkeys();
+@@ -161,6 +162,7 @@
+     int EmptyPush();
+     int Reapply();
+     BarReadback Readback();
++#endif
+ }
+ 
+ public readonly record struct BarResetStepResult(BarResetStep Step, int Count, string Error)
