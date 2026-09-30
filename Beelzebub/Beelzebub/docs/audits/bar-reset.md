@@ -361,3 +361,9 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
 - planted: `ClassifyEmpty_fails_when_an_unknown_owned_set_reads_as_known`, `IsWeaponBuff_fails_when_armour_counts_or_a_weapon_buff_does_not`
   and the reworked leak controls — harness entries D32-unknown-not-unknown, D32-armour-is-weapon, D32-weapon-not-weapon,
   D32-non-weapon-leaked (158 entries); tests 145 passed.
+
+### Step 10 · D32 empty-push leak · review round 2 · 2026-09-30 · reviewed bed6897 (`git diff d4f0cfe..bed6897`, code + tests)
+- Codex verdict: CLEAN — C2 (weapon equip-buff source only) and C3 (unknown owned set → unreadable) confirmed fixed, no new
+  finding. D32 code review closed after round 2.
+- the D3/D18/D23/D28 patches no longer applied after the plan and code edits — re-made in ba61a9a and a02c0d3, then the full run:
+  `harness: ok, 149 faults, 132 clauses, 5 deferred (D22: gate not met) (not run: D19), patch tree 2ca1c81b7549abecb10d036695fcc59bfa573555`
