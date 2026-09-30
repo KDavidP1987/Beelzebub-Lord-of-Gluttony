@@ -313,13 +313,27 @@ Per feature: **plan → pre-audit → build step → post-audit**, one commit pe
 4. **Diagnostic before fix.** When an in-game check fails and the cause is not proven, the next build adds a log
    line / read-only command that names the reason — record it as an amendment — and only then a fix. (Lesson of
    `docs/CHAIN_AUDIT.md`: eight versions went into an untested theory.)
-5. **In-game test requests** are numbered steps with the server address (127.0.0.1:9876), the exact quoted
-   `.beelz` commands, and a one-line PASS condition per step.
-6. **After every in-game session**, before any restart: `pwsh Beelzebub/tools/preflight.ps1 -LogCheck`, then read
-   every `[Error]`/`[Warning]` in BOTH logs — `BepInEx/LogOutput.log` and the game's `logs/NyarDev.log` (Unity
-   errors are not in BepInEx's log). Copy both logs before a restart — a reboot overwrites them (a stuck-bar
-   session's evidence was lost this way on 2026-09-29). The dev server is shared with Nyarlathotep: never stop
-   or restart it without the owner's go-ahead.
+5. **In-game test requests** — EVERY time test steps are handed over, even a short follow-up — start with
+   "connect to **127.0.0.1:9876**", then numbered steps with the exact `.beelz` commands (concrete ability IDs and
+   unit GUIDs filled in, never `<placeholders>` the owner has to look up), and a one-line PASS condition per step.
+   The owner's character is named **`Chaos`** in-game (SteamID 76561198039548286; `PerpetualChaos` does not resolve).
+6. **Claude runs the dev server itself** (adopted 2026-09-30), with the owner's go-ahead for every start, stop or
+   restart — it is shared with Nyarlathotep:
+   - **Before any start or restart:** copy `BepInEx/LogOutput.log` and `logs/NyarDev.log` to
+     `%TEMP%\beelz-logs-<date>-<label>\` — a launch overwrites both (a stuck-bar session's evidence was lost on 2026-09-29).
+   - **Deploy:** stop the server first (it locks the DLL); `dotnet build Beelzebub/Beelzebub.sln -c Release` copies the
+     DLL (the `BuildToServer` target); confirm with `cmp` against `bin/Release/net6.0/Beelzebub.dll`.
+   - **Stop:** `taskkill /PID <pid>` WITHOUT `/F` (a graceful close that saves the world); force only if still up after 60 s.
+   - **Start** (PowerShell, from the server root `C:\Program Files (x86)\Steam\steamapps\common\VRisingDedicatedServer`):
+     `$env:SteamAppId="1604030"; Start-Process VRisingServer.exe -WorkingDirectory <root> -ArgumentList '-persistentDataPath .\save-data-nyardev -serverName "Nyar Dev" -saveName nyardev -logFile .\logs\NyarDev.log'`.
+     Ready when `logs/NyarDev.log` prints `Server Setup Complete` and LogOutput shows `Beelzebub initialized`; if the
+     process exits right after "Steam GameServer Initialized!", check Bitdefender first.
+   - **Read live:** a `Monitor` on `tail -F BepInEx/LogOutput.log` filtered to the feature's log tags plus
+     `[Error`/`Exception`/`at Beelzebub.` (re-arm on expiry); report each step's result against its PASS line as it
+     lands, and ask the owner only for what the log cannot show (what the client displays).
+   - **After the session**, before any restart: `pwsh Beelzebub/tools/preflight.ps1 -LogCheck`, the feature's
+     session check (e.g. `check_bar_reset.py session <log> --target Chaos`), then read every `[Error]`/`[Warning]` in
+     BOTH logs (Unity errors are not in BepInEx's log).
 7. **Release gate**: `pwsh Beelzebub/tools/preflight.ps1` must print PREFLIGHT OK before a `chore(release)`
    commit (versions, CHANGELOG entry + size cap, README status + root-README sync, ApiVersion banner, audit
    markers, build, tests). The preflight build never deploys.
