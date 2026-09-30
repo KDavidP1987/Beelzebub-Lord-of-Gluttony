@@ -65,16 +65,17 @@ internal static partial class AdminCommands
         ctx.Reply(".beelz admin give-transform|revoke-transform|force-transform|clear-transform <player> [unitGuid] — renderable forms: Dracula, Morgana, Werewolf, Golem, Gargoyle (+ basic werewolf)");
         ctx.Reply(".beelz admin set-slot|clear-slot <player> <slot> [abilityGuid] — universal slot binds");
         ctx.Reply(".beelz admin set-weapon-slot|clear-weapon-slot <player> <weapon> <slot> [abilityGuid] — per-weapon binds");
-        ctx.Reply(".beelz admin reset-loadouts <player> CONFIRM — clear ALL of a player's slot/form/transform loadouts (captures kept)");
+        ctx.Reply(".beelz admin reset-loadouts <player> CONFIRM — reset a player's bar to vanilla: every slot/form/transform loadout (captures + hotkeys kept)");
         ctx.Reply("-- INSPECT --");
         ctx.Reply(".beelz admin inspect <player> / progress <player> — view a player's state");
         ctx.Reply(".beelz admin snapshot — server-wide summary · scan-abilities — dump ability metadata to disk · dump <abilityGuid|form> — log an ability's ECS component chain (DIAGNOSTIC)");
         ctx.Reply("-- SUMMONS --");
         ctx.Reply(".beelz admin desummon <player> / desummon-all — clean up ally summons · revert-all — end all transforms");
         ctx.Reply("-- RECOVERY (fix a stuck player, no server wipe) --");
-        ctx.Reply(".beelz admin respawn <player> — rebuild a stuck bar by respawning in place (keeps progress)");
-        ctx.Reply(".beelz admin purge <player> CONFIRM — LAST RESORT: wipe ALL bar integration to vanilla incl. the engine modification LEAK (captures/unlocks kept; player re-slots after)");
-        ctx.Reply(".beelz admin rebuildslots / clearslotmods / rebuildbar <player> — slot/bar repair levers");
+        ctx.Reply(".beelz admin bar [player] — READ-ONLY: what drives each bar slot (start here for a stuck bar)");
+        ctx.Reply(".beelz admin purge <player> CONFIRM — reset the bar to vanilla + clear hotkeys (captures/unlocks kept; player re-slots after)");
+        ctx.Reply(".beelz admin respawn <player> — respawn in place (keeps progress; keeps binds, so not a bar fix on its own)");
+        ctx.Reply(".beelz admin rebuildslots / clearslotmods <player> — LEGACY slot levers (use purge)");
         ctx.Reply(".beelz admin unmount <player> — force-dismount + clear stuck mount buffs (re-applies grants)");
         ctx.Reply(".beelz admin cleanse <player> [buffNameOrGuid] — strip stuck STATE buffs (invisible/phased/immaterial that survive respawn+relog); omit buff to remove the known ones");
         ctx.Reply(".beelz admin buffs <player> — DIAGNOSTIC: dump buffs + slot overrides to the server log");
@@ -373,24 +374,35 @@ internal static partial class AdminCommands
     // v0.100.0: non-destructive per-player reset — clears bindings + custom loadouts + active transform,
     // KEEPS captures + unlocks. Fills the recovery-ladder gap between "respawn" (keeps everything) and
     // "reset-character"/"wipe" (nukes the collection).
-    [Command("reset-loadouts", description: "Reset a player's slot loadouts (universal + per-weapon + per-form) AND their custom transform loadouts, and end any active transform — KEEPS their captured abilities + transform unlocks. Usage: .beelz admin reset-loadouts <player> CONFIRM", adminOnly: true)]
+    [Command("reset-loadouts", description: "Reset a player's bar to vanilla: clears their slot loadouts (universal, weapon and form sets) and custom transform loadouts, ends any active transform, and clears every Beelzebub override on the live bar — the same layered reset as resetbar, on any player. KEEPS captures, transform unlocks, hotkeys and presets. Usage: .beelz admin reset-loadouts <player> CONFIRM", adminOnly: true)]
     public static void ResetLoadouts(ChatCommandContext ctx, string player, string confirm = null)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
-        var character = EntityExtensions.FindCharacterByName(player, out ulong steamId, out string fullName);
-        if (character == Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
-        if (!string.Equals(confirm?.Trim(), "CONFIRM", StringComparison.OrdinalIgnoreCase))
-        { ctx.Reply($"This clears ALL of {fullName}'s slot/form/transform loadouts (captures + unlocks kept). Re-run: .beelz admin reset-loadouts {player} CONFIRM"); return; }
+        if (!TryBarTarget(ctx, player, out var character, out ulong steamId, out string fullName)) return;
+        if (!Beelzebub.Logic.BarResetInput.IsConfirm(confirm))
+        { ctx.Reply($"This clears ALL of {fullName}'s slot/form/transform loadouts and resets their bar (captures, unlocks and hotkeys kept). Re-run: .beelz admin reset-loadouts {player} CONFIRM"); return; }
 
-        if (Core.AbilityRegistry.GetActiveTransform(steamId) != null)
-            Core.Transforms.Revert(steamId, "admin reset-loadouts");
-        int removed = Core.AbilityRegistry.ClearAllLoadouts(steamId);
-        // Clear the live bar too (online players) so it reverts to vanilla immediately.
-        if (character.Exists())
-            for (int slot = 0; slot <= 7; slot++) { try { Beelzebub.Services.SlotApply.ClearGrant(character, slot); } catch { } }
-        Core.Persistence.RequestSave();
-        ctx.Reply($"Reset {fullName}'s loadouts: removed {removed} slot bind(s) + all per-form & custom transform loadouts, ended any active transform. Captures + unlocks KEPT. (They may need to swap weapons or relog for the live bar to fully refresh.)");
-        Audit(ctx, "reset-loadouts", steamId, fullName, $"removed={removed}");
+        var result = BarResetService.FullReset(character, steamId, fullName, Beelzebub.Logic.BarResetScope.AdminLoadouts);
+        foreach (string line in Beelzebub.Logic.BarResetReply.ForReset(result, Beelzebub.Logic.BarResetScope.AdminLoadouts, fullName))
+            ctx.Reply(line);
+        Audit(ctx, "reset-loadouts", steamId, fullName, $"binds={result.CountOf(Beelzebub.Logic.BarResetStep.ClearSavedBindings)} clean={(result.Clean ? 1 : 0)}");
+    }
+
+    /// <summary>v0.137.0 (bar-reset): the target of a bar command — the named player, or the sender when
+    /// <paramref name="player"/> is empty or "you". False (and a reply) when no single player matches.</summary>
+    static bool TryBarTarget(ChatCommandContext ctx, string player, out Entity character, out ulong steamId, out string name)
+    {
+        if (string.IsNullOrWhiteSpace(player) || string.Equals(player.Trim(), "you", StringComparison.OrdinalIgnoreCase))
+        {
+            character = ctx.Event.SenderCharacterEntity;
+            steamId = character.GetSteamId();
+            name = ctx.Event.User.CharacterName.ToString();
+            return true;
+        }
+        character = EntityExtensions.FindCharacterByName(player, out steamId, out name);
+        if (character != Entity.Null) return true;
+        ctx.Reply($"No (or ambiguous) player match for '{player}'.");
+        return false;
     }
 
     [Command("broadcast-msg", description: "Manage a broadcast message pool. Usage: .beelz admin broadcast-msg <complete|leaderboard> <list|add|remove|edit> [args]. add \"<text>\" · remove <n> · edit <n> \"<text>\" · list. WRAP multi-word messages in \"quotes\". Tokens: %player% (complete), %top%/%count% (leaderboard).", adminOnly: true)]
@@ -1236,31 +1248,18 @@ internal static partial class AdminCommands
         Audit(ctx, "buffs", steamId, fullName, $"total={total} overriders={overriders} charPrefab={charPg._Value} bear={hasBearShapeshift} carrier={hasCarrier}");
     }
 
-    [Command("rebuildbar", description: "Force a player's ability bar to rebuild from scratch via the engine's init-state (fixes a bar frozen at the resolved level, e.g. stuck after a shapeshift). Usage: .beelz admin rebuildbar [player] (default: you)", adminOnly: true)]
-    public static void RebuildBar(ChatCommandContext ctx, string player = null)
+    [Command("rebuildbar", description: "Alias of .beelz admin bar (read-only bar readout; the old init-state toggle is retired). Usage: .beelz admin rebuildbar [player] (default: you)", adminOnly: true)]
+    public static void RebuildBar(ChatCommandContext ctx, string player = null) => Bar(ctx, player);
+
+    [Command("bar", description: "READ-ONLY: show a player's bar slot by slot — the resolved ability, the saved bind, a Beelzebub row on the weapon, override buffs, and slot mods split gear vs other. Offline: their saved sets, transform record and hotkeys. Changes nothing. Usage: .beelz admin bar [player] (default: you)", adminOnly: true)]
+    public static void Bar(ChatCommandContext ctx, string player = null)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
-
-        Entity character;
-        ulong steamId;
-        string fullName;
-        if (string.IsNullOrWhiteSpace(player))
-        {
-            character = ctx.Event.SenderCharacterEntity;
-            steamId = character.GetSteamId();
-            fullName = "you";
-        }
-        else
-        {
-            character = EntityExtensions.FindCharacterByName(player, out steamId, out fullName);
-            if (character == Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
-        }
-
-        bool ok = TransformBuffService.ForceAbilityBarReinit(character);
-        ctx.Reply(ok
-            ? $"Forced an ability-bar rebuild for {fullName}. If the bar still looks wrong, try equipping a weapon to trigger the rebuild, and tell me — the server log has the details."
-            : $"Could not toggle the ability-bar init-state for {fullName} (logged details). Tell me what the server log says under [Beelz] rebuildbar.");
-        Audit(ctx, "rebuildbar", steamId, fullName, $"ok={ok}");
+        if (!TryBarTarget(ctx, player, out var character, out ulong steamId, out string fullName)) return;
+        var readback = BarResetService.ReadBar(character, steamId);
+        foreach (string line in Beelzebub.Logic.BarResetReply.ForBar(readback, fullName)) ctx.Reply(line);
+        if (!readback.Offline)
+            foreach (string line in Beelzebub.Logic.BarResetLog.FormatBar(readback, fullName, steamId)) Core.Log.LogInfo(line);
     }
 
     [Command("respawn", description: "Respawn a player's character AT THEIR CURRENT SPOT — V Rising rebuilds the character fresh, which fixes a stuck/frozen ability bar (the bear-form bug). Inventory, equipment, blood, and progress are preserved (same as dying + respawning). Usage: .beelz admin respawn [player] (default: you)", adminOnly: true)]
@@ -1383,88 +1382,25 @@ internal static partial class AdminCommands
         Audit(ctx, "testmount", steamId, fullName, $"on ok={ok}");
     }
 
-    [Command("purge", description: "LAST-RESORT RECOVERY: wipe ALL of Beelzebub's action-bar integration back to vanilla — clears the deep engine MODIFICATION LEAK (a creature kit stuck on the bar that survives relog/respawn/resetbar), ends + un-parks any transform, and removes every slot/form/weapon/hotkey/loadout binding. KEEPS the player's captured abilities + transform unlocks. Use when a bar is stuck and nothing else worked. Usage: .beelz admin purge <player> CONFIRM", adminOnly: true)]
+    [Command("purge", description: "Reset a player's bar to vanilla AND clear their hotkeys: the same layered reset as reset-loadouts (saved binds, weapon rows, form/orphan sources, every leaked slot modification) plus all hotkeys. KEEPS captures, transform unlocks and presets. For a bar still stuck after resetbar. Usage: .beelz admin purge <player> CONFIRM", adminOnly: true)]
     public static void Purge(ChatCommandContext ctx, string player = null, string confirm = null)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
-
-        Entity character;
-        ulong steamId;
-        string fullName;
-        if (string.IsNullOrWhiteSpace(player))
+        if (!TryBarTarget(ctx, player, out var character, out ulong steamId, out string fullName)) return;
+        if (!Beelzebub.Logic.BarResetInput.IsConfirm(confirm))
         {
-            character = ctx.Event.SenderCharacterEntity;
-            steamId = character.GetSteamId();
-            fullName = "you";
-        }
-        else
-        {
-            character = EntityExtensions.FindCharacterByName(player, out steamId, out fullName);
-            if (character == Entity.Null) { ctx.Reply($"No (or ambiguous) player match for '{player}'."); return; }
-        }
-
-        if (!string.Equals(confirm?.Trim(), "CONFIRM", StringComparison.OrdinalIgnoreCase))
-        {
-            ctx.Reply($"This wipes ALL Beelzebub bar integration for {fullName} back to vanilla (transform, every slot/form/weapon/hotkey/loadout binding, AND the deep engine modification leak) — their captured abilities + transform unlocks are KEPT. Re-run: .beelz admin purge {(string.IsNullOrWhiteSpace(player) ? "you" : player)} CONFIRM");
+            ctx.Reply($"This resets ALL of {fullName}'s Beelzebub bar integration to vanilla (transform, every slot/form/weapon/hotkey/loadout binding, leaked slot mods) — captures and unlocks are KEPT. Re-run: .beelz admin purge {(string.IsNullOrWhiteSpace(player) ? "you" : player)} CONFIRM");
             return;
         }
 
-        if (!character.Exists() || !Core.EntityManager.HasBuffer<AbilityGroupSlotBuffer>(character))
-        {
-            ctx.Reply("That character has no ability-slot buffer (offline or gone). The player must be ONLINE for a purge — it operates on their live character.");
-            return;
-        }
-
-        int keptCaptures = Core.AbilityRegistry.ListFor(steamId).Count;
-        int keptTransforms = Core.AbilityRegistry.ListTransforms(steamId).Count;
-
-        int loadouts = 0, hotkeys = 0, forms = 0, orphans = 0;
-        (int scanned, int removedById, int sourcesDestroyed, int forced) reg = (0, 0, 0, 0);
-        try
-        {
-            // (1) End + UN-PARK any transform (parked = the disconnect-grace record that would otherwise
-            // restore the form on reconnect). Revert with restoreBar:false (purge wants a vanilla bar, not
-            // re-applied grants), then ClearActiveTransform to drop a parked/disconnected record too.
-            try { Core.Transforms.Revert(steamId, "admin purge", restoreBar: false); } catch { /* not transformed */ }
-            Core.AbilityRegistry.ClearActiveTransform(steamId);
-            Core.AbilityRegistry.ClearTransformCooldowns(steamId);
-
-            // (2) Clear every Beelzebub slot binding (universal + per-weapon + per-form), custom transform
-            // loadouts and the slot baseline. KEEPS captures + unlocks.
-            loadouts = Core.AbilityRegistry.ClearAllLoadouts(steamId);
-
-            // (3) Clear all custom hotkeys.
-            foreach (var name in Core.AbilityRegistry.ListHotkeys(steamId).Keys.ToList())
-                if (Core.AbilityRegistry.ClearHotkey(steamId, name)) hotkeys++;
-
-            // (4) Strip any lingering form/shapeshift buffs, then destroy player-owned override SOURCES
-            // (orphaned ReplaceAbilityOnSlotBuff carriers) so their modifications become removable.
-            forms = TransformBuffService.RemoveAllFormsAndShapeshifts(character);
-            orphans = TransformBuffService.DestroyOwnedAbilitySlotOrphans(character);
-
-            // (5) THE DEEP FIX: clear the leaked AbilityGroupSlot modifications at the engine registry
-            // level (pop each by id via RemoveAbilityGroupModificationOnSlot + sweep loose orphans),
-            // then authoritatively re-resolve the bar from equipment + spellbook.
-            reg = TransformBuffService.PurgeAbilitySlotModifications(character);
-
-            Core.Persistence.RequestSave();
-        }
-        catch (Exception ex)
-        {
-            Core.Log.LogError($"[Beelz] purge failed for {fullName}: {ex}");
-            ctx.Reply($"purge failed: {ex.Message} (some steps may have applied — check the server log under [Beelz PURGE]).");
-            return;
-        }
-
-        Core.Log.LogInfo($"[Beelz PURGE] {fullName} ({steamId}): loadouts={loadouts} hotkeys={hotkeys} forms={forms} orphanSources={orphans} | registry scanned={reg.scanned} removedById={reg.removedById} sourcesDestroyed={reg.sourcesDestroyed} forced={reg.forced} | kept captures={keptCaptures} transforms={keptTransforms}.");
-        // VCF's ctx.Reply caps at FixedString512Bytes (~512 bytes) and THROWS on overflow — keep each
-        // line short + ASCII, and split across two replies.
-        ctx.Reply($"Purged {fullName}'s bar to vanilla: ended any transform, cleared {loadouts} bind(s)/{hotkeys} hotkey(s)/{forms} form(s), removed {reg.removedById}+{reg.sourcesDestroyed} leaked slot mod(s) across {reg.scanned} slots. Kept {keptCaptures} abilities + {keptTransforms} transform unlock(s).");
-        ctx.Reply("Now equip/swap a weapon (or relog) to finish patching, then re-slot with .beelz slot. (Log [Beelz PURGE] has before/after dumps; any 'Could not remove modification id' lines are harmless.)");
-        Audit(ctx, "purge", steamId, fullName, $"loadouts={loadouts} hotkeys={hotkeys} forms={forms} orphans={orphans} regRemoved={reg.removedById} sourcesDestroyed={reg.sourcesDestroyed} forced={reg.forced}");
+        var result = BarResetService.FullReset(character, steamId, fullName, Beelzebub.Logic.BarResetScope.Purge);
+        foreach (string line in Beelzebub.Logic.BarResetReply.ForReset(result, Beelzebub.Logic.BarResetScope.Purge, fullName))
+            ctx.Reply(line);
+        Audit(ctx, "purge", steamId, fullName,
+            $"binds={result.CountOf(Beelzebub.Logic.BarResetStep.ClearSavedBindings)} hotkeys={result.CountOf(Beelzebub.Logic.BarResetStep.ClearHotkeys)} popped={result.CountOf(Beelzebub.Logic.BarResetStep.PopSlotMods)} clean={(result.Clean ? 1 : 0)}");
     }
 
-    [Command("clearslotmods", description: "RECOVERY: clear orphaned ability-slot MODIFICATIONS on a player's character (the deep cause of a bar frozen on a creature kit) and force the slots to rebuild from base. Run after .beelz clear if a stuck bar survives everything. Usage: .beelz admin clearslotmods [player] (default: you)", adminOnly: true)]
+    [Command("clearslotmods", description: "LEGACY: (use .beelz admin purge) RECOVERY: clear orphaned ability-slot MODIFICATIONS on a player's character (the deep cause of a bar frozen on a creature kit) and force the slots to rebuild from base. Run after .beelz clear if a stuck bar survives everything. Usage: .beelz admin clearslotmods [player] (default: you)", adminOnly: true)]
     public static void ClearSlotMods(ChatCommandContext ctx, string player = null)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
@@ -1543,7 +1479,7 @@ internal static partial class AdminCommands
         Audit(ctx, "clearslotmods", steamId, fullName, $"slots={slots} withMods={withMods} cleared={modsCleared} dirtied={dirtied}");
     }
 
-    [Command("rebuildslots", description: "RECOVERY (safe): re-sync a player's active ability slots back to their stored base abilities via the engine's slot-setter — fixes a bar stuck on creature/shapeshift abilities. Values only; never destroys entities. Usage: .beelz admin rebuildslots [player] (default: you)", adminOnly: true)]
+    [Command("rebuildslots", description: "LEGACY: (use .beelz admin purge) RECOVERY (safe): re-sync a player's active ability slots back to their stored base abilities via the engine's slot-setter — fixes a bar stuck on creature/shapeshift abilities. Values only; never destroys entities. Usage: .beelz admin rebuildslots [player] (default: you)", adminOnly: true)]
     public static void RebuildSlots(ChatCommandContext ctx, string player = null)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }

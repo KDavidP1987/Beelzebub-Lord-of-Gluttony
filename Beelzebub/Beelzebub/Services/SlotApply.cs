@@ -573,7 +573,7 @@ internal static class SlotApply
 
     /// <summary>The ability-group GUID currently resolved on a slot (AbilityGroupSlot.StateEntity prefab
     /// GUID), or 0 if it can't be read. Same chain the cooldown enforcer walks.</summary>
-    static int CurrentSlotResolvedGuid(Entity character, int slot)
+    internal static int CurrentSlotResolvedGuid(Entity character, int slot)
     {
         try
         {

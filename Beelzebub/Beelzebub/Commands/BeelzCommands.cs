@@ -24,6 +24,7 @@ internal static class BeelzCommands
         ctx.Reply("4. RARE jackpot = DEVOUR: learn ALL of a unit's abilities in one kill (vs one at a time).");
         ctx.Reply("   Some bosses unlock a true TRANSFORM (.beelz transforms / transform / revert) — Dracula, Morgana, Werewolf, Golem, Gargoyle. Customize each form's kit with .beelz tform.");
         ctx.Reply("5. .beelz verbosity <silent|summary|verbose> — tune chat noise.");
+        ctx.Reply("Bar stuck? .beelz resetbar CONFIRM puts it back to vanilla (captures kept); still stuck, ask an admin for .beelz admin bar.");
         ctx.Reply("Full command list: .beelz commands. Group detail: .beelz admin help · .beelz api help · .beelz hotkey help.");
     }
 
@@ -46,7 +47,7 @@ internal static class BeelzCommands
         ctx.Reply(".beelz preset save|load|list|delete <name> — slot loadout presets");
         ctx.Reply(".beelz cast <hotkey|index> — cast a capture on demand (extra hotkeys: .beelz hotkey help)");
         ctx.Reply(".beelz active / .beelz current — what's effectively on your bar right now");
-        ctx.Reply(".beelz clearbar [all|universal|<weapon>|<form>] — clear bound slots (no confirm) · .beelz resetbar CONFIRM — full reset to vanilla · .beelz refresh — re-apply your bar");
+        ctx.Reply(".beelz clearbar [all|universal|<weapon>|<form>] — clear bound slots (no confirm) · .beelz resetbar CONFIRM — full reset to vanilla (still stuck: ask an admin for .beelz admin bar) · .beelz refresh — re-apply your bar");
         ctx.Reply("-- TRANSFORM (player-renderable forms: Dracula, Morgana, Werewolf, Golem, Gargoyle; other units' kits are learned as abilities / Devoured) --");
         ctx.Reply(".beelz transforms / .beelz transform <name> / .beelz revert — your unlocked transformations");
         ctx.Reply(".beelz preview <name> — a transform's abilities · .beelz phase [n] — switch a form's phase kit");
@@ -702,64 +703,28 @@ internal static class BeelzCommands
             $"[BEELZ:event] type=slot-cleared slot={slot}");
     }
 
-    [Command("resetbar", description: "Reset your action bar to its vanilla in-game state: ends any active transformation and removes ALL Beelzebub slot bindings (universal + weapon-specific), so your normal spells and weapon skills return. Keeps your captured abilities and transform unlocks — re-grant anytime with .beelz grant. Requires confirmation: .beelz resetbar CONFIRM")]
+    [Command("resetbar", description: "Reset your action bar to its vanilla in-game state: ends any active transformation, removes ALL your Beelzebub slot bindings (universal, weapon and form sets) and clears every Beelzebub override on the live bar, so your normal spells and weapon skills return without a weapon swap. Keeps your captured abilities, transform unlocks, hotkeys and presets. Requires confirmation: .beelz resetbar CONFIRM")]
     public static void ResetBar(ChatCommandContext ctx, string confirm = null)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
-        // v0.76.0: guard against an accidental wipe of every slot bind — require the CONFIRM token.
-        if (!string.Equals(confirm, "CONFIRM", System.StringComparison.Ordinal))
+        // v0.76.0: guard against an accidental wipe of every slot bind — require the CONFIRM token (v0.137: one rule).
+        if (!Beelzebub.Logic.BarResetInput.IsConfirm(confirm))
         {
-            ctx.Reply("This removes ALL your Beelzebub slot bindings (universal + weapon-specific) and returns your bar to vanilla. Your captured abilities + unlocks are KEPT. Re-run as: .beelz resetbar CONFIRM");
+            ctx.Reply("This removes ALL your Beelzebub slot bindings (universal, weapon and form) and returns your bar to vanilla. Your captured abilities, unlocks and hotkeys are KEPT. Re-run as: .beelz resetbar CONFIRM");
             return;
         }
         Entity character = ctx.Event.SenderCharacterEntity;
         ulong steamId = character.GetSteamId();
+        string name = ctx.Event.User.CharacterName.ToString();
 
-        // 1) End any active transformation first (destroys its carrier/form buff, despawns
-        //    its summons, clears the record). restoreBar:false — we re-resolve the bar below.
-        var (reverted, _) = Core.Transforms.Revert(steamId, "resetbar", restoreBar: false);
+        // Snapshot the bound universal slots first — BCH refreshes its loadout view from one slot-cleared event each.
+        var boundSlots = new List<int>(Core.AbilityRegistry.GetSlots(steamId).Keys);
 
-        // 2) Snapshot which universal slots were bound (for the BCH events), then drop EVERY
-        //    binding (universal + weapon-specific) from the saved loadout.
-        var boundSlots = new System.Collections.Generic.List<int>(Core.AbilityRegistry.GetSlots(steamId).Keys);
-        int cleared = Core.AbilityRegistry.ClearAllSlots(steamId);
+        // v0.137.0 (bar-reset): the ONE layered reset — saved binds, equip rows, override sources, slot mods, readback.
+        var result = BarResetService.FullReset(character, steamId, name, Beelzebub.Logic.BarResetScope.PlayerReset);
+        foreach (string line in Beelzebub.Logic.BarResetReply.ForReset(result, Beelzebub.Logic.BarResetScope.PlayerReset, name))
+            ctx.Reply(line);
 
-        // 3) Wipe the injected overrides off the LIVE bar so it returns to vanilla right now
-        //    (mirrors `.beelz unslot`, which only the player can otherwise do one slot at a time).
-        //    v0.94.0: 0-7 so the primary (0) and ultimate (7) slots are cleared too (v0.91 made them bindable).
-        for (int slot = Beelzebub.Services.AbilityRegistry.PrimarySlot; slot <= Beelzebub.Services.AbilityRegistry.UltimateSlot; slot++)
-            Beelzebub.Services.SlotApply.ClearGrant(character, slot);
-
-        // 4) Hardened teardown: walk the live buff buffer and destroy any lingering
-        //    carrier/form buff OR stuck shapeshift/transformation buff driving the bar
-        //    (catches buffs that TryGetBuff-based removal misses). EquipBuff is left alone.
-        int buffsKilled = Beelzebub.Services.TransformBuffService.RemoveAllFormsAndShapeshifts(character);
-
-        // 5) DEEP FIX: destroy any player-owned ability-slot OVERRIDE SOURCE that isn't gear/
-        //    jewels — including an orphaned carrier/form source that left the BuffBuffer but is
-        //    still injecting abilities and freezing the bar (invisible to the BuffBuffer sweep).
-        int orphanSources = Beelzebub.Services.TransformBuffService.DestroyOwnedAbilitySlotOrphans(character);
-
-        // 6) v0.120.0 AUTHORITATIVE CLEAR: even with every override SOURCE gone, V Rising can keep a slot's
-        //    CACHED resolved value (AbilityGroupSlot.StateEntity) pinned to the form ability — so the bar
-        //    stays stuck on a creature kit and SURVIVES RELOG (the "nothing reset my bar after chaining
-        //    transforms" report). Push every slot to Empty via the engine's own ModifyAbilityGroupOnSlot:
-        //    that clears the cached value and forces a clean re-resolve from equipment + spellbook. Engine
-        //    path, NO slot-entity destruction (the dangling-ref crash only came from destroying entities).
-        Beelzebub.Services.TransformBuffService.ForceResetAbilitySlots(character);
-
-        // Re-resolve the bar to vanilla + re-apply saved grants now that the cache + override sources are gone.
-        Beelzebub.Services.SlotApply.RestoreResolvedGrants(character);
-
-        Core.Persistence.RequestSave();
-
-        string buffNote = (buffsKilled + orphanSources) > 0 ? $", removed {buffsKilled + orphanSources} override source(s)" : "";
-        ctx.Reply(reverted
-            ? $"Transformation ended and your action bar is force-reset to vanilla ({cleared} binding(s){buffNote}). Your captures + unlocks are intact — re-grant with .beelz grant. (Still stuck on a creature kit? Ask an admin to run .beelz admin respawn — it rebuilds your character on the spot and KEEPS your gear, blood & progress. A relog alone will NOT clear it.)"
-            : $"Action bar force-reset to vanilla ({cleared} binding(s) removed{buffNote}). Your captures + unlocks are intact — re-grant with .beelz grant. (Still stuck on a creature kit? Ask an admin to run .beelz admin respawn — it rebuilds your character on the spot and KEEPS your gear, blood & progress. A relog alone will NOT clear it.)");
-
-        // Reuse the existing slot-cleared event per previously-bound slot so BCH refreshes
-        // its loadout view (no new event type → no wire-API change).
         foreach (int slot in boundSlots)
             Core.Chat.SendEvent(character, $"[BEELZ:event] type=slot-cleared slot={slot}");
     }

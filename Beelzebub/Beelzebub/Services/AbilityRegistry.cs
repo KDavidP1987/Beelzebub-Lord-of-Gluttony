@@ -830,7 +830,7 @@ internal sealed class AbilityRegistry
         }
     }
 
-    static bool IsUniversalBucket(WeaponFamily weapon) =>
+    internal static bool IsUniversalBucket(WeaponFamily weapon) =>
         weapon == WeaponFamily.None || weapon == WeaponFamily.Magic;
 
     public bool Add(ulong steamId, int unitPrefabGuid, int abilityPrefabGuid, CaptureSource source)

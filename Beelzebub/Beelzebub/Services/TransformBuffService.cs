@@ -639,6 +639,35 @@ internal static class TransformBuffService
     /// vanilla shapeshift / boss-phase form that left the player wearing a creature bar).
     /// The player's EquipBuff_Weapon is never touched. Returns the number destroyed.
     /// </summary>
+    /// <summary>A buff that can drive the bar: our carrier, a boss-form buff, or any shapeshift/transformation buff —
+    /// never the weapon equip buff. Shared by <see cref="RemoveAllFormsAndShapeshifts"/> and the read-only
+    /// <see cref="ListOverrideBuffs"/> so `admin bar` shows exactly what a reset destroys.</summary>
+    static bool IsBarOverrideBuff(int guid, string name)
+    {
+        if (name.StartsWith("EquipBuff", StringComparison.OrdinalIgnoreCase)) return false; // never the weapon equip buff
+        if (guid == CarrierBuff._Value) return true;
+        foreach (int g in Services.BossFormRegistry.FormBuffGuids) if (g == guid) return true;
+        return name.IndexOf("Shapeshift", StringComparison.OrdinalIgnoreCase) >= 0
+            || name.IndexOf("_Transformation_", StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    /// <summary>v0.137.0 (bar-reset D6): read-only — the prefab names of the buffs on the character that
+    /// <see cref="RemoveAllFormsAndShapeshifts"/> would destroy.</summary>
+    public static List<string> ListOverrideBuffs(Entity character)
+    {
+        var names = new List<string>();
+        if (!character.Exists() || !Core.EntityManager.HasBuffer<BuffBuffer>(character)) return names;
+        var buffs = Core.EntityManager.GetBuffer<BuffBuffer>(character);
+        for (int i = 0; i < buffs.Length; i++)
+        {
+            if (!buffs[i].Entity.Exists()) continue;
+            string name = buffs[i].PrefabGuid.GetPrefabName() ?? "";
+            if (IsBarOverrideBuff(buffs[i].PrefabGuid._Value, name))
+                names.Add(name.Length > 0 ? name : buffs[i].PrefabGuid._Value.ToString());
+        }
+        return names;
+    }
+
     public static int RemoveAllFormsAndShapeshifts(Entity character)
     {
         if (!character.Exists() || !Core.EntityManager.HasBuffer<BuffBuffer>(character)) return 0;
@@ -656,16 +685,7 @@ internal static class TransformBuffService
             int guid = buffs[i].PrefabGuid._Value;
             string name = buffs[i].PrefabGuid.GetPrefabName() ?? "";
 
-            if (name.StartsWith("EquipBuff", StringComparison.OrdinalIgnoreCase)) continue; // never touch the weapon equip buff
-
-            bool ours = guid == CarrierBuff._Value;
-            if (!ours)
-                foreach (int g in Services.BossFormRegistry.FormBuffGuids) { if (g == guid) { ours = true; break; } }
-
-            bool shapeshifty = name.IndexOf("Shapeshift", StringComparison.OrdinalIgnoreCase) >= 0
-                            || name.IndexOf("_Transformation_", StringComparison.OrdinalIgnoreCase) >= 0;
-
-            if (ours || shapeshifty) toDestroy.Add(be);
+            if (IsBarOverrideBuff(guid, name)) toDestroy.Add(be);
         }
 
         int destroyed = 0;

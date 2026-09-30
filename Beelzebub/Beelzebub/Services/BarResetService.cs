@@ -5,6 +5,7 @@ using System.Linq;
 using Beelzebub.Logic;
 using ProjectM;
 using ProjectM.Network;
+using Stunlock.Core;
 using Unity.Entities;
 
 namespace Beelzebub.Services;
@@ -62,27 +63,35 @@ internal sealed class BarResetService : IBarResetOps
         return result;
     }
 
-    /// <summary>Read-only readback of every bar slot: saved bind, injected equip row, gear/other GroupGuid mods.</summary>
+    /// <summary>Read-only readback. Online: every bar slot 0-8 (resolved ability, saved bind, injected equip row,
+    /// gear/other GroupGuid mods) plus the override buffs. Offline: the saved state only (sets, transform, hotkeys).
+    /// It changes nothing.</summary>
     public static BarReadback ReadBar(Entity character, ulong steamId)
     {
-        var readback = new BarReadback();
-        if (!character.Exists()) return readback;
+        string transform = TransformName(steamId);
+        int hotkeys = Core.AbilityRegistry.ListHotkeys(steamId).Count;
+        if (!IsOnline(character))
+            return new BarReadback { Offline = true, SavedSets = SavedSets(steamId), Transform = transform, Hotkeys = hotkeys };
 
+        var readback = new BarReadback
+        {
+            Transform = transform,
+            Hotkeys = hotkeys,
+            OverrideBuffs = TransformBuffService.ListOverrideBuffs(character),
+        };
         var binds = BindOrigins(character, steamId);
         var injected = SlotApply.InjectedRowSlots(character, out var anyRow);
         var mods = TransformBuffService.ReadSlotMods(character, BarMaxSlot).ToDictionary(m => m.Slot);
 
-        var slots = new SortedSet<int>(mods.Keys);
-        foreach (int s in binds.Keys) slots.Add(s);
-        foreach (int s in anyRow) slots.Add(s);
-        foreach (int slot in slots)
+        for (int slot = 0; slot <= BarMaxSlot; slot++)   // the bar only (Business rules 5)
         {
-            if (slot < 0 || slot > BarMaxSlot) continue;   // the bar only (Business rules 5)
             mods.TryGetValue(slot, out var m);
             bool rowsUnknown = injected == null && anyRow.Contains(slot);
+            int resolved = SlotApply.CurrentSlotResolvedGuid(character, slot);
             readback.Slots.Add(new BarSlotReading
             {
                 Slot = slot,
+                Ability = resolved == 0 ? "" : (new PrefabGUID(resolved).GetPrefabName() ?? resolved.ToString()),
                 Bind = binds.TryGetValue(slot, out var b) ? b : "none",
                 Row = injected != null && injected.Contains(slot),
                 Gear = m.Gear,
@@ -94,7 +103,8 @@ internal sealed class BarResetService : IBarResetOps
         return readback;
     }
 
-    /// <summary>slot → the saved set holding a bind for it ("weapon:Sword" before "universal" before "form:Wolf").</summary>
+    /// <summary>slot → the saved set holding a bind for it (the current weapon's set over universal over a form set,
+    /// the order the bar resolves them).</summary>
     static Dictionary<int, string> BindOrigins(Entity character, ulong steamId)
     {
         var d = new Dictionary<int, string>();
@@ -102,9 +112,32 @@ internal sealed class BarResetService : IBarResetOps
             foreach (int s in slots.Keys) d[s] = $"form:{form}";
         foreach (int s in Core.AbilityRegistry.GetSlots(steamId).Keys) d[s] = "universal";
         var weapon = SlotApply.CurrentWeapon(character);
-        if (weapon != WeaponFamily.None)
+        if (!AbilityRegistry.IsUniversalBucket(weapon))
             foreach (int s in Core.AbilityRegistry.GetWeaponSlots(steamId, weapon).Keys) d[s] = $"weapon:{weapon}";
         return d;
+    }
+
+    /// <summary>One entry per saved set that has binds: "universal: slots 2", "weapon:Sword: slots 1,4", "form:Wolf: …".</summary>
+    static List<string> SavedSets(ulong steamId)
+    {
+        static string Line(string set, IEnumerable<int> slots) =>
+            $"{set}: slots {string.Join(",", slots.OrderBy(s => s).Select(s => BarResetReply.SlotLabel(s).Replace("slot ", "")))}";
+        var sets = new List<string>();
+        var universal = Core.AbilityRegistry.GetSlots(steamId);
+        if (universal.Count > 0) sets.Add(Line("universal", universal.Keys));
+        foreach (var (weapon, slots) in Core.AbilityRegistry.AllWeaponSlots(steamId).OrderBy(kv => kv.Key.ToString()))
+            if (slots.Count > 0) sets.Add(Line($"weapon:{weapon}", slots.Keys));
+        foreach (var (form, slots) in Core.AbilityRegistry.AllFormSlots(steamId).OrderBy(kv => kv.Key.ToString()))
+            if (slots.Count > 0) sets.Add(Line($"form:{form}", slots.Keys));
+        return sets;
+    }
+
+    /// <summary>The active or parked transform record's unit prefab name, or "none".</summary>
+    static string TransformName(ulong steamId)
+    {
+        var at = Core.AbilityRegistry.GetActiveTransform(steamId);
+        if (at == null) return "none";
+        return new PrefabGUID(at.UnitPrefabGuid).GetPrefabName() ?? at.UnitPrefabGuid.ToString();
     }
 
     internal static bool IsOnline(Entity character) =>

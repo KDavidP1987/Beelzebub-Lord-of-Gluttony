@@ -114,6 +114,8 @@ public sealed class SlotPurgeDecision
 public sealed class BarSlotReading
 {
     public int Slot { get; init; }
+    /// <summary>The ability the slot resolves to right now (prefab name; "" when unknown) — shown by `admin bar`.</summary>
+    public string Ability { get; init; } = "";
     /// <summary>"none", or the saved set holding a bind for this slot ("universal", "weapon:Sword", "form:Wolf").</summary>
     public string Bind { get; init; } = "none";
     /// <summary>A Beelzebub ReplaceAbilityOnSlotBuff row on the held equip buff.</summary>
@@ -129,6 +131,15 @@ public sealed class BarSlotReading
 public sealed class BarReadback
 {
     public List<BarSlotReading> Slots { get; init; } = new();
+    /// <summary>The target was offline: no live slots were read; SavedSets / Transform / Hotkeys describe the saved state.</summary>
+    public bool Offline { get; init; }
+    /// <summary>Carrier / form / shapeshift buffs on the character that can drive the bar (names).</summary>
+    public List<string> OverrideBuffs { get; init; } = new();
+    /// <summary>One entry per saved set with binds, e.g. "universal: slots 2" or "weapon:Sword: slots 1,4".</summary>
+    public List<string> SavedSets { get; init; } = new();
+    /// <summary>The active or parked transform record ("none" when there is none).</summary>
+    public string Transform { get; init; } = "none";
+    public int Hotkeys { get; init; }
     public bool Unreadable => Slots.Any(s => s.Unreadable);
     public int Binds => Slots.Count(s => !string.Equals(s.Bind, "none", StringComparison.Ordinal));
     public int Rows => Slots.Count(s => s.Row);
@@ -163,6 +174,10 @@ public sealed class BarResetResult
     public BarReadback Readback { get; set; }
     public bool Unreadable { get; set; }
     public bool Saved { get; set; }
+    /// <summary>The target was connected when the reset ran (offline = saved state only).</summary>
+    public bool Online { get; set; }
+    /// <summary>The live components every live step needs were present (see BarResetPlanner.Plan).</summary>
+    public bool LiveReady { get; set; }
     public List<int> Survivors => Readback?.Survivors ?? new List<int>();
     public bool AnyStepFailed => Steps.Any(s => s.Failed);
     public int CountOf(BarResetStep step) => Steps.Where(s => s.Step == step && !s.Failed).Sum(s => s.Count);
@@ -178,7 +193,7 @@ public static class BarResetRunner
     /// run (D12); a SaveBindings that returns false is a failure (D27).</summary>
     public static BarResetResult Run(IBarResetOps ops, IReadOnlyList<BarResetStep> steps, bool online, bool liveReady)
     {
-        var r = new BarResetResult();
+        var r = new BarResetResult { Online = online, LiveReady = online && liveReady };
         foreach (var step in steps ?? Array.Empty<BarResetStep>())
         {
             try

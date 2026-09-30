@@ -336,13 +336,16 @@ Nothing to migrate (probe 3.4).
   - `Beelzebub/Beelzebub/Logic/BarResetInput.cs`
   - `Beelzebub/Beelzebub/Logic/FormBarFill.cs`
   - `Beelzebub/Beelzebub/Logic/EquipRows.cs`
+  - `Beelzebub/Beelzebub/Logic/BarResetReply.cs`
   - `Beelzebub/Beelzebub.Tests/SlotModDumpTests.cs`
   - `Beelzebub/Beelzebub.Tests/BarResetTests.cs`
   - `Beelzebub/Beelzebub.Tests/BarResetLogTests.cs`
   - `Beelzebub/Beelzebub.Tests/BarResetInputTests.cs`
   - `Beelzebub/Beelzebub.Tests/FormBarFillTests.cs`
   - `Beelzebub/Beelzebub.Tests/EquipRowsTests.cs`
+  - `Beelzebub/Beelzebub.Tests/BarResetReplyTests.cs`
   - `Beelzebub/Beelzebub/Services/BarResetService.cs`
+  - `Beelzebub/Beelzebub/Services/AbilityRegistry.cs`
   - `Beelzebub/Beelzebub/Services/SlotApply.cs`
   - `Beelzebub/Beelzebub/Services/PersistenceService.cs`
   - `Beelzebub/Beelzebub/Services/TransformBuffService.cs`
@@ -450,3 +453,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-30 · note · post-audit round 1 of build step 6 (/code-review + Codex on e3ee3e8, dispositions in docs/audits/bar-reset.md): Reapply is rows-only again (pushing the stored base pinned spell slots); the readback covers bar slots 0-8 with character/slot-entity sources counted vanilla (Business rules 5 and D6 updated); PopSlotMods, ClearEquipEntries, EmptyPush and Reapply now ERR instead of silently succeeding; three limitations recorded in Business rules 4 and 6 (+backlog slug mounted-bar-reset)
 - 2026-09-30 · note · post-audit round 2 of build step 6 (Codex on 8fb6f3b): PopSlotMods now ERRs on an unreadable slot anywhere (the readback only covers the bar), on a formatter exception (new `SlotModParse.Failed()`, never a readable empty dump) and on a failed source destroy; D24 unchanged (such a slot is still neither popped nor destroyed)
 - 2026-09-30 · note · post-audit round 3 (final) of build step 6 (Codex READY on 08a2b2f; fresh-context subagent review, 3 advisory): with any unreadable slot the destroy backstop is skipped (its sources are unknown — D24); watched risk for the release-candidate session: a routinely unreadable dump on a non-bar slot would make PopSlotMods ERR on every reset — the `[Beelz PURGE] slot[n] … dump unreadable` warning names it and D30 fails on the ERR, which then becomes a `defect` fix
+- 2026-09-30 · note · build step 7 (discovered, would be an amendment on an in-progress plan): the reply text is a pure module `Logic/BarResetReply.cs` with `BarResetReplyTests` (at most two lines per reset, 480-byte cap, no `<` `>`, primary/ultimate labels — Design › UX), `BarResetResult` carries Online/LiveReady, `AbilityRegistry.IsUniversalBucket` is internal (BindOrigins skips the universal bucket) — the three paths added to Paths walked; `PurgeAbilitySlotModifications` and `ForceAbilityBarReinit` have no callers left and stay until after the release-candidate session (rollback stays a plain revert)

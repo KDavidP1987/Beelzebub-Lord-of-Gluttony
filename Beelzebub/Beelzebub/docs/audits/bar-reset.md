@@ -17,6 +17,14 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
   ReplaceAbilityOnSlotBuff rows (0 primary, 1 Whirlwind, 4 Shockwave); the old resetbar's ClearGrant 0-7 loop stripped
   them → recorded in the plan Log, +D31
 
+### Step 7 · 2026-09-30 · base 0ddf7a2
+- git status: step-7 work in progress only (Logic/BarReset.cs, BarResetReply.cs, the Services readback fields), plus the
+  owner's own `docs/V0136_ABILITY_TEST_PLAN.xlsx` and `_matrix_build.py` (never touched)
+- compile: 0 errors (Release, no deploy); tests 110 passed
+- checker before the rewire: commands FAIL (ClearAllLoadouts / ClearAllSlots / PurgeAbilitySlotModifications /
+  ForceResetAbilitySlots in ResetBar, ResetLoadouts, Purge), text FAIL (ForceAbilityBarReinit call, `.beelz slot`
+  reply, two LEGACY prefixes missing) — the step-7 targets, as planned
+
 ## Post-audit
 ### Steps 1-4 · 2026-09-30 · pure logic, form-bar fill, checker
 - compile / tests: Release build 0 errors; `dotnet test` 97 passed (was 43 before the plan)
@@ -174,3 +182,22 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
   (surrogate input too short; a plant that broke compilation) — input fixed, both replanted and caught.
 - compile / tests: Release build 0 errors (no deploy); `dotnet test` 110 passed on the committed tree
 - Step 6 post-audit CLOSED after 3 rounds.
+
+### Step 7 · 2026-09-30 · commands on the one reset path
+- files: `Commands/BeelzCommands.cs` ResetBar → FullReset(PlayerReset) + BarResetReply (BCH slot-cleared events for the
+  previously bound universal slots kept), help/commands lines point at `admin bar`; `Commands/AdminCommands.cs`
+  ResetLoadouts / Purge → FullReset (Audit lines kept), new `admin bar` (ReadBar + ForBar, `[Beelz BAR]` logged when
+  online), `rebuildbar` = alias of `bar`, `clearslotmods` / `rebuildslots` descriptions start `LEGACY:`, the
+  `.beelz slot` reply gone, admin help recovery block rewritten; `Services/BarResetService.ReadBar` fills Ability,
+  OverrideBuffs (new read-only `TransformBuffService.ListOverrideBuffs`, same predicate as the destroy sweep), Offline /
+  SavedSets / Transform / Hotkeys and always the 9 bar slots; `Logic/BarResetReply.cs` (pure) +
+  `BarResetReplyTests` (11); `docs/COMMANDS.md`
+- compile / tests: Release build 0 errors (no deploy); `dotnet test` 121 passed
+- planted faults (BarResetReply): angle brackets kept, surrogate pair split, problems as separate lines, slot 0 not
+  "primary", not-reachable headline dropped — each failed its test, passed restored (two first attempts did not
+  exercise their test and were fixed — see step 6 round 3)
+- checker: commands ok (20 symbols, 3 FullReset call sites), text ok, auth ok (69 admin commands, 4 reset callers),
+  config ok, paths ok (44), data ok (17), selftest ok (41); docs FAIL until step 8 (BACKLOG.md, recovery guide)
+- left in place on purpose: `TransformBuffService.PurgeAbilitySlotModifications` and `ForceAbilityBarReinit` have no
+  callers now; removed after the release-candidate session so a rollback stays a plain revert
+- not unit-testable here (IL2CPP / VCF): the handlers themselves — verified in the release-candidate session (D6-D8)

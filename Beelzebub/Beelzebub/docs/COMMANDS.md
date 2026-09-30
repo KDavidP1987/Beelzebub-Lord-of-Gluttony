@@ -44,7 +44,7 @@ as you capture more.
 | `.beelz form-grant <index\|id> <form> <slot>` | Bind an ability into a shapeshift form's bar. |
 | `.beelz form-unslot <form> <slot>` | Clear one per-form binding. |
 | `.beelz clearbar [all\|universal\|<weapon>\|<form>]` | Clear a whole bucket of binds (no confirm). |
-| `.beelz resetbar CONFIRM` | Hard-reset your bar to vanilla (captures kept). |
+| `.beelz resetbar CONFIRM` | Reset your bar to vanilla without a weapon swap: ends any transform, clears every universal/weapon/form bind and every Beelzebub override on the live bar. Captures, unlocks, hotkeys and presets kept. Replies "bar is back to vanilla" or names the slots still overridden. Still stuck: ask an admin for `.beelz admin bar`. |
 | `.beelz loadouts` | Show all your slot/weapon/form binds. |
 | `.beelz active` / `.beelz current` | Your live spell bar with per-slot ability info (handy in transforms). |
 | `.beelz cast <index\|id>` | Force-cast a captured ability on demand (respects its cooldown). |
@@ -119,7 +119,7 @@ conditionSource=confirmed).
 | `.beelz admin give-transform\|revoke-transform\|force-transform\|clear-transform <player> [unitGuid]` | Manage a player's renderable forms. |
 | `.beelz admin set-slot\|clear-slot <player> <slot> [abilityGuid]` | Set a player's universal slot bind. Slot **0–7** (0=primary, 7=ultimate). `clear-slot` alias: `unslot`. |
 | `.beelz admin set-weapon-slot\|clear-weapon-slot <player> <weapon> <slot> [abilityGuid]` | Set a player's per-weapon bind (slot 0–7). `clear-weapon-slot` alias: `weapon-unslot`. |
-| `.beelz admin reset-loadouts <player> CONFIRM` | Clear ALL of a player's loadouts (captures kept). Requires `CONFIRM`. |
+| `.beelz admin reset-loadouts <player> CONFIRM` | The `resetbar` reset on any player (online or offline — offline clears the saved binds; the live bar resets on next login). Captures, unlocks, hotkeys kept. Requires `CONFIRM`. |
 
 ## Admin — inspect / broadcasts
 
@@ -136,9 +136,10 @@ conditionSource=confirmed).
 
 | Command | What it does |
 |---|---|
-| `.beelz admin respawn <player>` | Rebuild a stuck bar by respawning in place. |
-| `.beelz admin purge <player> CONFIRM` | **Last resort.** Wipe ALL bar integration to vanilla — incl. the engine-level modification **leak** that survives relog/respawn/resetbar. Ends + un-parks any transform, clears every slot/form/weapon/hotkey binding. Captures + transform unlocks are KEPT; the player re-slots afterward. Player must be online. |
-| `.beelz admin rebuildslots\|clearslotmods\|rebuildbar <player>` | Slot/bar repair levers. |
+| `.beelz admin bar [player]` | **Start here.** Read-only: each bar slot (primary, 1-6, ultimate, 8) with its resolved ability, saved bind, Beelzebub weapon row, gear vs other slot mods, plus override buffs. Offline: the saved sets, transform record and hotkey count. Changes nothing. `rebuildbar` is an alias. |
+| `.beelz admin purge <player> CONFIRM` | The same layered reset as `reset-loadouts`, plus all hotkeys (ends + un-parks any transform, clears every slot/form/weapon/hotkey binding and every leaked slot modification). Captures + transform unlocks are KEPT; the player re-slots afterward. Works offline too (saved state now, live bar on next login). |
+| `.beelz admin respawn <player>` | Respawn in place (keeps progress). Keeps the Steam-keyed binds, so it is not a bar fix on its own. |
+| `.beelz admin rebuildslots\|clearslotmods <player>` | LEGACY slot levers — use `purge`. |
 | `.beelz admin unmount <player>` | Force-dismount + clear stuck mount buffs. |
 | `.beelz admin buffs <player>` | Diagnostic: dump buffs + slot overrides to the log. |
 | `.beelz admin desummon <player>` / `desummon-all` / `revert-all` | Clean up summons / end transforms. |
