@@ -590,6 +590,108 @@ internal static class SlotApply
         catch { return 0; }
     }
 
+    // ── v0.137.0 bar-reset (D7 D31): equip-buff rows for BarResetService — never called by a command directly ──
+
+    /// <summary>True when the character holds a weapon equip buff with a slot-row buffer (part of BarResetService's
+    /// liveReady test).</summary>
+    public static bool HasEquipBuff(Entity character) => TryFindEquipBuff(character, out _, out _);
+
+    /// <summary>The held equip buff's PREFAB rows (the weapon's own kit), or false when the prefab cannot be found.</summary>
+    static bool TryGetPrefabRows(Entity equipBuff, out List<ReplaceAbilityOnSlotBuff> rows)
+    {
+        rows = null;
+        var guid = equipBuff.GetPrefabGuid();
+        if (!Core.PrefabCollectionSystem._PrefabLookupMap.TryGetValue(guid, out Entity prefab) || !prefab.Exists()) return false;
+        rows = new List<ReplaceAbilityOnSlotBuff>();
+        if (!Core.EntityManager.HasBuffer<ReplaceAbilityOnSlotBuff>(prefab)) return true;
+        var b = Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(prefab);
+        for (int i = 0; i < b.Length; i++) rows.Add(b[i]);
+        return true;
+    }
+
+    static List<Beelzebub.Logic.EquipRow> ToEquipRows(IEnumerable<ReplaceAbilityOnSlotBuff> rows)
+    {
+        var list = new List<Beelzebub.Logic.EquipRow>();
+        foreach (var r in rows) list.Add(new Beelzebub.Logic.EquipRow(r.Slot, r.NewGroupId._Value));
+        return list;
+    }
+
+    static List<ReplaceAbilityOnSlotBuff> Copy(DynamicBuffer<ReplaceAbilityOnSlotBuff> buffer)
+    {
+        var list = new List<ReplaceAbilityOnSlotBuff>(buffer.Length);
+        for (int i = 0; i < buffer.Length; i++) list.Add(buffer[i]);
+        return list;
+    }
+
+    /// <summary>
+    /// ClearEquipEntries: remove every INJECTED row on slots 0-7 of the held equip buff — a row the buff's prefab does
+    /// not carry (Logic/EquipRowDiff) — and put back any of the prefab's own rows a pre-0.137 reset stripped. The
+    /// weapon's own rows stay, so its skills never need a swap to come back. No RestoreSlotBaseValue here: the mod pop,
+    /// the Empty push and Reapply own the resolved value. Throws when the prefab's rows cannot be read, so the step is
+    /// an ERR and the reset is never reported clean. Returns the number of injected rows removed.
+    /// </summary>
+    public static int RemoveInjectedRows(Entity character)
+    {
+        if (!TryFindEquipBuff(character, out Entity equipBuff, out string equipName)) return 0;
+        if (!TryGetPrefabRows(equipBuff, out var prefabRows))
+            throw new InvalidOperationException($"prefab rows of {equipName} not found");
+
+        var buffer = Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(equipBuff);
+        var live = Copy(buffer);
+        var prefab = ToEquipRows(prefabRows);
+        var injected = Beelzebub.Logic.EquipRowDiff.InjectedIndices(ToEquipRows(live), prefab);
+        var missing = Beelzebub.Logic.EquipRowDiff.MissingPrefabIndices(ToEquipRows(live), prefab);
+        for (int i = injected.Count - 1; i >= 0; i--) buffer.RemoveAt(injected[i]);
+        foreach (int i in missing) buffer.Add(prefabRows[i]);
+        if (missing.Count > 0)
+            Core.Log.LogInfo($"[Beelz] bar reset: restored {missing.Count} stripped {equipName} row(s) for {character.GetSteamId()}.");
+        return injected.Count;
+    }
+
+    /// <summary>
+    /// Reapply: after the mod pop and the Empty push, set every bar slot 0-8 back through the engine's own setter with
+    /// the held equip buff as the (gear) source — the weapon's row where it has one, else the slot's stored vanilla base
+    /// (spellbook / jewel pick). Every run pops these and re-adds them, so the per-slot gear count stays equal run to
+    /// run. Returns the number of slots set.
+    /// </summary>
+    public static int ReapplyEquipRows(Entity character)
+    {
+        if (!TryFindEquipBuff(character, out Entity equipBuff, out _)) return 0;
+        var rows = Copy(Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(equipBuff));
+        int len = SlotBufferLength(character);
+        var sgm = Core.ServerGameManager;
+        var set = new List<int>();
+        for (int slot = 0; slot <= 8 && slot < len; slot++)
+        {
+            PrefabGUID ability = PrefabGUID.Empty;
+            int bestPriority = int.MinValue;
+            foreach (var r in rows)
+                if (r.Slot == slot && r.Priority >= bestPriority) { ability = r.NewGroupId; bestPriority = r.Priority; }
+            if (ability._Value == 0 && TryGetSlotBase(character, slot, out var baseAbility)) ability = baseAbility;
+            if (ability._Value == 0) continue;
+            sgm.ModifyAbilityGroupOnSlot(equipBuff, character, slot, ability);
+            set.Add(slot);
+        }
+        foreach (int slot in set) MarkSlotDirty(character, slot);
+        if (Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+        return set.Count;
+    }
+
+    /// <summary>Readback: slots 0-7 that carry an injected row on the held equip buff. Null when the buff or its
+    /// prefab rows cannot be read (the caller marks every slot with a row unreadable).</summary>
+    public static HashSet<int> InjectedRowSlots(Entity character, out HashSet<int> anyRowSlots)
+    {
+        anyRowSlots = new HashSet<int>();
+        if (!TryFindEquipBuff(character, out Entity equipBuff, out _)) return null;
+        var live = Copy(Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(equipBuff));
+        foreach (var r in live) anyRowSlots.Add(r.Slot);
+        if (!TryGetPrefabRows(equipBuff, out var prefabRows)) return null;
+        var injected = Beelzebub.Logic.EquipRowDiff.InjectedIndices(ToEquipRows(live), ToEquipRows(prefabRows));
+        var slots = new HashSet<int>();
+        foreach (int i in injected) slots.Add(live[i].Slot);
+        return slots;
+    }
+
     static bool RemoveSlotEntries(DynamicBuffer<ReplaceAbilityOnSlotBuff> buffer, int slot)
     {
         bool removed = false;

@@ -9,6 +9,14 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
 - preflight: PREFLIGHT OK (7 checks, -SkipBuild) before any change
 - dod status: 0/30 verified
 
+### Step 6 · 2026-09-30 · base 5109c36
+- git status: clean except the owner's own `docs/V0136_ABILITY_TEST_PLAN.xlsx` and `_matrix_build.py` (never touched)
+- compile: 0 errors (Release, no deploy)
+- dod status: 0/30 verified (build under the round-5 waiver; items are verified at step 9/10)
+- read before building: `Reference Data/Prefabs/EquipBuff_Weapon_Sword_Base` — the prefab carries the weapon's own
+  ReplaceAbilityOnSlotBuff rows (0 primary, 1 Whirlwind, 4 Shockwave); the old resetbar's ClearGrant 0-7 loop stripped
+  them → recorded in the plan Log, +D31
+
 ## Post-audit
 ### Steps 1-4 · 2026-09-30 · pure logic, form-bar fill, checker
 - compile / tests: Release build 0 errors; `dotnet test` 97 passed (was 43 before the plan)
@@ -89,3 +97,15 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
 - checker: `selftest: ok, 41 cases`
 - Round cap reached (3 of 3, CLAUDE.md › Development procedure step 3). The round-3 fix is verified by its planted fault,
   not by a fourth review; the whole steps 1-9 diff gets a fresh Codex pass in build step 9.
+
+### Step 6 · 2026-09-30 · game-side reset service
+- files: `Services/BarResetService.cs` (IBarResetOps + FullReset / ReadBar / TickLate), `SlotApply` RemoveInjectedRows /
+  ReapplyEquipRows / InjectedRowSlots / HasEquipBuff, `TransformBuffService` PopSlotModifications / ReadSlotMods,
+  `PersistenceService.TrySaveSync` (SaveSync calls it; the catch deletes `state.json.tmp`), `Heartbeat` calls TickLate,
+  `Logic/EquipRows.cs` (+D31)
+- compile / tests: Release build 0 errors (no deploy); `dotnet test` 109 passed (+5 EquipRowsTests)
+- planted faults: D31 vanilla-row-injected, copies-not-counted, slot-range-ignored, null-prefab-acts,
+  missing-not-reported — each failed its test, passed restored
+- checker: config ok, paths ok (41), data ok (17), auth ok; commands/text/docs/audit FAIL as expected until steps 7-9
+- not unit-testable here (IL2CPP): the game calls behind IBarResetOps — verified in the release-candidate session (D6-D10, D30)
+

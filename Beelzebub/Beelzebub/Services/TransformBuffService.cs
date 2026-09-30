@@ -929,6 +929,110 @@ internal static class TransformBuffService
         return (scanned, removedById, sourcesDestroyed, forced);
     }
 
+    /// <summary>(index, entity) of every slot in the character's AbilityGroupSlotBuffer, snapshotted before any registry
+    /// change (removing modifications can be structural and invalidate the live buffer handle).</summary>
+    static List<(int idx, Entity slot)> SnapshotSlots(Entity character)
+    {
+        var slots = new List<(int idx, Entity slot)>();
+        var buf = Core.EntityManager.GetBuffer<AbilityGroupSlotBuffer>(character);
+        for (int i = 0; i < buf.Length; i++) slots.Add((i, buf[i].GroupSlotEntity._Entity));
+        return slots;
+    }
+
+    static string SourcePrefabName(Beelzebub.Logic.SlotModEntry e)
+    {
+        var src = new Entity { Index = e.SourceIndex, Version = e.SourceVersion };
+        return src.Exists() ? (src.GetPrefabGuid().GetPrefabName() ?? "") : "";
+    }
+
+    /// <summary>
+    /// v0.137.0 (bar-reset PopSlotMods, D10 D24): pop EVERY AbilityGroupSlot.GroupGuid modification by id on every slot,
+    /// gear-sourced ones too (Reapply + the one Empty push re-add those, so the gear count is stable run to run). A slot
+    /// whose dump is Unreadable is skipped entirely — nothing popped, nothing destroyed — and the readback reports it.
+    /// A slot that still carries mods after the pop gets its non-gear, non-protected sources destroyed (the engine then
+    /// patches the slot on a later tick). Returns the number of mods popped.
+    /// </summary>
+    public static int PopSlotModifications(Entity character)
+    {
+        if (!character.Exists() || !Core.EntityManager.HasBuffer<AbilityGroupSlotBuffer>(character)) return 0;
+        var sgm = Core.ServerGameManager;
+        var reg = sgm.Modifications;
+        var em = Core.EntityManager;
+        var slots = SnapshotSlots(character);
+        var protectedSet = new HashSet<Entity> { character };
+        foreach (var (_, se) in slots) if (se != Entity.Null) protectedSet.Add(se);
+        bool IsProtected(Beelzebub.Logic.SlotModEntry e) =>
+            protectedSet.Contains(new Entity { Index = e.SourceIndex, Version = e.SourceVersion });
+
+        int popped = 0, destroyed = 0;
+        var toDestroy = new HashSet<Entity>();
+        foreach (var (idx, slot) in slots)
+        {
+            if (slot == Entity.Null || !slot.Exists()) continue;
+            var parse = Beelzebub.Logic.SlotModDump.ParseGroupGuid(FormatEntityModifications(reg, em, slot));
+            var d = Beelzebub.Logic.SlotPurgeDecision.Decide(parse, SourcePrefabName, IsProtected);
+            if (d.Skipped)
+            {
+                Core.Log.LogWarning($"[Beelz PURGE] slot[{idx}] {slot} dump unreadable — slot skipped.");
+                continue;
+            }
+            foreach (int id in d.ModIdsToPop)
+            {
+                try { sgm.RemoveAbilityGroupModificationOnSlot(character, idx, ModificationId.NewId(id)); popped++; }
+                catch (Exception ex) { Core.Log.LogWarning($"[Beelz PURGE] slot[{idx}] remove ModId {id} failed: {ex.Message}"); }
+            }
+            if (d.ModIdsToPop.Count == 0) continue;
+            // Destroy backstop only for a slot the pop did not clear (a readable dump that still has mods).
+            var after = Beelzebub.Logic.SlotModDump.ParseGroupGuid(FormatEntityModifications(reg, em, slot));
+            if (after.Readable && after.HasMods)
+                foreach (var (i, v) in d.SourcesToDestroy) toDestroy.Add(new Entity { Index = i, Version = v });
+        }
+        foreach (Entity src in toDestroy)
+        {
+            if (!src.Exists() || src.Has<DestroyTag>() || protectedSet.Contains(src)) continue;
+            try
+            {
+                string sn = src.GetPrefabGuid().GetPrefabName();
+                DestroyUtility.Destroy(em, src, DestroyDebugReason.TryRemoveBuff);
+                destroyed++;
+                Core.Log.LogInfo($"[Beelz PURGE] destroyed modification source {src} ({(string.IsNullOrEmpty(sn) ? "no prefab" : sn)}).");
+            }
+            catch (Exception ex) { Core.Log.LogWarning($"[Beelz PURGE] destroy source {src} failed: {ex.Message}"); }
+        }
+        if (Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+        return popped;
+    }
+
+    /// <summary>One slot's GroupGuid mods as the bar readback sees them.</summary>
+    public readonly record struct SlotModReading(int Slot, int Gear, int Other, bool Unreadable, List<string> GearSources);
+
+    /// <summary>
+    /// v0.137.0 (bar-reset ReadBar, D6): read-only — every slot's GroupGuid mods split by the gear-source rule
+    /// (Logic/GearRule: EquipBuff* / Item_*), with the gear source prefab names kept. Changes nothing.
+    /// </summary>
+    public static List<SlotModReading> ReadSlotMods(Entity character)
+    {
+        var list = new List<SlotModReading>();
+        if (!character.Exists() || !Core.EntityManager.HasBuffer<AbilityGroupSlotBuffer>(character)) return list;
+        var reg = Core.ServerGameManager.Modifications;
+        foreach (var (idx, slot) in SnapshotSlots(character))
+        {
+            if (slot == Entity.Null || !slot.Exists()) continue;   // no slot entity → nothing can modify it
+            var parse = Beelzebub.Logic.SlotModDump.ParseGroupGuid(FormatEntityModifications(reg, Core.EntityManager, slot));
+            if (!parse.Readable) { list.Add(new SlotModReading(idx, 0, 0, true, new List<string>())); continue; }
+            int gear = 0, other = 0;
+            var names = new List<string>();
+            foreach (var e in parse.Entries)
+            {
+                string n = SourcePrefabName(e);
+                if (Beelzebub.Logic.GearRule.IsGearSource(n)) { gear++; if (!names.Contains(n)) names.Add(n); }
+                else other++;
+            }
+            list.Add(new SlotModReading(idx, gear, other, false, names));
+        }
+        return list;
+    }
+
     /// <summary>
     /// Best-effort wrapper around the engine's <c>ModificationsRegistry.GetFormattedEntityModificationsMessage</c>
     /// — returns the human-readable per-entity modification dump (or "" on any failure). Used by

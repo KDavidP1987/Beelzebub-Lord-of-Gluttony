@@ -187,9 +187,16 @@ internal sealed class PersistenceService
         }
     }
 
-    public void SaveSync()
+    public void SaveSync() => TrySaveSync();
+
+    /// <summary>
+    /// v0.137.0 (bar-reset D27): the synchronous save, reporting the outcome — false when the registry is not up or the
+    /// write failed (logged, and the half-written <c>state.json.tmp</c> removed). A bar reset calls this so a failed
+    /// save is an ERR step, never a silent "clean" that reverts on the next restart.
+    /// </summary>
+    public bool TrySaveSync()
     {
-        if (Core.AbilityRegistry is null) return;
+        if (Core.AbilityRegistry is null) return false;
         try
         {
             var allVerbosity = Core.AbilityRegistry.AllVerbosity();
@@ -304,10 +311,14 @@ internal sealed class PersistenceService
             else File.Move(tmp, StateFilePath);
             _lastSavedUtc = DateTime.UtcNow;
             System.Threading.Interlocked.Exchange(ref _dirty, 0);
+            return true;
         }
         catch (Exception e)
         {
             Core.Log.LogError($"Failed to save state to {StateFilePath}: {e}");
+            try { if (File.Exists(StateFilePath + ".tmp")) File.Delete(StateFilePath + ".tmp"); }
+            catch (Exception ex) { Core.Log.LogWarning($"Could not remove {StateFilePath}.tmp: {ex.Message}"); }
+            return false;
         }
     }
 

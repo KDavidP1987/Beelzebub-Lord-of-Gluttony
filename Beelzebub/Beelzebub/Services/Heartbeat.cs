@@ -108,6 +108,9 @@ public class HeartbeatBehaviour : MonoBehaviour
             // v0.132.0: runtime forcetimeout — expire timed buff instances on the frame they're due.
             try { Services.CastHistoryService.Tick(); }
             catch { /* never let a timeout hiccup kill the heartbeat */ }
+            // v0.137.0 (bar-reset): the one-frame-later re-read after a bar reset (no-op when none is pending).
+            try { Services.BarResetService.TickLate(); }
+            catch { /* never let a late re-read kill the heartbeat */ }
         }
         Heartbeat.Pulse();
     }
