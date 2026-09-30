@@ -23,8 +23,9 @@ public sealed class SlotModParse
 
 public static class SlotModDump
 {
-    // Any "- " line is a field header: the GroupGuid section ends at the next one, whatever component it names.
-    const string FieldPrefix = "- ";
+    // A field header is `- <Component>.<Field>:` (any component); the GroupGuid section ends at the next one. A
+    // bare "- " sub-line is not a header, so it can never end the section early and hide later [ModId lines.
+    static readonly Regex _headerRx = new(@"^- [A-Za-z_]\w*\.[A-Za-z_]\w*:", RegexOptions.Compiled | RegexOptions.CultureInvariant);
     // Exact field token: "- AbilityGroupSlot.GroupGuid:" (never GroupGuidBackup or another GroupGuid* field).
     const string GroupGuidField = "- AbilityGroupSlot.GroupGuid:";
 
@@ -42,7 +43,7 @@ public static class SlotModDump
         foreach (string raw in dump.Split('\n'))
         {
             string t = raw.Trim();
-            if (t.StartsWith(FieldPrefix, StringComparison.Ordinal))
+            if (_headerRx.IsMatch(t))
             {
                 inGroupGuid = t.StartsWith(GroupGuidField, StringComparison.Ordinal);
                 continue;

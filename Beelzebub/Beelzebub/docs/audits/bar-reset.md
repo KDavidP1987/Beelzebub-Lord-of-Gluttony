@@ -58,3 +58,22 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
 - checker: `selftest: ok, 35 cases` (session gains 5 defect trees: not clean, another player's FORM, a step ERR, a
   skipped layer, a truncated part set); `data: ok, 17 artifacts` (new `[Beelz PURGE]` warning row)
 - plan: D1 D2 D4 D16 D24 D29 D30 text tightened to match (Log note, same date)
+
+### Steps 1-4 · review round 2 · 2026-09-30 · reviewed d43cb9e
+- /code-review (medium, d43cb9e), 3 findings, all ACCEPTED:
+  - CR1 ACCEPTED — no selftest defect touched the Purge line, so dropping `_reset_ok` from D8 went unnoticed. New
+    anchored fixtures edit the Purge line only and run 3 only (the driver takes an optional anchor).
+  - CR2 ACCEPTED — D7 took any clean PlayerReset, so a failed run rescued by a retry passed. D7 is now the FIRST
+    PlayerReset (Business rules 7: a failure blocks the release, it is not retried away). Its isolated fixture is
+    covered jointly with D9 (the Wolf line sits between runs 1 and 2) — recorded, not separately planted.
+  - CR3 ACCEPTED — `FieldPrefix = "- "` let an indented `- ` sub-line end the GroupGuid section and hide later
+    `[ModId` lines as Readable. A header is now `^- <Word>.<Word>:`.
+- Codex verdict: REVISE — 2 blocking on d43cb9e, both ACCEPTED:
+  - F1 ACCEPTED — `_reset_ok` built a dict, so `SaveBindings:ERR,SaveBindings:1` overwrote the ERR. The raw tokens are
+    now checked for `:ERR` before any dict. (A separate duplicate-name guard was added, then removed: a planted fault
+    showed it redundant with the raw check — no fixture could fail it alone.)
+  - F2 ACCEPTED — `_RESET` was unanchored, so `clean=10` read as `clean=1`. It now ends `clean=[01](?: slow=1)?\s*$`.
+- compile / tests: `dotnet test` 104 passed (+1)
+- planted faults: D8-without-_reset_ok, D10-without-_reset_ok, unanchored-clean, raw-ERR-allowed — each made selftest
+  FAIL on its defect tree, ok restored; header-is-any-dash-line — failed its new test, passed restored
+- checker: `selftest: ok, 40 cases`

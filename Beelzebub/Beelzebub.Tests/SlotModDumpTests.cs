@@ -89,4 +89,18 @@ public class SlotModDumpTests
         Assert.True(p.Readable);
         Assert.Single(p.Entries);
     }
+
+    [Fact]
+    public void Parse_fails_when_a_dash_sub_line_ends_the_GroupGuid_section()
+    {
+        var p = SlotModDump.ParseGroupGuid(
+            "- AbilityGroupSlot.GroupGuid: PrefabGuid(1) (Base: PrefabGuid(0))" + NL +
+            "    [ModId 5066] Set PrefabGuid(1) from Entity(326806:1) (ok)" + NL +
+            "    - note: stacked" + NL +
+            "    [ModId 5067] Set PrefabGuid(2) from Entity(326807:1) (ok)" + NL);
+        Assert.True(p.Readable);
+        Assert.Equal(2, p.Entries.Count);
+    }
+
+    const string NL = "\n";
 }

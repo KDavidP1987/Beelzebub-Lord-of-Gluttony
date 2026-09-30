@@ -580,7 +580,7 @@ def check_rollback(root: str) -> str:
 _BAR = re.compile(r"\[Beelz BAR\] target=(?P<t>.*?) \((?P<id>\d+)\) binds=(?P<binds>\d+) rows=(?P<rows>\d+) "
                   r"gear=(?P<gear>\d+) other=(?P<other>\w+) slots=(?P<slots>\S*)(?: part=(?P<k>\d+)/(?P<n>\d+))?")
 _RESET = re.compile(r"\[Beelz RESET\] run=(?P<run>\d+) scope=(?P<scope>\w+) target=(?P<t>.*?) \((?P<id>\d+)\) "
-                    r"ms=(?P<ms>\d+) steps=(?P<steps>\S+) survivors=(?P<surv>\S+) clean=(?P<clean>[01])")
+                    r"ms=(?P<ms>\d+) steps=(?P<steps>\S+) survivors=(?P<surv>\S+) clean=(?P<clean>[01])(?: slow=1)?\s*$")
 _LATE = re.compile(r"\[Beelz RESET\] late-survivor target=(?P<t>.*?) \((?P<id>\d+)\) run=(?P<run>\d+) slot=(?P<slot>\d+)")
 _FORM = re.compile(r"\[Beelz FORM\] target=(?P<id>\d+) form=(?P<form>\w+) source=(?P<src>\w+)")
 # every layer a clean live reset must have run, each without :ERR (RevertTransform / ClearHotkeys are conditional)
@@ -590,8 +590,12 @@ _REQUIRED_STEPS = ["ClearSavedBindings", "SaveBindings", "ClearEquipEntries", "D
 
 def _reset_ok(d: dict) -> bool:
     """A reset line that proves a clean run: clean=1, survivors=none, every required step present, no :ERR."""
-    steps = dict(x.split(":", 1) for x in d["steps"].split(",") if ":" in x)
-    return (d["clean"] == "1" and d["surv"] == "none" and "ERR" not in steps.values()
+    tokens = d["steps"].split(",")
+    # checked on the raw tokens, so a duplicate step (SaveBindings:ERR,SaveBindings:1) cannot hide an ERR
+    if any(":" not in t or t.endswith(":ERR") for t in tokens):
+        return False
+    steps = dict(t.split(":", 1) for t in tokens)
+    return (d["clean"] == "1" and d["surv"] == "none"
             and all(r in steps for r in _REQUIRED_STEPS) and steps.get("SaveBindings") == "1")
 
 
@@ -659,14 +663,14 @@ def check_session(root: str, log: str | None) -> str:
 
     # D7 — a PlayerReset with survivors=none, then a clean BAR, and no late-survivor for that run
     d7_idx, d7_run = None, None
-    for i, (kind, d, _) in enumerate(joined):
-        if kind == "reset" and d["scope"] == "PlayerReset" and _reset_ok(d):
-            nxt = next((e for e in joined[i + 1:] if e[0] == "bar"), None)
-            if nxt and nxt[1]["binds"] == "0" and nxt[1]["rows"] == "0" and nxt[1]["other"] == "0":
-                d7_idx, d7_run = i, d["run"]
-                break
+    # the FIRST PlayerReset is the D7 run: a failed reset is not rescued by a later retry (Business rules 7)
+    first = next((i for i, (k, d, _) in enumerate(joined) if k == "reset" and d["scope"] == "PlayerReset"), None)
+    if first is not None and _reset_ok(joined[first][1]):
+        nxt = next((e for e in joined[first + 1:] if e[0] == "bar"), None)
+        if nxt and nxt[1]["binds"] == "0" and nxt[1]["rows"] == "0" and nxt[1]["other"] == "0":
+            d7_idx, d7_run = first, joined[first][1]["run"]
     if d7_idx is None:
-        bad.append("D7: no clean PlayerReset (clean=1, survivors=none, every step, no ERR) followed by a BAR line binds=0 rows=0 other=0")
+        bad.append("D7: the first PlayerReset is not clean (clean=1, survivors=none, every step once, no ERR) or not followed by a BAR line binds=0 rows=0 other=0")
     elif any(k == "late" and d["run"] == d7_run for k, d, _ in joined):
         bad.append(f"D7: late-survivor after reset run {d7_run}")
 
@@ -814,6 +818,7 @@ def _build_good(root: str) -> None:
 
 
 # one planted defect per D30 failure the reviews named; each replaces the FIRST occurrence (the run 1 line)
+# unless a third element names an anchor, in which case the first occurrence at or after the anchor
 SESSION_DEFECTS = [
     ("survivors=none clean=1", "survivors=4 clean=0"),                                     # a survivor
     ("survivors=none clean=1", "survivors=none clean=0"),                                  # not clean
@@ -821,6 +826,15 @@ SESSION_DEFECTS = [
     (",SaveBindings:1,", ",SaveBindings:ERR,"),                                            # a failed step
     ("DestroyOverrideSources:0,PopSlotMods:3,", "DestroyOverrideSources:0,"),              # a skipped layer
     ("slots=4:bind:1:0 part=2/2\n", "\n"),                                                 # a truncated part set
+]
+
+
+SESSION_DEFECTS += [
+    ("SaveBindings:1,", "SaveBindings:ERR,", "scope=Purge"),                               # the Purge line only (D8)
+    ("clean=1", "clean=0", "run=3 "),                                                      # run 3 only (D10)
+    (",SaveBindings:1,", ",SaveBindings:ERR,SaveBindings:1,"),                             # a duplicate step hides ERR
+    ("clean=1", "clean=10"),                                                               # a malformed clean field
+    ("PopSlotMods:3,", "PopSlotMods:ERR,"),                                                # ERR on a non-save step
 ]
 
 
@@ -851,8 +865,15 @@ def _defect(sub: str, root: str, variant: int = 0) -> None:
     elif sub == "rollback":
         sub_in(AUDIT, "rollback: git revert --no-edit ", "rollback: git revert --no-edit 0000000")
     elif sub == "session":
-        a, b = SESSION_DEFECTS[variant]
-        sub_in("session.log", a, b)
+        a, b, *anchor = SESSION_DEFECTS[variant]
+        if anchor:  # replace the first `a` at or after the anchor text
+            path = os.path.join(root, "session.log")
+            text = open(path, encoding="utf-8").read()
+            at = text.index(anchor[0])
+            assert a in text[at:], (sub, a, anchor)
+            open(path, "w", encoding="utf-8", newline="\n").write(text[:at] + text[at:].replace(a, b, 1))
+        else:
+            sub_in("session.log", a, b)
 
 
 def _run_sub(sub: str, root: str) -> tuple[bool, str]:
