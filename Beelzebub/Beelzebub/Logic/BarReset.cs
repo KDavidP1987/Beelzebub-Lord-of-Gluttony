@@ -191,8 +191,11 @@ public static class BarResetRunner
                         r.Steps.Add(new BarResetStepResult(step, ok ? 1 : 0, ok ? null : "not saved"));
                         break;
                     case BarResetStep.Readback:
-                        r.Readback = ops.Readback() ?? new BarReadback();
-                        r.Steps.Add(new BarResetStepResult(step, r.Readback.Survivors.Count, null));
+                        // A null readback is a failed read, never an empty (clean) bar.
+                        r.Readback = ops.Readback();
+                        r.Steps.Add(r.Readback == null
+                            ? new BarResetStepResult(step, 0, "no readback")
+                            : new BarResetStepResult(step, r.Readback.Survivors.Count, null));
                         break;
                     default:
                         r.Steps.Add(new BarResetStepResult(step, Invoke(ops, step), null));
@@ -207,13 +210,23 @@ public static class BarResetRunner
 
         bool readbackRan = r.Readback != null && !r.Steps.Any(s => s.Step == BarResetStep.Readback && s.Failed);
         r.Unreadable = online && (!liveReady || !readbackRan || r.Readback.Unreadable);
-        // An empty plan (unknown scope) never runs SaveBindings, so r.Saved alone makes it an error result.
-        r.Clean = online && liveReady
+        // An empty plan (unknown scope) never runs SaveBindings, so r.Saved alone makes it an error result; a plan
+        // that skipped a live layer (not planner-made) can never be clean either.
+        bool complete = RequiredForClean.All(req => r.Steps.Any(s => s.Step == req));
+        r.Clean = online && liveReady && complete
                   && !r.AnyStepFailed && r.Saved
                   && readbackRan && !r.Unreadable
                   && r.Survivors.Count == 0;
         return r;
     }
+
+    /// <summary>Every layer a clean live reset must have run (RevertTransform and ClearHotkeys are conditional).</summary>
+    public static readonly IReadOnlyList<BarResetStep> RequiredForClean = new[]
+    {
+        BarResetStep.ClearSavedBindings, BarResetStep.SaveBindings, BarResetStep.ClearEquipEntries,
+        BarResetStep.DestroyOverrideSources, BarResetStep.PopSlotMods, BarResetStep.EmptyPush,
+        BarResetStep.Reapply, BarResetStep.Readback,
+    };
 
     static int Invoke(IBarResetOps ops, BarResetStep step) => step switch
     {

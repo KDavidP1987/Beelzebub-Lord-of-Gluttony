@@ -31,10 +31,15 @@ public static class LogSafe
 
 public static class BarResetLog
 {
+    /// <summary>`[Beelz FORM] target=&lt;steamId&gt; form=&lt;name&gt; source=&lt;form|universal|captures|native&gt;` — logged
+    /// AFTER the lock filter, so a bar the locks emptied reports `native`.</summary>
+    public static string FormatForm(ulong steamId, string form, FormBarSource source, int barCount) =>
+        $"[Beelz FORM] target={steamId} form={LogSafe.Field(form)} source={(barCount == 0 ? FormBarSource.Native : source).ToString().ToLowerInvariant()}";
+
     public const int SlowMs = 250;
     public const int MaxBarLineChars = 400;
 
-    /// <summary>`[Beelz RESET] run=&lt;n&gt; scope=&lt;s&gt; target=&lt;name&gt; (&lt;steamId&gt;) ms=&lt;n&gt; steps=&lt;Step:count|Step:ERR&gt; ... survivors=&lt;slots|none|unreadable&gt;[ slow=1]`</summary>
+    /// <summary>`[Beelz RESET] run=&lt;n&gt; scope=&lt;s&gt; target=&lt;name&gt; (&lt;steamId&gt;) ms=&lt;n&gt; steps=&lt;Step:count|Step:ERR&gt; ... survivors=&lt;slots|none|unreadable&gt; clean=&lt;0|1&gt;[ slow=1]`</summary>
     public static string Format(BarResetResult result, BarResetScope scope, string targetName, ulong steamId, long elapsedMs, int runId)
     {
         var sb = new StringBuilder("[Beelz RESET] ");
@@ -48,6 +53,9 @@ public static class BarResetLog
             ? "none"
             : string.Join(",", steps.Select(s => s.Failed ? $"{s.Step}:ERR" : $"{s.Step}:{s.Count}")));
         sb.Append(" survivors=").Append(Survivors(result));
+        // clean=1 only for a Clean result: survivors=none alone does not prove a failed save, a thrown step or an
+        // offline (saved-state only) run were clean.
+        sb.Append(" clean=").Append(result?.Clean == true ? 1 : 0);
         if (elapsedMs > SlowMs) sb.Append(" slow=1");
         return sb.ToString();
     }

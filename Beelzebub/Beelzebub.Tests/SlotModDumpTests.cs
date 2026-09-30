@@ -67,4 +67,26 @@ public class SlotModDumpTests
         Assert.False(p.Readable);
         Assert.Empty(p.Entries);
     }
+
+    [Fact]
+    public void Parse_fails_when_a_GroupGuid_prefixed_field_is_read_as_GroupGuid()
+    {
+        var p = SlotModDump.ParseGroupGuid(
+            "- AbilityGroupSlot.GroupGuidBackup: PrefabGuid(1)\n" +
+            "    [ModId 77] Set PrefabGuid(1) from Entity(2:1) (x)\n");
+        Assert.Empty(p.Entries);
+        Assert.True(p.Readable);
+    }
+
+    [Fact]
+    public void Parse_fails_when_another_component_field_after_GroupGuid_is_read()
+    {
+        var p = SlotModDump.ParseGroupGuid(
+            "- AbilityGroupSlot.GroupGuid: PrefabGuid(1) (Base: PrefabGuid(0))\n" +
+            "    [ModId 5066] Set PrefabGuid(1) from Entity(326806:1) (ok)\n" +
+            "- OtherComponent.Value: 3\n" +
+            "    [ModId 12] Added 3 by something\n");
+        Assert.True(p.Readable);
+        Assert.Single(p.Entries);
+    }
 }

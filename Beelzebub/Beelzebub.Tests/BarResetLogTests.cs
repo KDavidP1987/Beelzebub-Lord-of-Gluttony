@@ -23,7 +23,7 @@ public class BarResetLogTests
         string line = BarResetLog.Format(Result(), BarResetScope.PlayerReset, "PerpetualChaos", 76561198039548286UL, 42, 7);
         Assert.Equal(
             "[Beelz RESET] run=7 scope=PlayerReset target=PerpetualChaos (76561198039548286) ms=42 " +
-            "steps=ClearSavedBindings:3,PopSlotMods:ERR survivors=none", line);
+            "steps=ClearSavedBindings:3,PopSlotMods:ERR survivors=none clean=0", line);
     }
 
     [Fact]
@@ -46,8 +46,8 @@ public class BarResetLogTests
     [Fact]
     public void Format_fails_when_unreadable_prints_survivors_none()
     {
-        Assert.EndsWith("survivors=unreadable", BarResetLog.Format(Result(unreadable: true), BarResetScope.Purge, "x", 1, 5, 1));
-        Assert.EndsWith("survivors=1,4", BarResetLog.Format(Result(false, 1, 4), BarResetScope.Purge, "x", 1, 5, 1));
+        Assert.EndsWith("survivors=unreadable clean=0", BarResetLog.Format(Result(unreadable: true), BarResetScope.Purge, "x", 1, 5, 1));
+        Assert.EndsWith("survivors=1,4 clean=0", BarResetLog.Format(Result(false, 1, 4), BarResetScope.Purge, "x", 1, 5, 1));
     }
 
     [Fact]
@@ -123,5 +123,21 @@ public class BarResetLogTests
     public void FormatLate_carries_target_and_run()
     {
         Assert.Equal("[Beelz RESET] late-survivor target=Bob (5) run=3 slot=4", BarResetLog.FormatLate("Bob", 5, 3, 4));
+    }
+
+    [Fact]
+    public void Format_fails_when_an_unclean_reset_prints_clean_1()
+    {
+        // survivors=none but a failed step (Result() has PopSlotMods:ERR) — never clean=1
+        Assert.Contains("survivors=none clean=0", BarResetLog.Format(Result(), BarResetScope.PlayerReset, "x", 1, 5, 1));
+        var ok = new BarResetResult { Clean = true, Readback = new BarReadback() };
+        Assert.Contains("survivors=none clean=1", BarResetLog.Format(ok, BarResetScope.PlayerReset, "x", 1, 5, 1));
+    }
+
+    [Fact]
+    public void FormatForm_fails_when_an_emptied_bar_is_not_native_or_the_target_is_missing()
+    {
+        Assert.Equal("[Beelz FORM] target=7 form=Wolf source=native", BarResetLog.FormatForm(7, "Wolf", FormBarSource.Universal, 0));
+        Assert.Equal("[Beelz FORM] target=7 form=Wolf source=universal", BarResetLog.FormatForm(7, "Wolf", FormBarSource.Universal, 2));
     }
 }

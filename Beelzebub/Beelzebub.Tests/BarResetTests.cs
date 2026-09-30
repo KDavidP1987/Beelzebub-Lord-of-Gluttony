@@ -114,6 +114,23 @@ public class BarResetTests
     }
 
     [Fact]
+    public void Runner_fails_when_a_null_readback_is_clean()
+    {
+        var ops = new FakeOps { Reading = null };
+        var r = BarResetRunner.Run(ops, BarResetPlanner.Plan(BarResetScope.PlayerReset, true, true, false), true, true);
+        Assert.False(r.Clean);
+        Assert.True(r.Unreadable);
+        Assert.Contains(r.Steps, s => s.Step == S.Readback && s.Failed);
+    }
+
+    [Fact]
+    public void Runner_fails_when_a_plan_without_live_layers_is_clean()
+    {
+        var r = BarResetRunner.Run(new FakeOps(), new[] { S.ClearSavedBindings, S.SaveBindings, S.Readback }, true, true);
+        Assert.False(r.Clean);
+    }
+
+    [Fact]
     public void Runner_is_clean_for_a_good_reset()
     {
         var r = BarResetRunner.Run(new FakeOps(), BarResetPlanner.Plan(BarResetScope.PlayerReset, true, true, false), true, true);

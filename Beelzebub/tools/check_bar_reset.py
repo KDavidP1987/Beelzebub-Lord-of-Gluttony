@@ -580,9 +580,49 @@ def check_rollback(root: str) -> str:
 _BAR = re.compile(r"\[Beelz BAR\] target=(?P<t>.*?) \((?P<id>\d+)\) binds=(?P<binds>\d+) rows=(?P<rows>\d+) "
                   r"gear=(?P<gear>\d+) other=(?P<other>\w+) slots=(?P<slots>\S*)(?: part=(?P<k>\d+)/(?P<n>\d+))?")
 _RESET = re.compile(r"\[Beelz RESET\] run=(?P<run>\d+) scope=(?P<scope>\w+) target=(?P<t>.*?) \((?P<id>\d+)\) "
-                    r"ms=(?P<ms>\d+) steps=(?P<steps>\S+) survivors=(?P<surv>\S+)")
+                    r"ms=(?P<ms>\d+) steps=(?P<steps>\S+) survivors=(?P<surv>\S+) clean=(?P<clean>[01])")
 _LATE = re.compile(r"\[Beelz RESET\] late-survivor target=(?P<t>.*?) \((?P<id>\d+)\) run=(?P<run>\d+) slot=(?P<slot>\d+)")
-_FORM = re.compile(r"\[Beelz FORM\] form=(?P<form>\w+) source=(?P<src>\w+)")
+_FORM = re.compile(r"\[Beelz FORM\] target=(?P<id>\d+) form=(?P<form>\w+) source=(?P<src>\w+)")
+# every layer a clean live reset must have run, each without :ERR (RevertTransform / ClearHotkeys are conditional)
+_REQUIRED_STEPS = ["ClearSavedBindings", "SaveBindings", "ClearEquipEntries", "DestroyOverrideSources",
+                   "PopSlotMods", "EmptyPush", "Reapply", "Readback"]
+
+
+def _reset_ok(d: dict) -> bool:
+    """A reset line that proves a clean run: clean=1, survivors=none, every required step present, no :ERR."""
+    steps = dict(x.split(":", 1) for x in d["steps"].split(",") if ":" in x)
+    return (d["clean"] == "1" and d["surv"] == "none" and "ERR" not in steps.values()
+            and all(r in steps for r in _REQUIRED_STEPS) and steps.get("SaveBindings") == "1")
+
+
+def _join_bar_parts(events: list) -> list:
+    """Joins `part=k/n` BAR continuation lines into one reading; a missing, duplicate, out-of-order, mixed or
+    unterminated part set is a FAIL, never a shorter reading."""
+    joined, open_part = [], None
+    for kind, d, line in events:
+        is_part = kind == "bar" and d.get("k")
+        if open_part is not None and not is_part:
+            raise CheckFail(f"D30: unterminated BAR part set before: {line[:80]}")
+        if not is_part:
+            joined.append((kind, dict(d), line))
+            continue
+        k, n = int(d["k"]), int(d["n"])
+        head = {x: d[x] for x in ("t", "id", "binds", "rows", "gear", "other")}
+        if open_part is None:
+            if k != 1 or n < 2:
+                raise CheckFail(f"D30: BAR part {k}/{n} without part 1: {line[:80]}")
+            open_part = {"head": head, "k": 1, "n": n}
+            joined.append((kind, dict(d, k=None, n=None), line))
+        else:
+            if k != open_part["k"] + 1 or n != open_part["n"] or head != open_part["head"]:
+                raise CheckFail(f"D30: BAR part {k}/{n} out of order or mixed: {line[:80]}")
+            open_part["k"] = k
+            joined[-1][1]["slots"] += "," + d["slots"]
+        if open_part["k"] == open_part["n"]:
+            open_part = None
+    if open_part is not None:
+        raise CheckFail("D30: unterminated BAR part set at the end of the log")
+    return joined
 
 
 def check_session(root: str, log: str | None) -> str:
@@ -599,14 +639,10 @@ def check_session(root: str, log: str | None) -> str:
                     break
     if not events:
         raise CheckFail("no input: no [Beelz BAR/RESET/FORM] lines in the log")
-    mine = [e for e in events if e[0] == "form" or e[1].get("t") == target]
-    # join BAR continuation parts into one reading
-    joined = []
-    for kind, d, line in mine:
-        if kind == "bar" and d.get("k") and int(d["k"]) > 1 and joined and joined[-1][0] == "bar":
-            joined[-1][1]["slots"] += "," + d["slots"]
-            continue
-        joined.append((kind, dict(d), line))
+    # FORM lines carry only the Steam ID: keep those whose ID the target's own BAR/RESET lines printed
+    ids = {d["id"] for k, d, _ in events if k != "form" and d.get("t") == target}
+    mine = [e for e in events if (e[0] == "form" and e[1]["id"] in ids) or (e[0] != "form" and e[1].get("t") == target)]
+    joined = _join_bar_parts(mine)
     bad = []
 
     # D6 — two consecutive identical BAR readings with slots 1 and 4 bound
@@ -624,20 +660,20 @@ def check_session(root: str, log: str | None) -> str:
     # D7 — a PlayerReset with survivors=none, then a clean BAR, and no late-survivor for that run
     d7_idx, d7_run = None, None
     for i, (kind, d, _) in enumerate(joined):
-        if kind == "reset" and d["scope"] == "PlayerReset" and d["surv"] == "none":
+        if kind == "reset" and d["scope"] == "PlayerReset" and _reset_ok(d):
             nxt = next((e for e in joined[i + 1:] if e[0] == "bar"), None)
             if nxt and nxt[1]["binds"] == "0" and nxt[1]["rows"] == "0" and nxt[1]["other"] == "0":
                 d7_idx, d7_run = i, d["run"]
                 break
     if d7_idx is None:
-        bad.append("D7: no PlayerReset with survivors=none followed by a BAR line binds=0 rows=0 other=0")
+        bad.append("D7: no clean PlayerReset (clean=1, survivors=none, every step, no ERR) followed by a BAR line binds=0 rows=0 other=0")
     elif any(k == "late" and d["run"] == d7_run for k, d, _ in joined):
         bad.append(f"D7: late-survivor after reset run {d7_run}")
 
     # D8 — a Purge with survivors=none and ClearHotkeys:1
-    if not any(k == "reset" and d["scope"] == "Purge" and d["surv"] == "none" and "ClearHotkeys:1" in d["steps"]
+    if not any(k == "reset" and d["scope"] == "Purge" and _reset_ok(d) and "ClearHotkeys:1" in d["steps"].split(",")
                for k, d, _ in joined):
-        bad.append("D8: no Purge line with survivors=none and ClearHotkeys:1")
+        bad.append("D8: no clean Purge line (clean=1, survivors=none, every step, no ERR) with ClearHotkeys:1")
 
     # D9 — Wolf enters with its native kit after the D7 reset
     if d7_idx is not None and not any(k == "form" and d["form"] == "Wolf" and d["src"] == "native"
@@ -650,7 +686,7 @@ def check_session(root: str, log: str | None) -> str:
     triples, streak = [], []
     for i, (kind, d, _) in enumerate(joined):
         if kind == "reset":
-            if d["scope"] != "PlayerReset":
+            if d["scope"] != "PlayerReset" or not _reset_ok(d):
                 streak = []
                 continue
             nxt = next((e for e in joined[i + 1:] if e[0] in ("bar", "reset")), None)
@@ -659,7 +695,7 @@ def check_session(root: str, log: str | None) -> str:
                 triples.append(streak[-3:])
     ok10 = any(all(b is not None and b["other"] == "0" for b in t) and len({b["gear"] for b in t}) == 1 for t in triples)
     if not ok10:
-        bad.append("D10: no three consecutive PlayerReset runs with other=0 and a constant gear= after each")
+        bad.append("D10: no three consecutive clean PlayerReset runs with other=0 and a constant gear= after each")
     if bad:
         raise CheckFail("; ".join(bad))
     return "session: ok D6 D7 D8 D9 D10"
@@ -685,17 +721,21 @@ def _git(root: str, *args: str) -> str:
     return r.stdout.strip()
 
 
+_STEPS = "SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,EmptyPush:6,Reapply:0,Readback:0"
 GOOD_SESSION = "\n".join([
-    "[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (7) binds=2 rows=2 gear=2 other=0 slots=1:bind:1:0,4:bind:1:0",
-    "[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (7) binds=2 rows=2 gear=2 other=0 slots=1:bind:1:0,4:bind:1:0",
-    "[Info   :Beelzebub] [Beelz RESET] run=1 scope=PlayerReset target=PerpetualChaos (7) ms=12 steps=ClearSavedBindings:2 survivors=none",
+    "[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (7) binds=2 rows=2 gear=2 other=0 slots=1:bind:1:0 part=1/2",
+    "[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (7) binds=2 rows=2 gear=2 other=0 slots=4:bind:1:0 part=2/2",
+    "[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (7) binds=2 rows=2 gear=2 other=0 slots=1:bind:1:0 part=1/2",
+    "[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (7) binds=2 rows=2 gear=2 other=0 slots=4:bind:1:0 part=2/2",
+    "[Info   :Beelzebub] [Beelz FORM] target=8 form=Wolf source=captures",
+    "[Info   :Beelzebub] [Beelz RESET] run=1 scope=PlayerReset target=PerpetualChaos (7) ms=12 steps=ClearSavedBindings:2," + _STEPS + " survivors=none clean=1",
     "[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (7) binds=0 rows=0 gear=9 other=0 slots=none",
-    "[Info   :Beelzebub] [Beelz FORM] form=Wolf source=native",
-    "[Info   :Beelzebub] [Beelz RESET] run=2 scope=PlayerReset target=PerpetualChaos (7) ms=9 steps=ClearSavedBindings:0 survivors=none",
+    "[Info   :Beelzebub] [Beelz FORM] target=7 form=Wolf source=native",
+    "[Info   :Beelzebub] [Beelz RESET] run=2 scope=PlayerReset target=PerpetualChaos (7) ms=9 steps=ClearSavedBindings:0," + _STEPS + " survivors=none clean=1",
     "[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (7) binds=0 rows=0 gear=9 other=0 slots=none",
-    "[Info   :Beelzebub] [Beelz RESET] run=3 scope=PlayerReset target=PerpetualChaos (7) ms=9 steps=ClearSavedBindings:0 survivors=none",
+    "[Info   :Beelzebub] [Beelz RESET] run=3 scope=PlayerReset target=PerpetualChaos (7) ms=9 steps=ClearSavedBindings:0," + _STEPS + " survivors=none clean=1",
     "[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (7) binds=0 rows=0 gear=9 other=0 slots=none",
-    "[Info   :Beelzebub] [Beelz RESET] run=4 scope=Purge target=PerpetualChaos (7) ms=9 steps=ClearSavedBindings:2,ClearHotkeys:1 survivors=none",
+    "[Info   :Beelzebub] [Beelz RESET] run=4 scope=Purge target=PerpetualChaos (7) ms=9 steps=ClearSavedBindings:2,ClearHotkeys:1," + _STEPS + " survivors=none clean=1",
     "",
 ])
 
@@ -773,7 +813,18 @@ def _build_good(root: str) -> None:
     _git(root, "commit", "-q", "-m", "docs(audit): rollback range")
 
 
-def _defect(sub: str, root: str) -> None:
+# one planted defect per D30 failure the reviews named; each replaces the FIRST occurrence (the run 1 line)
+SESSION_DEFECTS = [
+    ("survivors=none clean=1", "survivors=4 clean=0"),                                     # a survivor
+    ("survivors=none clean=1", "survivors=none clean=0"),                                  # not clean
+    ("[Beelz FORM] target=7 form=Wolf", "[Beelz FORM] target=9 form=Wolf"),                # only another player's FORM
+    (",SaveBindings:1,", ",SaveBindings:ERR,"),                                            # a failed step
+    ("DestroyOverrideSources:0,PopSlotMods:3,", "DestroyOverrideSources:0,"),              # a skipped layer
+    ("slots=4:bind:1:0 part=2/2\n", "\n"),                                                 # a truncated part set
+]
+
+
+def _defect(sub: str, root: str, variant: int = 0) -> None:
     def sub_in(rel: str, a: str, b: str) -> None:
         p = os.path.join(root, rel)
         s = open(p, encoding="utf-8").read()
@@ -800,8 +851,8 @@ def _defect(sub: str, root: str) -> None:
     elif sub == "rollback":
         sub_in(AUDIT, "rollback: git revert --no-edit ", "rollback: git revert --no-edit 0000000")
     elif sub == "session":
-        sub_in("session.log", "run=1 scope=PlayerReset target=PerpetualChaos (7) ms=12 steps=ClearSavedBindings:2 survivors=none",
-               "run=1 scope=PlayerReset target=PerpetualChaos (7) ms=12 steps=ClearSavedBindings:2 survivors=4")
+        a, b = SESSION_DEFECTS[variant]
+        sub_in("session.log", a, b)
 
 
 def _run_sub(sub: str, root: str) -> tuple[bool, str]:
@@ -836,14 +887,15 @@ def check_selftest(_root: str) -> str:
             if not passed:
                 bad.append(f"{sub} on the good tree: {line}")
 
-            defect = os.path.join(tmp, f"{sub}-defect")
-            os.makedirs(defect)
-            _build_good(defect)
-            _defect(sub, defect)
-            passed, line = _run_sub(sub, defect)
-            cases += 1
-            if passed:
-                bad.append(f"{sub} ok on its defect tree")
+            for v in range(len(SESSION_DEFECTS) if sub == "session" else 1):
+                defect = os.path.join(tmp, f"{sub}-defect-{v}")
+                os.makedirs(defect)
+                _build_good(defect)
+                _defect(sub, defect, v)
+                passed, line = _run_sub(sub, defect)
+                cases += 1
+                if passed:
+                    bad.append(f"{sub} ok on its defect tree {v}")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
         if os.path.isdir(tmp):  # git object files can be read-only on Windows

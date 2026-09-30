@@ -23,8 +23,10 @@ public sealed class SlotModParse
 
 public static class SlotModDump
 {
-    const string FieldPrefix = "- AbilityGroupSlot.";
-    const string GroupGuidField = "- AbilityGroupSlot.GroupGuid";
+    // Any "- " line is a field header: the GroupGuid section ends at the next one, whatever component it names.
+    const string FieldPrefix = "- ";
+    // Exact field token: "- AbilityGroupSlot.GroupGuid:" (never GroupGuidBackup or another GroupGuid* field).
+    const string GroupGuidField = "- AbilityGroupSlot.GroupGuid:";
 
     // Anchored and single-line: no nested quantifiers, so no catastrophic backtracking on hostile text.
     static readonly Regex _entryRx = new(

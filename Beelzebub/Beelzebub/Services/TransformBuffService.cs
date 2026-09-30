@@ -855,7 +855,14 @@ internal static class TransformBuffService
             if (slot == Entity.Null || !slot.Exists()) continue;
             scanned++;
             string before = FormatEntityModifications(reg, em, slot);
-            if (string.IsNullOrEmpty(before) || !GroupGuidStillModified(before)) continue;
+            if (string.IsNullOrEmpty(before)) continue;
+            if (GroupGuidUnreadable(before))
+            {
+                // v0.137.0 (bar-reset D24): an unreadable dump is never popped nor harvested for sources.
+                Core.Log.LogWarning($"[Beelz PURGE] slot[{idx}] {slot} dump unreadable — slot skipped:\n{before}");
+                continue;
+            }
+            if (!GroupGuidStillModified(before)) continue;
 
             hadMods.Add((idx, slot));
             Core.Log.LogInfo($"[Beelz PURGE] slot[{idx}] {slot} BEFORE:\n{before}");
@@ -915,7 +922,7 @@ internal static class TransformBuffService
         {
             if (!slot.Exists()) continue;
             string after = FormatEntityModifications(reg, em, slot);
-            Core.Log.LogInfo($"[Beelz PURGE] slot[{idx}] {slot} AFTER:\n{(GroupGuidStillModified(after) ? after : "(GroupGuid reverted to base)")}");
+            Core.Log.LogInfo($"[Beelz PURGE] slot[{idx}] {slot} AFTER:\n{(GroupGuidStillModified(after) || GroupGuidUnreadable(after) ? after : "(GroupGuid reverted to base)")}");
         }
 
         Core.Log.LogInfo($"[Beelz PURGE] {character}: scanned {scanned} slot(s), {hadMods.Count} had GroupGuid mods, removed {removedById} by id, destroyed {sourcesDestroyed} source(s), force-cleared {forced} slot(s).");
@@ -945,18 +952,24 @@ internal static class TransformBuffService
     // v0.137.0 (bar-reset D1): the dump is parsed by the pure, unit-tested Logic/SlotModDump — GroupGuid field
     // only (never CopyCooldown / SpellModsSource). These thin adapters keep the purge call sites unchanged.
 
-    /// <summary>True if the dump shows at least one modification under the AbilityGroupSlot.GroupGuid field.</summary>
+    /// <summary>True if the dump is readable and shows at least one modification under the AbilityGroupSlot.GroupGuid
+    /// field. An unreadable dump is NOT "still modified" — it never feeds the destroy backstop (D24).</summary>
     static bool GroupGuidStillModified(string dump)
     {
         var p = Beelzebub.Logic.SlotModDump.ParseGroupGuid(dump);
-        return p.HasMods || !p.Readable;
+        return p.Readable && p.HasMods;
     }
+
+    /// <summary>True if a GroupGuid `[ModId` line does not match the known shape (bar-reset D24).</summary>
+    static bool GroupGuidUnreadable(string dump) => !Beelzebub.Logic.SlotModDump.ParseGroupGuid(dump).Readable;
 
     /// <summary>Parse the modification ids under the AbilityGroupSlot.GroupGuid field only.</summary>
     static List<int> ParseGroupGuidModIds(string dump)
     {
         var ids = new List<int>();
-        foreach (var e in Beelzebub.Logic.SlotModDump.ParseGroupGuid(dump).Entries) ids.Add(e.ModId);
+        var p = Beelzebub.Logic.SlotModDump.ParseGroupGuid(dump);
+        if (!p.Readable) return ids;   // D24: nothing actionable from an unreadable dump
+        foreach (var e in p.Entries) ids.Add(e.ModId);
         return ids;
     }
 
@@ -964,7 +977,9 @@ internal static class TransformBuffService
     static List<Entity> ParseGroupGuidSources(string dump)
     {
         var list = new List<Entity>();
-        foreach (var e in Beelzebub.Logic.SlotModDump.ParseGroupGuid(dump).Entries)
+        var p = Beelzebub.Logic.SlotModDump.ParseGroupGuid(dump);
+        if (!p.Readable) return list;   // D24: nothing actionable from an unreadable dump
+        foreach (var e in p.Entries)
             list.Add(new Entity { Index = e.SourceIndex, Version = e.SourceVersion });
         return list;
     }

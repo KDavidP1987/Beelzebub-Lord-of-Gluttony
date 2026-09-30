@@ -272,9 +272,9 @@ internal static class ShapeshiftAbilityService
         // captures (the v0.48.0 behavior) so the feature is still useful before per-form curation.
         var form = FormForBuff(formBuffGuid, new PrefabGUID(formBuffGuid).GetPrefabName());   // v0.80.0: name-aware (skins)
         var perSlot = BuildFormBar(steamId, form, out bool fromFormBucket, out var source);
-        Core.Log.LogInfo($"[Beelz FORM] form={form} source={source.ToString().ToLowerInvariant()}");   // v0.137.0 (bar-reset D30)
         // v0.135.0: incompatibility locks — drop suppressed abilities (the slot keeps its native move).
         perSlot = ExclusionService.FilterBar(character, "form", perSlot);
+        Core.Log.LogInfo(BarResetLog.FormatForm(steamId, form.ToString(), source, perSlot.Count));   // v0.137.0 (bar-reset D4, D30)
         bool restored = RestoreBarSnapshot(buffEntity);
         if (perSlot.Count == 0)
         {
