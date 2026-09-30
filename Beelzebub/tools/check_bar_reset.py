@@ -636,10 +636,10 @@ def _join_bar_parts(events: list) -> list:
     return joined
 
 
-def check_session(root: str, log: str | None) -> str:
+def check_session(root: str, log: str | None, target: str = "PerpetualChaos") -> str:
+    # target: the tester character's in-game name as the log prints it (the fixture's character may carry another name)
     if not log or not os.path.isfile(log) or os.path.getsize(log) == 0:
         raise CheckFail(f"no input: session log missing or empty ({log})")
-    target = "PerpetualChaos"
     events = []
     with open(log, encoding="utf-8", errors="replace") as f:
         for line in f:
@@ -965,13 +965,14 @@ def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("sub", choices=sorted(list(CHECKS) + ["session", "all"]))
     ap.add_argument("log", nargs="?", help="session: the copied LogOutput.log")
+    ap.add_argument("--target", default="PerpetualChaos", help="session: the tester character's name in the log")
     ap.add_argument("--root", default=os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     a = ap.parse_args(argv)
     subs = ALL if a.sub == "all" else [a.sub]
     rc = 0
     for sub in subs:
         try:
-            line = check_session(a.root, a.log) if sub == "session" else CHECKS[sub](a.root)
+            line = check_session(a.root, a.log, a.target) if sub == "session" else CHECKS[sub](a.root)
         except CheckFail as e:
             line, rc = f"{sub}: FAIL {e}", 1
         print(line)
