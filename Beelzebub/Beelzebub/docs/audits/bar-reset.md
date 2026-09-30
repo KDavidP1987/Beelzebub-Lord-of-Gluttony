@@ -291,3 +291,10 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
 - re-check with the merged output (all three command kinds: checker, pwsh -LogCheck, dotnet test):
   `harness: ok, 32 faults, 26 clauses (not run: D1 D2 D3 D4 D11 D12 D13 D14 D15 D16 D17 D18 D19 D22 D23 D24 D26 D27 D28 D29 D31), patch tree f4a3529b2df93662f06e7d39ebd1f6186b350d81`
   — the full run repeats in build step 9. `selftest: ok, 41 cases`, `audit: ok`.
+
+### Step 5 · review round 3 (final) · 2026-09-30 · reviewed 60199ce
+- Codex verdict: CLEAN — F1 and F2 confirmed fixed; no blocking findings.
+  - A1 (advisory) REJECTED — anchor the summary regex with `^…$`: the record quotes each harness summary inside a
+    bullet and backticks, so an anchored match would reject the real records; the status and the tree are already
+    read from one line, and the last such line wins.
+- Step 5 post-audit closed.
