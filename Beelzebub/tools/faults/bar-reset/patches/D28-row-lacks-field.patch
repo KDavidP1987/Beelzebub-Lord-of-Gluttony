@@ -7,6 +7,6 @@ diff --git a/Beelzebub/Beelzebub/docs/dod/bar-reset.md b/Beelzebub/Beelzebub/doc
  - artifact: [Beelz RESET] line · owner: the server · location: `BepInEx/LogOutput.log` · retention: overwritten at the next boot · copies: one prior boot in `LogOutput.1.log` (D16)
 -- artifact: [Beelz BAR] line · owner: the server · location: `BepInEx/LogOutput.log` · retention: overwritten at the next boot · copies: one prior boot in `LogOutput.1.log` (D6)
 +- artifact: [Beelz BAR] line · owner: the server · location: `BepInEx/LogOutput.log` · copies: one prior boot in `LogOutput.1.log` (D6)
+ - artifact: [Beelz REAPPLY] line · owner: the server · location: `BepInEx/LogOutput.log` · retention: overwritten at the next boot · copies: one prior boot in `LogOutput.1.log` (assumption S-2)
  - artifact: [Beelz FORM] line · owner: the server · location: `BepInEx/LogOutput.log` · retention: overwritten at the next boot · copies: one prior boot in `LogOutput.1.log` (D4, D30)
  - artifact: [Beelz PURGE] unreadable-dump warning · owner: the server · location: `BepInEx/LogOutput.log` · retention: overwritten at the next boot · copies: one prior boot in `LogOutput.1.log` (D1, D24)
- - artifact: fault fixture logs · owner: the repo · location: `Beelzebub/tools/faults/bar-reset/logs/` · retention: tracked, kept with the plan · copies: one (D21, D30)
