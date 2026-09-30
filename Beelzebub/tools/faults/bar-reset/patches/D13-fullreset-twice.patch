@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Commands/AdminCommands.cs b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
 --- a/Beelzebub/Beelzebub/Commands/AdminCommands.cs
 +++ b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
-@@ -1397,7 +1397,7 @@
+@@ -1411,7 +1411,7 @@
              return;
          }
  

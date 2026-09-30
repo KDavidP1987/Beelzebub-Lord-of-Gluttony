@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -234,7 +234,7 @@
+@@ -268,7 +268,7 @@
          // that skipped a live layer (not planner-made) can never be clean either.
          bool complete = RequiredForClean.All(req => r.Steps.Any(s => s.Step == req));
          r.Clean = online && liveReady && complete
@@ -10,7 +10,7 @@ diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/B
                    && readbackRan && !r.Unreadable
                    && r.Survivors.Count == 0 && r.OverrideBuffsLeft.Count == 0;
          return r;
-@@ -243,7 +243,7 @@
+@@ -277,7 +277,7 @@
      /// <summary>Every layer a clean live reset must have run (RevertTransform and ClearHotkeys are conditional).</summary>
      public static readonly IReadOnlyList<BarResetStep> RequiredForClean = new[]
      {

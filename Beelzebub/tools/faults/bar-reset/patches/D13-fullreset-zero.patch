@@ -10,7 +10,7 @@ diff --git a/Beelzebub/Beelzebub/Commands/AdminCommands.cs b/Beelzebub/Beelzebub
          foreach (string line in Beelzebub.Logic.BarResetReply.ForReset(result, Beelzebub.Logic.BarResetScope.AdminLoadouts, fullName))
              ctx.Reply(line);
          Audit(ctx, "reset-loadouts", steamId, fullName, $"binds={result.CountOf(Beelzebub.Logic.BarResetStep.ClearSavedBindings)} clean={(result.Clean ? 1 : 0)}");
-@@ -1397,7 +1397,7 @@
+@@ -1411,7 +1411,7 @@
              return;
          }
  

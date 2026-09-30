@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/docs/dod/bar-reset.md b/Beelzebub/Beelzebub/docs/dod/bar-reset.md
 --- a/Beelzebub/Beelzebub/docs/dod/bar-reset.md
 +++ b/Beelzebub/Beelzebub/docs/dod/bar-reset.md
-@@ -195,7 +195,7 @@
+@@ -198,7 +198,7 @@
  - artifact: audit record · owner: the repo · location: `docs/audits/bar-reset.md` · retention: tracked, append-only · copies: one (D21, D22)
  - artifact: selftest fixture trees · owner: check_bar_reset.py · location: a `tempfile.mkdtemp()` dir · retention: deleted before selftest exits, also on failure · copies: one per run (D29)
  - artifact: fault-harness output · owner: the repo · location: pasted into `docs/audits/bar-reset.md` · retention: tracked, append-only · copies: one per run (D21)

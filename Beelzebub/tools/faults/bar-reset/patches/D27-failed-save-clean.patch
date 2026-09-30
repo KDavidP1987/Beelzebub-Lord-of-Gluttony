@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -207,8 +207,8 @@
+@@ -241,8 +241,8 @@
                  {
                      case BarResetStep.SaveBindings:
                          bool ok = ops.SaveBindings();

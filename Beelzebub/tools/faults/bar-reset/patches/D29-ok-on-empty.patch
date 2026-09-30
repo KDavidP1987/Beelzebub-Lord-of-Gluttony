@@ -1,12 +1,12 @@
 diff --git a/Beelzebub/tools/check_bar_reset.py b/Beelzebub/tools/check_bar_reset.py
 --- a/Beelzebub/tools/check_bar_reset.py
 +++ b/Beelzebub/tools/check_bar_reset.py
-@@ -638,7 +638,7 @@
- 
- def check_session(root: str, log: str | None) -> str:
+@@ -639,7 +639,7 @@
+ def check_session(root: str, log: str | None, target: str = "PerpetualChaos") -> str:
+     # target: the tester character's in-game name as the log prints it (the fixture's character may carry another name)
      if not log or not os.path.isfile(log) or os.path.getsize(log) == 0:
 -        raise CheckFail(f"no input: session log missing or empty ({log})")
 +        return "session: ok D6 D7 D8 D9 D10"
-     target = "PerpetualChaos"
      events = []
      with open(log, encoding="utf-8", errors="replace") as f:
+         for line in f:

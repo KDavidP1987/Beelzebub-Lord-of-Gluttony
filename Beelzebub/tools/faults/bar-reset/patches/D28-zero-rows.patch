@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/docs/dod/bar-reset.md b/Beelzebub/Beelzebub/docs/dod/bar-reset.md
 --- a/Beelzebub/Beelzebub/docs/dod/bar-reset.md
 +++ b/Beelzebub/Beelzebub/docs/dod/bar-reset.md
-@@ -176,7 +176,7 @@
+@@ -177,7 +177,7 @@
    `Beelzebub.Tests` only (the test csproj links `Logic/*.cs` one way).
  
  ## Design
