@@ -394,7 +394,8 @@ def check_auth(root: str) -> str:
         cls = re.search(r"\bclass\s+(\w+)", strip_cs(raw))
         in_admin = bool(cls and cls.group(1) in admin_classes)
         for a in command_attrs(raw):
-            params = [p.strip().split()[-1].split("=")[0].strip() for p in a["params"].split(",")[1:] if p.strip()]
+            # the name is the last word BEFORE any default: `string player = null` -> player (not "null")
+            params = [p.split("=")[0].split()[-1] for p in a["params"].split(",")[1:] if p.split("=")[0].strip()]
             targets = any(p in ("player", "target") for p in params)
             if in_admin:
                 admin_count += 1

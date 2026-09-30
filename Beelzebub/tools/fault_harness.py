@@ -199,6 +199,31 @@ def planted_reason(command: str, out: str) -> str | None:
     return None
 
 
+def snapshot(files: list[tuple[str, bool]]) -> dict[str, bytes | None]:
+    """The exact bytes of every file a patch touches (None = absent), taken before it is planted."""
+    out = {}
+    for rel, _ in files:
+        p = os.path.join(ROOT, rel)
+        out[rel] = open(p, "rb").read() if os.path.isfile(p) else None
+    return out
+
+
+def restore(before: dict[str, bytes | None]) -> None:
+    """After `git apply -R`: put back the exact bytes. Under core.autocrlf `git apply` rewrites line endings, which
+    git then reports as a modified file (the `paths` check and the next patch's clean-tree check would see it).
+    Only a line-ending difference is repaired; any other difference means the revert failed."""
+    for rel, data in before.items():
+        p = os.path.join(ROOT, rel)
+        now = open(p, "rb").read() if os.path.isfile(p) else None
+        if now == data:
+            continue
+        if data is None or now is None or now.replace(b"\r\n", b"\n") != data.replace(b"\r\n", b"\n"):
+            raise HarnessFail(f"git apply -R did not restore {rel}")
+        with open(p, "wb") as f:
+            f.write(data)
+    run(["git", "update-index", "-q", "--refresh"])
+
+
 def gate_open(gate: str) -> bool:
     if gate == "rollback":  # D22 can only run once the release commit and its rollback line exist
         code, out = run([sys.executable, "Beelzebub/tools/check_bar_reset.py", "rollback"])
@@ -331,11 +356,13 @@ def harness(a) -> int:
         if code != 0:
             failures.append(f"{e['id']}: patch does not apply: {out.strip()[:160]}")
             continue
+        before = snapshot(files)
         git("apply", ppath)
         try:
             code, out = run(argv_of(e["command"]))
         finally:
             git("apply", "-R", ppath)
+            restore(before)
         why = "exits 0 while planted" if code == 0 else planted_reason(e["command"], out)
         if why:
             failures.append(f"{e['id']}: {why}")

@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/tools/check_bar_reset.py b/Beelzebub/tools/check_bar_reset.py
 --- a/Beelzebub/tools/check_bar_reset.py
 +++ b/Beelzebub/tools/check_bar_reset.py
-@@ -752,7 +752,7 @@
+@@ -753,7 +753,7 @@
  
  GOOD_FILES = {
      f"{PROJ}/Config/Settings.cs":
