@@ -29,6 +29,15 @@ public class BarResetReplyTests
     }
 
     [Fact]
+    public void ForReset_fails_when_a_surviving_override_buff_is_not_named()
+    {
+        var bar = new BarReadback { Slots = { new BarSlotReading { Slot = 0 } }, OverrideBuffs = { "AB_Shapeshift_Wolf_Buff" } };
+        var lines = BarResetReply.ForReset(Run(BarResetScope.PlayerReset, reading: bar), BarResetScope.PlayerReset, "P");
+        Assert.Contains("NOT clean", lines[0]);
+        Assert.Contains("override buff still on: AB_Shapeshift_Wolf_Buff", lines[1]);
+    }
+
+    [Fact]
     public void ForReset_fails_when_a_not_reachable_bar_is_reported_clean()
     {
         var lines = BarResetReply.ForReset(Run(BarResetScope.PlayerReset, liveReady: false), BarResetScope.PlayerReset, "P");
@@ -174,7 +183,7 @@ public class BarResetReplyTests
         public BarReadback Reading;
         int Hit(S s) => Throw == s ? throw new InvalidOperationException($"{s} boom") : 1;
         public int RevertTransform() => Hit(S.RevertTransform);
-        public int ClearSavedBindings() => Hit(S.ClearSavedBindings);
+        public int ClearSavedBindings(bool keepTransformRecord) => Hit(S.ClearSavedBindings);
         public int ClearHotkeys() => Hit(S.ClearHotkeys);
         public bool SaveBindings() => SaveResult;
         public int ClearEquipEntries() => Hit(S.ClearEquipEntries);

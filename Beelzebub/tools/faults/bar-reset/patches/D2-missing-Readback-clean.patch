@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -223,8 +223,8 @@
+@@ -228,8 +228,8 @@
              }
          }
  
@@ -12,7 +12,7 @@ diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/B
          // An empty plan (unknown scope) never runs SaveBindings, so r.Saved alone makes it an error result; a plan
          // that skipped a live layer (not planner-made) can never be clean either.
          bool complete = RequiredForClean.All(req => r.Steps.Any(s => s.Step == req));
-@@ -240,7 +240,7 @@
+@@ -245,7 +245,7 @@
      {
          BarResetStep.ClearSavedBindings, BarResetStep.SaveBindings, BarResetStep.ClearEquipEntries,
          BarResetStep.DestroyOverrideSources, BarResetStep.PopSlotMods, BarResetStep.EmptyPush,
@@ -20,4 +20,4 @@ diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/B
 +        BarResetStep.Reapply,
      };
  
-     static int Invoke(IBarResetOps ops, BarResetStep step) => step switch
+     static int Invoke(IBarResetOps ops, BarResetStep step, BarResetResult r) => step switch

@@ -151,7 +151,9 @@ public sealed class BarReadback
 public interface IBarResetOps
 {
     int RevertTransform();
-    int ClearSavedBindings();
+    /// <param name="keepTransformRecord">true when this run's RevertTransform failed: the active/parked transform
+    /// record is kept so a retry plans RevertTransform again (its record-driven cleanup is not lost).</param>
+    int ClearSavedBindings(bool keepTransformRecord);
     int ClearHotkeys();
     /// <summary>Writes state.json synchronously; false when the write failed (never swallowed as success).</summary>
     bool SaveBindings();
@@ -179,11 +181,14 @@ public sealed class BarResetResult
     /// <summary>The live components every live step needs were present (see BarResetPlanner.Plan).</summary>
     public bool LiveReady { get; set; }
     public List<int> Survivors => Readback?.Survivors ?? new List<int>();
+    /// <summary>Override buffs (carrier / form / shapeshift) still on the character at the readback — each one can
+    /// re-patch the bar through its own ReplaceAbilityOnSlotBuff, which no slot reading shows.</summary>
+    public List<string> OverrideBuffsLeft => Readback?.OverrideBuffs ?? new List<string>();
     public bool AnyStepFailed => Steps.Any(s => s.Failed);
     public int CountOf(BarResetStep step) => Steps.Where(s => s.Step == step && !s.Failed).Sum(s => s.Count);
 
     /// <summary>Clean only when: a non-empty plan ran with no failed step, the binds were saved, the live bar was
-    /// reachable and readable, and the readback shows no overridden slot.</summary>
+    /// reachable and readable, and the readback shows no overridden slot and no override buff.</summary>
     public bool Clean { get; set; }
 }
 
@@ -213,7 +218,7 @@ public static class BarResetRunner
                             : new BarResetStepResult(step, r.Readback.Survivors.Count, null));
                         break;
                     default:
-                        r.Steps.Add(new BarResetStepResult(step, Invoke(ops, step), null));
+                        r.Steps.Add(new BarResetStepResult(step, Invoke(ops, step, r), null));
                         break;
                 }
             }
@@ -231,7 +236,7 @@ public static class BarResetRunner
         r.Clean = online && liveReady && complete
                   && !r.AnyStepFailed && r.Saved
                   && readbackRan && !r.Unreadable
-                  && r.Survivors.Count == 0;
+                  && r.Survivors.Count == 0 && r.OverrideBuffsLeft.Count == 0;
         return r;
     }
 
@@ -243,10 +248,11 @@ public static class BarResetRunner
         BarResetStep.Reapply, BarResetStep.Readback,
     };
 
-    static int Invoke(IBarResetOps ops, BarResetStep step) => step switch
+    static int Invoke(IBarResetOps ops, BarResetStep step, BarResetResult r) => step switch
     {
         BarResetStep.RevertTransform => ops.RevertTransform(),
-        BarResetStep.ClearSavedBindings => ops.ClearSavedBindings(),
+        BarResetStep.ClearSavedBindings => ops.ClearSavedBindings(
+            keepTransformRecord: r.Steps.Any(s => s.Step == BarResetStep.RevertTransform && s.Failed)),
         BarResetStep.ClearHotkeys => ops.ClearHotkeys(),
         BarResetStep.ClearEquipEntries => ops.ClearEquipEntries(),
         BarResetStep.DestroyOverrideSources => ops.DestroyOverrideSources(),

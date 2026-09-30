@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/tools/check_bar_reset.py b/Beelzebub/tools/check_bar_reset.py
 --- a/Beelzebub/tools/check_bar_reset.py
 +++ b/Beelzebub/tools/check_bar_reset.py
-@@ -781,7 +781,7 @@
+@@ -784,7 +784,7 @@
          + "".join(f'\n    [Command("x{i}", adminOnly: true, description: "filler {i}")]\n'
                    f'    public static void X{i}(ChatCommandContext ctx, string player = null) {{ }}\n' for i in range(46))
          + "}\n",

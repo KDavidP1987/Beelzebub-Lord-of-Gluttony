@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
+--- a/Beelzebub/Beelzebub/Logic/BarReset.cs
++++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
+@@ -252,7 +252,7 @@
+     {
+         BarResetStep.RevertTransform => ops.RevertTransform(),
+         BarResetStep.ClearSavedBindings => ops.ClearSavedBindings(
+-            keepTransformRecord: r.Steps.Any(s => s.Step == BarResetStep.RevertTransform && s.Failed)),
++            keepTransformRecord: false),
+         BarResetStep.ClearHotkeys => ops.ClearHotkeys(),
+         BarResetStep.ClearEquipEntries => ops.ClearEquipEntries(),
+         BarResetStep.DestroyOverrideSources => ops.DestroyOverrideSources(),

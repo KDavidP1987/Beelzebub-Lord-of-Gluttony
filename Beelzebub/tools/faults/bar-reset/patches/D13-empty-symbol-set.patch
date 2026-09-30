@@ -1,12 +1,14 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -150,17 +150,6 @@
+@@ -150,19 +150,6 @@
  
  public interface IBarResetOps
  {
 -    int RevertTransform();
--    int ClearSavedBindings();
+-    /// <param name="keepTransformRecord">true when this run's RevertTransform failed: the active/parked transform
+-    /// record is kept so a retry plans RevertTransform again (its record-driven cleanup is not lost).</param>
+-    int ClearSavedBindings(bool keepTransformRecord);
 -    int ClearHotkeys();
 -    /// <summary>Writes state.json synchronously; false when the write failed (never swallowed as success).</summary>
 -    bool SaveBindings();

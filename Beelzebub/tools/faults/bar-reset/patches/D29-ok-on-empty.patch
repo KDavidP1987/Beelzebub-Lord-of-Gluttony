@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/tools/check_bar_reset.py b/Beelzebub/tools/check_bar_reset.py
 --- a/Beelzebub/tools/check_bar_reset.py
 +++ b/Beelzebub/tools/check_bar_reset.py
-@@ -635,7 +635,7 @@
+@@ -638,7 +638,7 @@
  
  def check_session(root: str, log: str | None) -> str:
      if not log or not os.path.isfile(log) or os.path.getsize(log) == 0:

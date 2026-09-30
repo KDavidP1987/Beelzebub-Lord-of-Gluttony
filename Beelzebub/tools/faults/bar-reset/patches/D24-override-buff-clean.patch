@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
+--- a/Beelzebub/Beelzebub/Logic/BarReset.cs
++++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
+@@ -236,7 +236,7 @@
+         r.Clean = online && liveReady && complete
+                   && !r.AnyStepFailed && r.Saved
+                   && readbackRan && !r.Unreadable
+-                  && r.Survivors.Count == 0 && r.OverrideBuffsLeft.Count == 0;
++                  && r.Survivors.Count == 0;
+         return r;
+     }
+ 

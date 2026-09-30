@@ -651,7 +651,7 @@ internal static class TransformBuffService
         var buffs = Core.EntityManager.GetBuffer<BuffBuffer>(character);
         for (int i = 0; i < buffs.Length; i++)
         {
-            if (!buffs[i].Entity.Exists()) continue;
+            if (!buffs[i].Entity.Exists() || buffs[i].Entity.Has<DestroyTag>()) continue;   // queued: destroyed this frame
             string name = buffs[i].PrefabGuid.GetPrefabName() ?? "";
             if (IsBarOverrideBuff(buffs[i].PrefabGuid._Value, name))
                 names.Add(name.Length > 0 ? name : buffs[i].PrefabGuid._Value.ToString());

@@ -160,17 +160,25 @@ internal sealed class BarResetService : IBarResetOps
 
     public int RevertTransform()
     {
-        var (reverted, _) = Core.Transforms.Revert(_steamId, $"bar reset ({_scope})", restoreBar: false);
+        // the transform-ended wire reason keeps the pre-0.137 tokens BCH already sees (resetbar / admin-reset-loadouts / admin-purge)
+        string reason = _scope switch
+        {
+            BarResetScope.Purge => "admin purge",
+            BarResetScope.AdminLoadouts => "admin reset-loadouts",
+            _ => "resetbar",
+        };
+        var (reverted, _) = Core.Transforms.Revert(_steamId, reason, restoreBar: false);
         return reverted ? 1 : 0;
     }
 
-    public int ClearSavedBindings()
+    public int ClearSavedBindings(bool keepTransformRecord)
     {
         int n = Core.AbilityRegistry.ClearAllLoadouts(_steamId);   // universal + weapon + form binds, transform loadouts, baseline
         // An online character whose live bar is unreachable gets no RevertTransform, so its record is KEPT: dropping it
         // would leave the form buff and summons with nothing left to end them. The reset is not clean (Unreadable) and
         // the reply sends the admin to relog/respawn and re-run, which reverts it.
-        if (!_notLive && Core.AbilityRegistry.GetActiveTransform(_steamId) is not null)
+        // A RevertTransform that failed this run keeps the record too: the retry must plan the revert again.
+        if (!_notLive && !keepTransformRecord && Core.AbilityRegistry.GetActiveTransform(_steamId) is not null)
         {
             Core.AbilityRegistry.ClearActiveTransform(_steamId);    // an active or parked (disconnect-grace) record
             n++;
@@ -186,7 +194,13 @@ internal sealed class BarResetService : IBarResetOps
         return n;
     }
 
-    public bool SaveBindings() => Core.Persistence.TrySaveSync();
+    /// <summary>A failed synchronous write also marks the store dirty, so the heartbeat's save retries it.</summary>
+    public bool SaveBindings()
+    {
+        if (Core.Persistence.TrySaveSync()) return true;
+        Core.Persistence.RequestSave();
+        return false;
+    }
 
     public int ClearEquipEntries() => SlotApply.RemoveInjectedRows(RequireEquipBuff());
 
@@ -196,7 +210,13 @@ internal sealed class BarResetService : IBarResetOps
 
     public int PopSlotMods() => TransformBuffService.PopSlotModifications(_character);
 
-    public int EmptyPush() => TransformBuffService.ForceResetAbilitySlots(RequireEquipBuff());
+    /// <summary>A slot whose Empty push threw is an ERR for the step, never a short count that reads as success.</summary>
+    public int EmptyPush()
+    {
+        int pushed = TransformBuffService.ForceResetAbilitySlots(RequireEquipBuff());
+        if (pushed < BarMaxSlot + 1) throw new InvalidOperationException($"pushed {pushed}/{BarMaxSlot + 1} slots");
+        return pushed;
+    }
 
     public int Reapply() => SlotApply.ReapplyEquipRows(RequireEquipBuff());
 

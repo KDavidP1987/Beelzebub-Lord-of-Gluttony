@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarResetReply.cs b/Beelzebub/Beelzebub/Logic/BarResetReply.cs
+--- a/Beelzebub/Beelzebub/Logic/BarResetReply.cs
++++ b/Beelzebub/Beelzebub/Logic/BarResetReply.cs
+@@ -57,7 +57,7 @@
+         };
+         if (r.Survivors.Count > 0)
+             problems.Add($"still overridden: {Slots(r.Survivors)} — {ladder}");
+-        if (r.Online && r.LiveReady && r.OverrideBuffsLeft.Count > 0)
++        if (false)
+             problems.Add($"override buff still on: {string.Join(", ", r.OverrideBuffsLeft.Take(3).Select(b => Text(b, MaxPrefabName)))} — {ladder}");
+ 
+         if (problems.Count > 0) lines.Add(string.Join("; ", problems));

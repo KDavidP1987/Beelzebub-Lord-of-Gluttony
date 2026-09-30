@@ -662,6 +662,7 @@ internal static class SlotApply
         int len = SlotBufferLength(character);
         var sgm = Core.ServerGameManager;
         var set = new List<int>();
+        var before = new Dictionary<int, int>();
         for (int slot = 0; slot <= 8 && slot < len; slot++)
         {
             PrefabGUID ability = PrefabGUID.Empty;
@@ -669,11 +670,15 @@ internal static class SlotApply
             foreach (var r in rows)
                 if (r.Slot == slot && r.Priority >= bestPriority) { ability = r.NewGroupId; bestPriority = r.Priority; }
             if (ability._Value == 0) continue;
+            before[slot] = CurrentSlotResolvedGuid(character, slot);
             sgm.ModifyAbilityGroupOnSlot(equipBuff, character, slot, ability);
             set.Add(slot);
         }
         foreach (int slot in set) MarkSlotDirty(character, slot);
         if (Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+        // assumption S-2's diagnostic: if the weapon skills do not come back (D7), this names the slot that did not take
+        foreach (int slot in set)
+            Core.Log.LogInfo($"[Beelz REAPPLY] slot={slot} before={before[slot]} after={CurrentSlotResolvedGuid(character, slot)}");
         return set.Count;
     }
 

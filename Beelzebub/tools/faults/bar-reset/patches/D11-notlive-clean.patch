@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -224,11 +224,11 @@
+@@ -229,11 +229,11 @@
          }
  
          bool readbackRan = r.Readback != null && !r.Steps.Any(s => s.Step == BarResetStep.Readback && s.Failed);
@@ -14,4 +14,4 @@ diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/B
 +        r.Clean = online && complete
                    && !r.AnyStepFailed && r.Saved
                    && readbackRan && !r.Unreadable
-                   && r.Survivors.Count == 0;
+                   && r.Survivors.Count == 0 && r.OverrideBuffsLeft.Count == 0;

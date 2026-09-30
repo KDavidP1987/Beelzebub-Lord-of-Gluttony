@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -240,7 +240,7 @@
+@@ -245,7 +245,7 @@
      {
          BarResetStep.ClearSavedBindings, BarResetStep.SaveBindings, BarResetStep.ClearEquipEntries,
          BarResetStep.DestroyOverrideSources, BarResetStep.PopSlotMods, BarResetStep.EmptyPush,
@@ -9,4 +9,4 @@ diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/B
 +        BarResetStep.Readback,
      };
  
-     static int Invoke(IBarResetOps ops, BarResetStep step) => step switch
+     static int Invoke(IBarResetOps ops, BarResetStep step, BarResetResult r) => step switch

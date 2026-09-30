@@ -500,6 +500,55 @@
    ]
   },
   {
+   "id": "D12-failed-revert-drops-record",
+   "item": "D12",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "a fake ops whose RevertTransform throws is not told to keep the transform record"
+   ],
+   "patch": "D12-failed-revert-drops-record.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "keepTransformRecord: r.Steps.Any(s => s.Step == BarResetStep.RevertTransform && s.Failed)",
+     "replace": "keepTransformRecord: false"
+    }
+   ]
+  },
+  {
+   "id": "D24-override-buff-clean",
+   "item": "D24",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "a fake readback listing a surviving override buff produces Clean=true"
+   ],
+   "patch": "D24-override-buff-clean.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "&& r.Survivors.Count == 0 && r.OverrideBuffsLeft.Count == 0;",
+     "replace": "&& r.Survivors.Count == 0;"
+    }
+   ]
+  },
+  {
+   "id": "D24-override-buff-unnamed",
+   "item": "D24",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "a fake readback listing a surviving override buff",
+    "or a reply that does not name it"
+   ],
+   "patch": "D24-override-buff-unnamed.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarResetReply.cs",
+     "find": "if (r.Online && r.LiveReady && r.OverrideBuffsLeft.Count > 0)",
+     "replace": "if (false)"
+    }
+   ]
+  },
+  {
    "id": "D24-unreadable-clean",
    "item": "D24",
    "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
@@ -769,7 +818,7 @@
    "edits": [
     {
      "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
-     "find": "public interface IBarResetOps\n{\n    int RevertTransform();\n    int ClearSavedBindings();\n    int ClearHotkeys();\n    /// <summary>Writes state.json synchronously; false when the write failed (never swallowed as success).</summary>\n    bool SaveBindings();\n    int ClearEquipEntries();\n    int DestroyOverrideSources();\n    int PopSlotMods();\n    int EmptyPush();\n    int Reapply();\n    BarReadback Readback();\n}\n",
+     "find": "public interface IBarResetOps\n{\n    int RevertTransform();\n    /// <param name=\"keepTransformRecord\">true when this run's RevertTransform failed: the active/parked transform\n    /// record is kept so a retry plans RevertTransform again (its record-driven cleanup is not lost).</param>\n    int ClearSavedBindings(bool keepTransformRecord);\n    int ClearHotkeys();\n    /// <summary>Writes state.json synchronously; false when the write failed (never swallowed as success).</summary>\n    bool SaveBindings();\n    int ClearEquipEntries();\n    int DestroyOverrideSources();\n    int PopSlotMods();\n    int EmptyPush();\n    int Reapply();\n    BarReadback Readback();\n}\n",
      "replace": "public interface IBarResetOps\n{\n}\n"
     }
    ]

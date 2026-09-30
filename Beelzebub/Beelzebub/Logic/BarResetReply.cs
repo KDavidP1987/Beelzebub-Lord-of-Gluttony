@@ -49,13 +49,16 @@ public static class BarResetReply
             .Select(s => s.Step.ToString()).Distinct().ToList();
         if (failed.Count > 0) problems.Add($"failed: {string.Join(", ", failed)} (see [Beelz RESET] in the server log)");
         if (r.Online && r.LiveReady && r.Unreadable) problems.Add(CouldNotRead);
+        string ladder = scope switch
+        {
+            BarResetScope.PlayerReset => "ask an admin for .beelz admin bar",
+            BarResetScope.Purge => $"if they stay after a relog: .beelz admin reset-character {who} CONFIRM-RESET",
+            _ => $"run .beelz admin bar {who}; if they stay: .beelz admin purge {who} CONFIRM",
+        };
         if (r.Survivors.Count > 0)
-            problems.Add($"still overridden: {Slots(r.Survivors)} — " + scope switch
-            {
-                BarResetScope.PlayerReset => "ask an admin for .beelz admin bar",
-                BarResetScope.Purge => $"if they stay after a relog: .beelz admin reset-character {who} CONFIRM-RESET",
-                _ => $"run .beelz admin bar {who}; if they stay: .beelz admin purge {who} CONFIRM",
-            });
+            problems.Add($"still overridden: {Slots(r.Survivors)} — {ladder}");
+        if (r.Online && r.LiveReady && r.OverrideBuffsLeft.Count > 0)
+            problems.Add($"override buff still on: {string.Join(", ", r.OverrideBuffsLeft.Take(3).Select(b => Text(b, MaxPrefabName)))} — {ladder}");
 
         if (problems.Count > 0) lines.Add(string.Join("; ", problems));
         else if (self && r.Online) lines.Add(AskAdmin);

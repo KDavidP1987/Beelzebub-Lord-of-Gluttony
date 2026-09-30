@@ -164,6 +164,30 @@ public class BarResetTests
         Assert.Equal(new[] { 4 }, r.Survivors);
     }
 
+    [Fact]
+    public void Runner_fails_when_a_surviving_override_buff_is_clean()
+    {
+        var ops = new FakeOps { Reading = new BarReadback { Slots = { new BarSlotReading { Slot = 0 } }, OverrideBuffs = { "AB_Shapeshift_Wolf_Buff" } } };
+        var r = BarResetRunner.Run(ops, BarResetPlanner.Plan(BarResetScope.PlayerReset, true, true, false), true, true);
+        Assert.False(r.Clean);
+        Assert.Equal(new[] { "AB_Shapeshift_Wolf_Buff" }, r.OverrideBuffsLeft);
+        Assert.Contains(BarResetReply.ForReset(r, BarResetScope.PlayerReset, "P"), l => l.Contains("override buff still on: AB_Shapeshift_Wolf_Buff"));
+    }
+
+    [Fact]
+    public void Runner_fails_when_a_failed_revert_drops_the_transform_record()
+    {
+        var plan = BarResetPlanner.Plan(BarResetScope.PlayerReset, true, true, true);
+        var failed = new FakeOps { Throw = S.RevertTransform };
+        var r = BarResetRunner.Run(failed, plan, true, true);
+        Assert.True(failed.KeptRecord, "a failed RevertTransform must keep the transform record for the retry");
+        Assert.False(r.Clean);
+
+        var ok = new FakeOps();
+        BarResetRunner.Run(ok, plan, true, true);
+        Assert.False(ok.KeptRecord, "a reverted transform's record is dropped");
+    }
+
     // ── D24: unreadable is never clean ──────────────────────────────────────────────────────────────────
 
     [Fact]
@@ -243,7 +267,8 @@ public class BarResetTests
         int Hit(S s) { Called.Add(s); if (Throw == s) throw new InvalidOperationException($"{s} boom"); return 1; }
 
         public int RevertTransform() => Hit(S.RevertTransform);
-        public int ClearSavedBindings() => Hit(S.ClearSavedBindings);
+        public bool? KeptRecord;
+        public int ClearSavedBindings(bool keepTransformRecord) { KeptRecord = keepTransformRecord; return Hit(S.ClearSavedBindings); }
         public int ClearHotkeys() => Hit(S.ClearHotkeys);
         public bool SaveBindings() { Hit(S.SaveBindings); return SaveResult; }
         public int ClearEquipEntries() => Hit(S.ClearEquipEntries);
