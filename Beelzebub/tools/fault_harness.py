@@ -182,20 +182,23 @@ def argv_of(command: str) -> list[str]:
 
 
 def planted_reason(command: str, out: str) -> str | None:
-    """None when the non-zero exit is the planted failure; else why it is not (a build error, a crash)."""
+    """None when the non-zero exit is the planted failure; else why it is not (a build error, a crash). The marker must
+    be the command's own verdict — its last line, or dotnet's test summary — never a stray earlier line."""
+    lines = [l.strip() for l in out.splitlines() if l.strip()]
+    last = lines[-1] if lines else ""
     if command.startswith("dotnet test"):
-        if re.search(r"error CS\d+", out):
+        if re.search(r"\berror (CS|MSB|NU|NETSDK)\d+", out):
             return "the planted patch broke the build, not a test"
-        if not re.search(r"Failed!|Failed:\s*[1-9]", out):
-            return "no failing test in the output"
+        if not re.search(r"^\s*Failed!\s+-\s+Failed:\s*[1-9]", out, re.M):
+            return "no failing-test summary in the output"
     elif "preflight.ps1" in command:
-        if "PREFLIGHT FAILED" not in out:
-            return "no PREFLIGHT FAILED line"
+        if not last.startswith("PREFLIGHT FAILED"):
+            return f"last line is not PREFLIGHT FAILED: {last[:80]}"
     else:
         if "Traceback" in out:
             return "the checker crashed"
-        if ": FAIL" not in out:
-            return "no FAIL line"
+        if not re.match(r"^[\w-]+: FAIL ", last):
+            return f"last line is not a checker FAIL line: {last[:80]}"
     return None
 
 
@@ -208,20 +211,26 @@ def snapshot(files: list[tuple[str, bool]]) -> dict[str, bytes | None]:
     return out
 
 
-def restore(before: dict[str, bytes | None]) -> None:
-    """After `git apply -R`: put back the exact bytes. Under core.autocrlf `git apply` rewrites line endings, which
-    git then reports as a modified file (the `paths` check and the next patch's clean-tree check would see it).
-    Only a line-ending difference is repaired; any other difference means the revert failed."""
+def restore(before: dict[str, bytes | None]) -> list[str]:
+    """After `git apply -R`: ALWAYS put back the exact snapshot bytes (a file the patch created is removed). Under
+    core.autocrlf `git apply` rewrites line endings, which git then reports as a modified file — that difference is
+    repaired silently. Returns the files that differed in more than line endings (the revert failed, or the command
+    itself wrote to them); they are restored too, and the caller reports them."""
+    wrong = []
     for rel, data in before.items():
         p = os.path.join(ROOT, rel)
         now = open(p, "rb").read() if os.path.isfile(p) else None
         if now == data:
             continue
         if data is None or now is None or now.replace(b"\r\n", b"\n") != data.replace(b"\r\n", b"\n"):
-            raise HarnessFail(f"git apply -R did not restore {rel}")
-        with open(p, "wb") as f:
-            f.write(data)
+            wrong.append(rel)
+        if data is None:
+            os.remove(p)
+        else:
+            with open(p, "wb") as f:
+                f.write(data)
     run(["git", "update-index", "-q", "--refresh"])
+    return wrong
 
 
 def gate_open(gate: str) -> bool:
@@ -304,7 +313,17 @@ def harness(a) -> int:
             problems.append(f"{did}: no manifest entry")
         elif rest:
             problems.append(f"{did}: fails-when text not covered by any clause: {rest[:120]}")
-    named = {e["patch"] for e in entries if e.get("patch")}
+    pnames = [e["patch"] for e in entries if e.get("patch")]
+    for p in sorted({p for p in pnames if pnames.count(p) > 1}):
+        problems.append(f"patches/{p} is named by more than one entry")
+    named = set(pnames)
+    fixture_only = {"D20": f"Beelzebub/tools/faults/{a.slug}/logs/", "D30": f"Beelzebub/tools/faults/{a.slug}/logs/"}
+    for e in entries:
+        pp = os.path.join(pdir, e.get("patch") or "")
+        if e["item"] in fixture_only and e.get("patch") and os.path.isfile(pp):
+            for f_, _ in patch_files(open(pp, encoding="utf-8").read()):
+                if not f_.startswith(fixture_only[e["item"]]):
+                    problems.append(f"{e['id']}: plants into {f_}, not the tracked fixture logs")
     on_disk = set(os.listdir(pdir)) if os.path.isdir(pdir) else set()
     for p in sorted(on_disk - named):
         problems.append(f"patches/{p} is named by no entry")
@@ -329,6 +348,10 @@ def harness(a) -> int:
         raise HarnessFail(f"{len(problems)} manifest problem(s): " + " | ".join(problems[:8]))
     if a.list:
         return 0
+
+    if git("status", "--porcelain", "--", rel_dir).strip():
+        raise HarnessFail(f"uncommitted changes under {rel_dir}: commit the manifest and patches before a recorded run")
+    tree = git("rev-parse", f"HEAD:{rel_dir}").strip()
 
     selected = [e for e in entries if (not only or e["item"] in only) and e["item"] not in skip]
     patches = [e for e in selected if e.get("patch")]
@@ -364,12 +387,17 @@ def harness(a) -> int:
             failures.append(f"{e['id']}: patch does not apply: {out.strip()[:160]}")
             continue
         before = snapshot(files)
-        git("apply", ppath)
+        code, out = 1, ""
         try:
+            git("apply", ppath)
             code, out = run(argv_of(e["command"]))
         finally:
-            git("apply", "-R", ppath)
-            restore(before)
+            rcode, rout = run(["git", "apply", "-R", ppath])
+            wrong = restore(before)   # runs even when the apply, the command or the revert failed
+        if rcode != 0 or wrong:
+            failures.append(f"{e['id']}: revert failed ({rout.strip()[:80] or 'bytes differ: ' + ', '.join(wrong)}); snapshot restored")
+            print(f"planted {e['id']}: REVERT FAILED (snapshot restored)")
+            continue
         why = "exits 0 while planted" if code == 0 else planted_reason(e["command"], out)
         if why:
             failures.append(f"{e['id']}: {why}")
@@ -393,7 +421,7 @@ def harness(a) -> int:
     left_out = sorted(set(items) - {e["item"] for e in selected}, key=lambda d: int(d[1:]))
     if left_out:
         tail += f" (not run: {' '.join(left_out)})"
-    print(f"harness: ok, {len(patches)} faults, {len(clauses)} clauses{tail}")
+    print(f"harness: ok, {len(patches)} faults, {len(clauses)} clauses{tail}, patch tree {tree}")
     return 0
 
 

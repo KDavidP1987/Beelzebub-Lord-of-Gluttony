@@ -173,7 +173,14 @@
    "clauses": [
     "stays silent on the documented order"
    ],
-   "silent": "the clean baseline run passes Plan_is_the_documented_order_for_a_transformed_purge and Runner_is_clean_for_a_good_reset"
+   "patch": "D2-documented-order.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub.Tests/BarResetTests.cs",
+     "find": "S.SaveBindings, S.ClearEquipEntries,\n        S.DestroyOverrideSources, S.PopSlotMods,",
+     "replace": "S.SaveBindings, S.DestroyOverrideSources,\n        S.ClearEquipEntries, S.PopSlotMods,"
+    }
+   ]
   },
   {
    "id": "D2-unknown-scope-throws",

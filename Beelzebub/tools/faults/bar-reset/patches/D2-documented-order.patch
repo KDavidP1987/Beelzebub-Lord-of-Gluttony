@@ -1,0 +1,14 @@
+diff --git a/Beelzebub/Beelzebub.Tests/BarResetTests.cs b/Beelzebub/Beelzebub.Tests/BarResetTests.cs
+--- a/Beelzebub/Beelzebub.Tests/BarResetTests.cs
++++ b/Beelzebub/Beelzebub.Tests/BarResetTests.cs
+@@ -11,8 +11,8 @@
+ {
+     static readonly S[] LiveOrder =
+     {
+-        S.RevertTransform, S.ClearSavedBindings, S.ClearHotkeys, S.SaveBindings, S.ClearEquipEntries,
+-        S.DestroyOverrideSources, S.PopSlotMods, S.EmptyPush, S.Reapply, S.Readback,
++        S.RevertTransform, S.ClearSavedBindings, S.ClearHotkeys, S.SaveBindings, S.DestroyOverrideSources,
++        S.ClearEquipEntries, S.PopSlotMods, S.EmptyPush, S.Reapply, S.Readback,
+     };
+ 
+     // ── D2: one fixed order ─────────────────────────────────────────────────────────────────────────────
