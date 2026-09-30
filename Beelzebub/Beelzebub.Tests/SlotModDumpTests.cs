@@ -1,0 +1,70 @@
+using Beelzebub.Logic;
+using Xunit;
+
+// bar-reset D1 — the dump parser reads GroupGuid modifications only and flags text it cannot parse.
+public class SlotModDumpTests
+{
+    const string GroupGuidOnly =
+        "Entity(1234:1) modifications:\n" +
+        "- AbilityGroupSlot.GroupGuid: PrefabGuid(-1591532957) (Base: PrefabGuid(0))\n" +
+        "    [ModId 5066] Set PrefabGuid(-1591532957) from Entity(326806:1) (No PrefabGUID, Entity Name '')\n" +
+        "    [ModId 5070] Set PrefabGuid(862477668) from Entity(326900:3) (EquipBuff_Weapon_Sword_Base, Entity Name '')\n";
+
+    [Fact]
+    public void GroupGuid_entries_are_parsed_with_their_sources()
+    {
+        var p = SlotModDump.ParseGroupGuid(GroupGuidOnly);
+        Assert.True(p.Readable);
+        Assert.Equal(2, p.Entries.Count);
+        Assert.Equal(new SlotModEntry(5066, -1591532957, 326806, 1), p.Entries[0]);
+        Assert.Equal(new SlotModEntry(5070, 862477668, 326900, 3), p.Entries[1]);
+    }
+
+    [Fact]
+    public void Parse_fails_when_a_CopyCooldown_mod_is_returned_as_GroupGuid()
+    {
+        string dump =
+            "- AbilityGroupSlot.CopyCooldown: False (Base: False)\n" +
+            "    [ModId 900] Set PrefabGuid(111) from Entity(5:1) (x)\n" +
+            "- AbilityGroupSlot.GroupGuid: PrefabGuid(0) (Base: PrefabGuid(0))\n" +
+            "- AbilityGroupSlot.SpellModsSource: Entity(0:0)\n" +
+            "    [ModId 901] Set PrefabGuid(222) from Entity(6:1) (y)\n";
+        var p = SlotModDump.ParseGroupGuid(dump);
+        Assert.True(p.Readable);
+        Assert.Empty(p.Entries);
+    }
+
+    [Fact]
+    public void Parse_fails_when_an_empty_dump_yields_entries()
+    {
+        foreach (var dump in new[] { "", null, "\n\n" })
+        {
+            var p = SlotModDump.ParseGroupGuid(dump);
+            Assert.Empty(p.Entries);
+            Assert.True(p.Readable);
+            Assert.False(p.HasMods);
+        }
+    }
+
+    [Fact]
+    public void Parse_fails_when_an_unparseable_ModId_line_is_readable()
+    {
+        string dump =
+            "- AbilityGroupSlot.GroupGuid: PrefabGuid(1) (Base: PrefabGuid(0))\n" +
+            "    [ModId 5066] Set PrefabGuid(1) from Entity(326806:1) (ok)\n" +
+            "    [ModId 5067] Replaced by something new\n";
+        var p = SlotModDump.ParseGroupGuid(dump);
+        Assert.False(p.Readable);
+        Assert.Single(p.Entries);
+    }
+
+    [Fact]
+    public void Parse_fails_when_ModId_zero_is_accepted()
+    {
+        var p = SlotModDump.ParseGroupGuid(
+            "- AbilityGroupSlot.GroupGuid: PrefabGuid(1) (Base: PrefabGuid(0))\n" +
+            "    [ModId 0] Set PrefabGuid(1) from Entity(2:1) (x)\n");
+        Assert.False(p.Readable);
+        Assert.Empty(p.Entries);
+    }
+}

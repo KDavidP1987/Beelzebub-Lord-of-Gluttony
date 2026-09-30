@@ -942,48 +942,21 @@ internal static class TransformBuffService
         }
     }
 
-    // The engine formatter prints, per modifiable field:
-    //   - AbilityGroupSlot.GroupGuid: PrefabGuid(X) (Base: PrefabGuid(Y))
-    //       [ModId 5066] Set PrefabGuid(Z) from Entity(326806:1) (No PrefabGUID, Entity Name '')
-    // We only ever touch the GroupGuid field (the ability override) — never CopyCooldown / SpellModsSource.
-    static readonly System.Text.RegularExpressions.Regex _modIdRx =
-        new(@"\[ModId\s+(\d+)\]", System.Text.RegularExpressions.RegexOptions.Compiled);
-    static readonly System.Text.RegularExpressions.Regex _srcRx =
-        new(@"from\s+Entity\((\d+):(\d+)\)", System.Text.RegularExpressions.RegexOptions.Compiled);
+    // v0.137.0 (bar-reset D1): the dump is parsed by the pure, unit-tested Logic/SlotModDump — GroupGuid field
+    // only (never CopyCooldown / SpellModsSource). These thin adapters keep the purge call sites unchanged.
 
     /// <summary>True if the dump shows at least one modification under the AbilityGroupSlot.GroupGuid field.</summary>
     static bool GroupGuidStillModified(string dump)
     {
-        if (string.IsNullOrEmpty(dump)) return false;
-        bool inGroupGuid = false;
-        foreach (string raw in dump.Split('\n'))
-        {
-            string t = raw.TrimStart();
-            if (t.StartsWith("- AbilityGroupSlot.", StringComparison.Ordinal))
-                inGroupGuid = t.StartsWith("- AbilityGroupSlot.GroupGuid", StringComparison.Ordinal);
-            else if (inGroupGuid && t.StartsWith("[ModId", StringComparison.Ordinal))
-                return true;
-        }
-        return false;
+        var p = Beelzebub.Logic.SlotModDump.ParseGroupGuid(dump);
+        return p.HasMods || !p.Readable;
     }
 
     /// <summary>Parse the modification ids under the AbilityGroupSlot.GroupGuid field only.</summary>
     static List<int> ParseGroupGuidModIds(string dump)
     {
         var ids = new List<int>();
-        if (string.IsNullOrEmpty(dump)) return ids;
-        bool inGroupGuid = false;
-        foreach (string raw in dump.Split('\n'))
-        {
-            string t = raw.TrimStart();
-            if (t.StartsWith("- AbilityGroupSlot.", StringComparison.Ordinal))
-                inGroupGuid = t.StartsWith("- AbilityGroupSlot.GroupGuid", StringComparison.Ordinal);
-            else if (inGroupGuid)
-            {
-                var m = _modIdRx.Match(t);
-                if (m.Success && int.TryParse(m.Groups[1].Value, out int id) && id > 0) ids.Add(id);
-            }
-        }
+        foreach (var e in Beelzebub.Logic.SlotModDump.ParseGroupGuid(dump).Entries) ids.Add(e.ModId);
         return ids;
     }
 
@@ -991,20 +964,8 @@ internal static class TransformBuffService
     static List<Entity> ParseGroupGuidSources(string dump)
     {
         var list = new List<Entity>();
-        if (string.IsNullOrEmpty(dump)) return list;
-        bool inGroupGuid = false;
-        foreach (string raw in dump.Split('\n'))
-        {
-            string t = raw.TrimStart();
-            if (t.StartsWith("- AbilityGroupSlot.", StringComparison.Ordinal))
-                inGroupGuid = t.StartsWith("- AbilityGroupSlot.GroupGuid", StringComparison.Ordinal);
-            else if (inGroupGuid)
-            {
-                var m = _srcRx.Match(t);
-                if (m.Success && int.TryParse(m.Groups[1].Value, out int eidx) && int.TryParse(m.Groups[2].Value, out int ever))
-                    list.Add(new Entity { Index = eidx, Version = ever });
-            }
-        }
+        foreach (var e in Beelzebub.Logic.SlotModDump.ParseGroupGuid(dump).Entries)
+            list.Add(new Entity { Index = e.SourceIndex, Version = e.SourceVersion });
         return list;
     }
 

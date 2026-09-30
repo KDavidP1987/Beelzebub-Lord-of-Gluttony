@@ -1,3 +1,4 @@
+using Beelzebub.Logic;
 using System;
 using System.Collections.Generic;
 using ProjectM;
@@ -270,7 +271,8 @@ internal static class ShapeshiftAbilityService
         // player hasn't built a set for this form, fall back to their UNIVERSAL binds, then first
         // captures (the v0.48.0 behavior) so the feature is still useful before per-form curation.
         var form = FormForBuff(formBuffGuid, new PrefabGUID(formBuffGuid).GetPrefabName());   // v0.80.0: name-aware (skins)
-        var perSlot = BuildFormBar(steamId, form, out bool fromFormBucket);
+        var perSlot = BuildFormBar(steamId, form, out bool fromFormBucket, out var source);
+        Core.Log.LogInfo($"[Beelz FORM] form={form} source={source.ToString().ToLowerInvariant()}");   // v0.137.0 (bar-reset D30)
         // v0.135.0: incompatibility locks — drop suppressed abilities (the slot keeps its native move).
         perSlot = ExclusionService.FilterBar(character, "form", perSlot);
         bool restored = RestoreBarSnapshot(buffEntity);
@@ -285,13 +287,16 @@ internal static class ShapeshiftAbilityService
     }
 
     /// <summary>
-    /// The form bar a player gets in <paramref name="form"/>: their per-form bucket, else universal binds, else first
-    /// captures packed from slot 1 — every path filtered by the kill-switch and the form lock. (Shared with the
+    /// The form bar a player gets in <paramref name="form"/>: their per-form bucket, else universal binds, else (only
+    /// with Forms_AutoFillFromCaptures, v0.137.0) first captures packed from slot 1 — every path filtered by the
+    /// kill-switch and the form lock. (Shared with the
     /// incompatibility-lock loadout so both see the same bar.)
     /// </summary>
     public static Dictionary<int, int> BuildFormBar(ulong steamId, ShapeshiftForm form, out bool fromFormBucket)
+        => BuildFormBar(steamId, form, out fromFormBucket, out _);
+
+    public static Dictionary<int, int> BuildFormBar(ulong steamId, ShapeshiftForm form, out bool fromFormBucket, out FormBarSource source)
     {
-        var perSlot = new Dictionary<int, int>();
         // v0.132.0 FIX: every path (per-form bucket AND both fallbacks) honours the admin kill-switch
         // (Enabled / hard-block / review gate) and the form lock. The fallbacks used to inject disabled
         // or form-blocked abilities onto the form bar.
@@ -301,29 +306,21 @@ internal static class ShapeshiftAbilityService
             string nm = new PrefabGUID(ability).GetPrefabName();
             return Core.AbilityRules.IsEnabled(nm, ability) && Core.AbilityRules.IsUsableInForm(nm, form);
         }
+        // v0.137.0 (bar-reset D4): precedence lives in the pure, unit-tested Logic/FormBarFill; the capture
+        // fallback only runs with Forms_AutoFillFromCaptures (default off).
+        var formBinds = new List<(int, int)>();
         if (form != ShapeshiftForm.None)
-            foreach (var (slot, ability) in Core.AbilityRegistry.GetFormSlots(steamId, form))
-                if (UsableHere(ability))
-                    perSlot[slot] = ability;   // v0.101.0: skip abilities form-locked out of this form
+            foreach (var (slot, ability) in Core.AbilityRegistry.GetFormSlots(steamId, form)) formBinds.Add((slot, ability));
+        var universal = new List<(int, int)>();
+        foreach (var (slot, ability) in Core.AbilityRegistry.GetSlots(steamId)) universal.Add((slot, ability));
+        var captures = new List<int>();
+        foreach (var c in Core.AbilityRegistry.ListFor(steamId)) captures.Add(c.AbilityPrefabGuid);
 
-        fromFormBucket = perSlot.Count > 0;
-        if (!fromFormBucket)
-        {
-            // Fallback: universal binds (slot-accurate), else first captures packed from slot 1.
-            foreach (var (slot, ability) in Core.AbilityRegistry.GetSlots(steamId))
-                if (UsableHere(ability)) perSlot[slot] = ability;
-            if (perSlot.Count == 0)
-            {
-                int s = 1;
-                foreach (var c in Core.AbilityRegistry.ListFor(steamId))
-                {
-                    if (!UsableHere(c.AbilityPrefabGuid)) continue;
-                    perSlot[s++] = c.AbilityPrefabGuid;
-                    if (perSlot.Count >= 6) break;
-                }
-            }
-        }
-        return perSlot;
+        var fill = FormBarFill.Build(formBinds, universal, captures, UsableHere,
+            Beelzebub.Config.Settings.Forms_AutoFillFromCaptures.Value);
+        fromFormBucket = fill.Source == FormBarSource.Form;
+        source = fill.Source;
+        return fill.Bar;
     }
 
     static void ApplyFormBar(Entity buffEntity, ulong steamId, int formBuffGuid, ShapeshiftForm form,

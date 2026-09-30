@@ -218,7 +218,10 @@ internal static class ApiCommands
     //   key=<slot#|cast guid> a=<guid> group=<name> locked=1|0` when an ability is kept off (1) / returns to (0) the
     //   live bar. Grant/hotkey commands refuse a locked bind with a plain-text reply (no new API line). Additive.
     //   Gate `api>=32`.
-    const int ApiVersion = 32;
+    // v0.137.0 → 33: config key `Forms_AutoFillFromCaptures` (default false) in `api config`; admin-only `.beelz admin bar
+    //   <player>` diagnostic (plain chat, no [BEELZ:*] line); resetbar / purge / reset-loadouts now share one layered
+    //   reset. Additive — no line changes shape. Gate `api>=33`.
+    const int ApiVersion = 33;
 
     [Command("help", description: "List the Beelzebub API/BCH read commands (machine-readable data streams).")]
     public static void Help(ChatCommandContext ctx)

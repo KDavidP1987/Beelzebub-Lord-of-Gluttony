@@ -193,6 +193,11 @@ internal static class Settings
     // changes vanilla form behavior; it's the feasibility probe for the per-form-loadout feature.
     public static ConfigEntry<bool> Forms_CustomAbilities_Enabled { get; private set; }
 
+    // v0.137.0 (bar-reset D4/D5): with no per-form and no universal binds, fill the form bar from the first six
+    // captures. Default false — a bar reset keeps captures, so the old always-on fill made custom spells
+    // reappear on the next form enter.
+    public static ConfigEntry<bool> Forms_AutoFillFromCaptures { get; private set; }
+
     // v0.23.1: max distance (world units) a summon can wander from its player
     // before being teleported back. 0 = no leashing.
     public static ConfigEntry<float> Transform_SummonLeashRadius { get; private set; }
@@ -849,6 +854,13 @@ internal static class Settings
             "DEFAULT TRUE so per-form loadouts work out of the box — set false to restore stock " +
             "vanilla form behavior. It changes vanilla form behavior for every player when on. The " +
             "form buff keeps its own RemoveOnDisconnect, so logging out still exits the form cleanly.");
+
+        Forms_AutoFillFromCaptures = config.Bind(
+            "Forms", nameof(Forms_AutoFillFromCaptures), false,
+            "v0.137.0: when you enter a shapeshift form with NO per-form binds (.beelz form-grant) and NO universal " +
+            "binds, put your first six captured abilities on the form bar. Default false: the form keeps its own " +
+            "kit unless you bound something for it. Set true to restore the pre-0.137 behavior (note: a bar reset " +
+            "keeps captures, so with this on the captures return on the next form enter).");
 
         // v0.64.0 (#3): flush the file so the legacy DropChance_Transform_* keys we migrated +
         // removed above don't linger as orphans on disk (only the Devour_* keys persist).

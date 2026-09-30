@@ -12,16 +12,19 @@
       audits     every docs/audits/<slug>.md holds "## Pre-audit", "## Post-audit" and "Codex verdict:"
       build      dotnet build Beelzebub.sln -c Release: 0 errors
       tests      dotnet test Beelzebub.Tests: passes, and at least one test ran
+      bar-reset  python tools/check_bar_reset.py all (v0.137 bar-reset dod plan D5 D13-D18 D21 D23 D26 D28)
 
     -SkipBuild skips build + tests (for a fast docs-only check). -LogCheck instead reads the live server logs
     (BepInEx/LogOutput.log and logs/NyarDev.log) and fails on a Beelzebub stack frame or an empty/missing log;
-    run it after every in-game session, BEFORE the next boot overwrites the logs.
+    run it after every in-game session, BEFORE the next boot overwrites the logs. -LogDir <dir> reads
+    <dir>\LogOutput.log and <dir>\NyarDev.log instead (a copied session, or the fault harness's fixture logs).
     Adapted from Nyarlathotep's tools/preflight.ps1 (minimal port; no fixture self-test yet).
 #>
 param(
     [switch]$SkipBuild,
     [switch]$LogCheck,
     [string]$ServerPath = 'C:\Program Files (x86)\Steam\steamapps\common\VRisingDedicatedServer',
+    [string]$LogDir = '',
     [int]$ChangelogMaxKB = 64
 )
 $ErrorActionPreference = 'Stop'
@@ -32,7 +35,8 @@ $results = [System.Collections.Generic.List[object]]::new()
 function Add-Result([string]$Name, [bool]$Pass, [string]$Line) { $results.Add([pscustomobject]@{ Name = $Name; Pass = $Pass; Line = $Line }) }
 
 if ($LogCheck) {
-    $logs = @((Join-Path $ServerPath 'BepInEx\LogOutput.log'), (Join-Path $ServerPath 'logs\NyarDev.log'))
+    $logs = if ($LogDir) { @((Join-Path $LogDir 'LogOutput.log'), (Join-Path $LogDir 'NyarDev.log')) }
+            else { @((Join-Path $ServerPath 'BepInEx\LogOutput.log'), (Join-Path $ServerPath 'logs\NyarDev.log')) }
     foreach ($l in $logs) {
         if (-not (Test-Path $l) -or (Get-Item $l).Length -eq 0) { Add-Result 'log' $false "missing or empty: $l"; continue }
         $text = Get-Content $l -Raw
@@ -78,6 +82,10 @@ if ($LogCheck) {
         }
     }
     Add-Result 'audits' ($bad.Count -eq 0) ($(if ($bad) { $bad -join '; ' } else { 'every audit record has its markers' }))
+
+    # bar-reset (v0.137 dod plan) evidence checks — rollback / session / selftest run on their own
+    $br = & python (Join-Path $Root 'tools\check_bar_reset.py') all 2>&1
+    Add-Result 'bar-reset' ($LASTEXITCODE -eq 0) (($br | ForEach-Object { "$_" }) -join ' | ')
 
     if (-not $SkipBuild) {
         $sln = Join-Path $Root 'Beelzebub.sln'

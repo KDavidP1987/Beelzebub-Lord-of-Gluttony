@@ -18,12 +18,28 @@
 > in the BCH workspace.
 >
 > **Canonical source of truth for the wire API:**
-> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 32`). If this doc
+> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 33`). If this doc
 > and that file ever disagree, the file wins — and this doc should be corrected.
 
 ---
 
-# ⭐ BCH CATCH-UP: v0.100 → v0.135 (read this first) ⭐
+# ⭐ BCH CATCH-UP: v0.100 → v0.137 (read this first) ⭐
+
+> **🆕 v0.137 — ApiVersion 33 (gate `api>=33`). ONE LAYERED BAR RESET. Additive — no `[BEELZ:*]` line changes shape.**
+> - **New config key:** `Forms_AutoFillFromCaptures` (section `Forms`, bool, default **false**) appears in `.beelz api
+>   config` as an ordinary `[BEELZ:config]` line. When false (the new default) a shapeshift form with no per-form and no
+>   universal binds keeps its own kit; when true the first six captures fill the form bar (the pre-0.137 behavior).
+>   BCH: show it in the settings panel like any other bool; nothing else to consume.
+> - **New admin command (plain chat, not an API line):** `.beelz admin bar [player]` — read-only per-slot readout of
+>   the bar (saved bind, Beelzebub equip row, override buffs, gear- vs other-sourced engine mods). BCH may expose it in
+>   the admin panel as a text dump; do not parse it.
+> - **Behaviour (no wire change):** `.beelz resetbar CONFIRM`, `.beelz admin reset-loadouts <player> CONFIRM` and
+>   `.beelz admin purge <player> CONFIRM` now run one layered reset (saved binds → equip rows → form/orphan sources →
+>   engine mods → one Empty push → re-apply the weapon's skills), so spells leave the live bar at once with no weapon
+>   swap. `api slots` after a reset shows empty buckets, as before. `admin rebuildbar` now prints the `admin bar`
+>   readout; `clearslotmods` / `rebuildslots` are marked `LEGACY:` in their help text.
+> - **What BCH should do:** on `api>=33`, nothing is required. Optional: list `Forms_AutoFillFromCaptures` in the
+>   config view, and add `admin bar` to the admin tooling list.
 
 > **🆕 v0.135 — ApiVersion 32 (gate `api>=32`). INCOMPATIBILITY LOCKS. Additive.**
 > - **New read:** `.beelz api locks` → one line per admin-defined lock group, then an end line:
@@ -153,8 +169,9 @@ v0.120.0 callout below.
 | 30 | 0.133.0 | `damage_mode=` / `damage_scale_eff=` / `attribution=` / `summon_power=` on `api info` |
 | 31 | 0.134.0 | `maxstacks_override=` / `projcount_override=` / `knockback_override=` / `lifetime_override=` / `casttime_override=` / `cooldown_mode=` on `api info`; runtime cooldown semantics |
 | 32 | 0.135.0 | **`api locks`** (`[BEELZ:lock]`) + `type=ability-locked` event — incompatibility locks |
+| 33 | 0.137.0 | config key `Forms_AutoFillFromCaptures` in `api config`; admin `bar` diagnostic (plain chat); layered bar reset (no wire change) |
 
-Gate each feature on `api>=N`. `api version` returns `[BEELZ:version] api=32 plugin=0.135.0 ready=…`.
+Gate each feature on `api>=N`. `api version` returns `[BEELZ:version] api=33 plugin=0.137.0 ready=…`.
 
 ## 2. New per-row tokens on `catalog-ability` AND `api info` (all additive)
 
