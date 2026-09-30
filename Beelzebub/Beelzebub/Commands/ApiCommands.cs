@@ -563,25 +563,14 @@ internal static class ApiCommands
     /// 512-byte FixedString cap. Every line repeats the id field (e.g. <c>i=5</c>) and carries
     /// <c>part=k/n</c>; the body's space-separated <c>key=value</c> tokens are packed into chunks without
     /// splitting a token. BCH reassembles all parts for the same id (single-part lines look unchanged
-    /// apart from the new <c>part=1/1</c>). The budget leaves headroom for the prefix + id + part marker.
+    /// apart from the new <c>part=1/1</c>). The budget is UTF-8 bytes (Logic/ReplyChunks, v0.137.0).
     /// </summary>
-    const int ChunkBudget = 420;
     static void ReplyChunked(ChatCommandContext ctx, string tag, string idField, string body)
     {
-        var tokens = (body ?? "").Split(' ');
-        var chunks = new System.Collections.Generic.List<string>();
-        var sb = new StringBuilder();
-        foreach (var t in tokens)
-        {
-            if (sb.Length > 0 && sb.Length + 1 + t.Length > ChunkBudget) { chunks.Add(sb.ToString()); sb.Clear(); }
-            if (sb.Length > 0) sb.Append(' ');
-            sb.Append(t);
-        }
-        if (sb.Length > 0) chunks.Add(sb.ToString());
-        if (chunks.Count == 0) chunks.Add("");
-        int n = chunks.Count;
-        for (int k = 0; k < n; k++)
-            ctx.Reply($"[BEELZ:{tag}] {idField} part={k + 1}/{n} {chunks[k]}");
+        // v0.137.0: packed by UTF-8 BYTES (Logic/ReplyChunks) — the 420-character budget overflowed 512 bytes on
+        // multi-byte notes and aborted the catalog stream
+        foreach (var line in Beelzebub.Logic.ReplyChunks.Pack(tag, idField, body))
+            ctx.Reply(line);
     }
 
     static string TryGetCuratedNotes(string abilityName)

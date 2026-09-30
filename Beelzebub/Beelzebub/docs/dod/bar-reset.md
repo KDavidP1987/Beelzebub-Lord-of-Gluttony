@@ -341,6 +341,7 @@ Nothing to migrate (probe 3.4).
   - `Beelzebub/Beelzebub/Logic/FormBarFill.cs`
   - `Beelzebub/Beelzebub/Logic/EquipRows.cs`
   - `Beelzebub/Beelzebub/Logic/BarResetReply.cs`
+  - `Beelzebub/Beelzebub/Logic/ReplyChunks.cs`
   - `Beelzebub/Beelzebub.Tests/SlotModDumpTests.cs`
   - `Beelzebub/Beelzebub.Tests/BarResetTests.cs`
   - `Beelzebub/Beelzebub.Tests/BarResetLogTests.cs`
@@ -348,6 +349,7 @@ Nothing to migrate (probe 3.4).
   - `Beelzebub/Beelzebub.Tests/FormBarFillTests.cs`
   - `Beelzebub/Beelzebub.Tests/EquipRowsTests.cs`
   - `Beelzebub/Beelzebub.Tests/BarResetReplyTests.cs`
+  - `Beelzebub/Beelzebub.Tests/ReplyChunksTests.cs`
   - `Beelzebub/Beelzebub/Services/BarResetService.cs`
   - `Beelzebub/Beelzebub/Services/AbilityRegistry.cs`
   - `Beelzebub/Beelzebub/Services/SlotApply.cs`
@@ -462,3 +464,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-09-30 · note · build step 5 (fault harness, D21): one manifest entry per planted fault, `clauses` are exact substrings of the item's fails-when text and the harness FAILs when what is left over is more than connectives; a `test:` item's command is `dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~<TestClass>`; D21 does not plant into itself; D31 (added after D21 was written) is included; D2's stays-silent clause is `silent` (the baseline proves it); D22 is `deferred` behind the rollback line; D19's patches name the current version and are re-made (`--make`) after the release; `--skip`/`--only` name what they left out in the summary line. The harness found five checker holes (auth defaulted params, data open-w / dist, docs backlog rows, selftest crash) and an untracked manifest — all fixed before the recorded run (docs/audits/bar-reset.md › Step 5)
 - 2026-09-30 · note · post-audit round 1 of build step 9 (Codex + fresh-context subagent on 5401c27, dispositions in docs/audits/bar-reset.md): Clean also requires no override buff left at the readback (the same-frame listing skips buffs already queued with DestroyTag) and the reply names a survivor (D24); a failed RevertTransform keeps the transform record (D12); a failed synchronous save also marks the store dirty for the heartbeat retry (D27); EmptyPush is an ERR when fewer than 9 slots were pushed; RevertTransform passes the pre-0.137 transform-ended reasons (resetbar / admin reset-loadouts / admin purge), so BCH sees no new token; Reapply logs S-2's per-slot diagnostic as `[Beelz REAPPLY]`; Business rules 4 records the foreign equip-row limitation; Interfaces drops the stale RestoreResolvedGrants
 - 2026-09-30 · note · build step 9 done: post-audit closed after review round 2 (Codex CLEAN on a9eb3a1); every fault planted (D19 on a9eb3a1, the rest on 41139ef/3e333de); release candidate 0.137.0 prepared uncommitted (csproj, toml, both changelogs with [0.127.0] dropped from CHANGELOG.md, README status/cheat-sheet/limitations, root README synced) — preflight PREFLIGHT OK (10 checks, 133 tests). Next: build step 10, deploy on the owner's go-ahead
+- 2026-09-30 · note · build step 10, release-candidate session (defect, outside this plan's feature): `.beelz api catalog abilities` (Test fixture step 2) threw `FixedString512Bytes: Truncation` in `ApiCommands.ReplyChunked` and aborted the stream — the 420-character chunk budget overflowed VCF's 512-byte cap on the v0.136 notes' multi-byte punctuation; cause proven by the exception, so fixed directly: `Logic/ReplyChunks.Pack` packs by UTF-8 bytes (≤500 per line, an oversize token cut at a character boundary), wire shape unchanged, `ReplyChunksTests` (4 controls, each planted once); its stack trace would fail D20 for that session, so the session restarts on the fixed build

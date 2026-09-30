@@ -38,6 +38,9 @@
 >   engine mods → one Empty push → re-apply the weapon's skills), so spells leave the live bar at once with no weapon
 >   swap. `api slots` after a reset shows empty buckets, as before. `admin rebuildbar` now prints the `admin bar`
 >   readout; `clearslotmods` / `rebuildslots` are marked `LEGACY:` in their help text.
+> - **Fix (no wire change):** chunked `[BEELZ:info]` / `[BEELZ:catalog-ability]` lines are now sized in UTF-8 bytes
+>   (≤500 per line). A long multi-byte `notes=` value used to overflow 512 bytes and abort `api catalog abilities`
+>   mid-stream; parts may now split at different points, and the reassembly rule (merge parts `1..n` by id) is unchanged.
 > - **What BCH should do:** on `api>=33`, nothing is required. Optional: list `Forms_AutoFillFromCaptures` in the
 >   config view, and add `admin bar` to the admin tooling list.
 
