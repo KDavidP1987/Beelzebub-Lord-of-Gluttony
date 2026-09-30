@@ -50,9 +50,10 @@ class HarnessFail(Exception):
 
 
 def run(cmd: list[str], timeout: int = 1800) -> tuple[int, str]:
-    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
-                       timeout=timeout)
-    return r.returncode, (r.stdout or "") + (r.stderr or "")
+    # stderr is merged INTO stdout as it is written, so the output's last line is the command's real last line
+    r = subprocess.run(cmd, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8",
+                       errors="replace", timeout=timeout)
+    return r.returncode, r.stdout or ""
 
 
 def git(*args: str) -> str:

@@ -477,13 +477,14 @@ def check_audit(root: str) -> str:
     if not rec.strip():
         raise CheckFail("no input: audit record is empty")
     bad = [f"lacks '{m}'" for m in ("## Pre-audit", "## Post-audit", "Codex verdict:", "planted faults:") if m not in rec]
-    # the record is append-only: the LAST patch tree recorded after `planted faults:` is the current evidence
-    start = rec.find("planted faults:")
-    trees = re.findall(r"patch tree ([0-9a-f]{40})", rec[start:]) if start >= 0 else []
+    # the record is append-only: the evidence is the LAST harness summary line, read as one unit — its own
+    # `harness: ok, <n> faults ..., patch tree <sha>` (a hash elsewhere in the prose proves nothing)
+    runs = re.findall(r"harness: ok, \d+ faults[^\n]*?, patch tree ([0-9a-f]{40})", rec)
+    trees = runs
     if not re.search(r"harness: ok, \d+ faults", rec):
         bad.append("no 'harness: ok' output recorded")
     if not trees:
-        bad.append("no patch tree hash recorded")
+        bad.append("no harness summary line with its patch tree recorded")
     else:
         try:
             cur = git(root, "rev-parse", f"HEAD:{FAULTS}").strip()
@@ -822,7 +823,7 @@ def _build_good(root: str) -> None:
     _git(root, "commit", "-q", "--allow-empty", "-m", RELEASE_SUBJECT)
     release = _git(root, "rev-parse", "HEAD")
     tree = _git(root, "rev-parse", f"HEAD:{FAULTS}")
-    _w(root, AUDIT, "## Pre-audit\n## Post-audit\nCodex verdict: clean\nplanted faults:\nharness: ok, 1 faults, 1 clauses\n"
+    _w(root, AUDIT, "## Pre-audit\n## Post-audit\nCodex verdict: clean\nplanted faults:\nharness: ok, 1 faults, 1 clauses, "
                     f"patch tree {tree}\nrollback: git revert --no-edit {first}^..{release}\n")
     _w(root, "session.log", GOOD_SESSION)
     _git(root, "add", "-A")

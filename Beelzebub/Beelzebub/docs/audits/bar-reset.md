@@ -278,3 +278,16 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
   - F7 REJECTED — D23 needs a plant that creates an untracked file; the harness already requires that file to be absent.
 - planted faults: `python Beelzebub/tools/fault_harness.py bar-reset --skip D19` on c5e4dc7:
   `harness: ok, 132 faults, 113 clauses, 5 deferred (D22: gate not met) (not run: D19), patch tree f4a3529b2df93662f06e7d39ebd1f6186b350d81`
+
+- D19 on 4bffc98 (preflight baseline PREFLIGHT OK): `harness: ok, 4 faults, 4 clauses (not run: all but D19), patch tree f4a3529b2df93662f06e7d39ebd1f6186b350d81`
+
+### Step 5 · review round 2 · 2026-09-30 · reviewed 4bffc98
+- Codex verdict: REVISE — 2 blocking, both ACCEPTED:
+  - F1 — the harness appended stderr after stdout, so "the last line" was not the command's real last line; stderr is now
+    merged into stdout as written (`stderr=STDOUT`).
+  - F2 — `audit` bound a `harness: ok` line and a `patch tree` hash separately; it now reads the hash from the last
+    `harness: ok, <n> faults …, patch tree <sha>` summary line (the harness prints both on one line since round 1; the
+    selftest fixture follows).
+- re-check with the merged output (all three command kinds: checker, pwsh -LogCheck, dotnet test):
+  `harness: ok, 32 faults, 26 clauses (not run: D1 D2 D3 D4 D11 D12 D13 D14 D15 D16 D17 D18 D19 D22 D23 D24 D26 D27 D28 D29 D31), patch tree f4a3529b2df93662f06e7d39ebd1f6186b350d81`
+  — the full run repeats in build step 9. `selftest: ok, 41 cases`, `audit: ok`.
