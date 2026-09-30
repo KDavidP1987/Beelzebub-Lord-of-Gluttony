@@ -310,6 +310,13 @@ def harness(a) -> int:
         problems.append(f"patches/{p} is named by no entry")
     for p in sorted(named - on_disk):
         problems.append(f"patches/{p} missing (run --make)")
+    # a manifest, patch or fixture that exists only locally (e.g. caught by a .gitignore) is not re-runnable
+    rel_dir = os.path.relpath(fdir, ROOT).replace(os.sep, "/")
+    tracked = set(git("ls-files", "--", rel_dir).splitlines())
+    local = [f"{rel_dir}/{os.path.relpath(os.path.join(dp, fn), fdir).replace(os.sep, '/')}"
+             for dp, _, fns in os.walk(fdir) for fn in fns]
+    for p in sorted(set(local) - tracked):
+        problems.append(f"{p} is not tracked by git")
     gates = {}
     for e in entries:
         if e.get("deferred"):

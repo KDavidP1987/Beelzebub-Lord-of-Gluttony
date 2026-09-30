@@ -1,0 +1,3 @@
+# Beelzebub/.gitignore ignores every manifest.json and logs/ dir; the fault harness needs both tracked
+!manifest.json
+!logs/

@@ -1,12 +1,12 @@
 diff --git a/Beelzebub/tools/check_bar_reset.py b/Beelzebub/tools/check_bar_reset.py
 --- a/Beelzebub/tools/check_bar_reset.py
 +++ b/Beelzebub/tools/check_bar_reset.py
-@@ -753,7 +753,7 @@
- 
- GOOD_FILES = {
-     f"{PROJ}/Config/Settings.cs":
--        'class S { void B() { Forms_AutoFillFromCaptures = config.Bind(\n "Forms", nameof(Forms_AutoFillFromCaptures), false, "x"); } }\n',
-+        'class S { void B() { Forms_AutoFillFromCaptures = config.Bind(\n "Forms", nameof(Forms_AutoFillFromCaptures), true, "x"); } }\n',
-     f"{PROJ}/Logic/BarReset.cs": "public interface IBarResetOps\n{\n    int Reapply();\n    bool SaveBindings();\n}\n",
-     f"{PROJ}/Services/BarResetService.cs":
-         "static class BarResetService {\n public static int FullReset(int c) { return 0; }\n public static int ReadBar(int c) { return 0; }\n"
+@@ -781,7 +781,7 @@
+         + "".join(f'\n    [Command("x{i}", adminOnly: true, description: "filler {i}")]\n'
+                   f'    public static void X{i}(ChatCommandContext ctx, string player = null) {{ }}\n' for i in range(46))
+         + "}\n",
+-    f"{PROJ}/Commands/ApiCommands.cs": f"class A {{ const int ApiVersion = {API_VERSION}; }}\n",
++    f"{PROJ}/Commands/ApiCommands.cs": f"class A {{ const int ApiVersion = {API_VERSION + 1}; }}\n",
+     f"{PROJ}/docs/RECOVERY_GUIDE.md":
+         "1. `.beelz admin bar <player>`\n2. `.beelz resetbar CONFIRM` or `.beelz admin purge <player> CONFIRM`\n"
+         "3. Only if survivors remain: `.beelz admin reset-character <player>`\n",

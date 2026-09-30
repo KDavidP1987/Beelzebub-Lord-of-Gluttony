@@ -464,8 +464,9 @@ def check_docs(root: str) -> str:
                 bad.append(f"handoff v0.137 entry lacks {need}")
     backlog = read(root, f"{PROJ}/docs/BACKLOG.md")
     for slug in ("clearbar-fullreset", "transform-chain-guard", "docs-consolidation", "dev-snapshot"):
-        if slug not in backlog:
-            bad.append(f"BACKLOG.md lacks {slug}")
+        # the slug's own table row, not a mention in another row's prose (`dev-snapshot.ps1`)
+        if not re.search(rf"^\|\s*`{re.escape(slug)}`\s*\|", backlog, re.M):
+            bad.append(f"BACKLOG.md lacks a row for {slug}")
     if bad:
         raise CheckFail("; ".join(bad[:6]))
     return "docs: ok"
@@ -786,7 +787,8 @@ GOOD_FILES = {
         "3. Only if survivors remain: `.beelz admin reset-character <player>`\n",
     f"{PROJ}/docs/BCH_INTEGRATION_HANDOFF.md":
         f"ApiVersion = {API_VERSION}\n\n## v0.137 bar reset\nAdds Forms_AutoFillFromCaptures and admin bar; gate api>={API_VERSION}.\n",
-    f"{PROJ}/docs/BACKLOG.md": "- clearbar-fullreset\n- transform-chain-guard\n- docs-consolidation\n- dev-snapshot\n",
+    f"{PROJ}/docs/BACKLOG.md": "".join(f"| `{s}` | x | y |\n" for s in ("clearbar-fullreset", "transform-chain-guard",
+                                                                       "docs-consolidation", "dev-snapshot")),
     f"{FAULTS}/D1-x.patch": "fixture patch\n",
 }
 
@@ -864,7 +866,7 @@ def _defect(sub: str, root: str, variant: int = 0) -> None:
     elif sub == "auth":
         sub_in(f"{PROJ}/Commands/AdminCommands.cs", '[Command("purge", adminOnly: true,', '[Command("purge",')
     elif sub == "docs":
-        sub_in(f"{PROJ}/docs/BACKLOG.md", "- dev-snapshot\n", "")
+        sub_in(f"{PROJ}/docs/BACKLOG.md", "| `dev-snapshot` | x | y |\n", "| x | port dev-snapshot.ps1 | y |\n")
     elif sub == "audit":
         sub_in(AUDIT, "harness: ok, 1 faults", "harness: FAIL")
     elif sub == "paths":
@@ -913,7 +915,11 @@ def check_selftest(_root: str) -> str:
 
             good = os.path.join(tmp, f"{sub}-good")
             os.makedirs(good)
-            _build_good(good)
+            try:
+                _build_good(good)
+            except Exception as e:  # a fixture that cannot be built is a FAIL, never a crash
+                bad.append(f"{sub} good tree not built: {type(e).__name__}: {e}")
+                continue
             passed, line = _run_sub(sub, good)
             cases += 1
             if not passed:
@@ -922,8 +928,12 @@ def check_selftest(_root: str) -> str:
             for v in range(len(SESSION_DEFECTS) if sub == "session" else 1):
                 defect = os.path.join(tmp, f"{sub}-defect-{v}")
                 os.makedirs(defect)
-                _build_good(defect)
-                _defect(sub, defect, v)
+                try:
+                    _build_good(defect)
+                    _defect(sub, defect, v)
+                except Exception as e:
+                    bad.append(f"{sub} defect tree {v} not built: {type(e).__name__}: {e}")
+                    continue
                 passed, line = _run_sub(sub, defect)
                 cases += 1
                 if passed:

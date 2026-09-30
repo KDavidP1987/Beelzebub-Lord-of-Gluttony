@@ -1,0 +1,2298 @@
+{
+ "slug": "bar-reset",
+ "note": "One entry per planted fault (bar-reset D21). `clauses` are exact substrings of the item's `fails when:` text in docs/dod/bar-reset.md; `edits` regenerate the patch with `fault_harness.py bar-reset --make <id>`. The D19 edits name the current version and are re-made after each release; D22 is deferred until its rollback line exists.",
+ "entries": [
+  {
+   "id": "D1-copycooldown-read",
+   "item": "D1",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotModDumpTests",
+   "clauses": [
+    "a `[ModId]` line under `- AbilityGroupSlot.CopyCooldown`",
+    "is returned as a GroupGuid entry"
+   ],
+   "patch": "D1-copycooldown-read.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/SlotModDump.cs",
+     "find": "                inGroupGuid = t.StartsWith(GroupGuidField, StringComparison.Ordinal);",
+     "replace": "                inGroupGuid = t.StartsWith(GroupGuidField, StringComparison.Ordinal) || t.StartsWith(\"- AbilityGroupSlot.CopyCooldown\", StringComparison.Ordinal);"
+    }
+   ]
+  },
+  {
+   "id": "D1-backup-read",
+   "item": "D1",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotModDumpTests",
+   "clauses": [
+    "`- AbilityGroupSlot.GroupGuidBackup`",
+    "is returned as a GroupGuid entry"
+   ],
+   "patch": "D1-backup-read.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/SlotModDump.cs",
+     "find": "const string GroupGuidField = \"- AbilityGroupSlot.GroupGuid:\";",
+     "replace": "const string GroupGuidField = \"- AbilityGroupSlot.GroupGuid\";"
+    }
+   ]
+  },
+  {
+   "id": "D1-other-component-read",
+   "item": "D1",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotModDumpTests",
+   "clauses": [
+    "another component's field after GroupGuid",
+    "is returned as a GroupGuid entry"
+   ],
+   "patch": "D1-other-component-read.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/SlotModDump.cs",
+     "find": "new(@\"^- [A-Za-z_]\\w*\\.[A-Za-z_]\\w*:\"",
+     "replace": "new(@\"^- AbilityGroupSlot\\.[A-Za-z_]\\w*:\""
+    }
+   ]
+  },
+  {
+   "id": "D1-other-section-unreadable",
+   "item": "D1",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotModDumpTests",
+   "clauses": [
+    "a `[ModId]` line under `- AbilityGroupSlot.CopyCooldown`",
+    "makes the dump Unreadable"
+   ],
+   "patch": "D1-other-section-unreadable.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/SlotModDump.cs",
+     "find": "            if (!inGroupGuid || !t.StartsWith(\"[ModId\", StringComparison.Ordinal)) continue;",
+     "replace": "            if (!inGroupGuid && t.StartsWith(\"[ModId\", StringComparison.Ordinal)) { result.Readable = false; continue; }\n            if (!inGroupGuid || !t.StartsWith(\"[ModId\", StringComparison.Ordinal)) continue;"
+    }
+   ]
+  },
+  {
+   "id": "D1-empty-yields-entry",
+   "item": "D1",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotModDumpTests",
+   "clauses": [
+    "an empty dump yields any entry"
+   ],
+   "patch": "D1-empty-yields-entry.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/SlotModDump.cs",
+     "find": "        if (string.IsNullOrEmpty(dump)) return result;",
+     "replace": "        if (string.IsNullOrEmpty(dump)) { result.Entries.Add(new SlotModEntry(1, 0, 0, 0)); return result; }"
+    }
+   ]
+  },
+  {
+   "id": "D1-unparseable-readable",
+   "item": "D1",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotModDumpTests",
+   "clauses": [
+    "an unparseable `[ModId` line yields Readable"
+   ],
+   "patch": "D1-unparseable-readable.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/SlotModDump.cs",
+     "find": "            else\n            {\n                result.Readable = false;\n            }",
+     "replace": "            else\n            {\n            }"
+    }
+   ]
+  },
+  {
+   "id": "D2-equip-missing",
+   "item": "D2",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "ClearEquipEntries is missing"
+   ],
+   "patch": "D2-equip-missing.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "            steps.Add(BarResetStep.ClearEquipEntries);\n",
+     "replace": ""
+    }
+   ]
+  },
+  {
+   "id": "D2-equip-after-pop",
+   "item": "D2",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "or ordered after PopSlotMods"
+   ],
+   "patch": "D2-equip-after-pop.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "            steps.Add(BarResetStep.ClearEquipEntries);\n            steps.Add(BarResetStep.DestroyOverrideSources);\n            steps.Add(BarResetStep.PopSlotMods);\n",
+     "replace": "            steps.Add(BarResetStep.DestroyOverrideSources);\n            steps.Add(BarResetStep.PopSlotMods);\n            steps.Add(BarResetStep.ClearEquipEntries);\n"
+    }
+   ]
+  },
+  {
+   "id": "D2-save-before-clear",
+   "item": "D2",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "SaveBindings comes before ClearSavedBindings"
+   ],
+   "patch": "D2-save-before-clear.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "        steps.Add(BarResetStep.ClearSavedBindings);\n        if (ClearsHotkeys(scope)) steps.Add(BarResetStep.ClearHotkeys);\n        steps.Add(BarResetStep.SaveBindings);\n",
+     "replace": "        steps.Add(BarResetStep.SaveBindings);\n        steps.Add(BarResetStep.ClearSavedBindings);\n        if (ClearsHotkeys(scope)) steps.Add(BarResetStep.ClearHotkeys);\n"
+    }
+   ]
+  },
+  {
+   "id": "D2-emptypush-twice",
+   "item": "D2",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "or EmptyPush appears more than once"
+   ],
+   "patch": "D2-emptypush-twice.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "            steps.Add(BarResetStep.EmptyPush);\n",
+     "replace": "            steps.Add(BarResetStep.EmptyPush);\n            steps.Add(BarResetStep.EmptyPush);\n"
+    }
+   ]
+  },
+  {
+   "id": "D2-documented-order",
+   "item": "D2",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "stays silent on the documented order"
+   ],
+   "silent": "the clean baseline run passes Plan_is_the_documented_order_for_a_transformed_purge and Runner_is_clean_for_a_good_reset"
+  },
+  {
+   "id": "D2-unknown-scope-throws",
+   "item": "D2",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "an unknown scope value throws instead of returning an empty plan"
+   ],
+   "patch": "D2-unknown-scope-throws.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "        if (!Enum.IsDefined(typeof(BarResetScope), scope)) return steps;",
+     "replace": "        if (!Enum.IsDefined(typeof(BarResetScope), scope)) throw new ArgumentOutOfRangeException(nameof(scope));"
+    }
+   ]
+  },
+  {
+   "id": "D2-empty-plan-clean",
+   "item": "D2",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "or the runner reports an empty plan",
+    "as Clean=true — such a plan is an error result, `Clean=false`"
+   ],
+   "patch": "D2-empty-plan-clean.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "        r.Clean = online && liveReady && complete\n",
+     "replace": "        r.Clean = (steps == null || steps.Count == 0) || online && liveReady && complete\n"
+    }
+   ]
+  },
+  {
+   "id": "D2-missing-ClearSavedBindings-clean",
+   "item": "D2",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "or a plan missing any of ClearSavedBindings, SaveBindings, ClearEquipEntries, DestroyOverrideSources, PopSlotMods, EmptyPush, Reapply or Readback",
+    "as Clean=true — such a plan is an error result, `Clean=false`"
+   ],
+   "patch": "D2-missing-ClearSavedBindings-clean.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "        BarResetStep.ClearSavedBindings, BarResetStep.SaveBindings, BarResetStep.ClearEquipEntries,\n        BarResetStep.DestroyOverrideSources, BarResetStep.PopSlotMods, BarResetStep.EmptyPush,\n        BarResetStep.Reapply, BarResetStep.Readback,\n",
+     "replace": "        BarResetStep.SaveBindings, BarResetStep.ClearEquipEntries,\n        BarResetStep.DestroyOverrideSources, BarResetStep.PopSlotMods, BarResetStep.EmptyPush,\n        BarResetStep.Reapply, BarResetStep.Readback,\n"
+    }
+   ]
+  },
+  {
+   "id": "D2-missing-ClearEquipEntries-clean",
+   "item": "D2",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "or a plan missing any of ClearSavedBindings, SaveBindings, ClearEquipEntries, DestroyOverrideSources, PopSlotMods, EmptyPush, Reapply or Readback",
+    "as Clean=true — such a plan is an error result, `Clean=false`"
+   ],
+   "patch": "D2-missing-ClearEquipEntries-clean.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "        BarResetStep.ClearSavedBindings, BarResetStep.SaveBindings, BarResetStep.ClearEquipEntries,\n        BarResetStep.DestroyOverrideSources, BarResetStep.PopSlotMods, BarResetStep.EmptyPush,\n        BarResetStep.Reapply, BarResetStep.Readback,\n",
+     "replace": "        BarResetStep.ClearSavedBindings, BarResetStep.SaveBindings, \n        BarResetStep.DestroyOverrideSources, BarResetStep.PopSlotMods, BarResetStep.EmptyPush,\n        BarResetStep.Reapply, BarResetStep.Readback,\n"
+    }
+   ]
+  },
+  {
+   "id": "D2-missing-DestroyOverrideSources-clean",
+   "item": "D2",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "or a plan missing any of ClearSavedBindings, SaveBindings, ClearEquipEntries, DestroyOverrideSources, PopSlotMods, EmptyPush, Reapply or Readback",
+    "as Clean=true — such a plan is an error result, `Clean=false`"
+   ],
+   "patch": "D2-missing-DestroyOverrideSources-clean.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "        BarResetStep.ClearSavedBindings, BarResetStep.SaveBindings, BarResetStep.ClearEquipEntries,\n        BarResetStep.DestroyOverrideSources, BarResetStep.PopSlotMods, BarResetStep.EmptyPush,\n        BarResetStep.Reapply, BarResetStep.Readback,\n",
+     "replace": "        BarResetStep.ClearSavedBindings, BarResetStep.SaveBindings, BarResetStep.ClearEquipEntries,\n        BarResetStep.PopSlotMods, BarResetStep.EmptyPush,\n        BarResetStep.Reapply, BarResetStep.Readback,\n"
+    }
+   ]
+  },
+  {
+   "id": "D2-missing-PopSlotMods-clean",
+   "item": "D2",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "or a plan missing any of ClearSavedBindings, SaveBindings, ClearEquipEntries, DestroyOverrideSources, PopSlotMods, EmptyPush, Reapply or Readback",
+    "as Clean=true — such a plan is an error result, `Clean=false`"
+   ],
+   "patch": "D2-missing-PopSlotMods-clean.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "        BarResetStep.ClearSavedBindings, BarResetStep.SaveBindings, BarResetStep.ClearEquipEntries,\n        BarResetStep.DestroyOverrideSources, BarResetStep.PopSlotMods, BarResetStep.EmptyPush,\n        BarResetStep.Reapply, BarResetStep.Readback,\n",
+     "replace": "        BarResetStep.ClearSavedBindings, BarResetStep.SaveBindings, BarResetStep.ClearEquipEntries,\n        BarResetStep.DestroyOverrideSources, BarResetStep.EmptyPush,\n        BarResetStep.Reapply, BarResetStep.Readback,\n"
+    }
+   ]
+  },
+  {
+   "id": "D2-missing-EmptyPush-clean",
+   "item": "D2",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "or a plan missing any of ClearSavedBindings, SaveBindings, ClearEquipEntries, DestroyOverrideSources, PopSlotMods, EmptyPush, Reapply or Readback",
+    "as Clean=true — such a plan is an error result, `Clean=false`"
+   ],
+   "patch": "D2-missing-EmptyPush-clean.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "        BarResetStep.ClearSavedBindings, BarResetStep.SaveBindings, BarResetStep.ClearEquipEntries,\n        BarResetStep.DestroyOverrideSources, BarResetStep.PopSlotMods, BarResetStep.EmptyPush,\n        BarResetStep.Reapply, BarResetStep.Readback,\n",
+     "replace": "        BarResetStep.ClearSavedBindings, BarResetStep.SaveBindings, BarResetStep.ClearEquipEntries,\n        BarResetStep.DestroyOverrideSources, BarResetStep.PopSlotMods, \n        BarResetStep.Reapply, BarResetStep.Readback,\n"
+    }
+   ]
+  },
+  {
+   "id": "D2-missing-Reapply-clean",
+   "item": "D2",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "or a plan missing any of ClearSavedBindings, SaveBindings, ClearEquipEntries, DestroyOverrideSources, PopSlotMods, EmptyPush, Reapply or Readback",
+    "as Clean=true — such a plan is an error result, `Clean=false`"
+   ],
+   "patch": "D2-missing-Reapply-clean.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "        BarResetStep.ClearSavedBindings, BarResetStep.SaveBindings, BarResetStep.ClearEquipEntries,\n        BarResetStep.DestroyOverrideSources, BarResetStep.PopSlotMods, BarResetStep.EmptyPush,\n        BarResetStep.Reapply, BarResetStep.Readback,\n",
+     "replace": "        BarResetStep.ClearSavedBindings, BarResetStep.SaveBindings, BarResetStep.ClearEquipEntries,\n        BarResetStep.DestroyOverrideSources, BarResetStep.PopSlotMods, BarResetStep.EmptyPush,\n        BarResetStep.Readback,\n"
+    }
+   ]
+  },
+  {
+   "id": "D2-missing-SaveBindings-clean",
+   "item": "D2",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "or a plan missing any of ClearSavedBindings, SaveBindings, ClearEquipEntries, DestroyOverrideSources, PopSlotMods, EmptyPush, Reapply or Readback",
+    "as Clean=true — such a plan is an error result, `Clean=false`"
+   ],
+   "patch": "D2-missing-SaveBindings-clean.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "        BarResetStep.ClearSavedBindings, BarResetStep.SaveBindings, BarResetStep.ClearEquipEntries,\n        BarResetStep.DestroyOverrideSources, BarResetStep.PopSlotMods, BarResetStep.EmptyPush,\n        BarResetStep.Reapply, BarResetStep.Readback,\n",
+     "replace": "        BarResetStep.ClearSavedBindings, BarResetStep.ClearEquipEntries,\n        BarResetStep.DestroyOverrideSources, BarResetStep.PopSlotMods, BarResetStep.EmptyPush,\n        BarResetStep.Reapply, BarResetStep.Readback,\n"
+    },
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "                  && !r.AnyStepFailed && r.Saved\n",
+     "replace": "                  && !r.AnyStepFailed && (r.Saved || !r.Steps.Any(s => s.Step == BarResetStep.SaveBindings))\n"
+    }
+   ]
+  },
+  {
+   "id": "D2-missing-Readback-clean",
+   "item": "D2",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "or a plan missing any of ClearSavedBindings, SaveBindings, ClearEquipEntries, DestroyOverrideSources, PopSlotMods, EmptyPush, Reapply or Readback",
+    "as Clean=true — such a plan is an error result, `Clean=false`"
+   ],
+   "patch": "D2-missing-Readback-clean.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "        BarResetStep.ClearSavedBindings, BarResetStep.SaveBindings, BarResetStep.ClearEquipEntries,\n        BarResetStep.DestroyOverrideSources, BarResetStep.PopSlotMods, BarResetStep.EmptyPush,\n        BarResetStep.Reapply, BarResetStep.Readback,\n",
+     "replace": "        BarResetStep.ClearSavedBindings, BarResetStep.SaveBindings, BarResetStep.ClearEquipEntries,\n        BarResetStep.DestroyOverrideSources, BarResetStep.PopSlotMods, BarResetStep.EmptyPush,\n        BarResetStep.Reapply,\n"
+    },
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "        bool readbackRan = r.Readback != null && !r.Steps.Any(s => s.Step == BarResetStep.Readback && s.Failed);",
+     "replace": "        bool readbackRan = !r.Steps.Any(s => s.Step == BarResetStep.Readback) || r.Readback != null && !r.Steps.Any(s => s.Step == BarResetStep.Readback && s.Failed);"
+    },
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "!readbackRan || r.Readback.Unreadable)",
+     "replace": "!readbackRan || r.Readback?.Unreadable == true)"
+    }
+   ]
+  },
+  {
+   "id": "D3-playerreset-clears-hotkeys",
+   "item": "D3",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "PlayerReset plans ClearHotkeys"
+   ],
+   "patch": "D3-playerreset-clears-hotkeys.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "    public static bool ClearsHotkeys(BarResetScope scope) => scope == BarResetScope.Purge;",
+     "replace": "    public static bool ClearsHotkeys(BarResetScope scope) => scope != BarResetScope.AdminLoadouts;"
+    }
+   ]
+  },
+  {
+   "id": "D3-purge-omits-hotkeys",
+   "item": "D3",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "or Purge omits it"
+   ],
+   "patch": "D3-purge-omits-hotkeys.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "    public static bool ClearsHotkeys(BarResetScope scope) => scope == BarResetScope.Purge;",
+     "replace": "    public static bool ClearsHotkeys(BarResetScope scope) => false;"
+    }
+   ]
+  },
+  {
+   "id": "D11-offline-live-step",
+   "item": "D11",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "any live step is planned for online=false"
+   ],
+   "patch": "D11-offline-live-step.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "        if (live && transformActiveOrParked) steps.Add(BarResetStep.RevertTransform);",
+     "replace": "        if (transformActiveOrParked) steps.Add(BarResetStep.RevertTransform);"
+    }
+   ]
+  },
+  {
+   "id": "D11-offline-parked-omits-clear",
+   "item": "D11",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "an offline plan with a parked transform omits ClearSavedBindings"
+   ],
+   "patch": "D11-offline-parked-omits-clear.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "        steps.Add(BarResetStep.ClearSavedBindings);\n",
+     "replace": "        if (online || !transformActiveOrParked) steps.Add(BarResetStep.ClearSavedBindings);\n"
+    }
+   ]
+  },
+  {
+   "id": "D11-offline-parked-omits-save",
+   "item": "D11",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "or SaveBindings"
+   ],
+   "patch": "D11-offline-parked-omits-save.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "        steps.Add(BarResetStep.SaveBindings);\n",
+     "replace": "        if (online || !transformActiveOrParked) steps.Add(BarResetStep.SaveBindings);\n"
+    }
+   ]
+  },
+  {
+   "id": "D11-notlive-live-step",
+   "item": "D11",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "or online with liveReady=false plans a live step"
+   ],
+   "patch": "D11-notlive-live-step.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "        bool live = online && liveReady;",
+     "replace": "        bool live = online;"
+    }
+   ]
+  },
+  {
+   "id": "D11-notlive-clean",
+   "item": "D11",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "or yields Clean=true"
+   ],
+   "patch": "D11-notlive-clean.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "        r.Clean = online && liveReady && complete\n",
+     "replace": "        r.Clean = online && complete\n"
+    },
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "        r.Unreadable = online && (!liveReady || !readbackRan",
+     "replace": "        r.Unreadable = online && (!readbackRan"
+    }
+   ]
+  },
+  {
+   "id": "D12-throw-stops-run",
+   "item": "D12",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "a fake ops whose ClearEquipEntries throws makes PopSlotMods or Readback not run"
+   ],
+   "patch": "D12-throw-stops-run.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "                r.Steps.Add(new BarResetStepResult(step, 0, string.IsNullOrEmpty(ex.Message) ? ex.GetType().Name : ex.Message));\n",
+     "replace": "                r.Steps.Add(new BarResetStepResult(step, 0, string.IsNullOrEmpty(ex.Message) ? ex.GetType().Name : ex.Message));\n                break;\n"
+    }
+   ]
+  },
+  {
+   "id": "D24-unreadable-clean",
+   "item": "D24",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "a fake readback returning Unreadable",
+    "produces Clean=true"
+   ],
+   "patch": "D24-unreadable-clean.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "!readbackRan || r.Readback.Unreadable)",
+     "replace": "!readbackRan)"
+    }
+   ]
+  },
+  {
+   "id": "D24-null-readback-clean",
+   "item": "D24",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "or returning null",
+    "produces Clean=true"
+   ],
+   "patch": "D24-null-readback-clean.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "                        r.Readback = ops.Readback();\n",
+     "replace": "                        r.Readback = ops.Readback() ?? new BarReadback();\n"
+    }
+   ]
+  },
+  {
+   "id": "D24-unreadable-destroy",
+   "item": "D24",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "a fake readback returning Unreadable",
+    "or a destroy call for that slot"
+   ],
+   "patch": "D24-unreadable-destroy.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "        if (parse == null || !parse.Readable) return new SlotPurgeDecision { Skipped = true };",
+     "replace": "        if (parse == null) return new SlotPurgeDecision { Skipped = true };"
+    }
+   ]
+  },
+  {
+   "id": "D27-failed-save-clean",
+   "item": "D27",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "a fake ops whose SaveBindings returns false yields Clean=true"
+   ],
+   "patch": "D27-failed-save-clean.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "                        r.Saved = ok;\n                        r.Steps.Add(new BarResetStepResult(step, ok ? 1 : 0, ok ? null : \"not saved\"));\n",
+     "replace": "                        r.Saved = true;\n                        r.Steps.Add(new BarResetStepResult(step, 1, null));\n"
+    }
+   ]
+  },
+  {
+   "id": "D27-failed-save-stops",
+   "item": "D27",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetTests",
+   "clauses": [
+    "or later live steps do not run"
+   ],
+   "patch": "D27-failed-save-stops.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "                        r.Steps.Add(new BarResetStepResult(step, ok ? 1 : 0, ok ? null : \"not saved\"));\n                        break;\n",
+     "replace": "                        r.Steps.Add(new BarResetStepResult(step, ok ? 1 : 0, ok ? null : \"not saved\"));\n                        if (!ok) return r;\n                        break;\n"
+    }
+   ]
+  },
+  {
+   "id": "D4-empty-not-native",
+   "item": "D4",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~FormBarFillTests",
+   "clauses": [
+    "the result's Source is not `native` for an empty bar"
+   ],
+   "patch": "D4-empty-not-native.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/FormBarFill.cs",
+     "find": "        return new FormBarFillResult(bar, FormBarSource.Native);",
+     "replace": "        return new FormBarFillResult(bar, FormBarSource.Captures);"
+    }
+   ]
+  },
+  {
+   "id": "D4-captures-autofill-off",
+   "item": "D4",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~FormBarFillTests",
+   "clauses": [
+    "with no form or universal binds and autoFill=false any capture is returned"
+   ],
+   "patch": "D4-captures-autofill-off.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/FormBarFill.cs",
+     "find": "        if (autoFillFromCaptures)\n",
+     "replace": "        if (true)\n"
+    }
+   ]
+  },
+  {
+   "id": "D4-form-loses-to-universal",
+   "item": "D4",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~FormBarFillTests",
+   "clauses": [
+    "or a form bind loses to a universal bind on the same slot"
+   ],
+   "patch": "D4-form-loses-to-universal.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/FormBarFill.cs",
+     "find": "        if (bar.Count > 0) return new FormBarFillResult(bar, FormBarSource.Form);\n",
+     "replace": ""
+    }
+   ]
+  },
+  {
+   "id": "D4-empty-inputs-bar",
+   "item": "D4",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~FormBarFillTests",
+   "clauses": [
+    "empty inputs return an empty bar"
+   ],
+   "patch": "D4-empty-inputs-bar.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/FormBarFill.cs",
+     "find": "        return new FormBarFillResult(bar, FormBarSource.Native);",
+     "replace": "        bar[0] = 0;\n        return new FormBarFillResult(bar, FormBarSource.Native);"
+    }
+   ]
+  },
+  {
+   "id": "D5-bind-missing",
+   "item": "D5",
+   "command": "python Beelzebub/tools/check_bar_reset.py config",
+   "clauses": [
+    "the Bind call is missing",
+    "the check prints FAIL, never ok, when it finds no Bind call"
+   ],
+   "patch": "D5-bind-missing.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Config/Settings.cs",
+     "find": "        Forms_AutoFillFromCaptures = config.Bind(\n",
+     "replace": "        Forms_AutoFillFromCaptures = BindLater(config,\n"
+    }
+   ]
+  },
+  {
+   "id": "D5-default-true",
+   "item": "D5",
+   "command": "python Beelzebub/tools/check_bar_reset.py config",
+   "clauses": [
+    "or its default is true"
+   ],
+   "patch": "D5-default-true.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Config/Settings.cs",
+     "find": "            \"Forms\", nameof(Forms_AutoFillFromCaptures), false,",
+     "replace": "            \"Forms\", nameof(Forms_AutoFillFromCaptures), true,"
+    }
+   ]
+  },
+  {
+   "id": "D13-layer-symbol",
+   "item": "D13",
+   "command": "python Beelzebub/tools/check_bar_reset.py commands",
+   "clauses": [
+    "a non-exempt method under Commands/ references any symbol in the set"
+   ],
+   "patch": "D13-layer-symbol.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Commands/AdminCommands.cs",
+     "find": "        var readback = BarResetService.ReadBar(character, steamId);\n",
+     "replace": "        var readback = BarResetService.ReadBar(character, steamId);\n        TransformBuffService.PopSlotModifications(character);\n"
+    }
+   ]
+  },
+  {
+   "id": "D13-new-ops-member",
+   "item": "D13",
+   "command": "python Beelzebub/tools/check_bar_reset.py commands",
+   "clauses": [
+    "including a new IBarResetOps member"
+   ],
+   "patch": "D13-new-ops-member.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "    BarReadback Readback();\n",
+     "replace": "    BarReadback Readback();\n    int ClearCarrier();\n"
+    },
+    {
+     "file": "Beelzebub/Beelzebub/Commands/AdminCommands.cs",
+     "find": "        var readback = BarResetService.ReadBar(character, steamId);\n",
+     "replace": "        var readback = BarResetService.ReadBar(character, steamId);\n        BarResetService.Ops.ClearCarrier();\n"
+    }
+   ]
+  },
+  {
+   "id": "D13-fullreset-twice",
+   "item": "D13",
+   "command": "python Beelzebub/tools/check_bar_reset.py commands",
+   "clauses": [
+    "or FullReset is called fewer than 3 times"
+   ],
+   "patch": "D13-fullreset-twice.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Commands/AdminCommands.cs",
+     "find": "        var result = BarResetService.FullReset(character, steamId, fullName, Beelzebub.Logic.BarResetScope.Purge);",
+     "replace": "        var result = BarResetService.FullResetLegacy(character, steamId, fullName, Beelzebub.Logic.BarResetScope.Purge);"
+    }
+   ]
+  },
+  {
+   "id": "D13-fullreset-zero",
+   "item": "D13",
+   "command": "python Beelzebub/tools/check_bar_reset.py commands",
+   "clauses": [
+    "zero call sites"
+   ],
+   "patch": "D13-fullreset-zero.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Commands/AdminCommands.cs",
+     "find": "        var result = BarResetService.FullReset(character, steamId, fullName, Beelzebub.Logic.BarResetScope.Purge);",
+     "replace": "        var result = BarResetService.FullResetLegacy(character, steamId, fullName, Beelzebub.Logic.BarResetScope.Purge);"
+    },
+    {
+     "file": "Beelzebub/Beelzebub/Commands/AdminCommands.cs",
+     "find": "        var result = BarResetService.FullReset(character, steamId, fullName, Beelzebub.Logic.BarResetScope.AdminLoadouts);",
+     "replace": "        var result = BarResetService.FullResetLegacy(character, steamId, fullName, Beelzebub.Logic.BarResetScope.AdminLoadouts);"
+    },
+    {
+     "file": "Beelzebub/Beelzebub/Commands/BeelzCommands.cs",
+     "find": "        var result = BarResetService.FullReset(character, steamId, name, Beelzebub.Logic.BarResetScope.PlayerReset);",
+     "replace": "        var result = BarResetService.FullResetLegacy(character, steamId, name, Beelzebub.Logic.BarResetScope.PlayerReset);"
+    }
+   ]
+  },
+  {
+   "id": "D13-empty-symbol-set",
+   "item": "D13",
+   "command": "python Beelzebub/tools/check_bar_reset.py commands",
+   "clauses": [
+    "or an empty symbol set prints FAIL"
+   ],
+   "patch": "D13-empty-symbol-set.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "public interface IBarResetOps\n{\n    int RevertTransform();\n    int ClearSavedBindings();\n    int ClearHotkeys();\n    /// <summary>Writes state.json synchronously; false when the write failed (never swallowed as success).</summary>\n    bool SaveBindings();\n    int ClearEquipEntries();\n    int DestroyOverrideSources();\n    int PopSlotMods();\n    int EmptyPush();\n    int Reapply();\n    BarReadback Readback();\n}\n",
+     "replace": "public interface IBarResetOps\n{\n}\n"
+    }
+   ]
+  },
+  {
+   "id": "D14-reinit-call",
+   "item": "D14",
+   "command": "python Beelzebub/tools/check_bar_reset.py text",
+   "clauses": [
+    "Commands/ calls ForceAbilityBarReinit"
+   ],
+   "patch": "D14-reinit-call.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Commands/AdminCommands.cs",
+     "find": "        var readback = BarResetService.ReadBar(character, steamId);\n",
+     "replace": "        var readback = BarResetService.ReadBar(character, steamId);\n        TransformBuffService.ForceAbilityBarReinit(character);\n"
+    }
+   ]
+  },
+  {
+   "id": "D14-slot-space",
+   "item": "D14",
+   "command": "python Beelzebub/tools/check_bar_reset.py text",
+   "clauses": [
+    "a string contains \".beelz slot \""
+   ],
+   "patch": "D14-slot-space.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Commands/AdminCommands.cs",
+     "find": "        ctx.Reply(\".beelz admin rebuildslots / clearslotmods <player> — LEGACY slot levers (use purge)\");",
+     "replace": "        ctx.Reply(\".beelz admin rebuildslots / clearslotmods <player> — LEGACY slot levers (use purge, then .beelz slot 1)\");"
+    }
+   ]
+  },
+  {
+   "id": "D14-slot-dot",
+   "item": "D14",
+   "command": "python Beelzebub/tools/check_bar_reset.py text",
+   "clauses": [
+    "or \".beelz slot.\""
+   ],
+   "patch": "D14-slot-dot.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Commands/AdminCommands.cs",
+     "find": "        ctx.Reply(\".beelz admin rebuildslots / clearslotmods <player> — LEGACY slot levers (use purge)\");",
+     "replace": "        ctx.Reply(\".beelz admin rebuildslots / clearslotmods <player> — LEGACY slot levers (use purge or .beelz slot.)\");"
+    }
+   ]
+  },
+  {
+   "id": "D14-legacy-clearslotmods",
+   "item": "D14",
+   "command": "python Beelzebub/tools/check_bar_reset.py text",
+   "clauses": [
+    "or either LEGACY prefix is missing"
+   ],
+   "patch": "D14-legacy-clearslotmods.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Commands/AdminCommands.cs",
+     "find": "[Command(\"clearslotmods\", description: \"LEGACY: (use .beelz admin purge) ",
+     "replace": "[Command(\"clearslotmods\", description: \"(use .beelz admin purge) "
+    }
+   ]
+  },
+  {
+   "id": "D14-legacy-rebuildslots",
+   "item": "D14",
+   "command": "python Beelzebub/tools/check_bar_reset.py text",
+   "clauses": [
+    "or either LEGACY prefix is missing"
+   ],
+   "patch": "D14-legacy-rebuildslots.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Commands/AdminCommands.cs",
+     "find": "[Command(\"rebuildslots\", description: \"LEGACY: (use .beelz admin purge) ",
+     "replace": "[Command(\"rebuildslots\", description: \"(use .beelz admin purge) "
+    }
+   ]
+  },
+  {
+   "id": "D15-admin-group-not-adminonly",
+   "item": "D15",
+   "command": "python Beelzebub/tools/check_bar_reset.py auth",
+   "clauses": [
+    "one such command lacks adminOnly: true"
+   ],
+   "patch": "D15-admin-group-not-adminonly.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Commands/AdminCommands.cs",
+     "find": "Changes nothing. Usage: .beelz admin bar [player] (default: you)\", adminOnly: true)]",
+     "replace": "Changes nothing. Usage: .beelz admin bar [player] (default: you)\")]"
+    }
+   ]
+  },
+  {
+   "id": "D15-player-param-not-adminonly",
+   "item": "D15",
+   "command": "python Beelzebub/tools/check_bar_reset.py auth",
+   "clauses": [
+    "one such command lacks adminOnly: true"
+   ],
+   "patch": "D15-player-param-not-adminonly.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Commands/BeelzCommands.cs",
+     "find": "    public static void List(ChatCommandContext ctx, string arg = null, int page = 1)",
+     "replace": "    public static void List(ChatCommandContext ctx, string player = null, int page = 1)"
+    }
+   ]
+  },
+  {
+   "id": "D15-resetbar-player-param",
+   "item": "D15",
+   "command": "python Beelzebub/tools/check_bar_reset.py auth",
+   "clauses": [
+    "resetbar gains a player parameter"
+   ],
+   "patch": "D15-resetbar-player-param.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Commands/BeelzCommands.cs",
+     "find": "    public static void ResetBar(ChatCommandContext ctx, string confirm = null)",
+     "replace": "    public static void ResetBar(ChatCommandContext ctx, string confirm = null, string player = null)"
+    }
+   ]
+  },
+  {
+   "id": "D15-patch-calls-fullreset",
+   "item": "D15",
+   "command": "python Beelzebub/tools/check_bar_reset.py auth",
+   "clauses": [
+    "a patch, hook, service or API handler calls FullReset or ReadBar"
+   ],
+   "patch": "D15-patch-calls-fullreset.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Patches/PlayerTeleportSystemPatch.cs",
+     "find": "    public static void OnUpdatePostfix(PlayerTeleportSystem __instance)\n    {\n",
+     "replace": "    public static void OnUpdatePostfix(PlayerTeleportSystem __instance)\n    {\n        Services.BarResetService.FullReset(default, 0, \"\", Beelzebub.Logic.BarResetScope.Purge);\n"
+    }
+   ]
+  },
+  {
+   "id": "D15-hook-calls-readbar",
+   "item": "D15",
+   "command": "python Beelzebub/tools/check_bar_reset.py auth",
+   "clauses": [
+    "a patch, hook, service or API handler calls FullReset or ReadBar"
+   ],
+   "patch": "D15-hook-calls-readbar.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Plugin.cs",
+     "find": "public class Plugin : BasePlugin\n{\n",
+     "replace": "public class Plugin : BasePlugin\n{\n    static void Hook() => Services.BarResetService.ReadBar(default, 0);\n"
+    }
+   ]
+  },
+  {
+   "id": "D15-service-calls-fullreset",
+   "item": "D15",
+   "command": "python Beelzebub/tools/check_bar_reset.py auth",
+   "clauses": [
+    "a patch, hook, service or API handler calls FullReset or ReadBar"
+   ],
+   "patch": "D15-service-calls-fullreset.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Services/Heartbeat.cs",
+     "find": "internal static class Heartbeat\n{\n",
+     "replace": "internal static class Heartbeat\n{\n    static void Sweep() => BarResetService.FullReset(default, 0, \"\", Beelzebub.Logic.BarResetScope.Purge);\n"
+    }
+   ]
+  },
+  {
+   "id": "D15-api-calls-readbar",
+   "item": "D15",
+   "command": "python Beelzebub/tools/check_bar_reset.py auth",
+   "clauses": [
+    "a patch, hook, service or API handler calls FullReset or ReadBar"
+   ],
+   "patch": "D15-api-calls-readbar.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Commands/ApiCommands.cs",
+     "find": "internal static class ApiCommands\n{\n",
+     "replace": "internal static class ApiCommands\n{\n    [Command(\"bar\", description: \"x\")]\n    public static void ApiBar(ChatCommandContext ctx) => Services.BarResetService.ReadBar(default, 0);\n"
+    }
+   ]
+  },
+  {
+   "id": "D15-fewer-than-50",
+   "item": "D15",
+   "command": "python Beelzebub/tools/check_bar_reset.py auth",
+   "clauses": [
+    "or fewer than 50 admin commands are parsed"
+   ],
+   "patch": "D15-fewer-than-50.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Commands/AdminCommands.cs",
+     "find": "[CommandGroup(\"beelz admin\")]\ninternal static partial class AdminCommands\n",
+     "replace": "internal static class AdminCommandsNotes { }\n\n[CommandGroup(\"beelz admin\")]\ninternal static partial class AdminCommands\n"
+    }
+   ]
+  },
+  {
+   "id": "D15-none-parsed",
+   "item": "D15",
+   "command": "python Beelzebub/tools/check_bar_reset.py auth",
+   "clauses": [
+    "a parse that finds none prints FAIL"
+   ],
+   "patch": "D15-none-parsed.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Commands/AdminCommands.cs",
+     "find": "[CommandGroup(\"beelz admin\")]\n",
+     "replace": "[CommandGroup(name: \"beelz admin\")]\n"
+    }
+   ]
+  },
+  {
+   "id": "D16-newline-two-lines",
+   "item": "D16",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetLogTests",
+   "clauses": [
+    "a name containing a newline yields two lines"
+   ],
+   "patch": "D16-newline-two-lines.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarResetLog.cs",
+     "find": "            if (char.IsControl(c) || c == '[' ",
+     "replace": "            if (c == '[' "
+    }
+   ]
+  },
+  {
+   "id": "D16-step-missing",
+   "item": "D16",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetLogTests",
+   "clauses": [
+    "a step is missing"
+   ],
+   "patch": "D16-step-missing.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarResetLog.cs",
+     "find": ": string.Join(\",\", steps.Select(",
+     "replace": ": string.Join(\",\", steps.Skip(1).Select("
+    }
+   ]
+  },
+  {
+   "id": "D16-unreadable-survivors-none",
+   "item": "D16",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetLogTests",
+   "clauses": [
+    "survivors=none is printed for an unreadable readback"
+   ],
+   "patch": "D16-unreadable-survivors-none.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarResetLog.cs",
+     "find": "        if (result == null || result.Unreadable) return \"unreadable\";",
+     "replace": "        if (result == null) return \"unreadable\";"
+    }
+   ]
+  },
+  {
+   "id": "D16-failed-step-clean-1",
+   "item": "D16",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetLogTests",
+   "clauses": [
+    "clean=1 is printed for a result with a failed step"
+   ],
+   "patch": "D16-failed-step-clean-1.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarResetLog.cs",
+     "find": ".Append(result?.Clean == true ? 1 : 0);",
+     "replace": ".Append(result?.Clean == true || result?.Survivors.Count == 0 ? 1 : 0);"
+    }
+   ]
+  },
+  {
+   "id": "D16-slow-missing",
+   "item": "D16",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetLogTests",
+   "clauses": [
+    "ms=300 lacks slow=1"
+   ],
+   "patch": "D16-slow-missing.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarResetLog.cs",
+     "find": "        if (elapsedMs > SlowMs) sb.Append",
+     "replace": "        if (elapsedMs > 300) sb.Append"
+    }
+   ]
+  },
+  {
+   "id": "D16-bar-other-zero",
+   "item": "D16",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetLogTests",
+   "clauses": [
+    "or FormatBar prints other=0 for an unreadable slot"
+   ],
+   "patch": "D16-bar-other-zero.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarResetLog.cs",
+     "find": "        string other = readback.Unreadable ? \"unreadable\" : readback.Other.ToString();",
+     "replace": "        string other = readback.Other.ToString();"
+    }
+   ]
+  },
+  {
+   "id": "D17-lacks-admin-bar",
+   "item": "D17",
+   "command": "python Beelzebub/tools/check_bar_reset.py docs",
+   "clauses": [
+    "the guide lacks any of the three commands"
+   ],
+   "patch": "D17-lacks-admin-bar.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md",
+     "find": ".beelz admin bar",
+     "replace": ".beelz admin show",
+     "all": true
+    }
+   ]
+  },
+  {
+   "id": "D17-lacks-resetbar",
+   "item": "D17",
+   "command": "python Beelzebub/tools/check_bar_reset.py docs",
+   "clauses": [
+    "the guide lacks any of the three commands"
+   ],
+   "patch": "D17-lacks-resetbar.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md",
+     "find": ".beelz resetbar CONFIRM",
+     "replace": ".beelz resetbar YES",
+     "all": true
+    }
+   ]
+  },
+  {
+   "id": "D17-lacks-reset-character",
+   "item": "D17",
+   "command": "python Beelzebub/tools/check_bar_reset.py docs",
+   "clauses": [
+    "the guide lacks any of the three commands"
+   ],
+   "patch": "D17-lacks-reset-character.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md",
+     "find": ".beelz admin reset-character",
+     "replace": ".beelz admin reset-char",
+     "all": true
+    }
+   ]
+  },
+  {
+   "id": "D17-out-of-order",
+   "item": "D17",
+   "command": "python Beelzebub/tools/check_bar_reset.py docs",
+   "clauses": [
+    "lists them out of order"
+   ],
+   "patch": "D17-out-of-order.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md",
+     "find": "All admin commands are `adminOnly`.",
+     "replace": "All admin commands are `adminOnly`. The last resort is `.beelz admin reset-character <player> CONFIRM-RESET`."
+    }
+   ]
+  },
+  {
+   "id": "D17-reset-character-guaranteed",
+   "item": "D17",
+   "command": "python Beelzebub/tools/check_bar_reset.py docs",
+   "clauses": [
+    "or still calls reset-character or respawn \"guaranteed clean\""
+   ],
+   "patch": "D17-reset-character-guaranteed.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md",
+     "find": "Unbinds the player's Steam ID and kicks them;",
+     "replace": "Guaranteed clean: unbinds the player's Steam ID and kicks them;"
+    }
+   ]
+  },
+  {
+   "id": "D17-respawn-guaranteed",
+   "item": "D17",
+   "command": "python Beelzebub/tools/check_bar_reset.py docs",
+   "clauses": [
+    "or still calls reset-character or respawn \"guaranteed clean\""
+   ],
+   "patch": "D17-respawn-guaranteed.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/docs/RECOVERY_GUIDE.md",
+     "find": "rebuilds the character in place (progress kept).",
+     "replace": "rebuilds the character in place (progress kept) and is guaranteed clean."
+    }
+   ]
+  },
+  {
+   "id": "D18-banner-disagrees",
+   "item": "D18",
+   "command": "python Beelzebub/tools/check_bar_reset.py docs",
+   "clauses": [
+    "ApiCommands.cs and the banner disagree"
+   ],
+   "patch": "D18-banner-disagrees.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/docs/BCH_INTEGRATION_HANDOFF.md",
+     "find": "`Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 33`).",
+     "replace": "`Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 32`)."
+    }
+   ]
+  },
+  {
+   "id": "D18-entry-lacks-key",
+   "item": "D18",
+   "command": "python Beelzebub/tools/check_bar_reset.py docs",
+   "clauses": [
+    "or the entry lacks the key"
+   ],
+   "patch": "D18-entry-lacks-key.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/docs/BCH_INTEGRATION_HANDOFF.md",
+     "find": "Forms_AutoFillFromCaptures",
+     "replace": "Forms_AutoFill",
+     "all": true
+    }
+   ]
+  },
+  {
+   "id": "D18-entry-lacks-gate",
+   "item": "D18",
+   "command": "python Beelzebub/tools/check_bar_reset.py docs",
+   "clauses": [
+    "or the gate"
+   ],
+   "patch": "D18-entry-lacks-gate.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/docs/BCH_INTEGRATION_HANDOFF.md",
+     "find": "api>=33",
+     "replace": "api 33+",
+     "all": true
+    }
+   ]
+  },
+  {
+   "id": "D26-backlog-missing",
+   "item": "D26",
+   "command": "python Beelzebub/tools/check_bar_reset.py docs",
+   "clauses": [
+    "BACKLOG.md is missing"
+   ],
+   "patch": "D26-backlog-missing.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/docs/BACKLOG.md",
+     "delete": true
+    }
+   ]
+  },
+  {
+   "id": "D26-lacks-clearbar-fullreset",
+   "item": "D26",
+   "command": "python Beelzebub/tools/check_bar_reset.py docs",
+   "clauses": [
+    "or lacks any of clearbar-fullreset, transform-chain-guard, docs-consolidation, dev-snapshot"
+   ],
+   "patch": "D26-lacks-clearbar-fullreset.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/docs/BACKLOG.md",
+     "find": "| `clearbar-fullreset` |",
+     "replace": "| `tbd` |"
+    }
+   ]
+  },
+  {
+   "id": "D26-lacks-transform-chain-guard",
+   "item": "D26",
+   "command": "python Beelzebub/tools/check_bar_reset.py docs",
+   "clauses": [
+    "or lacks any of clearbar-fullreset, transform-chain-guard, docs-consolidation, dev-snapshot"
+   ],
+   "patch": "D26-lacks-transform-chain-guard.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/docs/BACKLOG.md",
+     "find": "| `transform-chain-guard` |",
+     "replace": "| `tbd` |"
+    }
+   ]
+  },
+  {
+   "id": "D26-lacks-docs-consolidation",
+   "item": "D26",
+   "command": "python Beelzebub/tools/check_bar_reset.py docs",
+   "clauses": [
+    "or lacks any of clearbar-fullreset, transform-chain-guard, docs-consolidation, dev-snapshot"
+   ],
+   "patch": "D26-lacks-docs-consolidation.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/docs/BACKLOG.md",
+     "find": "| `docs-consolidation` |",
+     "replace": "| `tbd` |"
+    }
+   ]
+  },
+  {
+   "id": "D26-lacks-dev-snapshot",
+   "item": "D26",
+   "command": "python Beelzebub/tools/check_bar_reset.py docs",
+   "clauses": [
+    "or lacks any of clearbar-fullreset, transform-chain-guard, docs-consolidation, dev-snapshot"
+   ],
+   "patch": "D26-lacks-dev-snapshot.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/docs/BACKLOG.md",
+     "find": "| `dev-snapshot` |",
+     "replace": "| `tbd` |"
+    }
+   ]
+  },
+  {
+   "id": "D19-toml-version",
+   "item": "D19",
+   "command": "pwsh Beelzebub/tools/preflight.ps1",
+   "clauses": [
+    "the csproj and toml versions differ"
+   ],
+   "patch": "D19-toml-version.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/thunderstore.toml",
+     "find": "versionNumber = \"0.136.0\"",
+     "replace": "versionNumber = \"0.136.1\""
+    }
+   ]
+  },
+  {
+   "id": "D19-changelog-entry",
+   "item": "D19",
+   "command": "pwsh Beelzebub/tools/preflight.ps1",
+   "clauses": [
+    "CHANGELOG.md has no [0.137.0] entry"
+   ],
+   "patch": "D19-changelog-entry.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/CHANGELOG.md",
+     "find": "## [0.136.0] - 2026-09-23",
+     "replace": "## 0.136.0 - 2026-09-23"
+    }
+   ]
+  },
+  {
+   "id": "D19-readme-status",
+   "item": "D19",
+   "command": "pwsh Beelzebub/tools/preflight.ps1",
+   "clauses": [
+    "the README status line names another version"
+   ],
+   "patch": "D19-readme-status.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/README.md",
+     "find": "**public test build (v0.136.0)**",
+     "replace": "**public test build (v0.135.0)**"
+    }
+   ]
+  },
+  {
+   "id": "D19-subcheck-fails",
+   "item": "D19",
+   "command": "pwsh Beelzebub/tools/preflight.ps1",
+   "clauses": [
+    "or any check_bar_reset subcheck fails"
+   ],
+   "patch": "D19-subcheck-fails.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Commands/AdminCommands.cs",
+     "find": "        ctx.Reply(\".beelz admin rebuildslots / clearslotmods <player> — LEGACY slot levers (use purge)\");",
+     "replace": "        ctx.Reply(\".beelz admin rebuildslots / clearslotmods <player> — LEGACY slot levers (use purge, then .beelz slot 1)\");"
+    }
+   ]
+  },
+  {
+   "id": "D20-stack-frame",
+   "item": "D20",
+   "command": "pwsh Beelzebub/tools/preflight.ps1 -LogCheck -LogDir Beelzebub/tools/faults/bar-reset/logs",
+   "clauses": [
+    "LogOutput.log contains a line starting \"at Beelzebub.\""
+   ],
+   "patch": "D20-stack-frame.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/LogOutput.log",
+     "find": "[Info   :Beelzebub] Beelzebub initialized.\n",
+     "replace": "[Info   :Beelzebub] Beelzebub initialized.\n[Error  :Beelzebub] reset threw\n  at Beelzebub.Services.BarResetService.FullReset ()\n"
+    }
+   ]
+  },
+  {
+   "id": "D20-logoutput-missing",
+   "item": "D20",
+   "command": "pwsh Beelzebub/tools/preflight.ps1 -LogCheck -LogDir Beelzebub/tools/faults/bar-reset/logs",
+   "clauses": [
+    "log is missing"
+   ],
+   "patch": "D20-logoutput-missing.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/LogOutput.log",
+     "delete": true
+    }
+   ]
+  },
+  {
+   "id": "D20-nyardev-missing",
+   "item": "D20",
+   "command": "pwsh Beelzebub/tools/preflight.ps1 -LogCheck -LogDir Beelzebub/tools/faults/bar-reset/logs",
+   "clauses": [
+    "log is missing"
+   ],
+   "patch": "D20-nyardev-missing.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/NyarDev.log",
+     "delete": true
+    }
+   ]
+  },
+  {
+   "id": "D20-logoutput-empty",
+   "item": "D20",
+   "command": "pwsh Beelzebub/tools/preflight.ps1 -LogCheck -LogDir Beelzebub/tools/faults/bar-reset/logs",
+   "clauses": [
+    "or empty"
+   ],
+   "patch": "D20-logoutput-empty.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/LogOutput.log",
+     "truncate": true
+    }
+   ]
+  },
+  {
+   "id": "D20-nyardev-empty",
+   "item": "D20",
+   "command": "pwsh Beelzebub/tools/preflight.ps1 -LogCheck -LogDir Beelzebub/tools/faults/bar-reset/logs",
+   "clauses": [
+    "or empty"
+   ],
+   "patch": "D20-nyardev-empty.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/NyarDev.log",
+     "truncate": true
+    }
+   ]
+  },
+  {
+   "id": "D22-sha-unresolved",
+   "item": "D22",
+   "command": "python Beelzebub/tools/check_bar_reset.py rollback",
+   "clauses": [
+    "a SHA does not resolve"
+   ],
+   "deferred": "the rollback line is written after the chore(release): v0.137.0 commit (build step 10); its patches plant into that line",
+   "gate": "rollback"
+  },
+  {
+   "id": "D22-release-subject",
+   "item": "D22",
+   "command": "python Beelzebub/tools/check_bar_reset.py rollback",
+   "clauses": [
+    "the release subject differs"
+   ],
+   "deferred": "the rollback line is written after the chore(release): v0.137.0 commit (build step 10); its patches plant into that line",
+   "gate": "rollback"
+  },
+  {
+   "id": "D22-order",
+   "item": "D22",
+   "command": "python Beelzebub/tools/check_bar_reset.py rollback",
+   "clauses": [
+    "the order is wrong"
+   ],
+   "deferred": "the rollback line is written after the chore(release): v0.137.0 commit (build step 10); its patches plant into that line",
+   "gate": "rollback"
+  },
+  {
+   "id": "D22-state-version",
+   "item": "D22",
+   "command": "python Beelzebub/tools/check_bar_reset.py rollback",
+   "clauses": [
+    "the state version changed"
+   ],
+   "deferred": "the rollback line is written after the chore(release): v0.137.0 commit (build step 10); its patches plant into that line",
+   "gate": "rollback"
+  },
+  {
+   "id": "D22-no-line",
+   "item": "D22",
+   "command": "python Beelzebub/tools/check_bar_reset.py rollback",
+   "clauses": [
+    "or no rollback line exists"
+   ],
+   "deferred": "the rollback line is written after the chore(release): v0.137.0 commit (build step 10); its patches plant into that line",
+   "gate": "rollback"
+  },
+  {
+   "id": "D23-untracked-path",
+   "item": "D23",
+   "command": "python Beelzebub/tools/check_bar_reset.py paths",
+   "clauses": [
+    "a changed or untracked path is not in the list"
+   ],
+   "patch": "D23-untracked-path.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/undeclared-fault.txt",
+     "create": "planted by the bar-reset fault harness\n"
+    }
+   ]
+  },
+  {
+   "id": "D23-changed-path",
+   "item": "D23",
+   "command": "python Beelzebub/tools/check_bar_reset.py paths",
+   "clauses": [
+    "a changed or untracked path is not in the list"
+   ],
+   "patch": "D23-changed-path.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/README.md",
+     "find": "# Beelzebub build-time tooling\n",
+     "replace": "# Beelzebub build-time tooling\n\n<!-- planted -->\n"
+    }
+   ]
+  },
+  {
+   "id": "D23-no-entries",
+   "item": "D23",
+   "command": "python Beelzebub/tools/check_bar_reset.py paths",
+   "clauses": [
+    "zero parsed list entries prints FAIL"
+   ],
+   "patch": "D23-no-entries.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/docs/dod/bar-reset.md",
+     "find": "- Paths walked (probe 14.4, D23) — the list `check_bar_reset.py paths` parses:",
+     "replace": "- Paths visited (probe 14.4, D23) — the list `check_bar_reset.py paths` parses:"
+    }
+   ]
+  },
+  {
+   "id": "D25-lowercase-rejected",
+   "item": "D25",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetInputTests",
+   "clauses": [
+    "`confirm`"
+   ],
+   "patch": "D25-lowercase-rejected.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarResetInput.cs",
+     "find": "        token != null && string.Equals(token.Trim(), ConfirmToken, StringComparison.OrdinalIgnoreCase);",
+     "replace": "        token != null && string.Equals(token.Trim(), ConfirmToken, StringComparison.Ordinal);"
+    }
+   ]
+  },
+  {
+   "id": "D25-padded-rejected",
+   "item": "D25",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetInputTests",
+   "clauses": [
+    "` CONFIRM ` is rejected"
+   ],
+   "patch": "D25-padded-rejected.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarResetInput.cs",
+     "find": "        token != null && string.Equals(token.Trim(), ConfirmToken, StringComparison.OrdinalIgnoreCase);",
+     "replace": "        token != null && string.Equals(token, ConfirmToken, StringComparison.OrdinalIgnoreCase);"
+    }
+   ]
+  },
+  {
+   "id": "D25-confirmed-accepted",
+   "item": "D25",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetInputTests",
+   "clauses": [
+    "`CONFIRMED`"
+   ],
+   "patch": "D25-confirmed-accepted.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarResetInput.cs",
+     "find": "        token != null && string.Equals(token.Trim(), ConfirmToken, StringComparison.OrdinalIgnoreCase);",
+     "replace": "        token != null && token.Trim().StartsWith(ConfirmToken, StringComparison.OrdinalIgnoreCase);"
+    }
+   ]
+  },
+  {
+   "id": "D25-empty-accepted",
+   "item": "D25",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetInputTests",
+   "clauses": [
+    "empty"
+   ],
+   "patch": "D25-empty-accepted.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarResetInput.cs",
+     "find": "        token != null && string.Equals(token.Trim(), ConfirmToken, StringComparison.OrdinalIgnoreCase);",
+     "replace": "        token != null && (token.Trim().Length == 0 || string.Equals(token.Trim(), ConfirmToken, StringComparison.OrdinalIgnoreCase));"
+    }
+   ]
+  },
+  {
+   "id": "D25-null-accepted",
+   "item": "D25",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~BarResetInputTests",
+   "clauses": [
+    "null is accepted"
+   ],
+   "patch": "D25-null-accepted.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarResetInput.cs",
+     "find": "        token != null && string.Equals(token.Trim(), ConfirmToken, StringComparison.OrdinalIgnoreCase);",
+     "replace": "        token == null || string.Equals(token.Trim(), ConfirmToken, StringComparison.OrdinalIgnoreCase);"
+    }
+   ]
+  },
+  {
+   "id": "D28-row-lacks-field",
+   "item": "D28",
+   "command": "python Beelzebub/tools/check_bar_reset.py data",
+   "clauses": [
+    "a row lacks one of the four fields"
+   ],
+   "patch": "D28-row-lacks-field.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/docs/dod/bar-reset.md",
+     "find": "- artifact: [Beelz BAR] line · owner: the server · location: `BepInEx/LogOutput.log` · retention: overwritten at the next boot · copies: one prior boot in `LogOutput.1.log` (D6)",
+     "replace": "- artifact: [Beelz BAR] line · owner: the server · location: `BepInEx/LogOutput.log` · copies: one prior boot in `LogOutput.1.log` (D6)"
+    }
+   ]
+  },
+  {
+   "id": "D28-log-tag-no-row",
+   "item": "D28",
+   "command": "python Beelzebub/tools/check_bar_reset.py data",
+   "clauses": [
+    "a declared producer has no matching row",
+    "producers are found by scanning the files in Rollout › Paths walked for",
+    "a `[Beelz <TAG>` log literal"
+   ],
+   "patch": "D28-log-tag-no-row.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Services/BarResetService.cs",
+     "find": "using Beelzebub.Logic;\n",
+     "replace": "using Beelzebub.Logic;\n// planted: [Beelz ZAP] tag with no Data row\n"
+    }
+   ]
+  },
+  {
+   "id": "D28-config-key-no-row",
+   "item": "D28",
+   "command": "python Beelzebub/tools/check_bar_reset.py data",
+   "clauses": [
+    "a declared producer has no matching row",
+    "producers are found by scanning the files in Rollout › Paths walked for",
+    "a `Config.Bind(` key"
+   ],
+   "patch": "D28-config-key-no-row.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/docs/dod/bar-reset.md",
+     "find": "- artifact: Forms_AutoFillFromCaptures · owner",
+     "replace": "- artifact: form auto-fill key · owner"
+    }
+   ]
+  },
+  {
+   "id": "D28-file-write-no-row",
+   "item": "D28",
+   "command": "python Beelzebub/tools/check_bar_reset.py data",
+   "clauses": [
+    "a declared producer has no matching row",
+    "producers are found by scanning the files in Rollout › Paths walked for",
+    "`File.Write`/`File.Replace`"
+   ],
+   "patch": "D28-file-write-no-row.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarResetReply.cs",
+     "find": "public static class BarResetReply\n{\n",
+     "replace": "public static class BarResetReply\n{\n    static void Dump() => System.IO.File.WriteAllText(\"bar-dump.txt\", \"\");\n"
+    }
+   ]
+  },
+  {
+   "id": "D28-open-w-no-row",
+   "item": "D28",
+   "command": "python Beelzebub/tools/check_bar_reset.py data",
+   "clauses": [
+    "a declared producer has no matching row",
+    "producers are found by scanning the files in Rollout › Paths walked for",
+    "`open(...,'w')`"
+   ],
+   "patch": "D28-open-w-no-row.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/docs/dod/bar-reset.md",
+     "find": "owner: the repo (written by `fault_harness.py --make`) ·",
+     "replace": "owner: the repo ·"
+    },
+    {
+     "file": "Beelzebub/tools/fault_harness.py",
+     "find": "def git(*args: str) -> str:\n",
+     "replace": "def git(*args: str) -> str:\n    open(\"harness-scratch.txt\", \"w\").close()\n"
+    }
+   ]
+  },
+  {
+   "id": "D28-mkdtemp-no-row",
+   "item": "D28",
+   "command": "python Beelzebub/tools/check_bar_reset.py data",
+   "clauses": [
+    "a declared producer has no matching row",
+    "producers are found by scanning the files in Rollout › Paths walked for",
+    "`mkdtemp`"
+   ],
+   "patch": "D28-mkdtemp-no-row.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/docs/dod/bar-reset.md",
+     "find": "owner: the repo (written by `fault_harness.py --make`) ·",
+     "replace": "owner: the repo ·"
+    },
+    {
+     "file": "Beelzebub/tools/fault_harness.py",
+     "find": "def git(*args: str) -> str:\n",
+     "replace": "def git(*args: str) -> str:\n    __import__(\"tempfile\").mkdtemp()\n"
+    }
+   ]
+  },
+  {
+   "id": "D28-bin-no-row",
+   "item": "D28",
+   "command": "python Beelzebub/tools/check_bar_reset.py data",
+   "clauses": [
+    "a declared producer has no matching row",
+    "producers are found by scanning the files in Rollout › Paths walked for",
+    "or a `bin/`/`dist/` output"
+   ],
+   "patch": "D28-bin-no-row.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/docs/dod/bar-reset.md",
+     "find": "`bin/`, `obj/`, `Beelzebub.Tests/bin`, `dist/` (gitignored)",
+     "replace": "`obj/`, `Beelzebub.Tests/bin`, `dist/` (gitignored)"
+    }
+   ]
+  },
+  {
+   "id": "D28-dist-no-row",
+   "item": "D28",
+   "command": "python Beelzebub/tools/check_bar_reset.py data",
+   "clauses": [
+    "a declared producer has no matching row",
+    "producers are found by scanning the files in Rollout › Paths walked for",
+    "or a `bin/`/`dist/` output"
+   ],
+   "patch": "D28-dist-no-row.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/docs/dod/bar-reset.md",
+     "find": "`bin/`, `obj/`, `Beelzebub.Tests/bin`, `dist/` (gitignored)",
+     "replace": "`bin/`, `obj/`, `Beelzebub.Tests/bin` (gitignored)"
+    }
+   ]
+  },
+  {
+   "id": "D28-zero-rows",
+   "item": "D28",
+   "command": "python Beelzebub/tools/check_bar_reset.py data",
+   "clauses": [
+    "zero parsed rows prints FAIL"
+   ],
+   "patch": "D28-zero-rows.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/docs/dod/bar-reset.md",
+     "find": "\n### Data\n",
+     "replace": "\n### Data model\n"
+    }
+   ]
+  },
+  {
+   "id": "D29-ok-on-empty",
+   "item": "D29",
+   "command": "python Beelzebub/tools/check_bar_reset.py selftest",
+   "clauses": [
+    "any subcommand prints ok on the empty"
+   ],
+   "patch": "D29-ok-on-empty.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/check_bar_reset.py",
+     "find": "        raise CheckFail(f\"no input: session log missing or empty ({log})\")",
+     "replace": "        return \"session: ok D6 D7 D8 D9 D10\""
+    }
+   ]
+  },
+  {
+   "id": "D29-ok-on-defect",
+   "item": "D29",
+   "command": "python Beelzebub/tools/check_bar_reset.py selftest",
+   "clauses": [
+    "or defect tree"
+   ],
+   "patch": "D29-ok-on-defect.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/check_bar_reset.py",
+     "find": "        sub_in(f\"{PROJ}/Config/Settings.cs\", \"false\", \"true\")",
+     "replace": "        sub_in(f\"{PROJ}/Config/Settings.cs\", \"false\", \"false\")"
+    }
+   ]
+  },
+  {
+   "id": "D29-fail-on-good",
+   "item": "D29",
+   "command": "python Beelzebub/tools/check_bar_reset.py selftest",
+   "clauses": [
+    "or FAIL on the good tree"
+   ],
+   "patch": "D29-fail-on-good.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/check_bar_reset.py",
+     "find": "f\"class A {{ const int ApiVersion = {API_VERSION}; }}\\n\"",
+     "replace": "f\"class A {{ const int ApiVersion = {API_VERSION + 1}; }}\\n\""
+    }
+   ]
+  },
+  {
+   "id": "D30-d6-missing",
+   "item": "D30",
+   "command": "python Beelzebub/tools/check_bar_reset.py session Beelzebub/tools/faults/bar-reset/logs/session.log",
+   "clauses": [
+    "any of the five line groups is missing"
+   ],
+   "patch": "D30-d6-missing.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/session.log",
+     "find": "[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=1:bind:1:0 part=1/2\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=4:bind:1:0 part=2/2\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=1:bind:1:0 part=1/2\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=4:bind:1:0 part=2/2\n",
+     "replace": ""
+    }
+   ]
+  },
+  {
+   "id": "D30-d7-missing",
+   "item": "D30",
+   "command": "python Beelzebub/tools/check_bar_reset.py session Beelzebub/tools/faults/bar-reset/logs/session.log",
+   "clauses": [
+    "any of the five line groups is missing"
+   ],
+   "patch": "D30-d7-missing.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/session.log",
+     "find": "[Info   :Beelzebub] [Beelz RESET] run=1 scope=PlayerReset target=PerpetualChaos (76561198000000001) ms=12 steps=ClearSavedBindings:2,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,EmptyPush:6,Reapply:0,Readback:0 survivors=none clean=1\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=0 rows=0 gear=9 other=0 slots=none\n[Info   :Beelzebub] [Beelz FORM] target=76561198000000001 form=Wolf source=native\n[Info   :Beelzebub] [Beelz RESET] run=2 scope=PlayerReset target=PerpetualChaos (76561198000000001) ms=9 steps=ClearSavedBindings:0,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,EmptyPush:6,Reapply:0,Readback:0 survivors=none clean=1\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=0 rows=0 gear=9 other=0 slots=none\n[Info   :Beelzebub] [Beelz RESET] run=3 scope=PlayerReset target=PerpetualChaos (76561198000000001) ms=9 steps=ClearSavedBindings:0,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,EmptyPush:6,Reapply:0,Readback:0 survivors=none clean=1\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=0 rows=0 gear=9 other=0 slots=none\n",
+     "replace": "[Info   :Beelzebub] [Beelz FORM] target=76561198000000001 form=Wolf source=native\n"
+    }
+   ]
+  },
+  {
+   "id": "D30-d8-missing",
+   "item": "D30",
+   "command": "python Beelzebub/tools/check_bar_reset.py session Beelzebub/tools/faults/bar-reset/logs/session.log",
+   "clauses": [
+    "any of the five line groups is missing"
+   ],
+   "patch": "D30-d8-missing.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/session.log",
+     "find": "[Info   :Beelzebub] [Beelz RESET] run=4 scope=Purge target=PerpetualChaos (76561198000000001) ms=9 steps=ClearSavedBindings:2,ClearHotkeys:1,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,EmptyPush:6,Reapply:0,Readback:0 survivors=none clean=1\n",
+     "replace": ""
+    }
+   ]
+  },
+  {
+   "id": "D30-d9-missing",
+   "item": "D30",
+   "command": "python Beelzebub/tools/check_bar_reset.py session Beelzebub/tools/faults/bar-reset/logs/session.log",
+   "clauses": [
+    "any of the five line groups is missing"
+   ],
+   "patch": "D30-d9-missing.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/session.log",
+     "find": "[Info   :Beelzebub] [Beelz FORM] target=76561198000000001 form=Wolf source=native\n",
+     "replace": ""
+    }
+   ]
+  },
+  {
+   "id": "D30-d10-missing",
+   "item": "D30",
+   "command": "python Beelzebub/tools/check_bar_reset.py session Beelzebub/tools/faults/bar-reset/logs/session.log",
+   "clauses": [
+    "any of the five line groups is missing"
+   ],
+   "patch": "D30-d10-missing.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/session.log",
+     "find": "[Info   :Beelzebub] [Beelz RESET] run=3 scope=PlayerReset target=PerpetualChaos (76561198000000001) ms=9 steps=ClearSavedBindings:0,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,EmptyPush:6,Reapply:0,Readback:0 survivors=none clean=1\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=0 rows=0 gear=9 other=0 slots=none\n",
+     "replace": ""
+    }
+   ]
+  },
+  {
+   "id": "D30-bar-other-above-0",
+   "item": "D30",
+   "command": "python Beelzebub/tools/check_bar_reset.py session Beelzebub/tools/faults/bar-reset/logs/session.log",
+   "clauses": [
+    "a BAR line after a reset shows `other=` above 0"
+   ],
+   "patch": "D30-bar-other-above-0.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/session.log",
+     "find": "[Info   :Beelzebub] [Beelz RESET] run=1 scope=PlayerReset target=PerpetualChaos (76561198000000001) ms=12 steps=ClearSavedBindings:2,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,EmptyPush:6,Reapply:0,Readback:0 survivors=none clean=1\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=0 rows=0 gear=9 other=0 slots=none\n",
+     "replace": "[Info   :Beelzebub] [Beelz RESET] run=1 scope=PlayerReset target=PerpetualChaos (76561198000000001) ms=12 steps=ClearSavedBindings:2,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,EmptyPush:6,Reapply:0,Readback:0 survivors=none clean=1\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=0 rows=0 gear=9 other=1 slots=none\n"
+    }
+   ]
+  },
+  {
+   "id": "D30-bar-unreadable",
+   "item": "D30",
+   "command": "python Beelzebub/tools/check_bar_reset.py session Beelzebub/tools/faults/bar-reset/logs/session.log",
+   "clauses": [
+    "or `unreadable`"
+   ],
+   "patch": "D30-bar-unreadable.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/session.log",
+     "find": "[Info   :Beelzebub] [Beelz RESET] run=1 scope=PlayerReset target=PerpetualChaos (76561198000000001) ms=12 steps=ClearSavedBindings:2,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,EmptyPush:6,Reapply:0,Readback:0 survivors=none clean=1\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=0 rows=0 gear=9 other=0 slots=none\n",
+     "replace": "[Info   :Beelzebub] [Beelz RESET] run=1 scope=PlayerReset target=PerpetualChaos (76561198000000001) ms=12 steps=ClearSavedBindings:2,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,EmptyPush:6,Reapply:0,Readback:0 survivors=none clean=1\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=0 rows=0 gear=9 other=unreadable slots=none\n"
+    }
+   ]
+  },
+  {
+   "id": "D30-d6-differ",
+   "item": "D30",
+   "command": "python Beelzebub/tools/check_bar_reset.py session Beelzebub/tools/faults/bar-reset/logs/session.log",
+   "clauses": [
+    "the two D6 lines differ"
+   ],
+   "patch": "D30-d6-differ.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/session.log",
+     "find": "[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=4:bind:1:0 part=2/2\n[Info   :Beelzebub] [Beelz FORM] target=76561198000000002 form=Wolf source=captures\n",
+     "replace": "[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=4:bind:2:0 part=2/2\n[Info   :Beelzebub] [Beelz FORM] target=76561198000000002 form=Wolf source=captures\n"
+    }
+   ]
+  },
+  {
+   "id": "D30-d10-gear-changes",
+   "item": "D30",
+   "command": "python Beelzebub/tools/check_bar_reset.py session Beelzebub/tools/faults/bar-reset/logs/session.log",
+   "clauses": [
+    "a D10 `gear=` value changes"
+   ],
+   "patch": "D30-d10-gear-changes.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/session.log",
+     "find": "[Info   :Beelzebub] [Beelz RESET] run=3 scope=PlayerReset target=PerpetualChaos (76561198000000001) ms=9 steps=ClearSavedBindings:0,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,EmptyPush:6,Reapply:0,Readback:0 survivors=none clean=1\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=0 rows=0 gear=9 other=0 slots=none\n",
+     "replace": "[Info   :Beelzebub] [Beelz RESET] run=3 scope=PlayerReset target=PerpetualChaos (76561198000000001) ms=9 steps=ClearSavedBindings:0,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,EmptyPush:6,Reapply:0,Readback:0 survivors=none clean=1\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=0 rows=0 gear=8 other=0 slots=none\n"
+    }
+   ]
+  },
+  {
+   "id": "D30-late-survivor",
+   "item": "D30",
+   "command": "python Beelzebub/tools/check_bar_reset.py session Beelzebub/tools/faults/bar-reset/logs/session.log",
+   "clauses": [
+    "a `late-survivor` line follows the D7 reset"
+   ],
+   "patch": "D30-late-survivor.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/session.log",
+     "find": "[Info   :Beelzebub] [Beelz RESET] run=1 scope=PlayerReset target=PerpetualChaos (76561198000000001) ms=12 steps=ClearSavedBindings:2,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,EmptyPush:6,Reapply:0,Readback:0 survivors=none clean=1\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=0 rows=0 gear=9 other=0 slots=none\n",
+     "replace": "[Info   :Beelzebub] [Beelz RESET] run=1 scope=PlayerReset target=PerpetualChaos (76561198000000001) ms=12 steps=ClearSavedBindings:2,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,EmptyPush:6,Reapply:0,Readback:0 survivors=none clean=1\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=0 rows=0 gear=9 other=0 slots=none\n[Info   :Beelzebub] [Beelz RESET] late-survivor target=PerpetualChaos (76561198000000001) run=1 slot=3\n"
+    }
+   ]
+  },
+  {
+   "id": "D30-reset-clean-0",
+   "item": "D30",
+   "command": "python Beelzebub/tools/check_bar_reset.py session Beelzebub/tools/faults/bar-reset/logs/session.log",
+   "clauses": [
+    "a reset line has `clean=0`"
+   ],
+   "patch": "D30-reset-clean-0.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/session.log",
+     "find": "[Info   :Beelzebub] [Beelz RESET] run=1 scope=PlayerReset target=PerpetualChaos (76561198000000001) ms=12 steps=ClearSavedBindings:2,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,EmptyPush:6,Reapply:0,Readback:0 survivors=none clean=1\n",
+     "replace": "[Info   :Beelzebub] [Beelz RESET] run=1 scope=PlayerReset target=PerpetualChaos (76561198000000001) ms=12 steps=ClearSavedBindings:2,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,EmptyPush:6,Reapply:0,Readback:0 survivors=none clean=0\n"
+    }
+   ]
+  },
+  {
+   "id": "D30-reset-step-err",
+   "item": "D30",
+   "command": "python Beelzebub/tools/check_bar_reset.py session Beelzebub/tools/faults/bar-reset/logs/session.log",
+   "clauses": [
+    "or a step `:ERR`"
+   ],
+   "patch": "D30-reset-step-err.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/session.log",
+     "find": "[Info   :Beelzebub] [Beelz RESET] run=1 scope=PlayerReset target=PerpetualChaos (76561198000000001) ms=12 steps=ClearSavedBindings:2,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,EmptyPush:6,Reapply:0,Readback:0 survivors=none clean=1\n",
+     "replace": "[Info   :Beelzebub] [Beelz RESET] run=1 scope=PlayerReset target=PerpetualChaos (76561198000000001) ms=12 steps=ClearSavedBindings:2,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:ERR,EmptyPush:6,Reapply:0,Readback:0 survivors=none clean=1\n"
+    }
+   ]
+  },
+  {
+   "id": "D30-reset-lacks-step",
+   "item": "D30",
+   "command": "python Beelzebub/tools/check_bar_reset.py session Beelzebub/tools/faults/bar-reset/logs/session.log",
+   "clauses": [
+    "or lacks a required step"
+   ],
+   "patch": "D30-reset-lacks-step.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/session.log",
+     "find": "[Info   :Beelzebub] [Beelz RESET] run=1 scope=PlayerReset target=PerpetualChaos (76561198000000001) ms=12 steps=ClearSavedBindings:2,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,EmptyPush:6,Reapply:0,Readback:0 survivors=none clean=1\n",
+     "replace": "[Info   :Beelzebub] [Beelz RESET] run=1 scope=PlayerReset target=PerpetualChaos (76561198000000001) ms=12 steps=ClearSavedBindings:2,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,Reapply:0,Readback:0 survivors=none clean=1\n"
+    }
+   ]
+  },
+  {
+   "id": "D30-form-other-player",
+   "item": "D30",
+   "command": "python Beelzebub/tools/check_bar_reset.py session Beelzebub/tools/faults/bar-reset/logs/session.log",
+   "clauses": [
+    "the only Wolf FORM line is another player's"
+   ],
+   "patch": "D30-form-other-player.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/session.log",
+     "find": "[Info   :Beelzebub] [Beelz FORM] target=76561198000000001 form=Wolf source=native\n",
+     "replace": "[Info   :Beelzebub] [Beelz FORM] target=76561198000000009 form=Wolf source=native\n"
+    }
+   ]
+  },
+  {
+   "id": "D30-part-truncated",
+   "item": "D30",
+   "command": "python Beelzebub/tools/check_bar_reset.py session Beelzebub/tools/faults/bar-reset/logs/session.log",
+   "clauses": [
+    "a BAR part set is truncated"
+   ],
+   "patch": "D30-part-truncated.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/session.log",
+     "find": "[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=1:bind:1:0 part=1/2\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=4:bind:1:0 part=2/2\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=1:bind:1:0 part=1/2\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=4:bind:1:0 part=2/2\n",
+     "replace": "[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=1:bind:1:0 part=1/2\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=1:bind:1:0 part=1/2\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=4:bind:1:0 part=2/2\n"
+    }
+   ]
+  },
+  {
+   "id": "D30-part-mixed",
+   "item": "D30",
+   "command": "python Beelzebub/tools/check_bar_reset.py session Beelzebub/tools/faults/bar-reset/logs/session.log",
+   "clauses": [
+    "mixed"
+   ],
+   "patch": "D30-part-mixed.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/session.log",
+     "find": "[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=1:bind:1:0 part=1/2\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=4:bind:1:0 part=2/2\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=1:bind:1:0 part=1/2\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=4:bind:1:0 part=2/2\n",
+     "replace": "[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=1:bind:1:0 part=1/2\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=3 rows=2 gear=2 other=0 slots=4:bind:1:0 part=2/2\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=1:bind:1:0 part=1/2\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=4:bind:1:0 part=2/2\n"
+    }
+   ]
+  },
+  {
+   "id": "D30-part-out-of-order",
+   "item": "D30",
+   "command": "python Beelzebub/tools/check_bar_reset.py session Beelzebub/tools/faults/bar-reset/logs/session.log",
+   "clauses": [
+    "or out of order"
+   ],
+   "patch": "D30-part-out-of-order.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/session.log",
+     "find": "[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=1:bind:1:0 part=1/2\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=4:bind:1:0 part=2/2\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=1:bind:1:0 part=1/2\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=4:bind:1:0 part=2/2\n",
+     "replace": "[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=4:bind:1:0 part=2/2\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=1:bind:1:0 part=1/2\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=1:bind:1:0 part=1/2\n[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (76561198000000001) binds=2 rows=2 gear=2 other=0 slots=4:bind:1:0 part=2/2\n"
+    }
+   ]
+  },
+  {
+   "id": "D30-line-does-not-parse",
+   "item": "D30",
+   "command": "python Beelzebub/tools/check_bar_reset.py session Beelzebub/tools/faults/bar-reset/logs/session.log",
+   "clauses": [
+    "or any `[Beelz RESET]`/`[Beelz BAR]` line does not parse"
+   ],
+   "patch": "D30-line-does-not-parse.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/session.log",
+     "find": "[Info   :Beelzebub] [Beelz RESET] run=2 scope=PlayerReset target=PerpetualChaos (76561198000000001) ms=9 steps=ClearSavedBindings:0,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,EmptyPush:6,Reapply:0,Readback:0 survivors=none clean=1\n",
+     "replace": "[Info   :Beelzebub] [Beelz RESET] run=2 scope=PlayerReset target=PerpetualChaos (76561198000000001) ms=9 steps=ClearSavedBindings:0,SaveBindings:1,ClearEquipEntries:2,DestroyOverrideSources:0,PopSlotMods:3,EmptyPush:6,Reapply:0,Readback:0 survivors=none clean=yes\n"
+    }
+   ]
+  },
+  {
+   "id": "D30-log-empty",
+   "item": "D30",
+   "command": "python Beelzebub/tools/check_bar_reset.py session Beelzebub/tools/faults/bar-reset/logs/session.log",
+   "clauses": [
+    "an empty or missing log prints FAIL no input"
+   ],
+   "patch": "D30-log-empty.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/session.log",
+     "truncate": true
+    }
+   ]
+  },
+  {
+   "id": "D30-log-missing",
+   "item": "D30",
+   "command": "python Beelzebub/tools/check_bar_reset.py session Beelzebub/tools/faults/bar-reset/logs/session.log",
+   "clauses": [
+    "an empty or missing log prints FAIL no input"
+   ],
+   "patch": "D30-log-missing.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/tools/faults/bar-reset/logs/session.log",
+     "delete": true
+    }
+   ]
+  },
+  {
+   "id": "D31-vanilla-slot-0-injected",
+   "item": "D31",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~EquipRowsTests",
+   "clauses": [
+    "a vanilla Sword row on slot 0, 1 or 4 is returned as injected"
+   ],
+   "patch": "D31-vanilla-slot-0-injected.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/EquipRows.cs",
+     "find": "            if (budget.TryGetValue(r, out int n) && n > 0) { budget[r] = n - 1; continue; }",
+     "replace": "            if (r.Slot != 0 && budget.TryGetValue(r, out int n) && n > 0) { budget[r] = n - 1; continue; }"
+    }
+   ]
+  },
+  {
+   "id": "D31-vanilla-slot-1-injected",
+   "item": "D31",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~EquipRowsTests",
+   "clauses": [
+    "a vanilla Sword row on slot 0, 1 or 4 is returned as injected"
+   ],
+   "patch": "D31-vanilla-slot-1-injected.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/EquipRows.cs",
+     "find": "            if (budget.TryGetValue(r, out int n) && n > 0) { budget[r] = n - 1; continue; }",
+     "replace": "            if (r.Slot != 1 && budget.TryGetValue(r, out int n) && n > 0) { budget[r] = n - 1; continue; }"
+    }
+   ]
+  },
+  {
+   "id": "D31-vanilla-slot-4-injected",
+   "item": "D31",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~EquipRowsTests",
+   "clauses": [
+    "a vanilla Sword row on slot 0, 1 or 4 is returned as injected"
+   ],
+   "patch": "D31-vanilla-slot-4-injected.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/EquipRows.cs",
+     "find": "            if (budget.TryGetValue(r, out int n) && n > 0) { budget[r] = n - 1; continue; }",
+     "replace": "            if (r.Slot != 4 && budget.TryGetValue(r, out int n) && n > 0) { budget[r] = n - 1; continue; }"
+    }
+   ]
+  },
+  {
+   "id": "D31-extra-copy-kept",
+   "item": "D31",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~EquipRowsTests",
+   "clauses": [
+    "an extra copy of a vanilla row is kept"
+   ],
+   "patch": "D31-extra-copy-kept.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/EquipRows.cs",
+     "find": "            if (budget.TryGetValue(r, out int n) && n > 0) { budget[r] = n - 1; continue; }",
+     "replace": "            if (budget.TryGetValue(r, out int n) && n > 0) { budget[r] = n; continue; }"
+    }
+   ]
+  },
+  {
+   "id": "D31-slot-8-returned",
+   "item": "D31",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~EquipRowsTests",
+   "clauses": [
+    "a row on slot 8 is returned"
+   ],
+   "patch": "D31-slot-8-returned.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/EquipRows.cs",
+     "find": "            if (r.Slot >= MinSlot && r.Slot <= MaxSlot) injected.Add(i);",
+     "replace": "            if (r.Slot >= MinSlot) injected.Add(i);"
+    }
+   ]
+  },
+  {
+   "id": "D31-null-prefab-injected",
+   "item": "D31",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~EquipRowsTests",
+   "clauses": [
+    "a null prefab returns a non-null list"
+   ],
+   "patch": "D31-null-prefab-injected.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/EquipRows.cs",
+     "find": "        if (prefab == null) return null;\n        var budget",
+     "replace": "        if (prefab == null) prefab = new List<EquipRow>();\n        var budget"
+    }
+   ]
+  },
+  {
+   "id": "D31-null-prefab-missing",
+   "item": "D31",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~EquipRowsTests",
+   "clauses": [
+    "a null prefab returns a non-null list"
+   ],
+   "patch": "D31-null-prefab-missing.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/EquipRows.cs",
+     "find": "        if (prefab == null) return null;\n        var have",
+     "replace": "        if (prefab == null) return new List<int>();\n        var have"
+    }
+   ]
+  },
+  {
+   "id": "D31-stripped-not-missing",
+   "item": "D31",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~EquipRowsTests",
+   "clauses": [
+    "or a stripped prefab row is not reported missing"
+   ],
+   "patch": "D31-stripped-not-missing.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/EquipRows.cs",
+     "find": "            missing.Add(i);\n",
+     "replace": ""
+    }
+   ]
+  }
+ ]
+}

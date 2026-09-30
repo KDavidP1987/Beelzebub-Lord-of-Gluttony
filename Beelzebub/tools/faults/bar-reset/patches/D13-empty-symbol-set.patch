@@ -1,19 +1,21 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -150,6 +150,7 @@
+@@ -150,17 +150,6 @@
  
  public interface IBarResetOps
  {
-+#if NEVER
-     int RevertTransform();
-     int ClearSavedBindings();
-     int ClearHotkeys();
-@@ -161,6 +162,7 @@
-     int EmptyPush();
-     int Reapply();
-     BarReadback Readback();
-+#endif
+-    int RevertTransform();
+-    int ClearSavedBindings();
+-    int ClearHotkeys();
+-    /// <summary>Writes state.json synchronously; false when the write failed (never swallowed as success).</summary>
+-    bool SaveBindings();
+-    int ClearEquipEntries();
+-    int DestroyOverrideSources();
+-    int PopSlotMods();
+-    int EmptyPush();
+-    int Reapply();
+-    BarReadback Readback();
  }
  
  public readonly record struct BarResetStepResult(BarResetStep Step, int Count, string Error)

@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/tools/check_bar_reset.py b/Beelzebub/tools/check_bar_reset.py
 --- a/Beelzebub/tools/check_bar_reset.py
 +++ b/Beelzebub/tools/check_bar_reset.py
-@@ -856,7 +856,7 @@
+@@ -858,7 +858,7 @@
          assert a in s, (sub, a)
          open(p, "w", encoding="utf-8", newline="\n").write(s.replace(a, b, 1))
      if sub == "config":
