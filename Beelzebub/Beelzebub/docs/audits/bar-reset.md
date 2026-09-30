@@ -235,3 +235,23 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
 - Codex verdict: READY (no findings) — the round-1 fixes F1 A1 A2 A3 A5 A6 checked against the pasted handlers.
 - /code-review: waived — round 1's fresh-context subagent covered this surface; the round-2 diff is its own fixes.
 - Step 7 post-audit CLOSED after 2 rounds.
+
+### Step 5 · 2026-09-30 · fault harness (commits 7baa616, cc8497e, 49fe6ba)
+- planted faults: `python Beelzebub/tools/fault_harness.py bar-reset --skip D19` on 49fe6ba, patch tree a0fa64654f214a39138d148671a4e9ed706353a8 (`git rev-parse HEAD:Beelzebub/tools/faults/bar-reset`):
+  `harness: ok, 131 faults, 113 clauses, 1 silent, 5 deferred (D22: gate not met) (not run: D19)`
+  - every one of the 131 patches: planted → its command failed for the planted reason (a failing test, a checker FAIL line,
+    PREFLIGHT FAILED) → `git apply -R` → the command passed again. D2 "stays silent on the documented order" is proven by
+    the clean baseline; D22's five clauses wait for the rollback line (build step 10); D19's four patches run once this
+    record is committed (its preflight baseline needs `audit: ok`) and their result is added below.
+- what the harness found (each fixed in its own commit before the recorded run):
+  - run 1 (54 of 131 exercised): under `core.autocrlf` `git apply -R` rewrote line endings, so reverted files stayed
+    "modified" and later patches were skipped as a dirty tree — the harness now restores each file's exact bytes.
+  - `check_bar_reset.py auth` read `string player = null` as the parameter `null`: a defaulted player/target parameter
+    never counted as targeting (D15 hole). Fixed; `auth: ok, 69 admin commands` unchanged on the repo.
+  - `check_bar_reset.py data` never flagged a script that only `open(...,'w')`s and did not require a `dist/` row (D28).
+  - `check_bar_reset.py docs` accepted a backlog slug mentioned in another row's prose (D26); it now needs the slug's row.
+  - selftest crashed instead of FAILing when a fixture could not be built.
+  - D2 "a plan missing any of …": no test removed ONE required layer; new Theory `Runner_fails_when_a_plan_missing_one_required_layer_is_clean`.
+  - `Beelzebub/.gitignore` ignores `manifest.json` and `logs/`: the manifest and fixture logs were never committed. A
+    faults-dir `.gitignore` re-includes them, and the harness FAILs on any untracked file in its dir.
+  - four plants did not reach their check (D13 empty set, D28 script writers, D29 empty/good tree) and were re-aimed.
