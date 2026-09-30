@@ -641,6 +641,11 @@ def check_session(root: str, log: str | None) -> str:
                 if m:
                     events.append((kind, m.groupdict(), line.strip()))
                     break
+            else:
+                # the mod writes these two tags only through BarResetLog: a line that does not parse is a defect,
+                # never skipped (a skipped malformed first reset would let a later retry satisfy D7)
+                if "[Beelz RESET]" in line or "[Beelz BAR]" in line:
+                    raise CheckFail(f"D30: malformed line: {line.strip()[:100]}")
     if not events:
         raise CheckFail("no input: no [Beelz BAR/RESET/FORM] lines in the log")
     # FORM lines carry only the Steam ID: keep those whose ID the target's own BAR/RESET lines printed
@@ -835,6 +840,9 @@ SESSION_DEFECTS += [
     (",SaveBindings:1,", ",SaveBindings:ERR,SaveBindings:1,"),                             # a duplicate step hides ERR
     ("clean=1", "clean=10"),                                                               # a malformed clean field
     ("PopSlotMods:3,", "PopSlotMods:ERR,"),                                                # ERR on a non-save step
+    ("[Info   :Beelzebub] [Beelz RESET] run=1 ",                                             # a malformed FIRST reset
+     "[Info   :Beelzebub] [Beelz RESET] run=0 scope=PlayerReset target=PerpetualChaos (7) ms=1 steps=SaveBindings:1 "
+     "survivors=none clean=10\n[Info   :Beelzebub] [Beelz RESET] run=1 "),
 ]
 
 

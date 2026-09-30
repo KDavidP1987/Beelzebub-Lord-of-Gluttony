@@ -77,3 +77,15 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
 - planted faults: D8-without-_reset_ok, D10-without-_reset_ok, unanchored-clean, raw-ERR-allowed — each made selftest
   FAIL on its defect tree, ok restored; header-is-any-dash-line — failed its new test, passed restored
 - checker: `selftest: ok, 40 cases`
+
+### Steps 1-4 · review round 3 (final) · 2026-09-30 · reviewed ab61c77
+- Codex verdict: REVISE — 1 blocking on ab61c77, ACCEPTED:
+  - F1 ACCEPTED — a malformed first PlayerReset line (e.g. `clean=10`) failed `_RESET`, was silently dropped, and a
+    later clean retry became "the first" PlayerReset for D7. Any `[Beelz RESET]` / `[Beelz BAR]` line that does not parse
+    now fails the session (the mod writes those tags only through BarResetLog). New fixture: a malformed run 0 before run 1.
+- /code-review: not rerun for round 3 — the round-2 /code-review findings were all fixed in ab61c77 and this round's
+  single change is the checker line above.
+- planted faults: malformed-line-check-removed → `selftest: FAIL session ok on its defect tree 11`, restored ok
+- checker: `selftest: ok, 41 cases`
+- Round cap reached (3 of 3, CLAUDE.md › Development procedure step 3). The round-3 fix is verified by its planted fault,
+  not by a fourth review; the whole steps 1-9 diff gets a fresh Codex pass in build step 9.
