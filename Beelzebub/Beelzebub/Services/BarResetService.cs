@@ -34,6 +34,9 @@ internal sealed class BarResetService : IBarResetOps
 
     static int _runCounter;
 
+    /// <summary>The bar the player sees: slots 0 (primary) to 8.</summary>
+    const int BarMaxSlot = 8;
+
     /// <summary>Resets <paramref name="character"/>'s bar for <paramref name="scope"/>, logs the `[Beelz RESET]` and
     /// `[Beelz BAR]` lines, schedules the next-tick late re-read, and returns the result for the reply.</summary>
     public static BarResetResult FullReset(Entity character, ulong steamId, string name, BarResetScope scope)
@@ -67,13 +70,14 @@ internal sealed class BarResetService : IBarResetOps
 
         var binds = BindOrigins(character, steamId);
         var injected = SlotApply.InjectedRowSlots(character, out var anyRow);
-        var mods = TransformBuffService.ReadSlotMods(character).ToDictionary(m => m.Slot);
+        var mods = TransformBuffService.ReadSlotMods(character, BarMaxSlot).ToDictionary(m => m.Slot);
 
         var slots = new SortedSet<int>(mods.Keys);
         foreach (int s in binds.Keys) slots.Add(s);
         foreach (int s in anyRow) slots.Add(s);
         foreach (int slot in slots)
         {
+            if (slot < 0 || slot > BarMaxSlot) continue;   // the bar only (Business rules 5)
             mods.TryGetValue(slot, out var m);
             bool rowsUnknown = injected == null && anyRow.Contains(slot);
             readback.Slots.Add(new BarSlotReading
@@ -145,7 +149,7 @@ internal sealed class BarResetService : IBarResetOps
 
     public bool SaveBindings() => Core.Persistence.TrySaveSync();
 
-    public int ClearEquipEntries() => SlotApply.RemoveInjectedRows(_character);
+    public int ClearEquipEntries() => SlotApply.RemoveInjectedRows(RequireEquipBuff());
 
     public int DestroyOverrideSources() =>
         TransformBuffService.RemoveAllFormsAndShapeshifts(_character)
@@ -153,9 +157,14 @@ internal sealed class BarResetService : IBarResetOps
 
     public int PopSlotMods() => TransformBuffService.PopSlotModifications(_character);
 
-    public int EmptyPush() => TransformBuffService.ForceResetAbilitySlots(_character);
+    public int EmptyPush() => TransformBuffService.ForceResetAbilitySlots(RequireEquipBuff());
 
-    public int Reapply() => SlotApply.ReapplyEquipRows(_character);
+    public int Reapply() => SlotApply.ReapplyEquipRows(RequireEquipBuff());
+
+    /// <summary>The live steps need the held equip buff; one that vanished after planning (a swap, a respawn) is an ERR
+    /// for the step, never a 0 that reads as success.</summary>
+    Entity RequireEquipBuff() =>
+        SlotApply.HasEquipBuff(_character) ? _character : throw new InvalidOperationException("no held equip buff");
 
     public BarReadback Readback() => ReadBar(_character, _steamId);
 

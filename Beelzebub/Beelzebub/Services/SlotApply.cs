@@ -649,10 +649,11 @@ internal static class SlotApply
     }
 
     /// <summary>
-    /// Reapply: after the mod pop and the Empty push, set every bar slot 0-8 back through the engine's own setter with
-    /// the held equip buff as the (gear) source — the weapon's row where it has one, else the slot's stored vanilla base
-    /// (spellbook / jewel pick). Every run pops these and re-adds them, so the per-slot gear count stays equal run to
-    /// run. Returns the number of slots set.
+    /// Reapply: after the mod pop and the Empty push, set each slot that has a row on the held equip buff (the weapon's
+    /// own kit, slots 0-8) back through the engine's own setter, the equip buff as the (gear) source. Slots without a row
+    /// are left on the Empty push, which resolves to their stored base — pushing the base itself would pin it and block
+    /// a later spellbook re-pick until a weapon swap. Every run pops these and re-adds them, so the per-slot gear count
+    /// stays equal run to run. Returns the number of slots set.
     /// </summary>
     public static int ReapplyEquipRows(Entity character)
     {
@@ -667,7 +668,6 @@ internal static class SlotApply
             int bestPriority = int.MinValue;
             foreach (var r in rows)
                 if (r.Slot == slot && r.Priority >= bestPriority) { ability = r.NewGroupId; bestPriority = r.Priority; }
-            if (ability._Value == 0 && TryGetSlotBase(character, slot, out var baseAbility)) ability = baseAbility;
             if (ability._Value == 0) continue;
             sgm.ModifyAbilityGroupOnSlot(equipBuff, character, slot, ability);
             set.Add(slot);

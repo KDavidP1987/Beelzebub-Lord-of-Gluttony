@@ -109,3 +109,32 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
 - checker: config ok, paths ok (41), data ok (17), auth ok; commands/text/docs/audit FAIL as expected until steps 7-9
 - not unit-testable here (IL2CPP): the game calls behind IBarResetOps — verified in the release-candidate session (D6-D10, D30)
 
+
+### Step 6 · review round 1 · 2026-09-30 · reviewed e3ee3e8
+- /code-review (medium, e3ee3e8), 6 findings:
+  - CR1 ACCEPTED as a documented limitation — a destroyed stuck source is patched by the engine one tick later, so
+    that run reads the slot as a survivor (not clean). Safe direction (never falsely clean); the reply points to
+    `.beelz admin bar`. Business rules 4.
+  - CR2 ACCEPTED — ReapplyEquipRows pushed each row-less slot's stored base with the equip buff as source, pinning the
+    spell until a weapon swap (the D7 symptom, moved to spell slots). Reapply is rows-only again, as the plan said.
+  - CR3 ACCEPTED — the readback walked all ~296 slot entities (any non-bar mod = never clean; 2-3 registry dumps each).
+    It now reads bar slots 0-8 only; a mod sourced by the character or a slot entity counts as vanilla. Business
+    rules 5 and D6 updated. PopSlotMods still covers every slot.
+  - CR4 ACCEPTED as a documented limitation — an offline reset drops a parked transform record (the plan's D11 rule),
+    so the reconnect path no longer despawns its carrier; the next reset's DestroyOverrideSources removes it.
+    Business rules 6.
+  - CR5 REJECTED — purge no longer clears transform cooldowns: Business rules 6 (owner-approved plan) decides
+    "cooldowns are not a reset concern and are left alone". A change made in the fix pass was reverted.
+  - CR6 ACCEPTED as a documented limitation — mounted saddle rows are not read or cleared; dismount first. Business
+    rules 4, Out of scope, backlog slug `mounted-bar-reset`.
+- Codex verdict: REVISE — 4 blocking, 1 advisory on e3ee3e8:
+  - F1 ACCEPTED — a failed `RemoveAbilityGroupModificationOnSlot` was logged and swallowed; PopSlotModifications now
+    finishes every slot and then throws, so the step is an ERR.
+  - F2 REJECTED — "re-read each slot after the setter": the engine resolves the slot in its own system job later, so a
+    same-call re-read is not a reliable signal; the readback and the D7/D30 session checks are the verification.
+  - F3 ACCEPTED — a held equip buff that vanished after planning made ClearEquipEntries / EmptyPush / Reapply return 0
+    as success; they now throw "no held equip buff" (step ERR).
+  - F4 ACCEPTED — same as CR2.
+  - F5 ACCEPTED (advisory) — the post-pop dump now checks the slot entity still exists; a vanished one is a failure.
+- compile / tests: Release build 0 errors (no deploy); `dotnet test` 109 passed
+- not unit-testable (IL2CPP game calls): verified in the release-candidate session (D6-D10, D30)

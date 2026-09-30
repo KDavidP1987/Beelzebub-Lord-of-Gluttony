@@ -965,6 +965,7 @@ internal static class TransformBuffService
             protectedSet.Contains(new Entity { Index = e.SourceIndex, Version = e.SourceVersion });
 
         int popped = 0, destroyed = 0;
+        var failures = new List<string>();
         var toDestroy = new HashSet<Entity>();
         foreach (var (idx, slot) in slots)
         {
@@ -979,9 +980,14 @@ internal static class TransformBuffService
             foreach (int id in d.ModIdsToPop)
             {
                 try { sgm.RemoveAbilityGroupModificationOnSlot(character, idx, ModificationId.NewId(id)); popped++; }
-                catch (Exception ex) { Core.Log.LogWarning($"[Beelz PURGE] slot[{idx}] remove ModId {id} failed: {ex.Message}"); }
+                catch (Exception ex)
+                {
+                    Core.Log.LogWarning($"[Beelz PURGE] slot[{idx}] remove ModId {id} failed: {ex.Message}");
+                    failures.Add($"slot {idx} mod {id}");
+                }
             }
             if (d.ModIdsToPop.Count == 0) continue;
+            if (!slot.Exists()) { failures.Add($"slot {idx} entity gone after the pop"); continue; }
             // Destroy backstop only for a slot the pop did not clear (a readable dump that still has mods).
             var after = Beelzebub.Logic.SlotModDump.ParseGroupGuid(FormatEntityModifications(reg, em, slot));
             if (after.Readable && after.HasMods)
@@ -1000,6 +1006,9 @@ internal static class TransformBuffService
             catch (Exception ex) { Core.Log.LogWarning($"[Beelz PURGE] destroy source {src} failed: {ex.Message}"); }
         }
         if (Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+        // Every slot was processed first; a failure then makes the whole step an ERR (never a silent partial pop).
+        if (failures.Count > 0)
+            throw new InvalidOperationException($"{failures.Count} pop failure(s): {string.Join("; ", failures.GetRange(0, Math.Min(3, failures.Count)))}");
         return popped;
     }
 
@@ -1007,16 +1016,22 @@ internal static class TransformBuffService
     public readonly record struct SlotModReading(int Slot, int Gear, int Other, bool Unreadable, List<string> GearSources);
 
     /// <summary>
-    /// v0.137.0 (bar-reset ReadBar, D6): read-only — every slot's GroupGuid mods split by the gear-source rule
-    /// (Logic/GearRule: EquipBuff* / Item_*), with the gear source prefab names kept. Changes nothing.
+    /// v0.137.0 (bar-reset ReadBar, D6): read-only — the GroupGuid mods of the BAR slots 0-<paramref name="maxSlot"/>
+    /// (the buffer holds ~300 slot entities; only the bar is shown or judged), split by the gear-source rule
+    /// (Logic/GearRule: EquipBuff* / Item_*) with the gear source names kept. A mod sourced by the character itself or a
+    /// slot entity is the engine's own and counts as vanilla ("character"), never as other. Changes nothing.
     /// </summary>
-    public static List<SlotModReading> ReadSlotMods(Entity character)
+    public static List<SlotModReading> ReadSlotMods(Entity character, int maxSlot = 8)
     {
         var list = new List<SlotModReading>();
         if (!character.Exists() || !Core.EntityManager.HasBuffer<AbilityGroupSlotBuffer>(character)) return list;
         var reg = Core.ServerGameManager.Modifications;
-        foreach (var (idx, slot) in SnapshotSlots(character))
+        var all = SnapshotSlots(character);
+        var own = new HashSet<Entity> { character };
+        foreach (var (_, se) in all) if (se != Entity.Null) own.Add(se);
+        foreach (var (idx, slot) in all)
         {
+            if (idx > maxSlot) break;
             if (slot == Entity.Null || !slot.Exists()) continue;   // no slot entity → nothing can modify it
             var parse = Beelzebub.Logic.SlotModDump.ParseGroupGuid(FormatEntityModifications(reg, Core.EntityManager, slot));
             if (!parse.Readable) { list.Add(new SlotModReading(idx, 0, 0, true, new List<string>())); continue; }
@@ -1024,8 +1039,9 @@ internal static class TransformBuffService
             var names = new List<string>();
             foreach (var e in parse.Entries)
             {
-                string n = SourcePrefabName(e);
-                if (Beelzebub.Logic.GearRule.IsGearSource(n)) { gear++; if (!names.Contains(n)) names.Add(n); }
+                bool engineOwn = own.Contains(new Entity { Index = e.SourceIndex, Version = e.SourceVersion });
+                string n = engineOwn ? "character" : SourcePrefabName(e);
+                if (engineOwn || Beelzebub.Logic.GearRule.IsGearSource(n)) { gear++; if (!names.Contains(n)) names.Add(n); }
                 else other++;
             }
             list.Add(new SlotModReading(idx, gear, other, false, names));
