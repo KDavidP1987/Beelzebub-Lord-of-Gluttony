@@ -75,6 +75,8 @@ public static class BarResetPlanner
 /// row for (Sword: 0, 1, 4). The EmptyPush used to push Empty onto all nine slots with the equip buff as source; on a
 /// slot the weapon does not own (2 Space, 3, 5 R, 6 C, 7 T, 8) that mod masks the stored base (the Space dash) and
 /// blocks the spellbook pick, grows by one per reset, and survives a restart (bar-raw, 2026-09-30).</summary>
+public enum EmptyVerdict { NotLeak, Leak, Unknown }
+
 public static class SlotOwnership
 {
     /// <summary>Hard cap on PopSlotMods' re-pop rounds for one slot.</summary>
@@ -84,10 +86,19 @@ public static class SlotOwnership
     public static List<int> PushTargets(IEnumerable<int> prefabRowSlots, int maxSlot) =>
         (prefabRowSlots ?? Enumerable.Empty<int>()).Where(s => s >= 0 && s <= maxSlot).Distinct().OrderBy(s => s).ToList();
 
-    /// <summary>A gear-sourced Empty mod on a slot the weapon does not own is a leak (counts as other, never clean).
-    /// An unknown owned set leaks nothing — the readback already marks those slots unreadable.</summary>
-    public static bool IsLeakedEmpty(SlotModEntry e, int slot, bool gearSource, ISet<int> owned) =>
-        gearSource && e.SetToGuid == 0 && owned != null && !owned.Contains(slot);
+    /// <summary>What an Empty mod sourced by a WEAPON equip buff (the EmptyPush's own source; armour or item gear never
+    /// counts) is on this slot: a Leak on a slot the weapon does not own (counts as other, never clean), Unknown when the
+    /// owned set could not be read (the slot is unreadable, never clean), NotLeak otherwise.</summary>
+    public static EmptyVerdict ClassifyEmpty(SlotModEntry e, int slot, bool weaponBuffSource, ISet<int> owned)
+    {
+        if (!weaponBuffSource || e.SetToGuid != 0) return EmptyVerdict.NotLeak;
+        if (owned == null) return EmptyVerdict.Unknown;
+        return owned.Contains(slot) ? EmptyVerdict.NotLeak : EmptyVerdict.Leak;
+    }
+
+    /// <summary>The source prefab is a weapon equip buff (the only source ForceResetAbilitySlots ever used).</summary>
+    public static bool IsWeaponBuff(string prefabName) =>
+        !string.IsNullOrEmpty(prefabName) && prefabName.StartsWith("EquipBuff_Weapon", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Pop the slot again while its GroupGuid mod count keeps falling and the cap is not reached.</summary>
     public static bool PopAgain(int previousCount, int currentCount, int roundsDone) =>

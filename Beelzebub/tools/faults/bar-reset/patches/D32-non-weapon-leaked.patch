@@ -6,7 +6,7 @@ diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/B
      public static EmptyVerdict ClassifyEmpty(SlotModEntry e, int slot, bool weaponBuffSource, ISet<int> owned)
      {
 -        if (!weaponBuffSource || e.SetToGuid != 0) return EmptyVerdict.NotLeak;
-+        if (!weaponBuffSource) return EmptyVerdict.NotLeak;
++        if (e.SetToGuid != 0) return EmptyVerdict.NotLeak;
          if (owned == null) return EmptyVerdict.Unknown;
          return owned.Contains(slot) ? EmptyVerdict.NotLeak : EmptyVerdict.Leak;
      }

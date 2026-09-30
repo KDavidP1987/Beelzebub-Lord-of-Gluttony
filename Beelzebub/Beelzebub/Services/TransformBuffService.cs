@@ -1133,17 +1133,19 @@ internal static class TransformBuffService
             var parse = ParseSlot(reg, Core.EntityManager, slot);
             if (!parse.Readable) { list.Add(new SlotModReading(idx, 0, 0, true, new List<string>())); continue; }
             int gear = 0, other = 0;
+            bool unknown = false;
             var names = new List<string>();
             foreach (var e in parse.Entries)
             {
                 bool engineOwn = own.Contains(new Entity { Index = e.SourceIndex, Version = e.SourceVersion });
                 string n = engineOwn ? "character" : SourcePrefabName(e);
-                bool gearSource = !engineOwn && Beelzebub.Logic.GearRule.IsGearSource(n);
-                if (Beelzebub.Logic.SlotOwnership.IsLeakedEmpty(e, idx, gearSource, owned)) other++;
-                else if (engineOwn || gearSource) { gear++; if (!names.Contains(n)) names.Add(n); }
+                var verdict = Beelzebub.Logic.SlotOwnership.ClassifyEmpty(e, idx, !engineOwn && Beelzebub.Logic.SlotOwnership.IsWeaponBuff(n), owned);
+                if (verdict == Beelzebub.Logic.EmptyVerdict.Leak) other++;
+                else if (verdict == Beelzebub.Logic.EmptyVerdict.Unknown) unknown = true;
+                else if (engineOwn || Beelzebub.Logic.GearRule.IsGearSource(n)) { gear++; if (!names.Contains(n)) names.Add(n); }
                 else other++;
             }
-            list.Add(new SlotModReading(idx, gear, other, false, names));
+            list.Add(unknown ? new SlotModReading(idx, 0, 0, true, new List<string>()) : new SlotModReading(idx, gear, other, false, names));
         }
         return list;
     }

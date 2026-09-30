@@ -1,12 +1,12 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -82,7 +82,7 @@
+@@ -84,7 +84,7 @@
  
      /// <summary>The distinct slots 0-<paramref name="maxSlot"/> with a prefab row, ascending. Null rows → none.</summary>
      public static List<int> PushTargets(IEnumerable<int> prefabRowSlots, int maxSlot) =>
 -        (prefabRowSlots ?? Enumerable.Empty<int>()).Where(s => s >= 0 && s <= maxSlot).Distinct().OrderBy(s => s).ToList();
 +        (prefabRowSlots ?? Enumerable.Empty<int>()).Where(s => s >= 0 && s <= maxSlot).OrderBy(s => s).ToList();
  
-     /// <summary>A gear-sourced Empty mod on a slot the weapon does not own is a leak (counts as other, never clean).
-     /// An unknown owned set leaks nothing — the readback already marks those slots unreadable.</summary>
+     /// <summary>What an Empty mod sourced by a WEAPON equip buff (the EmptyPush's own source; armour or item gear never
+     /// counts) is on this slot: a Leak on a slot the weapon does not own (counts as other, never clean), Unknown when the

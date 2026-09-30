@@ -2420,14 +2420,14 @@
    "item": "D32",
    "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotOwnershipTests",
    "clauses": [
-    "a gear Empty mod on a slot the weapon does not own is not leaked"
+    "a weapon-buff Empty mod on a slot the weapon does not own is not a Leak"
    ],
    "patch": "D32-leak-missed.patch",
    "edits": [
     {
      "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
-     "find": "gearSource && e.SetToGuid == 0 && owned != null && !owned.Contains(slot);",
-     "replace": "false;"
+     "find": "        return owned.Contains(slot) ? EmptyVerdict.NotLeak : EmptyVerdict.Leak;",
+     "replace": "        return EmptyVerdict.NotLeak;"
     }
    ]
   },
@@ -2442,8 +2442,8 @@
    "edits": [
     {
      "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
-     "find": "gearSource && e.SetToGuid == 0 && owned != null && !owned.Contains(slot);",
-     "replace": "gearSource && e.SetToGuid == 0 && owned != null;"
+     "find": "        return owned.Contains(slot) ? EmptyVerdict.NotLeak : EmptyVerdict.Leak;",
+     "replace": "        return EmptyVerdict.Leak;"
     }
    ]
   },
@@ -2452,46 +2452,78 @@
    "item": "D32",
    "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotOwnershipTests",
    "clauses": [
-    "a non-Empty gear mod"
+    "a non-Empty mod"
    ],
    "patch": "D32-non-empty-leaked.patch",
    "edits": [
     {
      "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
-     "find": "gearSource && e.SetToGuid == 0 && owned != null && !owned.Contains(slot);",
-     "replace": "gearSource && owned != null && !owned.Contains(slot);"
+     "find": "        if (!weaponBuffSource || e.SetToGuid != 0) return EmptyVerdict.NotLeak;",
+     "replace": "        if (!weaponBuffSource) return EmptyVerdict.NotLeak;"
     }
    ]
   },
   {
-   "id": "D32-non-gear-leaked",
+   "id": "D32-non-weapon-leaked",
    "item": "D32",
    "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotOwnershipTests",
    "clauses": [
-    "a non-gear mod"
+    "or a mod no weapon equip buff sourced is"
    ],
-   "patch": "D32-non-gear-leaked.patch",
+   "patch": "D32-non-weapon-leaked.patch",
    "edits": [
     {
      "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
-     "find": "gearSource && e.SetToGuid == 0 && owned != null && !owned.Contains(slot);",
-     "replace": "e.SetToGuid == 0 && owned != null && !owned.Contains(slot);"
+     "find": "        if (!weaponBuffSource || e.SetToGuid != 0) return EmptyVerdict.NotLeak;",
+     "replace": "        if (e.SetToGuid != 0) return EmptyVerdict.NotLeak;"
     }
    ]
   },
   {
-   "id": "D32-unknown-owned-leaked",
+   "id": "D32-unknown-not-unknown",
    "item": "D32",
    "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotOwnershipTests",
    "clauses": [
-    "or any mod with an unknown owned set is"
+    "a weapon-buff Empty with an unknown owned set is not Unknown"
    ],
-   "patch": "D32-unknown-owned-leaked.patch",
+   "patch": "D32-unknown-not-unknown.patch",
    "edits": [
     {
      "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
-     "find": "gearSource && e.SetToGuid == 0 && owned != null && !owned.Contains(slot);",
-     "replace": "gearSource && e.SetToGuid == 0 && (owned == null || !owned.Contains(slot));"
+     "find": "        if (owned == null) return EmptyVerdict.Unknown;",
+     "replace": "        if (owned == null) return EmptyVerdict.NotLeak;"
+    }
+   ]
+  },
+  {
+   "id": "D32-armour-is-weapon",
+   "item": "D32",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotOwnershipTests",
+   "clauses": [
+    "an armour or item buff counts as a weapon buff"
+   ],
+   "patch": "D32-armour-is-weapon.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "prefabName.StartsWith(\"EquipBuff_Weapon\", StringComparison.OrdinalIgnoreCase)",
+     "replace": "prefabName.StartsWith(\"EquipBuff\", StringComparison.OrdinalIgnoreCase)"
+    }
+   ]
+  },
+  {
+   "id": "D32-weapon-not-weapon",
+   "item": "D32",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SlotOwnershipTests",
+   "clauses": [
+    "or a weapon buff does not"
+   ],
+   "patch": "D32-weapon-not-weapon.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "prefabName.StartsWith(\"EquipBuff_Weapon\", StringComparison.OrdinalIgnoreCase)",
+     "replace": "prefabName.StartsWith(\"EquipBuff_Weapon_Sword\", StringComparison.OrdinalIgnoreCase)"
     }
    ]
   },

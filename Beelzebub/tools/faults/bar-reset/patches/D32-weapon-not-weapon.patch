@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
+--- a/Beelzebub/Beelzebub/Logic/BarReset.cs
++++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
+@@ -98,7 +98,7 @@
+ 
+     /// <summary>The source prefab is a weapon equip buff (the only source ForceResetAbilitySlots ever used).</summary>
+     public static bool IsWeaponBuff(string prefabName) =>
+-        !string.IsNullOrEmpty(prefabName) && prefabName.StartsWith("EquipBuff_Weapon", StringComparison.OrdinalIgnoreCase);
++        !string.IsNullOrEmpty(prefabName) && prefabName.StartsWith("EquipBuff_Weapon_Sword", StringComparison.OrdinalIgnoreCase);
+ 
+     /// <summary>Pop the slot again while its GroupGuid mod count keeps falling and the cap is not reached.</summary>
+     public static bool PopAgain(int previousCount, int currentCount, int roundsDone) =>

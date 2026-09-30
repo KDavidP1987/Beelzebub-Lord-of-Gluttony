@@ -342,3 +342,22 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
 - Step 9 code review closed after round 2.
 - D19 on a9eb3a1 (preflight baseline: `audit: ok`):
   `harness: ok, 4 faults, 4 clauses (not run: D1 D2 D3 D4 D5 D11 D12 D13 D14 D15 D16 D17 D18 D20 D22 D23 D24 D25 D26 D27 D28 D29 D30 D31), patch tree 0bd1cf8e55abed87ad2bcffbe29d1e081e1add30`
+
+### Step 10 · D32 empty-push leak · review round 1 · 2026-09-30 · reviewed d4f0cfe (`git diff dafc7de..d4f0cfe`, code + tests)
+- Evidence for the fix (Development procedure 4, diagnostic first): `.beelz admin bar-raw Chaos` at 19:14 and 19:15 on the
+  release candidate showed an Empty GroupGuid mod sourced by `EquipBuff_Weapon_Unarmed_Start01` on every bar slot 0-8,
+  slot 2 `PrefabGuid(0) (Base: PrefabGuid(-433204738))`, stacks growing one per reset and surviving a restart; logs kept
+  in `%TEMP%/beelz-logs-2026-09-30-rc1-tstuck/`. Owner Decision F1 option A, F2 option A (discovered, plan note + D32).
+- Release build ok; tests 143 passed; every D32 control planted by the harness (`--only D32`: 12 of 12 caught).
+- Codex verdict: REVISE —
+  - C1 REJECTED — "the re-pop loop pops every entry in `after.Entries`, not only `d.ModIdsToPop`": `SlotPurgeDecision.Decide`
+    already selects every GroupGuid entry of the slot (gear ones too; Reapply re-adds the weapon's), so re-popping the
+    fresh snapshot's entries keeps the same set; the loop only repeats while the count keeps falling, capped at 16.
+  - C2 ACCEPTED — the leak rule used `GearRule` (any `EquipBuff*` / `Item_*` source), so a vanilla armour or item Empty on
+    a non-weapon slot would have read as a leak (false-unclean). It now needs a WEAPON equip-buff source
+    (`SlotOwnership.IsWeaponBuff`, the only source ForceResetAbilitySlots ever used).
+  - C3 ACCEPTED — an unknown owned set classified a weapon-buff Empty as gear (a possible false-clean). `ClassifyEmpty`
+    returns Unknown and the slot reads unreadable (never clean).
+- planted: `ClassifyEmpty_fails_when_an_unknown_owned_set_reads_as_known`, `IsWeaponBuff_fails_when_armour_counts_or_a_weapon_buff_does_not`
+  and the reworked leak controls — harness entries D32-unknown-not-unknown, D32-armour-is-weapon, D32-weapon-not-weapon,
+  D32-non-weapon-leaked (158 entries); tests 145 passed.

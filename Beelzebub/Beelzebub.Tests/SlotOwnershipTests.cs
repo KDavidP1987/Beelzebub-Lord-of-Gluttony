@@ -23,19 +23,37 @@ public class SlotOwnershipTests
     }
 
     [Fact]
-    public void IsLeakedEmpty_fails_when_a_gear_Empty_on_a_non_weapon_slot_is_not_leaked()
+    public void ClassifyEmpty_fails_when_a_weapon_Empty_on_a_non_weapon_slot_is_not_a_leak()
     {
         foreach (int slot in new[] { 2, 3, 5, 6, 7, 8 })
-            Assert.True(SlotOwnership.IsLeakedEmpty(Empty, slot, gearSource: true, Sword));
+            Assert.Equal(EmptyVerdict.Leak, SlotOwnership.ClassifyEmpty(Empty, slot, weaponBuffSource: true, Sword));
     }
 
     [Fact]
-    public void IsLeakedEmpty_fails_when_a_legitimate_mod_is_called_a_leak()
+    public void ClassifyEmpty_fails_when_a_legitimate_mod_is_called_a_leak()
     {
-        Assert.False(SlotOwnership.IsLeakedEmpty(Empty, 1, gearSource: true, Sword));       // owned slot
-        Assert.False(SlotOwnership.IsLeakedEmpty(Whirlwind, 7, gearSource: true, Sword));   // not Empty
-        Assert.False(SlotOwnership.IsLeakedEmpty(Empty, 7, gearSource: false, Sword));      // not gear
-        Assert.False(SlotOwnership.IsLeakedEmpty(Empty, 7, gearSource: true, null));        // owned set unknown
+        Assert.Equal(EmptyVerdict.NotLeak, SlotOwnership.ClassifyEmpty(Empty, 1, true, Sword));        // owned slot
+        Assert.Equal(EmptyVerdict.NotLeak, SlotOwnership.ClassifyEmpty(Whirlwind, 7, true, Sword));    // not Empty
+        Assert.Equal(EmptyVerdict.NotLeak, SlotOwnership.ClassifyEmpty(Empty, 7, false, Sword));       // armour / item gear
+        Assert.Equal(EmptyVerdict.NotLeak, SlotOwnership.ClassifyEmpty(Empty, 7, false, null));
+    }
+
+    [Fact]
+    public void ClassifyEmpty_fails_when_an_unknown_owned_set_reads_as_known()
+    {
+        Assert.Equal(EmptyVerdict.Unknown, SlotOwnership.ClassifyEmpty(Empty, 7, true, null));
+        Assert.Equal(EmptyVerdict.Unknown, SlotOwnership.ClassifyEmpty(Empty, 1, true, null));
+    }
+
+    [Fact]
+    public void IsWeaponBuff_fails_when_armour_counts_or_a_weapon_buff_does_not()
+    {
+        Assert.True(SlotOwnership.IsWeaponBuff("EquipBuff_Weapon_Unarmed_Start01"));
+        Assert.True(SlotOwnership.IsWeaponBuff("EquipBuff_Weapon_Sword_Ability03"));
+        Assert.False(SlotOwnership.IsWeaponBuff("EquipBuff_Chest_Base"));
+        Assert.False(SlotOwnership.IsWeaponBuff("Item_Cloak_Main_T01"));
+        Assert.False(SlotOwnership.IsWeaponBuff(""));
+        Assert.False(SlotOwnership.IsWeaponBuff(null));
     }
 
     [Fact]

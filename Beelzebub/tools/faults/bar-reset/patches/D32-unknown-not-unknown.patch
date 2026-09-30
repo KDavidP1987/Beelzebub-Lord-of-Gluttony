@@ -1,12 +1,12 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -91,7 +91,7 @@
-     /// owned set could not be read (the slot is unreadable, never clean), NotLeak otherwise.</summary>
+@@ -92,7 +92,7 @@
      public static EmptyVerdict ClassifyEmpty(SlotModEntry e, int slot, bool weaponBuffSource, ISet<int> owned)
      {
--        if (!weaponBuffSource || e.SetToGuid != 0) return EmptyVerdict.NotLeak;
-+        if (!weaponBuffSource) return EmptyVerdict.NotLeak;
-         if (owned == null) return EmptyVerdict.Unknown;
+         if (!weaponBuffSource || e.SetToGuid != 0) return EmptyVerdict.NotLeak;
+-        if (owned == null) return EmptyVerdict.Unknown;
++        if (owned == null) return EmptyVerdict.NotLeak;
          return owned.Contains(slot) ? EmptyVerdict.NotLeak : EmptyVerdict.Leak;
      }
+ 

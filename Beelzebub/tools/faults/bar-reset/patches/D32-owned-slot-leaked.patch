@@ -1,12 +1,12 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -87,7 +87,7 @@
-     /// <summary>A gear-sourced Empty mod on a slot the weapon does not own is a leak (counts as other, never clean).
-     /// An unknown owned set leaks nothing — the readback already marks those slots unreadable.</summary>
-     public static bool IsLeakedEmpty(SlotModEntry e, int slot, bool gearSource, ISet<int> owned) =>
--        gearSource && e.SetToGuid == 0 && owned != null && !owned.Contains(slot);
-+        gearSource && e.SetToGuid == 0 && owned != null;
+@@ -93,7 +93,7 @@
+     {
+         if (!weaponBuffSource || e.SetToGuid != 0) return EmptyVerdict.NotLeak;
+         if (owned == null) return EmptyVerdict.Unknown;
+-        return owned.Contains(slot) ? EmptyVerdict.NotLeak : EmptyVerdict.Leak;
++        return EmptyVerdict.Leak;
+     }
  
-     /// <summary>Pop the slot again while its GroupGuid mod count keeps falling and the cap is not reached.</summary>
-     public static bool PopAgain(int previousCount, int currentCount, int roundsDone) =>
+     /// <summary>The source prefab is a weapon equip buff (the only source ForceResetAbilitySlots ever used).</summary>
