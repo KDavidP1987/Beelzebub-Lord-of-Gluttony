@@ -844,6 +844,8 @@ internal sealed class TransformService
     {
         if (Core.AbilityRegistry.GetActiveTransform(steamId) is not null) return;
         bool removed = TransformBuffService.Remove(character); // carrier + every boss/native form buff
+        // v0.137.0 (bar-reset D33): heal spellbook spells whose buff a pre-0.137 teardown destroyed (blank Space/T).
+        TransformBuffService.RepairSpellbook(character, "login");
 
         // v0.62.0 (G — universal-grant reliability): ALWAYS re-apply the saved grant loadout on a
         // non-transformed login, not only when an orphan buff was cleared. A normal relog rebuilds

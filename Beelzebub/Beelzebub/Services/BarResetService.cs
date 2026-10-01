@@ -204,9 +204,14 @@ internal sealed class BarResetService : IBarResetOps
 
     public int ClearEquipEntries() => SlotApply.RemoveInjectedRows(RequireEquipBuff());
 
-    public int DestroyOverrideSources() =>
-        TransformBuffService.RemoveAllFormsAndShapeshifts(_character)
-        + TransformBuffService.DestroyOwnedAbilitySlotOrphans(_character);
+    /// <summary>Also heals spellbook entries whose buff earlier versions destroyed (D33), so one reset restores them.</summary>
+    public int DestroyOverrideSources()
+    {
+        int destroyed = TransformBuffService.RemoveAllFormsAndShapeshifts(_character)
+            + TransformBuffService.DestroyOwnedAbilitySlotOrphans(_character);
+        TransformBuffService.RepairSpellbook(_character, "reset");
+        return destroyed;
+    }
 
     public int PopSlotMods() => TransformBuffService.PopSlotModifications(_character);
 

@@ -75,6 +75,28 @@ public static class BarResetPlanner
 /// row for (Sword: 0, 1, 4). The EmptyPush used to push Empty onto all nine slots with the equip buff as source; on a
 /// slot the weapon does not own (2 Space, 3, 5 R, 6 C, 7 T, 8) that mod masks the stored base (the Space dash) and
 /// blocks the spellbook pick, grows by one per reset, and survives a restart (bar-raw, 2026-09-30).</summary>
+/// <summary>One `VBloodAbilityBuffEntry` of a character: the spell the spellbook says is on <see cref="SlotId"/>,
+/// and whether the buff behind it still lives (exists and is not queued for destruction).</summary>
+public readonly record struct SpellbookEntry(int Index, int SlotId, int AbilityGuid, bool BuffLive);
+
+/// <summary>bar-reset D33 — `Buff_VBlood_Ability_Replace` is both Beelzebub's transform carrier and V Rising's own
+/// equipped-spell buff. Only a buff no spellbook entry references is ours.</summary>
+public static class SpellbookBuffs
+{
+    /// <param name="referencedIds">ids of every buff a spellbook entry references; null = the spellbook could not be
+    /// read, and then no buff is ours (never destroy blind).</param>
+    public static bool IsOwnCarrier(long buffId, ISet<long> referencedIds) =>
+        referencedIds != null && !referencedIds.Contains(buffId);
+
+    /// <summary>The entries to repair: those whose buff is gone or being destroyed, highest index first so removing
+    /// one never shifts another still to be handled.</summary>
+    public static List<SpellbookEntry> Dangling(IEnumerable<SpellbookEntry> entries) =>
+        (entries ?? Enumerable.Empty<SpellbookEntry>()).Where(e => !e.BuffLive).OrderByDescending(e => e.Index).ToList();
+
+    /// <summary>Entity (index, version) packed into one comparable id.</summary>
+    public static long Id(int index, int version) => ((long)index << 32) | (uint)version;
+}
+
 public enum EmptyVerdict { NotLeak, Leak, Unknown }
 
 public static class SlotOwnership
@@ -132,11 +154,14 @@ public sealed class SlotPurgeDecision
         if (parse == null || !parse.Readable) return new SlotPurgeDecision { Skipped = true };
         var d = new SlotPurgeDecision();
         var seen = new HashSet<(int, int)>();
+        var popIds = new HashSet<int>();
         foreach (var e in parse.Entries)
         {
             // Every GroupGuid mod is popped, gear ones too: Reapply + the single Empty push re-add the gear
-            // mods, so the per-slot gear count stays equal run to run (no pile-up, D10).
-            d.ModIdsToPop.Add(e.ModId);
+            // mods, so the per-slot gear count stays equal run to run (no pile-up, D10). The engine dump repeats
+            // a mod id; each id is popped ONCE — a second pop of a gone id is an engine LogError (D33). Real
+            // stacked entries are caught by PopSlotModifications' re-pop rounds (D32).
+            if (popIds.Add(e.ModId)) d.ModIdsToPop.Add(e.ModId);
             if (isProtected(e) || GearRule.IsGearSource(sourcePrefabName(e) ?? "")) continue;
             if (seen.Add((e.SourceIndex, e.SourceVersion))) d.SourcesToDestroy.Add((e.SourceIndex, e.SourceVersion));
         }

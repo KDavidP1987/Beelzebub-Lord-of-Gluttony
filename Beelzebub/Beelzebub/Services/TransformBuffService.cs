@@ -67,6 +67,13 @@ internal static class TransformBuffService
                 Core.Log.LogError("[Beelz] TransformBuffService.Apply: TryInstantiateBuffEntityImmediate failed for carrier buff; transform aborted.");
                 return false;
             }
+            // v0.137.0 (bar-reset D33): the carrier prefab is also the spellbook's spell buff. If the engine handed back a
+            // buff a spellbook entry references, enriching it would overwrite the player's spell — abort instead.
+            if (!IsOwnCarrier(buffEntity, SpellbookBuffIds(character)))
+            {
+                Core.Log.LogError($"[Beelz SPELLBUF] Apply: the new carrier {buffEntity} is a spellbook spell's buff; transform aborted.");
+                return false;
+            }
 
             // Tag the buff so revert can find it even if our cache is lost across server restart.
             // (V Rising auto-destroys buffs on disconnect via the RemoveOnDisconnect flag below.)
@@ -610,9 +617,125 @@ internal static class TransformBuffService
             var entries = Core.EntityManager.GetBuffer<VBloodAbilityBuffEntry>(owner);
             for (int i = 0; i < entries.Length; i++)
                 if (entries[i].ActiveBuff == buffEntity)
-                    Core.Log.LogInfo($"[Beelz SPELLBUF] destroying spellbook buff {buffEntity} target={owner.GetSteamId()} slot={entries[i].SlotId} ability={entries[i].ActiveAbility.GetPrefabName()}");
+                    Core.Log.LogWarning($"[Beelz SPELLBUF] destroying spellbook buff {buffEntity} target={owner.GetSteamId()} slot={entries[i].SlotId} ability={entries[i].ActiveAbility.GetPrefabName()}");
         }
         catch (Exception ex) { Core.Log.LogWarning($"[Beelz SPELLBUF] check failed: {ex.Message}"); }
+    }
+
+    /// <summary>v0.137.0 (bar-reset D33): ids of every buff the character's spellbook (VBloodAbilityBuffEntry.ActiveBuff)
+    /// references; empty when the character has no spellbook buffer, null when it cannot be read (then nothing of this
+    /// prefab counts as ours).</summary>
+    public static HashSet<long> SpellbookBuffIds(Entity character)
+    {
+        try
+        {
+            var ids = new HashSet<long>();
+            if (!character.Exists() || !Core.EntityManager.HasBuffer<VBloodAbilityBuffEntry>(character)) return ids;
+            var entries = Core.EntityManager.GetBuffer<VBloodAbilityBuffEntry>(character);
+            for (int i = 0; i < entries.Length; i++)
+            {
+                Entity b = entries[i].ActiveBuff;
+                if (b != Entity.Null) ids.Add(Beelzebub.Logic.SpellbookBuffs.Id(b.Index, b.Version));
+            }
+            return ids;
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogWarning($"[Beelz SPELLBUF] spellbook read failed: {ex.Message}");
+            return null;
+        }
+    }
+
+    static bool IsOwnCarrier(Entity buff, HashSet<long> spellbookIds) =>
+        Beelzebub.Logic.SpellbookBuffs.IsOwnCarrier(Beelzebub.Logic.SpellbookBuffs.Id(buff.Index, buff.Version), spellbookIds);
+
+    /// <summary>Beelzebub's own carrier buffs on the character: Buff_VBlood_Ability_Replace instances no spellbook
+    /// entry references (D33).</summary>
+    static List<Entity> OwnCarriers(Entity character)
+    {
+        var result = new List<Entity>();
+        if (!character.Exists() || !Core.EntityManager.HasBuffer<BuffBuffer>(character)) return result;
+        var spellbookIds = SpellbookBuffIds(character);
+        var buffs = Core.EntityManager.GetBuffer<BuffBuffer>(character);
+        for (int i = 0; i < buffs.Length; i++)
+            if (buffs[i].PrefabGuid._Value == CarrierBuff._Value && buffs[i].Entity.Exists() && IsOwnCarrier(buffs[i].Entity, spellbookIds))
+                result.Add(buffs[i].Entity);
+        return result;
+    }
+
+    /// <summary>v0.137.0 (bar-reset D33): heals spellbook entries whose buff is gone (destroyed by pre-0.137 teardown):
+    /// the spellbook shows the spell, the bar slot is blank, and picking the same spell again is a no-op. Each dangling
+    /// entry is removed and re-created with V Rising's own equip sequence (VBloodAbilityUtilities.InstantiateBuff, as
+    /// Bloodcraft's spell equip); when that fails the entry stays removed, so the player can pick the spell again.
+    /// Returns the number of entries handled.</summary>
+    public static int RepairSpellbook(Entity character, string context)
+    {
+        if (!character.Exists() || !Core.EntityManager.HasBuffer<VBloodAbilityBuffEntry>(character)) return 0;
+        var em = Core.EntityManager;
+        var snapshot = new List<Beelzebub.Logic.SpellbookEntry>();
+        var entries = em.GetBuffer<VBloodAbilityBuffEntry>(character);
+        for (int i = 0; i < entries.Length; i++)
+        {
+            Entity b = entries[i].ActiveBuff;
+            snapshot.Add(new Beelzebub.Logic.SpellbookEntry(i, entries[i].SlotId, entries[i].ActiveAbility._Value, b.Exists() && !b.Has<DestroyTag>()));
+        }
+        var dangling = Beelzebub.Logic.SpellbookBuffs.Dangling(snapshot);
+        if (dangling.Count == 0) return 0;
+
+        ulong sid = character.GetSteamId();
+        ProjectM.Gameplay.Systems.ActivateVBloodAbilitySystem system = null;
+        Entity buffPrefab = Entity.Null;
+        try
+        {
+            system = Core.Server.GetExistingSystemManaged<ProjectM.Gameplay.Systems.ActivateVBloodAbilitySystem>();
+            Core.PrefabCollectionSystem._PrefabGuidToEntityMap.TryGetValue(CarrierBuff, out buffPrefab);
+        }
+        catch (Exception ex) { Core.Log.LogWarning($"[Beelz SPELLBUF] repair setup failed: {ex.Message}"); }
+
+        foreach (var d in dangling)
+        {
+            var ability = new PrefabGUID(d.AbilityGuid);
+            string abilityName = ability.GetPrefabName() ?? d.AbilityGuid.ToString();
+            em.GetBuffer<VBloodAbilityBuffEntry>(character).RemoveAt(d.Index);   // highest index first: no shift
+            bool repaired = false;
+            if (d.AbilityGuid != 0 && system != null && buffPrefab != Entity.Null)
+            {
+                try
+                {
+                    VBloodAbilityUtilities.InstantiateBuff(em, system._BuffSpawnerSystemData, character, buffPrefab, ability, d.SlotId);
+                    repaired = SetAbilityType(character, ability, d.SlotId);
+                }
+                catch (Exception ex) { Core.Log.LogWarning($"[Beelz SPELLBUF] re-create failed slot={d.SlotId} ability={abilityName}: {ex.Message}"); }
+            }
+            Core.Log.LogInfo(repaired
+                ? $"[Beelz SPELLBUF] repaired target={sid} slot={d.SlotId} ability={abilityName} ({context})"
+                : $"[Beelz SPELLBUF] removed target={sid} slot={d.SlotId} ability={abilityName} ({context}): the spellbook slot is free to pick again");
+        }
+        Core.ReplaceAbilityOnSlotSystem?.OnUpdate();
+        return dangling.Count;
+    }
+
+    /// <summary>Gives the re-created entry's buff the ability's VBloodAbilityData.AbilityType (Bloodcraft's equip
+    /// sequence). True when the new entry exists with a live buff.</summary>
+    static bool SetAbilityType(Entity character, PrefabGUID ability, int slotId)
+    {
+        var em = Core.EntityManager;
+        var entries = em.GetBuffer<VBloodAbilityBuffEntry>(character);
+        for (int i = 0; i < entries.Length; i++)
+        {
+            if (entries[i].SlotId != slotId || entries[i].ActiveAbility._Value != ability._Value) continue;
+            Entity b = entries[i].ActiveBuff;
+            if (!b.Exists()) return false;
+            if (Core.PrefabCollectionSystem._PrefabGuidToEntityMap.TryGetValue(ability, out Entity abilityPrefab)
+                && em.HasComponent<VBloodAbilityData>(abilityPrefab) && em.HasComponent<VBloodAbilityReplaceBuff>(b))
+            {
+                var replace = em.GetComponentData<VBloodAbilityReplaceBuff>(b);
+                replace.AbilityType = em.GetComponentData<VBloodAbilityData>(abilityPrefab).AbilityType;
+                em.SetComponentData(b, replace);
+            }
+            return true;
+        }
+        return false;
     }
 
     /// <summary>v0.137.0 diagnostic: the character's equipped-spell entries — slot, ability, and whether the
@@ -641,10 +764,12 @@ internal static class TransformBuffService
         ulong sid = character.GetSteamId();
         if (sid != 0) _pendingForms.Remove(sid);
 
-        // Default ability-only carrier buff.
-        if (Core.ServerGameManager.TryGetBuff(character, CarrierBuff.ToIdentifier(), out Entity buffEntity)
-            && SafeDestroyBuff(buffEntity))
+        // Default ability-only carrier buff. v0.137.0 (bar-reset D33): the carrier prefab is ALSO V Rising's own
+        // equipped-spell buff, so TryGetBuff by prefab could return (and this destroyed) a spellbook spell — at every
+        // login. Walk the BuffBuffer and destroy only the carriers no spellbook entry references.
+        foreach (Entity buffEntity in OwnCarriers(character))
         {
+            if (!SafeDestroyBuff(buffEntity)) continue;
             removed = true;
             if (Beelzebub.Config.Settings.VerboseLogging.Value)
                 Core.Log.LogInfo($"[Beelz] TransformBuffService.Remove: destroyed carrier buff {buffEntity}.");
@@ -669,10 +794,10 @@ internal static class TransformBuffService
     /// <summary>A buff that can drive the bar: our carrier, a boss-form buff, or any shapeshift/transformation buff —
     /// never the weapon equip buff. Shared by <see cref="RemoveAllFormsAndShapeshifts"/> and the read-only
     /// <see cref="ListOverrideBuffs"/> so `admin bar` shows exactly what a reset destroys.</summary>
-    static bool IsBarOverrideBuff(int guid, string name)
+    static bool IsBarOverrideBuff(int guid, string name, Entity buff, HashSet<long> spellbookIds)
     {
         if (name.StartsWith("EquipBuff", StringComparison.OrdinalIgnoreCase)) return false; // never the weapon equip buff
-        if (guid == CarrierBuff._Value) return true;
+        if (guid == CarrierBuff._Value) return IsOwnCarrier(buff, spellbookIds);           // never a spellbook spell (D33)
         foreach (int g in Services.BossFormRegistry.FormBuffGuids) if (g == guid) return true;
         return name.IndexOf("Shapeshift", StringComparison.OrdinalIgnoreCase) >= 0
             || name.IndexOf("_Transformation_", StringComparison.OrdinalIgnoreCase) >= 0;
@@ -684,12 +809,13 @@ internal static class TransformBuffService
     {
         var names = new List<string>();
         if (!character.Exists() || !Core.EntityManager.HasBuffer<BuffBuffer>(character)) return names;
+        var spellbookIds = SpellbookBuffIds(character);
         var buffs = Core.EntityManager.GetBuffer<BuffBuffer>(character);
         for (int i = 0; i < buffs.Length; i++)
         {
             if (!buffs[i].Entity.Exists() || buffs[i].Entity.Has<DestroyTag>()) continue;   // queued: destroyed this frame
             string name = buffs[i].PrefabGuid.GetPrefabName() ?? "";
-            if (IsBarOverrideBuff(buffs[i].PrefabGuid._Value, name))
+            if (IsBarOverrideBuff(buffs[i].PrefabGuid._Value, name, buffs[i].Entity, spellbookIds))
                 names.Add(name.Length > 0 ? name : buffs[i].PrefabGuid._Value.ToString());
         }
         return names;
@@ -713,6 +839,7 @@ internal static class TransformBuffService
         if (sid != 0) _pendingForms.Remove(sid);
 
         var toDestroy = new List<Entity>();
+        var spellbookIds = SpellbookBuffIds(character);
         var buffs = Core.EntityManager.GetBuffer<BuffBuffer>(character);
         for (int i = 0; i < buffs.Length; i++)
         {
@@ -721,7 +848,7 @@ internal static class TransformBuffService
             int guid = buffs[i].PrefabGuid._Value;
             string name = buffs[i].PrefabGuid.GetPrefabName() ?? "";
 
-            if (IsBarOverrideBuff(guid, name)) toDestroy.Add(be);
+            if (IsBarOverrideBuff(guid, name, be, spellbookIds)) toDestroy.Add(be);
         }
 
         int destroyed = 0;
@@ -769,11 +896,14 @@ internal static class TransformBuffService
                 ComponentType.ReadOnly<EntityOwner>());
             var arr = q.ToEntityArray(Unity.Collections.Allocator.Temp);
             var toDestroy = new List<Entity>();
+            var spellbookIds = SpellbookBuffIds(character);
             for (int i = 0; i < arr.Length; i++)
             {
                 Entity e = arr[i];
                 if (!e.Exists()) continue;
                 if (!e.TryGetComponent<EntityOwner>(out var owner) || owner.Owner != character) continue;
+                // v0.137.0 (D33): a spellbook spell's own buff is a legitimate vanilla bar source.
+                if (e.GetPrefabGuid()._Value == CarrierBuff._Value && !IsOwnCarrier(e, spellbookIds)) continue;
                 string name = e.GetPrefabGuid().GetPrefabName() ?? "";
                 // Keep the legitimate vanilla bar sources: equipped gear + magic-source jewels.
                 if (name.StartsWith("EquipBuff", StringComparison.OrdinalIgnoreCase)) continue;

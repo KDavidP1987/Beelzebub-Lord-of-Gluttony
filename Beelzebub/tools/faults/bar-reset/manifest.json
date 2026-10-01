@@ -2574,6 +2574,134 @@
      "replace": "currentCount > 0 && currentCount < previousCount;"
     }
    ]
+  },
+  {
+   "id": "D33-referenced-is-ours",
+   "item": "D33",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SpellbookBuffsTests",
+   "clauses": [
+    "a buff a spellbook entry references counts as our carrier"
+   ],
+   "patch": "D33-referenced-is-ours.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "referencedIds != null && !referencedIds.Contains(buffId);",
+     "replace": "referencedIds != null;"
+    }
+   ]
+  },
+  {
+   "id": "D33-unreferenced-not-ours",
+   "item": "D33",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SpellbookBuffsTests",
+   "clauses": [
+    "or an unreferenced carrier does not"
+   ],
+   "patch": "D33-unreferenced-not-ours.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "referencedIds != null && !referencedIds.Contains(buffId);",
+     "replace": "false;"
+    }
+   ]
+  },
+  {
+   "id": "D33-null-is-ours",
+   "item": "D33",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SpellbookBuffsTests",
+   "clauses": [
+    "a null referenced set makes any buff ours"
+   ],
+   "patch": "D33-null-is-ours.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "referencedIds != null && !referencedIds.Contains(buffId);",
+     "replace": "referencedIds == null || !referencedIds.Contains(buffId);"
+    }
+   ]
+  },
+  {
+   "id": "D33-live-repaired",
+   "item": "D33",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SpellbookBuffsTests",
+   "clauses": [
+    "an entry whose buff is live is picked for repair"
+   ],
+   "patch": "D33-live-repaired.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": ".Where(e => !e.BuffLive)",
+     "replace": ".Where(e => true)"
+    }
+   ]
+  },
+  {
+   "id": "D33-missing-skipped",
+   "item": "D33",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SpellbookBuffsTests",
+   "clauses": [
+    "or one whose buff is missing or being destroyed is not"
+   ],
+   "patch": "D33-missing-skipped.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": ".Where(e => !e.BuffLive)",
+     "replace": ".Where(e => !e.BuffLive && e.Index > 0)"
+    }
+   ]
+  },
+  {
+   "id": "D33-wrong-order",
+   "item": "D33",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SpellbookBuffsTests",
+   "clauses": [
+    "the dangling entries are not ordered highest index first"
+   ],
+   "patch": "D33-wrong-order.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": ".OrderByDescending(e => e.Index)",
+     "replace": ".OrderBy(e => e.Index)"
+    }
+   ]
+  },
+  {
+   "id": "D33-id-collision",
+   "item": "D33",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SpellbookBuffsTests",
+   "clauses": [
+    "two entities pack to one id"
+   ],
+   "patch": "D33-id-collision.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "((long)index << 32) | (uint)version",
+     "replace": "(long)index + version"
+    }
+   ]
+  },
+  {
+   "id": "D33-dup-pop",
+   "item": "D33",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SpellbookBuffsTests",
+   "clauses": [
+    "Decide pops a duplicated mod id more than once"
+   ],
+   "patch": "D33-dup-pop.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "if (popIds.Add(e.ModId)) d.ModIdsToPop.Add(e.ModId);",
+     "replace": "popIds.Add(e.ModId); d.ModIdsToPop.Add(e.ModId);"
+    }
+   ]
   }
  ]
 }

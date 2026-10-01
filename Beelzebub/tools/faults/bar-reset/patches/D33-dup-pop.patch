@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
+--- a/Beelzebub/Beelzebub/Logic/BarReset.cs
++++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
+@@ -161,7 +161,7 @@
+             // mods, so the per-slot gear count stays equal run to run (no pile-up, D10). The engine dump repeats
+             // a mod id; each id is popped ONCE — a second pop of a gone id is an engine LogError (D33). Real
+             // stacked entries are caught by PopSlotModifications' re-pop rounds (D32).
+-            if (popIds.Add(e.ModId)) d.ModIdsToPop.Add(e.ModId);
++            popIds.Add(e.ModId); d.ModIdsToPop.Add(e.ModId);
+             if (isProtected(e) || GearRule.IsGearSource(sourcePrefabName(e) ?? "")) continue;
+             if (seen.Add((e.SourceIndex, e.SourceVersion))) d.SourcesToDestroy.Add((e.SourceIndex, e.SourceVersion));
+         }

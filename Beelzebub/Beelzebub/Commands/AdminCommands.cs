@@ -1187,12 +1187,15 @@ internal static partial class AdminCommands
         var buffs = Core.EntityManager.GetBuffer<BuffBuffer>(character);
         int total = buffs.Length, overriders = 0;
         bool hasBearShapeshift = false, hasCarrier = false;
+        var spellbookIds = TransformBuffService.SpellbookBuffIds(character);
         Core.Log.LogInfo($"[Beelz BUFFS] === {fullName} (SteamID {steamId}) has {total} buff(s) ===");
         for (int i = 0; i < buffs.Length; i++)
         {
             int guid = buffs[i].PrefabGuid._Value;
             if (guid == -1569370346) hasBearShapeshift = true; // AB_Shapeshift_Bear_Buff
-            if (guid == 1171608023) hasCarrier = true;          // Beelzebub ability carrier
+            if (guid == 1171608023 && buffs[i].Entity.Exists()      // Beelzebub ability carrier — not a spellbook spell (D33)
+                && Beelzebub.Logic.SpellbookBuffs.IsOwnCarrier(Beelzebub.Logic.SpellbookBuffs.Id(buffs[i].Entity.Index, buffs[i].Entity.Version), spellbookIds))
+                hasCarrier = true;
             string name = buffs[i].PrefabGuid.GetPrefabName() ?? "(unknown)";
             Entity be = buffs[i].Entity;
             string overrideInfo = "";
