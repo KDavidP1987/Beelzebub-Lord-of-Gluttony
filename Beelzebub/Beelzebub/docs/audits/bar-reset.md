@@ -422,3 +422,10 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
   in-game re-test, not a fourth Codex round.
 - Full harness on d5e218a (`--skip D19`): 165 of 167 caught; D18-entry-lacks-key and D18-entry-lacks-gate did not apply
   (stale context after the handoff reset map, 6579ee5) — re-made in ea34f77, `--only D18`: 3 of 3 caught. Every fault caught.
+
+### Step 10 · in-game release-candidate pass · 2026-10-01 · build 2fed946 (deployed, `cmp` match)
+- Owner session: test fixture + D6 (admin bar twice, identical), D7/D9 (reset, then Wolf form shows only Wolf), D8 (purge
+  clears the hotkey, `ClearHotkeys:1`), D10 (three consecutive resets `clean=1`, constant `PopSlotMods:6`).
+- `check_bar_reset.py session %TEMP%/beelz-logs-2026-10-01-rc8-d10/LogOutput.log --target Chaos` → `ok D6 D7 D8 D9 D10`.
+- `preflight.ps1 -LogCheck` on both logs → PREFLIGHT OK; 0 errors, 2 known `[Beelz TUNE]` shared-prefab warnings.
+- Next: dod status, final preflight, `chore(release): v0.137.0`.
