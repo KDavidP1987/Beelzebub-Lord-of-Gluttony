@@ -1246,7 +1246,7 @@ internal static class TransformBuffService
         {
             if (slot == Entity.Null || !slot.Exists()) continue;
             var parse = ParseSlot(reg, em, slot);
-            bool Keep(Beelzebub.Logic.SlotModEntry e) => Beelzebub.Logic.SpellbookBuffs.IsSpellbookMod(e, idx, spellBySlot);
+            bool Keep(Beelzebub.Logic.SlotModEntry e) => Beelzebub.Logic.SpellbookBuffs.IsSpellbookMod(e, idx, spellBySlot, SourcePrefabName(e));
             var d = Beelzebub.Logic.SlotPurgeDecision.Decide(parse, SourcePrefabName, IsProtected, Keep);
             if (d.Skipped)
             {
@@ -1355,7 +1355,7 @@ internal static class TransformBuffService
                 bool engineOwn = own.Contains(new Entity { Index = e.SourceIndex, Version = e.SourceVersion });
                 string n = engineOwn ? "character" : SourcePrefabName(e);
                 var verdict = Beelzebub.Logic.SlotOwnership.ClassifyEmpty(e, idx, !engineOwn && Beelzebub.Logic.SlotOwnership.IsWeaponBuff(n), owned);
-                if (Beelzebub.Logic.SpellbookBuffs.IsSpellbookMod(e, idx, spellBySlot)) { gear++; if (!names.Contains("spellbook")) names.Add("spellbook"); continue; }
+                if (!engineOwn && Beelzebub.Logic.SpellbookBuffs.IsSpellbookMod(e, idx, spellBySlot, n)) { gear++; if (!names.Contains("spellbook")) names.Add("spellbook"); continue; }
                 if (verdict == Beelzebub.Logic.EmptyVerdict.Leak) other++;
                 else if (verdict == Beelzebub.Logic.EmptyVerdict.Unknown) unknown = true;
                 else if (engineOwn || Beelzebub.Logic.GearRule.IsGearSource(n)) { gear++; if (!names.Contains(n)) names.Add(n); }

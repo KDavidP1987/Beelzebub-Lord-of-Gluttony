@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -168,7 +168,7 @@
+@@ -171,7 +171,7 @@
              // a mod id; each id is popped ONCE — a second pop of a gone id is an engine LogError (D33). Real
              // stacked entries are caught by PopSlotModifications' re-pop rounds (D32).
              if (keep != null && keep(e)) continue;   // the player's own spellbook spell stays on its key (D33)

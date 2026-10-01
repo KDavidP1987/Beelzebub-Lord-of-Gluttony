@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -157,7 +157,7 @@
+@@ -160,7 +160,7 @@
          Func<SlotModEntry, bool> isProtected, Func<SlotModEntry, bool> keep = null)
      {
          // Unreadable → touch nothing on this slot (D24); the readback reports it and the reset is never clean.

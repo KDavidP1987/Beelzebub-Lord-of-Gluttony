@@ -9,4 +9,4 @@ diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/B
 +        (entries ?? Enumerable.Empty<SpellbookEntry>()).Where(e => true).OrderByDescending(e => e.Index).ToList();
  
      /// <summary>A GroupGuid mod that puts the slot's spellbook spell on it (the vanilla equip) — a reset keeps it and the
-     /// readback counts it as legitimate. <paramref name="spellBySlot"/>: slot → the spellbook's ability guid there.</summary>
+     /// readback counts it as legitimate. <paramref name="spellBySlot"/>: slot → the spellbook's ability guid there. A

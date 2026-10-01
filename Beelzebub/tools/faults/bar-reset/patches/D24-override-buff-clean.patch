@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -302,7 +302,7 @@
+@@ -305,7 +305,7 @@
          r.Clean = online && liveReady && complete
                    && !r.AnyStepFailed && r.Saved
                    && readbackRan && !r.Unreadable

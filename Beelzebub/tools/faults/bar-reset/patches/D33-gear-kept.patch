@@ -1,12 +1,12 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -98,7 +98,7 @@
-     /// gear-sourced mod (equip buff / item — where Beelzebub's own slot injections live) is never the spellbook's, even
+@@ -99,7 +99,7 @@
      /// when it sets the same spell (review K5): the reset pops it and Reapply rebuilds the weapon's.</summary>
      public static bool IsSpellbookMod(SlotModEntry e, int slot, IReadOnlyDictionary<int, int> spellBySlot, string sourcePrefabName) =>
--        spellBySlot != null && spellBySlot.TryGetValue(slot, out int g) && g != 0 && e.SetToGuid == g
-+        false
-         && !GearRule.IsGearSource(sourcePrefabName ?? "");
+         spellBySlot != null && spellBySlot.TryGetValue(slot, out int g) && g != 0 && e.SetToGuid == g
+-        && !GearRule.IsGearSource(sourcePrefabName ?? "");
++        ;
  
      /// <summary>Entity (index, version) packed into one comparable id.</summary>
+     public static long Id(int index, int version) => ((long)index << 32) | (uint)version;

@@ -94,9 +94,12 @@ public static class SpellbookBuffs
         (entries ?? Enumerable.Empty<SpellbookEntry>()).Where(e => !e.BuffLive).OrderByDescending(e => e.Index).ToList();
 
     /// <summary>A GroupGuid mod that puts the slot's spellbook spell on it (the vanilla equip) — a reset keeps it and the
-    /// readback counts it as legitimate. <paramref name="spellBySlot"/>: slot → the spellbook's ability guid there.</summary>
-    public static bool IsSpellbookMod(SlotModEntry e, int slot, IReadOnlyDictionary<int, int> spellBySlot) =>
-        spellBySlot != null && spellBySlot.TryGetValue(slot, out int g) && g != 0 && e.SetToGuid == g;
+    /// readback counts it as legitimate. <paramref name="spellBySlot"/>: slot → the spellbook's ability guid there. A
+    /// gear-sourced mod (equip buff / item — where Beelzebub's own slot injections live) is never the spellbook's, even
+    /// when it sets the same spell (review K5): the reset pops it and Reapply rebuilds the weapon's.</summary>
+    public static bool IsSpellbookMod(SlotModEntry e, int slot, IReadOnlyDictionary<int, int> spellBySlot, string sourcePrefabName) =>
+        spellBySlot != null && spellBySlot.TryGetValue(slot, out int g) && g != 0 && e.SetToGuid == g
+        && !GearRule.IsGearSource(sourcePrefabName ?? "");
 
     /// <summary>Entity (index, version) packed into one comparable id.</summary>
     public static long Id(int index, int version) => ((long)index << 32) | (uint)version;

@@ -2714,8 +2714,8 @@
    "edits": [
     {
      "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
-     "find": "spellBySlot != null && spellBySlot.TryGetValue(slot, out int g) && g != 0 && e.SetToGuid == g;",
-     "replace": "false;"
+     "find": "spellBySlot != null && spellBySlot.TryGetValue(slot, out int g) && g != 0 && e.SetToGuid == g",
+     "replace": "false"
     }
    ]
   },
@@ -2724,14 +2724,46 @@
    "item": "D33",
    "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SpellbookBuffsTests",
    "clauses": [
-    "or one on another slot, a granted ability's mod"
+    "or one on another slot"
    ],
    "patch": "D33-other-slot-kept.patch",
    "edits": [
     {
      "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
-     "find": "spellBySlot != null && spellBySlot.TryGetValue(slot, out int g) && g != 0 && e.SetToGuid == g;",
-     "replace": "spellBySlot != null && spellBySlot.ContainsValue(e.SetToGuid) || (spellBySlot != null && spellBySlot.ContainsKey(slot) && e.SetToGuid != 0);"
+     "find": "spellBySlot != null && spellBySlot.TryGetValue(slot, out int g) && g != 0 && e.SetToGuid == g",
+     "replace": "spellBySlot != null && e.SetToGuid != 0 && spellBySlot.Values.Contains(e.SetToGuid)"
+    }
+   ]
+  },
+  {
+   "id": "D33-granted-kept",
+   "item": "D33",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SpellbookBuffsTests",
+   "clauses": [
+    "a granted ability's mod"
+   ],
+   "patch": "D33-granted-kept.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "spellBySlot != null && spellBySlot.TryGetValue(slot, out int g) && g != 0 && e.SetToGuid == g",
+     "replace": "spellBySlot != null && spellBySlot.ContainsKey(slot)"
+    }
+   ]
+  },
+  {
+   "id": "D33-gear-kept",
+   "item": "D33",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SpellbookBuffsTests",
+   "clauses": [
+    "a gear-sourced mod setting the spell"
+   ],
+   "patch": "D33-gear-kept.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "        && !GearRule.IsGearSource(sourcePrefabName ?? \"\");",
+     "replace": "        ;"
     }
    ]
   },
@@ -2746,8 +2778,8 @@
    "edits": [
     {
      "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
-     "find": "spellBySlot != null && spellBySlot.TryGetValue(slot, out int g) && g != 0 && e.SetToGuid == g;",
-     "replace": "spellBySlot == null || (spellBySlot.TryGetValue(slot, out int g) && g != 0 && e.SetToGuid == g);"
+     "find": "spellBySlot != null && spellBySlot.TryGetValue(slot, out int g) && g != 0 && e.SetToGuid == g",
+     "replace": "(spellBySlot == null || (spellBySlot.TryGetValue(slot, out int g) && g != 0 && e.SetToGuid == g))"
     }
    ]
   },

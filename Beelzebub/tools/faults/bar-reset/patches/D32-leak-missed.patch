@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -120,7 +120,7 @@
+@@ -123,7 +123,7 @@
      {
          if (!weaponBuffSource || e.SetToGuid != 0) return EmptyVerdict.NotLeak;
          if (owned == null) return EmptyVerdict.Unknown;
