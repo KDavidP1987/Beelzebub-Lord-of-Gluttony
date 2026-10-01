@@ -10,16 +10,16 @@ diff --git a/Beelzebub/Beelzebub/docs/BCH_INTEGRATION_HANDOFF.md b/Beelzebub/Bee
  >   config` as an ordinary `[BEELZ:config]` line. When false (the new default) a shapeshift form with no per-form and no
  >   universal binds keeps its own kit; when true the first six captures fill the form bar (the pre-0.137 behavior).
  >   BCH: show it in the settings panel like any other bool; nothing else to consume.
-@@ -42,7 +42,7 @@
- > - **Fix (no wire change):** chunked `[BEELZ:info]` / `[BEELZ:catalog-ability]` lines are now sized in UTF-8 bytes
- >   (≤500 per line). A long multi-byte `notes=` value used to overflow 512 bytes and abort `api catalog abilities`
- >   mid-stream; parts may now split at different points, and the reassembly rule (merge parts `1..n` by id) is unchanged.
--> - **What BCH should do:** on `api>=33`, nothing is required. Optional: list `Forms_AutoFillFromCaptures` in the
-+> - **What BCH should do:** on `api>=33`, nothing is required. Optional: list `Forms_AutoFill` in the
- >   config view, and add `admin bar` to the admin tooling list.
+@@ -72,7 +72,7 @@
+ >   grant is the right client behaviour; keep it. A server fix will be announced with its own entry here.
+ > - **What BCH should do:** on `api>=33`, nothing is required. Recommended: apply the reset command map above (drop
+ >   the two LEGACY admin buttons, relabel Rebuild bar → Diagnose bar, collapse "revert → resetbar" into one Reset
+->   bar call), list `Forms_AutoFillFromCaptures` in the config view.
++>   bar call), list `Forms_AutoFill` in the config view.
  
  > **🆕 v0.135 — ApiVersion 32 (gate `api>=32`). INCOMPATIBILITY LOCKS. Additive.**
-@@ -173,7 +173,7 @@
+ > - **New read:** `.beelz api locks` → one line per admin-defined lock group, then an end line:
+@@ -202,7 +202,7 @@
  | 30 | 0.133.0 | `damage_mode=` / `damage_scale_eff=` / `attribution=` / `summon_power=` on `api info` |
  | 31 | 0.134.0 | `maxstacks_override=` / `projcount_override=` / `knockback_override=` / `lifetime_override=` / `casttime_override=` / `cooldown_mode=` on `api info`; runtime cooldown semantics |
  | 32 | 0.135.0 | **`api locks`** (`[BEELZ:lock]`) + `type=ability-locked` event — incompatibility locks |
