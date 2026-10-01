@@ -317,8 +317,9 @@ Per feature: **plan → pre-audit → build step → post-audit**, one commit pe
    "connect to **127.0.0.1:9876**", then numbered steps with the exact `.beelz` commands (concrete ability IDs and
    unit GUIDs filled in, never `<placeholders>` the owner has to look up), and a one-line PASS condition per step.
    The owner's character is named **`Chaos`** in-game (SteamID 76561198039548286; `PerpetualChaos` does not resolve).
-6. **Claude runs the dev server itself** (adopted 2026-09-30), with the owner's go-ahead for every start, stop or
-   restart — it is shared with Nyarlathotep:
+6. **Claude runs the dev server itself** (adopted 2026-09-30). It starts, stops and restarts it **without asking**
+   while monitoring or deploying updates — it is a dev server, and the owner just sees a disconnect (owner's rule,
+   2026-09-30). It is shared with Nyarlathotep, so the log backup below is still mandatory:
    - **Before any start or restart:** copy `BepInEx/LogOutput.log` and `logs/NyarDev.log` to
      `%TEMP%\beelz-logs-<date>-<label>\` — a launch overwrites both (a stuck-bar session's evidence was lost on 2026-09-29).
    - **Deploy:** stop the server first (it locks the DLL); `dotnet build Beelzebub/Beelzebub.sln -c Release` copies the
