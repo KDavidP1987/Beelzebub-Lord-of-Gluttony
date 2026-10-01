@@ -420,3 +420,5 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
   (176 entries), stale D33 patches re-made (6ec2efa); `--only D33`: 18 of 18 caught. Round cap reached: the D33
   review is closed after round 3 with every finding dispositioned; the fix is covered by controls, planted faults and the
   in-game re-test, not a fourth Codex round.
+- Full harness on d5e218a (`--skip D19`): 165 of 167 caught; D18-entry-lacks-key and D18-entry-lacks-gate did not apply
+  (stale context after the handoff reset map, 6579ee5) — re-made in ea34f77, `--only D18`: 3 of 3 caught. Every fault caught.
