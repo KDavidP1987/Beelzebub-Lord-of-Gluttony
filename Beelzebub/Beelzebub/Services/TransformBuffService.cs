@@ -592,8 +592,44 @@ internal static class TransformBuffService
     {
         if (!buffEntity.Exists()) return false;
         if (buffEntity.Has<DestroyTag>()) return false; // already queued for destruction — never double-destroy
+        LogIfSpellbookBuff(buffEntity);
         DestroyUtility.Destroy(Core.EntityManager, buffEntity, DestroyDebugReason.TryRemoveBuff);
         return true;
+    }
+
+    /// <summary>v0.137.0 diagnostic (bar-reset A-spellbuff): Buff_VBlood_Ability_Replace is BOTH our carrier and
+    /// V Rising's own equipped-spell buff (VBloodAbilityBuffEntry.ActiveBuff). Read-only: logs when a buff about to be
+    /// destroyed is one the character's spellbook references, so the log names whose buff a teardown removed.</summary>
+    static void LogIfSpellbookBuff(Entity buffEntity)
+    {
+        try
+        {
+            if (!buffEntity.Has<Buff>()) return;
+            Entity owner = Core.EntityManager.GetComponentData<Buff>(buffEntity).Target;
+            if (!owner.Exists() || !Core.EntityManager.HasBuffer<VBloodAbilityBuffEntry>(owner)) return;
+            var entries = Core.EntityManager.GetBuffer<VBloodAbilityBuffEntry>(owner);
+            for (int i = 0; i < entries.Length; i++)
+                if (entries[i].ActiveBuff == buffEntity)
+                    Core.Log.LogInfo($"[Beelz SPELLBUF] destroying spellbook buff {buffEntity} target={owner.GetSteamId()} slot={entries[i].SlotId} ability={entries[i].ActiveAbility.GetPrefabName()}");
+        }
+        catch (Exception ex) { Core.Log.LogWarning($"[Beelz SPELLBUF] check failed: {ex.Message}"); }
+    }
+
+    /// <summary>v0.137.0 diagnostic: the character's equipped-spell entries — slot, ability, and whether the
+    /// ActiveBuff behind it still exists. A dangling entry (buff gone) is a spell the spellbook shows but the bar lacks.</summary>
+    public static List<string> SpellbookEntries(Entity character)
+    {
+        var lines = new List<string>();
+        if (!character.Exists() || !Core.EntityManager.HasBuffer<VBloodAbilityBuffEntry>(character)) { lines.Add("no VBloodAbilityBuffEntry buffer"); return lines; }
+        var entries = Core.EntityManager.GetBuffer<VBloodAbilityBuffEntry>(character);
+        for (int i = 0; i < entries.Length; i++)
+        {
+            Entity b = entries[i].ActiveBuff;
+            string state = !b.Exists() ? "MISSING" : b.Has<DestroyTag>() ? "destroying" : "ok";
+            lines.Add($"entry={i} slot={entries[i].SlotId} ability={entries[i].ActiveAbility.GetPrefabName()} ({entries[i].ActiveAbility._Value}) buff={b} state={state}");
+        }
+        if (entries.Length == 0) lines.Add("buffer empty");
+        return lines;
     }
 
     static bool RemoveInternal(Entity character)

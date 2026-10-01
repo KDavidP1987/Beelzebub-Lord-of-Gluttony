@@ -1273,6 +1273,8 @@ internal static partial class AdminCommands
         string who = Beelzebub.Logic.LogSafe.Field(fullName);
         foreach (var (slot, lines) in TransformBuffService.RawSlotDumps(character))
             foreach (string line in lines) { Core.Log.LogInfo($"[Beelz BARRAW] target={who} ({steamId}) slot={slot} {line}"); n++; }
+        foreach (string line in TransformBuffService.SpellbookEntries(character))
+        { Core.Log.LogInfo($"[Beelz BARRAW] target={who} ({steamId}) spellbook {line}"); n++; }
         ctx.Reply($"bar-raw: logged {n} line(s) for {Beelzebub.Logic.BarResetReply.Name(fullName)} to LogOutput.log ([Beelz BARRAW]).");
         Audit(ctx, "bar-raw", steamId, fullName, $"lines={n}");
     }
