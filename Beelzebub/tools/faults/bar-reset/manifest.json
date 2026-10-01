@@ -2814,6 +2814,54 @@
      "replace": ""
     }
    ]
+  },
+  {
+   "id": "D33-shown-repaired",
+   "item": "D33",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SpellbookBuffsTests",
+   "clauses": [
+    "or one whose slot already shows the spell is"
+   ],
+   "patch": "D33-shown-repaired.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "&& !hasSpellMod && activeGuid != abilityGuid;",
+     "replace": "&& !hasSpellMod;"
+    }
+   ]
+  },
+  {
+   "id": "D33-failed-destroys",
+   "item": "D33",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SpellbookBuffsTests",
+   "clauses": [
+    "a failed re-create destroys a live old buff"
+   ],
+   "patch": "D33-failed-destroys.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "DestroyOldBuff(bool oldBuffLive, bool replacementLive) => oldBuffLive && replacementLive;",
+     "replace": "DestroyOldBuff(bool oldBuffLive, bool replacementLive) => oldBuffLive;"
+    }
+   ]
+  },
+  {
+   "id": "D33-not-restored",
+   "item": "D33",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SpellbookBuffsTests",
+   "clauses": [
+    "or a live one is not put back"
+   ],
+   "patch": "D33-not-restored.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "RestoreOldEntry(bool oldBuffLive, bool replacementLive) => oldBuffLive && !replacementLive;",
+     "replace": "RestoreOldEntry(bool oldBuffLive, bool replacementLive) => false;"
+    }
+   ]
   }
  ]
 }

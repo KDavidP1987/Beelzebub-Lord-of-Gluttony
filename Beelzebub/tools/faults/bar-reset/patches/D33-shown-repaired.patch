@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
+--- a/Beelzebub/Beelzebub/Logic/BarReset.cs
++++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
+@@ -99,7 +99,7 @@
+     /// and the slot does not already show it (review round 3: a slot whose base already is the spell needs no mod — a
+     /// repair there would destroy a valid buff on every login and reset).</summary>
+     public static bool ModKnownMissing(int abilityGuid, bool readable, bool hasSpellMod, int activeGuid) =>
+-        abilityGuid != 0 && readable && !hasSpellMod && activeGuid != abilityGuid;
++        abilityGuid != 0 && readable && !hasSpellMod;
+ 
+     /// <summary>A repaired entry's old buff (live: its slot had lost the mod) is destroyed only once a live replacement
+     /// exists; otherwise the old entry is put back (review round 3: a failed re-create must never cost the spell).</summary>

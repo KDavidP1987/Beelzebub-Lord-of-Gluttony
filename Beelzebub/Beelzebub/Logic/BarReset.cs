@@ -95,6 +95,17 @@ public static class SpellbookBuffs
     public static List<SpellbookEntry> Dangling(IEnumerable<SpellbookEntry> entries) =>
         (entries ?? Enumerable.Empty<SpellbookEntry>()).Where(e => !e.BuffLive || e.SpellModMissing).OrderByDescending(e => e.Index).ToList();
 
+    /// <summary>A live spell's slot is KNOWN to lack it only when the dump is readable, no spellbook mod places the spell,
+    /// and the slot does not already show it (review round 3: a slot whose base already is the spell needs no mod — a
+    /// repair there would destroy a valid buff on every login and reset).</summary>
+    public static bool ModKnownMissing(int abilityGuid, bool readable, bool hasSpellMod, int activeGuid) =>
+        abilityGuid != 0 && readable && !hasSpellMod && activeGuid != abilityGuid;
+
+    /// <summary>A repaired entry's old buff (live: its slot had lost the mod) is destroyed only once a live replacement
+    /// exists; otherwise the old entry is put back (review round 3: a failed re-create must never cost the spell).</summary>
+    public static bool DestroyOldBuff(bool oldBuffLive, bool replacementLive) => oldBuffLive && replacementLive;
+    public static bool RestoreOldEntry(bool oldBuffLive, bool replacementLive) => oldBuffLive && !replacementLive;
+
     /// <summary>A GroupGuid mod that puts the slot's spellbook spell on it (the vanilla equip) — a reset keeps it and the
     /// readback counts it as legitimate. <paramref name="spellBySlot"/>: slot → the spellbook's ability guid there. A
     /// gear-sourced mod (equip buff / item — where Beelzebub's own slot injections live) is never the spellbook's, even

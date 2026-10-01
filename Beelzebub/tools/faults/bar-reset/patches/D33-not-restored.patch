@@ -1,0 +1,12 @@
+diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
+--- a/Beelzebub/Beelzebub/Logic/BarReset.cs
++++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
+@@ -104,7 +104,7 @@
+     /// <summary>A repaired entry's old buff (live: its slot had lost the mod) is destroyed only once a live replacement
+     /// exists; otherwise the old entry is put back (review round 3: a failed re-create must never cost the spell).</summary>
+     public static bool DestroyOldBuff(bool oldBuffLive, bool replacementLive) => oldBuffLive && replacementLive;
+-    public static bool RestoreOldEntry(bool oldBuffLive, bool replacementLive) => oldBuffLive && !replacementLive;
++    public static bool RestoreOldEntry(bool oldBuffLive, bool replacementLive) => false;
+ 
+     /// <summary>A GroupGuid mod that puts the slot's spellbook spell on it (the vanilla equip) — a reset keeps it and the
+     /// readback counts it as legitimate. <paramref name="spellBySlot"/>: slot → the spellbook's ability guid there. A

@@ -63,6 +63,26 @@ public class SpellbookBuffsTests
         Assert.Equal(new[] { 0 }, d.Select(e => e.Index));
     }
 
+    [Fact]
+    public void ModKnownMissing_fails_when_a_slot_already_showing_the_spell_is_repaired()
+    {
+        Assert.True(SpellbookBuffs.ModKnownMissing(1191439206, readable: true, hasSpellMod: false, activeGuid: 0));          // C blank
+        Assert.False(SpellbookBuffs.ModKnownMissing(-433204738, readable: true, hasSpellMod: false, activeGuid: -433204738)); // Space base is the spell
+        Assert.False(SpellbookBuffs.ModKnownMissing(1191439206, readable: true, hasSpellMod: true, activeGuid: 0));
+        Assert.False(SpellbookBuffs.ModKnownMissing(1191439206, readable: false, hasSpellMod: false, activeGuid: 0));
+        Assert.False(SpellbookBuffs.ModKnownMissing(0, readable: true, hasSpellMod: false, activeGuid: 5));
+    }
+
+    [Fact]
+    public void DestroyOldBuff_fails_when_a_failed_recreate_costs_the_live_spell()
+    {
+        Assert.True(SpellbookBuffs.DestroyOldBuff(oldBuffLive: true, replacementLive: true));
+        Assert.False(SpellbookBuffs.DestroyOldBuff(oldBuffLive: true, replacementLive: false));
+        Assert.True(SpellbookBuffs.RestoreOldEntry(oldBuffLive: true, replacementLive: false));
+        Assert.False(SpellbookBuffs.RestoreOldEntry(oldBuffLive: true, replacementLive: true));
+        Assert.False(SpellbookBuffs.RestoreOldEntry(oldBuffLive: false, replacementLive: false));   // nothing to put back
+    }
+
     static readonly Dictionary<int, int> Spells =new() { [2] = -433204738, [5] = -880131926, [6] = 1191439206, [7] = 375131842 };
 
     [Fact]

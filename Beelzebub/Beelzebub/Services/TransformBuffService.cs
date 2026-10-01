@@ -729,6 +729,7 @@ internal static class TransformBuffService
             var ability = new PrefabGUID(d.AbilityGuid);
             string abilityName = ability.GetPrefabName() ?? d.AbilityGuid.ToString();
             Entity oldBuff = Entity.Null;
+            VBloodAbilityBuffEntry oldEntry = default;
             try
             {
                 // Re-validate: the entry at the captured index must still be this slot's spell, in the captured state.
@@ -739,7 +740,8 @@ internal static class TransformBuffService
                     Core.Log.LogWarning($"[Beelz SPELLBUF] repair skipped slot={d.SlotId} ability={abilityName} ({context}): the entry changed");
                     continue;
                 }
-                oldBuff = buf[d.Index].ActiveBuff;
+                oldEntry = buf[d.Index];
+                oldBuff = oldEntry.ActiveBuff;
                 buf.RemoveAt(d.Index);   // highest index first: no shift
             }
             catch (Exception ex) { Core.Log.LogWarning($"[Beelz SPELLBUF] repair skipped slot={d.SlotId} ({context}): {ex.Message}"); continue; }
@@ -749,22 +751,31 @@ internal static class TransformBuffService
                 try { VBloodAbilityUtilities.InstantiateBuff(em, system._BuffSpawnerSystemData, character, buffPrefab, ability, d.SlotId); }
                 catch (Exception ex) { Core.Log.LogWarning($"[Beelz SPELLBUF] re-create threw slot={d.SlotId} ability={abilityName}: {ex.Message}"); }
             }
-            // A live old buff (its slot had lost the spell's mod) is now unreferenced: destroy it, as vanilla's spell swap
-            // does (Bloodcraft Classes.cs: RemoveAt then Destroy), so it never lingers as a stray carrier.
-            if (d.BuffLive)
-            {
-                try { SafeDestroyBuff(oldBuff); }
-                catch (Exception ex) { Core.Log.LogWarning($"[Beelz SPELLBUF] old buff destroy failed slot={d.SlotId}: {ex.Message}"); }
-            }
             // Verify by re-scan, whatever the call did: a valid new entry is configured; a partial one (entry without a
             // live buff) is removed so the slot really is free to pick again.
             bool repaired = false;
             try { repaired = FinishRepair(character, ability, d.SlotId); }
             catch (Exception ex) { Core.Log.LogWarning($"[Beelz SPELLBUF] repair check failed slot={d.SlotId}: {ex.Message}"); }
+            // A live old buff (its slot had lost the spell's mod): once a live replacement exists it is unreferenced and is
+            // destroyed, as vanilla's spell swap does (Bloodcraft Classes.cs: RemoveAt then Destroy); a failed re-create
+            // puts the old entry back instead, so the spell is never lost to a repair (review round 3).
+            bool restored = false;
+            if (Beelzebub.Logic.SpellbookBuffs.DestroyOldBuff(d.BuffLive, repaired))
+            {
+                try { SafeDestroyBuff(oldBuff); }
+                catch (Exception ex) { Core.Log.LogWarning($"[Beelz SPELLBUF] old buff destroy failed slot={d.SlotId}: {ex.Message}"); }
+            }
+            else if (Beelzebub.Logic.SpellbookBuffs.RestoreOldEntry(d.BuffLive, repaired) && IsLive(oldBuff))
+            {
+                try { em.GetBuffer<VBloodAbilityBuffEntry>(character).Add(oldEntry); restored = true; }
+                catch (Exception ex) { Core.Log.LogWarning($"[Beelz SPELLBUF] old entry restore failed slot={d.SlotId}: {ex.Message}"); }
+            }
             string why = d.BuffLive ? "slot lacked the spell's mod" : "buff missing";
             Core.Log.LogInfo(repaired
                 ? $"[Beelz SPELLBUF] repaired target={sid} slot={d.SlotId} ability={abilityName} ({context}; {why})"
-                : $"[Beelz SPELLBUF] removed target={sid} slot={d.SlotId} ability={abilityName} ({context}; {why}): the spellbook slot is free to pick again");
+                : restored
+                    ? $"[Beelz SPELLBUF] repair failed, kept target={sid} slot={d.SlotId} ability={abilityName} ({context}; {why}): the spell is unchanged"
+                    : $"[Beelz SPELLBUF] removed target={sid} slot={d.SlotId} ability={abilityName} ({context}; {why}): the spellbook slot is free to pick again");
         }
         Core.ReplaceAbilityOnSlotSystem?.OnUpdate();
         return dangling.Count;
@@ -784,9 +795,15 @@ internal static class TransformBuffService
                 if (idx != slotId) continue;
                 if (slot == Entity.Null || !slot.Exists()) return false;
                 var parse = ParseSlot(Core.ServerGameManager.Modifications, Core.EntityManager, slot);
-                if (!parse.Readable) return false;
                 var map = new Dictionary<int, int> { [slotId] = abilityGuid };
-                return !parse.Entries.Any(e => Beelzebub.Logic.SpellbookBuffs.IsSpellbookMod(e, slotId, map, SourcePrefabName(e)));
+                bool hasSpellMod = parse.Entries.Any(e => Beelzebub.Logic.SpellbookBuffs.IsSpellbookMod(e, slotId, map, SourcePrefabName(e)));
+                int active = 0;
+                if (Core.EntityManager.HasComponent<AbilityGroupSlot>(slot))
+                {
+                    Entity st = Core.EntityManager.GetComponentData<AbilityGroupSlot>(slot).StateEntity._Entity;
+                    if (st.Exists()) active = st.GetPrefabGuid()._Value;
+                }
+                return Beelzebub.Logic.SpellbookBuffs.ModKnownMissing(abilityGuid, parse.Readable, hasSpellMod, active);
             }
             return false;
         }
