@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -170,7 +170,6 @@
+@@ -172,7 +172,6 @@
              // mods, so the per-slot gear count stays equal run to run (no pile-up, D10). The engine dump repeats
              // a mod id; each id is popped ONCE — a second pop of a gone id is an engine LogError (D33). Real
              // stacked entries are caught by PopSlotModifications' re-pop rounds (D32).

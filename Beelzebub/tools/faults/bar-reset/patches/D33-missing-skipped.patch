@@ -1,12 +1,12 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -91,7 +91,7 @@
-     /// <summary>The entries to repair: those whose buff is gone or being destroyed, highest index first so removing
-     /// one never shifts another still to be handled.</summary>
+@@ -93,7 +93,7 @@
+     /// <summary>The entries to repair: those whose buff is gone or being destroyed, or whose slot lacks the spell's mod,
+     /// highest index first so removing one never shifts another still to be handled.</summary>
      public static List<SpellbookEntry> Dangling(IEnumerable<SpellbookEntry> entries) =>
--        (entries ?? Enumerable.Empty<SpellbookEntry>()).Where(e => !e.BuffLive).OrderByDescending(e => e.Index).ToList();
-+        (entries ?? Enumerable.Empty<SpellbookEntry>()).Where(e => !e.BuffLive && e.Index > 0).OrderByDescending(e => e.Index).ToList();
+-        (entries ?? Enumerable.Empty<SpellbookEntry>()).Where(e => !e.BuffLive || e.SpellModMissing).OrderByDescending(e => e.Index).ToList();
++        (entries ?? Enumerable.Empty<SpellbookEntry>()).Where(e => (!e.BuffLive || e.SpellModMissing) && e.Index > 0).OrderByDescending(e => e.Index).ToList();
  
      /// <summary>A GroupGuid mod that puts the slot's spellbook spell on it (the vanilla equip) — a reset keeps it and the
      /// readback counts it as legitimate. <paramref name="spellBySlot"/>: slot → the spellbook's ability guid there. A

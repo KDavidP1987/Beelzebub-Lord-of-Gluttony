@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -232,6 +232,7 @@
+@@ -234,6 +234,7 @@
      int EmptyPush();
      int Reapply();
      BarReadback Readback();

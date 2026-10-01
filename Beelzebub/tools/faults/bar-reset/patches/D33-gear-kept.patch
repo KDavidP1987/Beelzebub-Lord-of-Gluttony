@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -99,7 +99,7 @@
+@@ -101,7 +101,7 @@
      /// when it sets the same spell (review K5): the reset pops it and Reapply rebuilds the weapon's.</summary>
      public static bool IsSpellbookMod(SlotModEntry e, int slot, IReadOnlyDictionary<int, int> spellBySlot, string sourcePrefabName) =>
          spellBySlot != null && spellBySlot.TryGetValue(slot, out int g) && g != 0 && e.SetToGuid == g

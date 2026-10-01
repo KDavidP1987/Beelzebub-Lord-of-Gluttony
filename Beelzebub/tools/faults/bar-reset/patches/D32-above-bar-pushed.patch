@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -114,7 +114,7 @@
+@@ -116,7 +116,7 @@
  
      /// <summary>The distinct slots 0-<paramref name="maxSlot"/> with a prefab row, ascending. Null rows → none.</summary>
      public static List<int> PushTargets(IEnumerable<int> prefabRowSlots, int maxSlot) =>

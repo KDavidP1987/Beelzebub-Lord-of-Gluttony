@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -313,7 +313,7 @@
+@@ -315,7 +315,7 @@
      public static readonly IReadOnlyList<BarResetStep> RequiredForClean = new[]
      {
          BarResetStep.ClearSavedBindings, BarResetStep.SaveBindings, BarResetStep.ClearEquipEntries,

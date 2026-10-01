@@ -1,12 +1,12 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -86,7 +86,7 @@
+@@ -88,7 +88,7 @@
      /// <param name="referencedIds">ids of every buff a spellbook entry references; null = the spellbook could not be
      /// read, and then no buff is ours (never destroy blind).</param>
      public static bool IsOwnCarrier(long buffId, ISet<long> referencedIds) =>
 -        referencedIds != null && !referencedIds.Contains(buffId);
 +        false;
  
-     /// <summary>The entries to repair: those whose buff is gone or being destroyed, highest index first so removing
-     /// one never shifts another still to be handled.</summary>
+     /// <summary>The entries to repair: those whose buff is gone or being destroyed, or whose slot lacks the spell's mod,
+     /// highest index first so removing one never shifts another still to be handled.</summary>

@@ -51,7 +51,19 @@ public class SpellbookBuffsTests
         Assert.Empty(SpellbookBuffs.Dangling(null));
     }
 
-    static readonly Dictionary<int, int> Spells = new() { [2] = -433204738, [5] = -880131926, [6] = 1191439206, [7] = 375131842 };
+    [Fact]
+    public void Dangling_fails_when_a_live_spell_whose_slot_lost_its_mod_is_skipped()
+    {
+        var entries = new[]
+        {
+            new SpellbookEntry(0, 6, 1191439206, BuffLive: true, SpellModMissing: true),   // C Blood Rite: buff alive, key blank
+            new SpellbookEntry(1, 5, -880131926, BuffLive: true),                          // R Shadowbolt: placed
+        };
+        var d = SpellbookBuffs.Dangling(entries);
+        Assert.Equal(new[] { 0 }, d.Select(e => e.Index));
+    }
+
+    static readonly Dictionary<int, int> Spells =new() { [2] = -433204738, [5] = -880131926, [6] = 1191439206, [7] = 375131842 };
 
     [Fact]
     public void IsSpellbookMod_fails_when_the_slot_spell_mod_is_not_recognised_or_another_mod_is()

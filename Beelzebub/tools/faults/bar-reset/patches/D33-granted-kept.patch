@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -98,7 +98,7 @@
+@@ -100,7 +100,7 @@
      /// gear-sourced mod (equip buff / item — where Beelzebub's own slot injections live) is never the spellbook's, even
      /// when it sets the same spell (review K5): the reset pops it and Reapply rebuilds the weapon's.</summary>
      public static bool IsSpellbookMod(SlotModEntry e, int slot, IReadOnlyDictionary<int, int> spellBySlot, string sourcePrefabName) =>

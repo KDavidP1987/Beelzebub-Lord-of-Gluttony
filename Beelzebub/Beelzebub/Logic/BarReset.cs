@@ -76,8 +76,10 @@ public static class BarResetPlanner
 /// slot the weapon does not own (2 Space, 3, 5 R, 6 C, 7 T, 8) that mod masks the stored base (the Space dash) and
 /// blocks the spellbook pick, grows by one per reset, and survives a restart (bar-raw, 2026-09-30).</summary>
 /// <summary>One `VBloodAbilityBuffEntry` of a character: the spell the spellbook says is on <see cref="SlotId"/>,
-/// and whether the buff behind it still lives (exists and is not queued for destruction).</summary>
-public readonly record struct SpellbookEntry(int Index, int SlotId, int AbilityGuid, bool BuffLive);
+/// whether the buff behind it still lives (exists and is not queued for destruction), and whether the slot is KNOWN to
+/// lack the mod that places the spell (<see cref="SpellModMissing"/>: a readable slot dump with no non-gear mod setting
+/// the slot to it — the buff lives but a pre-0.137 reset popped its mod, so the key is blank).</summary>
+public readonly record struct SpellbookEntry(int Index, int SlotId, int AbilityGuid, bool BuffLive, bool SpellModMissing = false);
 
 /// <summary>bar-reset D33 — `Buff_VBlood_Ability_Replace` is both Beelzebub's transform carrier and V Rising's own
 /// equipped-spell buff. Only a buff no spellbook entry references is ours.</summary>
@@ -88,10 +90,10 @@ public static class SpellbookBuffs
     public static bool IsOwnCarrier(long buffId, ISet<long> referencedIds) =>
         referencedIds != null && !referencedIds.Contains(buffId);
 
-    /// <summary>The entries to repair: those whose buff is gone or being destroyed, highest index first so removing
-    /// one never shifts another still to be handled.</summary>
+    /// <summary>The entries to repair: those whose buff is gone or being destroyed, or whose slot lacks the spell's mod,
+    /// highest index first so removing one never shifts another still to be handled.</summary>
     public static List<SpellbookEntry> Dangling(IEnumerable<SpellbookEntry> entries) =>
-        (entries ?? Enumerable.Empty<SpellbookEntry>()).Where(e => !e.BuffLive).OrderByDescending(e => e.Index).ToList();
+        (entries ?? Enumerable.Empty<SpellbookEntry>()).Where(e => !e.BuffLive || e.SpellModMissing).OrderByDescending(e => e.Index).ToList();
 
     /// <summary>A GroupGuid mod that puts the slot's spellbook spell on it (the vanilla equip) — a reset keeps it and the
     /// readback counts it as legitimate. <paramref name="spellBySlot"/>: slot → the spellbook's ability guid there. A

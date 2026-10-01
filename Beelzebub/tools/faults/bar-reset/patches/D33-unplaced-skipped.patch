@@ -6,7 +6,7 @@ diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/B
      /// highest index first so removing one never shifts another still to be handled.</summary>
      public static List<SpellbookEntry> Dangling(IEnumerable<SpellbookEntry> entries) =>
 -        (entries ?? Enumerable.Empty<SpellbookEntry>()).Where(e => !e.BuffLive || e.SpellModMissing).OrderByDescending(e => e.Index).ToList();
-+        (entries ?? Enumerable.Empty<SpellbookEntry>()).Where(e => !e.BuffLive || e.SpellModMissing).OrderBy(e => e.Index).ToList();
++        (entries ?? Enumerable.Empty<SpellbookEntry>()).Where(e => !e.BuffLive).OrderByDescending(e => e.Index).ToList();
  
      /// <summary>A GroupGuid mod that puts the slot's spellbook spell on it (the vanilla equip) — a reset keeps it and the
      /// readback counts it as legitimate. <paramref name="spellBySlot"/>: slot → the spellbook's ability guid there. A

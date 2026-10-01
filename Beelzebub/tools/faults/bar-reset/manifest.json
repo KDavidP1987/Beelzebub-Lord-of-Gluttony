@@ -2634,7 +2634,7 @@
    "edits": [
     {
      "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
-     "find": ".Where(e => !e.BuffLive)",
+     "find": ".Where(e => !e.BuffLive || e.SpellModMissing)",
      "replace": ".Where(e => true)"
     }
    ]
@@ -2650,8 +2650,24 @@
    "edits": [
     {
      "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
-     "find": ".Where(e => !e.BuffLive)",
-     "replace": ".Where(e => !e.BuffLive && e.Index > 0)"
+     "find": ".Where(e => !e.BuffLive || e.SpellModMissing)",
+     "replace": ".Where(e => (!e.BuffLive || e.SpellModMissing) && e.Index > 0)"
+    }
+   ]
+  },
+  {
+   "id": "D33-unplaced-skipped",
+   "item": "D33",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SpellbookBuffsTests",
+   "clauses": [
+    "a live spell whose slot lost its mod is not picked"
+   ],
+   "patch": "D33-unplaced-skipped.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": ".Where(e => !e.BuffLive || e.SpellModMissing)",
+     "replace": ".Where(e => !e.BuffLive)"
     }
    ]
   },
