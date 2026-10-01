@@ -42,8 +42,37 @@
 > - **Fix (no wire change):** chunked `[BEELZ:info]` / `[BEELZ:catalog-ability]` lines are now sized in UTF-8 bytes
 >   (≤500 per line). A long multi-byte `notes=` value used to overflow 512 bytes and abort `api catalog abilities`
 >   mid-stream; parts may now split at different points, and the reassembly rule (merge parts `1..n` by id) is unchanged.
-> - **What BCH should do:** on `api>=33`, nothing is required. Optional: list `Forms_AutoFillFromCaptures` in the
->   config view, and add `admin bar` to the admin tooling list.
+> - **Spellbook spells survive (no wire change).** The reset keeps the spells the player picked in the vanilla
+>   spellbook (J) on their keys (Space, R, C, T): it no longer destroys their buffs or pops the slot mods that place
+>   them. At every non-transformed login (and in every reset) the server also REPAIRS spellbook spells that earlier
+>   Beelzebub versions broke (key blank while the spellbook still lists the spell; re-picking it did nothing). The
+>   player sees the spell come back on login; nothing for BCH to send. The "Recovered a stuck transformation" chat
+>   line no longer fires on every login — only when a real Beelzebub carrier was left over.
+> - **Reset command map for the Raphael panel (gate: `api>=33`, i.e. plugin ≥ 0.137.0):**
+>
+>   | Button / intent | Send | Notes |
+>   |---|---|---|
+>   | Player "Reset bar" | `.beelz resetbar CONFIRM` | The complete reset. Spells leave the bar at once (no weapon swap), spellbook spells stay. One button covers what used to be "revert → resetbar". |
+>   | Player "Fix bar" | `.beelz refresh` | Unchanged: re-applies the saved binds. Keep `BeelzAutoRefreshBar` (refresh after grant) on — see the caveat below. |
+>   | Player "Clear set" | `.beelz clearbar [all\|universal\|<weapon>\|<form>]` | Unchanged: clears saved binds only, no confirm. |
+>   | Admin "Diagnose bar" | `.beelz admin bar <player>` | NEW. Read-only text dump; show it, do not parse. `rebuildbar` is now an alias of it. |
+>   | Admin "Reset player's bar" | `.beelz admin reset-loadouts <player> CONFIRM` | Same layered reset as `resetbar`, for another player. |
+>   | Admin "Purge" | `.beelz admin purge <player> CONFIRM` | Same reset **plus** hotkeys cleared. For a bar still stuck after reset-loadouts. |
+>   | Admin "Respawn" | `.beelz admin respawn <player>` | Unchanged last resort; keeps binds. |
+>   | Admin "Cleanse" | `.beelz admin cleanse <player>` | Unchanged; stuck invisible/immaterial state, not the bar. |
+>   | ~~Admin "Rebuild slots"~~ | `.beelz admin rebuildslots` | **LEGACY** — superseded by reset-loadouts/purge. Remove the button (or move it under "Legacy"). |
+>   | ~~Admin "Clear slot mods"~~ | `.beelz admin clearslotmods` | **LEGACY** — superseded by purge. Remove the button (or move it under "Legacy"). |
+>   | ~~Admin "Rebuild bar"~~ | `.beelz admin rebuildbar` | Now just prints the `admin bar` readout — relabel to "Diagnose bar" or drop the duplicate. |
+>
+>   Suggested admin escalation ladder: **Diagnose bar → Reset player's bar → Purge → Respawn** (Cleanse separately for
+>   stuck states). The reset reply ends with `still stuck? ask an admin for .beelz admin bar`; repeated identical
+>   replies can be collapsed by the client, so do not treat a missing first line as a failure.
+> - **Known caveat (server-side, backlog):** a NEW grant (`.beelz grant <slot> <id>`) is saved and injected but the
+>   live bar only shows it after a weapon swap/unequip-re-equip. Raphael's existing auto-`.beelz refresh` after a
+>   grant is the right client behaviour; keep it. A server fix will be announced with its own entry here.
+> - **What BCH should do:** on `api>=33`, nothing is required. Recommended: apply the reset command map above (drop
+>   the two LEGACY admin buttons, relabel Rebuild bar → Diagnose bar, collapse "revert → resetbar" into one Reset
+>   bar call), list `Forms_AutoFillFromCaptures` in the config view.
 
 > **🆕 v0.135 — ApiVersion 32 (gate `api>=32`). INCOMPATIBILITY LOCKS. Additive.**
 > - **New read:** `.beelz api locks` → one line per admin-defined lock group, then an end line:
