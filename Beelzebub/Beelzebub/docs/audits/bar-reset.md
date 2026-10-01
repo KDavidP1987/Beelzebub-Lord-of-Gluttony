@@ -403,3 +403,20 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
 - Harness on be78e2e: 160 of 161 caught; D33-other-slot-kept broke the build (`IReadOnlyDictionary.ContainsValue`), not a
   test — the fault was rewritten and split (D33-other-slot-kept, D33-granted-kept, D33-gear-kept; 172 entries), all non-D19
   patches re-made on 64e5927; `--only D33`: 14 of 14 caught.
+
+### Step 10 · D33 spellbook spell buffs · review round 3 (final) · 2026-10-01 · reviewed 728a783 (`git diff 64e5927..728a783`, code + tests)
+- Codex verdict: FINDINGS — no K1-K5 regression; unreadable/missing snapshots fail closed; the non-gear filter keeps K5.
+  - K6 ACCEPTED as hardening (medium) — `SpellModKnownMissing` looked only at GroupGuid mods, so a live spell on a slot whose
+    base already IS that spell (no mod needed) would read "missing" and be re-created, destroying a valid buff, on every login
+    and reset. Not observed (the 2026-10-01 session repaired slots 2/5/6/7 once at login, and no later reset repaired
+    anything), but cheap to close: `SpellbookBuffs.ModKnownMissing(ability, readable, hasSpellMod, activeGuid)` also
+    requires the slot's active ability (`AbilityGroupSlot.StateEntity` prefab) to differ from the spell.
+    Control `ModKnownMissing_fails_when_a_slot_already_showing_the_spell_is_repaired`.
+  - K7 ACCEPTED (medium) — a live old buff was destroyed even when `InstantiateBuff` failed, so a transient failure cost the
+    player the spell. The old buff is now destroyed only after `FinishRepair` confirms a live replacement
+    (`SpellbookBuffs.DestroyOldBuff`); otherwise the captured entry is put back (`RestoreOldEntry`) and the log says
+    `repair failed, kept`. Control `DestroyOldBuff_fails_when_a_failed_recreate_costs_the_live_spell`.
+- Fix 2fed946: Release build clean, tests 156 passed; new faults D33-shown-repaired, D33-failed-destroys, D33-not-restored
+  (176 entries), stale D33 patches re-made (6ec2efa); `--only D33`: 18 of 18 caught. Round cap reached: the D33
+  review is closed after round 3 with every finding dispositioned; the fix is covered by controls, planted faults and the
+  in-game re-test, not a fourth Codex round.
