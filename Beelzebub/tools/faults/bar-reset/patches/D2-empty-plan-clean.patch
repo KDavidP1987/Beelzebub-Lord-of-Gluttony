@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -267,7 +267,7 @@
+@@ -299,7 +299,7 @@
          // An empty plan (unknown scope) never runs SaveBindings, so r.Saved alone makes it an error result; a plan
          // that skipped a live layer (not planner-made) can never be clean either.
          bool complete = RequiredForClean.All(req => r.Steps.Any(s => s.Step == req));

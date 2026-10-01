@@ -2702,6 +2702,70 @@
      "replace": "popIds.Add(e.ModId); d.ModIdsToPop.Add(e.ModId);"
     }
    ]
+  },
+  {
+   "id": "D33-spell-mod-missed",
+   "item": "D33",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SpellbookBuffsTests",
+   "clauses": [
+    "the mod that sets a slot to its spellbook spell is not recognised"
+   ],
+   "patch": "D33-spell-mod-missed.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "spellBySlot != null && spellBySlot.TryGetValue(slot, out int g) && g != 0 && e.SetToGuid == g;",
+     "replace": "false;"
+    }
+   ]
+  },
+  {
+   "id": "D33-other-slot-kept",
+   "item": "D33",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SpellbookBuffsTests",
+   "clauses": [
+    "or one on another slot, a granted ability's mod"
+   ],
+   "patch": "D33-other-slot-kept.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "spellBySlot != null && spellBySlot.TryGetValue(slot, out int g) && g != 0 && e.SetToGuid == g;",
+     "replace": "spellBySlot != null && spellBySlot.ContainsValue(e.SetToGuid) || (spellBySlot != null && spellBySlot.ContainsKey(slot) && e.SetToGuid != 0);"
+    }
+   ]
+  },
+  {
+   "id": "D33-unreadable-kept",
+   "item": "D33",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SpellbookBuffsTests",
+   "clauses": [
+    "or any mod with an unreadable spellbook is"
+   ],
+   "patch": "D33-unreadable-kept.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "spellBySlot != null && spellBySlot.TryGetValue(slot, out int g) && g != 0 && e.SetToGuid == g;",
+     "replace": "spellBySlot == null || (spellBySlot.TryGetValue(slot, out int g) && g != 0 && e.SetToGuid == g);"
+    }
+   ]
+  },
+  {
+   "id": "D33-kept-popped",
+   "item": "D33",
+   "command": "dotnet test Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj -c Release --filter FullyQualifiedName~SpellbookBuffsTests",
+   "clauses": [
+    "Decide pops a spellbook spell's mod or queues its source for destruction"
+   ],
+   "patch": "D33-kept-popped.patch",
+   "edits": [
+    {
+     "file": "Beelzebub/Beelzebub/Logic/BarReset.cs",
+     "find": "            if (keep != null && keep(e)) continue;   // the player's own spellbook spell stays on its key (D33)\n",
+     "replace": ""
+    }
+   ]
   }
  ]
 }

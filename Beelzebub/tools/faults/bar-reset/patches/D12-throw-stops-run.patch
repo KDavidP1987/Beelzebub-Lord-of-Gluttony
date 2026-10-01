@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -259,6 +259,7 @@
+@@ -291,6 +291,7 @@
              catch (Exception ex)
              {
                  r.Steps.Add(new BarResetStepResult(step, 0, string.IsNullOrEmpty(ex.Message) ? ex.GetType().Name : ex.Message));

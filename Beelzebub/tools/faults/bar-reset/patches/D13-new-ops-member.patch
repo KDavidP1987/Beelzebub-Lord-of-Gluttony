@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -197,6 +197,7 @@
+@@ -229,6 +229,7 @@
      int EmptyPush();
      int Reapply();
      BarReadback Readback();
@@ -12,7 +12,7 @@ diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/B
 diff --git a/Beelzebub/Beelzebub/Commands/AdminCommands.cs b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
 --- a/Beelzebub/Beelzebub/Commands/AdminCommands.cs
 +++ b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
-@@ -1257,6 +1257,7 @@
+@@ -1260,6 +1260,7 @@
          if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
          if (!TryBarTarget(ctx, player, out var character, out ulong steamId, out string fullName)) return;
          var readback = BarResetService.ReadBar(character, steamId);

@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Commands/AdminCommands.cs b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
 --- a/Beelzebub/Beelzebub/Commands/AdminCommands.cs
 +++ b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
-@@ -1497,7 +1497,7 @@
+@@ -1502,7 +1502,7 @@
          Audit(ctx, "clearslotmods", steamId, fullName, $"slots={slots} withMods={withMods} cleared={modsCleared} dirtied={dirtied}");
      }
  

@@ -60,6 +60,14 @@ internal static class TransformBuffService
             // spell-bar change. The immediate variant creates the buff entity in
             // the current frame and hands us the entity back to enrich directly.
             // Pattern confirmed by Bloodcraft FamiliarBindingSystem.cs:795.
+            // v0.137.0 (bar-reset D33): the carrier prefab is also the spellbook's spell buff — read the spellbook first so
+            // an unreadable one aborts before anything is created (a carrier made then would be unremovable).
+            var spellbookBefore = SpellbookBuffIds(character);
+            if (spellbookBefore == null)
+            {
+                Core.Log.LogError("[Beelz SPELLBUF] Apply: the spellbook cannot be read; transform aborted before creating a carrier.");
+                return false;
+            }
             Entity buffEntity;
             if (!Core.ServerGameManager.TryInstantiateBuffEntityImmediate(character, character, CarrierBuff, out buffEntity)
                 || !buffEntity.Exists())
@@ -67,9 +75,9 @@ internal static class TransformBuffService
                 Core.Log.LogError("[Beelz] TransformBuffService.Apply: TryInstantiateBuffEntityImmediate failed for carrier buff; transform aborted.");
                 return false;
             }
-            // v0.137.0 (bar-reset D33): the carrier prefab is also the spellbook's spell buff. If the engine handed back a
-            // buff a spellbook entry references, enriching it would overwrite the player's spell — abort instead.
-            if (!IsOwnCarrier(buffEntity, SpellbookBuffIds(character)))
+            // If the engine handed back a buff a spellbook entry already referenced, enriching it would overwrite the
+            // player's spell — abort and leave it alone (it is theirs, not a carrier this call created).
+            if (!IsOwnCarrier(buffEntity, spellbookBefore))
             {
                 Core.Log.LogError($"[Beelz SPELLBUF] Apply: the new carrier {buffEntity} is a spellbook spell's buff; transform aborted.");
                 return false;
@@ -646,6 +654,25 @@ internal static class TransformBuffService
         }
     }
 
+    /// <summary>D33: slot → the ability the character's spellbook has equipped there; null when unreadable.</summary>
+    public static Dictionary<int, int> SpellbookSpellsBySlot(Entity character)
+    {
+        try
+        {
+            var map = new Dictionary<int, int>();
+            if (!character.Exists() || !Core.EntityManager.HasBuffer<VBloodAbilityBuffEntry>(character)) return map;
+            var entries = Core.EntityManager.GetBuffer<VBloodAbilityBuffEntry>(character);
+            for (int i = 0; i < entries.Length; i++)
+                if (entries[i].ActiveAbility._Value != 0) map[entries[i].SlotId] = entries[i].ActiveAbility._Value;
+            return map;
+        }
+        catch (Exception ex)
+        {
+            Core.Log.LogWarning($"[Beelz SPELLBUF] spellbook read failed: {ex.Message}");
+            return null;
+        }
+    }
+
     static bool IsOwnCarrier(Entity buff, HashSet<long> spellbookIds) =>
         Beelzebub.Logic.SpellbookBuffs.IsOwnCarrier(Beelzebub.Logic.SpellbookBuffs.Id(buff.Index, buff.Version), spellbookIds);
 
@@ -673,12 +700,13 @@ internal static class TransformBuffService
         if (!character.Exists() || !Core.EntityManager.HasBuffer<VBloodAbilityBuffEntry>(character)) return 0;
         var em = Core.EntityManager;
         var snapshot = new List<Beelzebub.Logic.SpellbookEntry>();
-        var entries = em.GetBuffer<VBloodAbilityBuffEntry>(character);
-        for (int i = 0; i < entries.Length; i++)
+        try
         {
-            Entity b = entries[i].ActiveBuff;
-            snapshot.Add(new Beelzebub.Logic.SpellbookEntry(i, entries[i].SlotId, entries[i].ActiveAbility._Value, b.Exists() && !b.Has<DestroyTag>()));
+            var entries = em.GetBuffer<VBloodAbilityBuffEntry>(character);
+            for (int i = 0; i < entries.Length; i++)
+                snapshot.Add(new Beelzebub.Logic.SpellbookEntry(i, entries[i].SlotId, entries[i].ActiveAbility._Value, IsLive(entries[i].ActiveBuff)));
         }
+        catch (Exception ex) { Core.Log.LogWarning($"[Beelz SPELLBUF] repair: spellbook read failed ({context}): {ex.Message}"); return 0; }
         var dangling = Beelzebub.Logic.SpellbookBuffs.Dangling(snapshot);
         if (dangling.Count == 0) return 0;
 
@@ -696,17 +724,30 @@ internal static class TransformBuffService
         {
             var ability = new PrefabGUID(d.AbilityGuid);
             string abilityName = ability.GetPrefabName() ?? d.AbilityGuid.ToString();
-            em.GetBuffer<VBloodAbilityBuffEntry>(character).RemoveAt(d.Index);   // highest index first: no shift
-            bool repaired = false;
+            try
+            {
+                // Re-validate: the entry at the captured index must still be this slot's dangling spell.
+                var buf = em.GetBuffer<VBloodAbilityBuffEntry>(character);
+                if (d.Index >= buf.Length || buf[d.Index].SlotId != d.SlotId || buf[d.Index].ActiveAbility._Value != d.AbilityGuid
+                    || IsLive(buf[d.Index].ActiveBuff))
+                {
+                    Core.Log.LogWarning($"[Beelz SPELLBUF] repair skipped slot={d.SlotId} ability={abilityName} ({context}): the entry changed");
+                    continue;
+                }
+                buf.RemoveAt(d.Index);   // highest index first: no shift
+            }
+            catch (Exception ex) { Core.Log.LogWarning($"[Beelz SPELLBUF] repair skipped slot={d.SlotId} ({context}): {ex.Message}"); continue; }
+
             if (d.AbilityGuid != 0 && system != null && buffPrefab != Entity.Null)
             {
-                try
-                {
-                    VBloodAbilityUtilities.InstantiateBuff(em, system._BuffSpawnerSystemData, character, buffPrefab, ability, d.SlotId);
-                    repaired = SetAbilityType(character, ability, d.SlotId);
-                }
-                catch (Exception ex) { Core.Log.LogWarning($"[Beelz SPELLBUF] re-create failed slot={d.SlotId} ability={abilityName}: {ex.Message}"); }
+                try { VBloodAbilityUtilities.InstantiateBuff(em, system._BuffSpawnerSystemData, character, buffPrefab, ability, d.SlotId); }
+                catch (Exception ex) { Core.Log.LogWarning($"[Beelz SPELLBUF] re-create threw slot={d.SlotId} ability={abilityName}: {ex.Message}"); }
             }
+            // Verify by re-scan, whatever the call did: a valid new entry is configured; a partial one (entry without a
+            // live buff) is removed so the slot really is free to pick again.
+            bool repaired = false;
+            try { repaired = FinishRepair(character, ability, d.SlotId); }
+            catch (Exception ex) { Core.Log.LogWarning($"[Beelz SPELLBUF] repair check failed slot={d.SlotId}: {ex.Message}"); }
             Core.Log.LogInfo(repaired
                 ? $"[Beelz SPELLBUF] repaired target={sid} slot={d.SlotId} ability={abilityName} ({context})"
                 : $"[Beelz SPELLBUF] removed target={sid} slot={d.SlotId} ability={abilityName} ({context}): the spellbook slot is free to pick again");
@@ -715,17 +756,19 @@ internal static class TransformBuffService
         return dangling.Count;
     }
 
-    /// <summary>Gives the re-created entry's buff the ability's VBloodAbilityData.AbilityType (Bloodcraft's equip
-    /// sequence). True when the new entry exists with a live buff.</summary>
-    static bool SetAbilityType(Entity character, PrefabGUID ability, int slotId)
+    static bool IsLive(Entity buff) => buff.Exists() && !buff.Has<DestroyTag>();
+
+    /// <summary>After a re-create attempt: the slot's entry with a live buff gets the ability's VBloodAbilityData.AbilityType
+    /// (Bloodcraft's equip sequence) → true; an entry left without a live buff is removed → false.</summary>
+    static bool FinishRepair(Entity character, PrefabGUID ability, int slotId)
     {
         var em = Core.EntityManager;
         var entries = em.GetBuffer<VBloodAbilityBuffEntry>(character);
-        for (int i = 0; i < entries.Length; i++)
+        for (int i = entries.Length - 1; i >= 0; i--)
         {
             if (entries[i].SlotId != slotId || entries[i].ActiveAbility._Value != ability._Value) continue;
             Entity b = entries[i].ActiveBuff;
-            if (!b.Exists()) return false;
+            if (!IsLive(b)) { entries.RemoveAt(i); return false; }
             if (Core.PrefabCollectionSystem._PrefabGuidToEntityMap.TryGetValue(ability, out Entity abilityPrefab)
                 && em.HasComponent<VBloodAbilityData>(abilityPrefab) && em.HasComponent<VBloodAbilityReplaceBuff>(b))
             {
@@ -1196,11 +1239,15 @@ internal static class TransformBuffService
         int popped = 0, destroyed = 0, skipped = 0;
         var failures = new List<string>();
         var toDestroy = new HashSet<Entity>();
+        // D33: the mod that puts a slot's spellbook spell on it is the player's own pick — never popped. An unreadable
+        // spellbook keeps nothing extra (the mods are then popped as before, and the readback still reports them).
+        var spellBySlot = SpellbookSpellsBySlot(character);
         foreach (var (idx, slot) in slots)
         {
             if (slot == Entity.Null || !slot.Exists()) continue;
             var parse = ParseSlot(reg, em, slot);
-            var d = Beelzebub.Logic.SlotPurgeDecision.Decide(parse, SourcePrefabName, IsProtected);
+            bool Keep(Beelzebub.Logic.SlotModEntry e) => Beelzebub.Logic.SpellbookBuffs.IsSpellbookMod(e, idx, spellBySlot);
+            var d = Beelzebub.Logic.SlotPurgeDecision.Decide(parse, SourcePrefabName, IsProtected, Keep);
             if (d.Skipped)
             {
                 // Nothing popped or destroyed (D24) — and the step fails: the readback only covers the bar, so an
@@ -1227,20 +1274,21 @@ internal static class TransformBuffService
             var after = ParseSlot(reg, em, slot);
             // D32: a stack of the same mod id (the leaked weapon-buff Empties) can need several pops — pop again while
             // the count keeps falling, capped; [Beelz LEAK] records what each bar slot went through.
-            int prev = parse.Entries.Count, rounds = 1;
-            while (after.Readable && Beelzebub.Logic.SlotOwnership.PopAgain(prev, after.Entries.Count, rounds))
+            int Poppable(Beelzebub.Logic.SlotModParse p) => p.Entries.Count(e => !Keep(e));
+            int prev = Poppable(parse), rounds = 1;
+            while (after.Readable && Beelzebub.Logic.SlotOwnership.PopAgain(prev, Poppable(after), rounds))
             {
-                prev = after.Entries.Count;
-                foreach (var e in after.Entries) Pop(e.ModId);
+                prev = Poppable(after);
+                foreach (int id in after.Entries.Where(e => !Keep(e)).Select(e => e.ModId).Distinct()) Pop(id);
                 rounds++;
                 if (!slot.Exists()) break;
                 after = ParseSlot(reg, em, slot);
             }
             if (idx <= 8)
-                Core.Log.LogInfo($"[Beelz LEAK] target={character.GetSteamId()} slot={idx} before={parse.Entries.Count} popped={slotPopped} after={(after.Readable ? after.Entries.Count.ToString() : "unreadable")} rounds={rounds}");
+                Core.Log.LogInfo($"[Beelz LEAK] target={character.GetSteamId()} slot={idx} before={parse.Entries.Count} popped={slotPopped} after={(after.Readable ? after.Entries.Count.ToString() : "unreadable")} kept={(after.Readable ? after.Entries.Count(Keep).ToString() : "?")} rounds={rounds}");
             if (!slot.Exists()) { failures.Add($"slot {idx} entity gone after the pop"); continue; }
             if (!after.Readable) { failures.Add($"slot {idx} dump unreadable after the pop"); skipped++; continue; }
-            if (after.HasMods)
+            if (Poppable(after) > 0)
                 foreach (var (i, v) in d.SourcesToDestroy) toDestroy.Add(new Entity { Index = i, Version = v });
         }
         // An unreadable slot's sources are unknown, so any source queued here might also drive it: with a skipped
@@ -1292,6 +1340,7 @@ internal static class TransformBuffService
         foreach (var (_, se) in all) if (se != Entity.Null) own.Add(se);
         // D32: a weapon-buff Empty on a slot the weapon does not own is a leak — counted as other, never clean
         SlotApply.TryGetOwnedSlots(character, maxSlot, out var owned);
+        var spellBySlot = SpellbookSpellsBySlot(character);   // D33: the spellbook's own pick is legitimate, never other
         foreach (var (idx, slot) in all)
         {
             if (idx > maxSlot) break;
@@ -1306,6 +1355,7 @@ internal static class TransformBuffService
                 bool engineOwn = own.Contains(new Entity { Index = e.SourceIndex, Version = e.SourceVersion });
                 string n = engineOwn ? "character" : SourcePrefabName(e);
                 var verdict = Beelzebub.Logic.SlotOwnership.ClassifyEmpty(e, idx, !engineOwn && Beelzebub.Logic.SlotOwnership.IsWeaponBuff(n), owned);
+                if (Beelzebub.Logic.SpellbookBuffs.IsSpellbookMod(e, idx, spellBySlot)) { gear++; if (!names.Contains("spellbook")) names.Add("spellbook"); continue; }
                 if (verdict == Beelzebub.Logic.EmptyVerdict.Leak) other++;
                 else if (verdict == Beelzebub.Logic.EmptyVerdict.Unknown) unknown = true;
                 else if (engineOwn || Beelzebub.Logic.GearRule.IsGearSource(n)) { gear++; if (!names.Contains(n)) names.Add(n); }

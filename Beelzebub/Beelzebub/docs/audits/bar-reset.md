@@ -367,3 +367,27 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
   finding. D32 code review closed after round 2.
 - the D3/D18/D23/D28 patches no longer applied after the plan and code edits — re-made in ba61a9a and a02c0d3, then the full run:
   `harness: ok, 149 faults, 132 clauses, 5 deferred (D22: gate not met) (not run: D19), patch tree 2ca1c81b7549abecb10d036695fcc59bfa573555`
+
+### Step 10 · D33 spellbook spell buffs · review round 1 · 2026-09-30 · reviewed 35c9ac7 (`git diff 90d7956^..35c9ac7`, code + tests)
+- Evidence for the fix (Development procedure 4, diagnostic first, 90d7956): at login `[Beelz SPELLBUF] destroying spellbook
+  buff Entity(345239:1) … slot=5 ability=AB_Blood_Shadowbolt_AbilityGroup` from the reconnect reconcile with no transform
+  active; `bar-raw` then listed spellbook entries T CrimsonBeam, Space VeilOfShadow and R Shadowbolt `state=MISSING`.
+  Logs in `%TEMP%/beelz-logs-2026-09-30-rc3-spellbuf/`. Owner decisions G1-G4 option A.
+- Release build ok; tests 150 passed; `--only D33`: 8 of 8 caught. In game on 35c9ac7: login logged `repaired` for slots
+  5, 2, 7, bar-raw showed all four entries `state=ok`, the owner equipped and unequipped spells freely — but a resetbar
+  then emptied R, C and T (defect, plan Log): PopSlotMods popped the GroupGuid mods that place the spellbook spells.
+- Codex verdict: FINDINGS —
+  - K1 ACCEPTED (high) — Apply read the spellbook only after instantiating the carrier; an unreadable spellbook (null) made
+    the fresh carrier "not ours", Apply returned without removing it, and every teardown would then skip it. The spellbook
+    is now read first and an unreadable one aborts before anything is created; the post-instantiate check uses that set.
+  - K2 ACCEPTED (medium) — a failed re-create could leave a partial entry while logging "removed". `FinishRepair` now
+    re-scans the slot after every attempt: a live entry is configured (repaired), an entry without a live buff is removed.
+  - K3 REJECTED (medium) — "identify our carrier positively": carriers saved by earlier versions carry no unique mark (the
+    only flag set, RemoveOnDisconnect, is not ours alone), so positive identity cannot cover old saves; the spellbook read
+    only fails on an exception, which is logged, and the next login or reset retries the removal.
+  - K4 ACCEPTED (low) — the repair snapshot and each RemoveAt are guarded, and the entry at the captured index is
+    re-validated (slot, ability, buff still dead) before it is removed.
+- Same round (defect above): `SpellbookBuffs.IsSpellbookMod` — Decide and the re-pop rounds keep the mod that sets a slot to
+  its spellbook spell (and never destroy its source); the readback counts it as legitimate (`spellbook`); `[Beelz LEAK]`
+  gains `kept=`. Tests 152 passed; new faults D33-spell-mod-missed, D33-other-slot-kept, D33-unreadable-kept,
+  D33-kept-popped (170 entries); all non-D19 patches re-made against the new tree.

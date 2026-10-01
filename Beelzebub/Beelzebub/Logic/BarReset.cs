@@ -93,6 +93,11 @@ public static class SpellbookBuffs
     public static List<SpellbookEntry> Dangling(IEnumerable<SpellbookEntry> entries) =>
         (entries ?? Enumerable.Empty<SpellbookEntry>()).Where(e => !e.BuffLive).OrderByDescending(e => e.Index).ToList();
 
+    /// <summary>A GroupGuid mod that puts the slot's spellbook spell on it (the vanilla equip) — a reset keeps it and the
+    /// readback counts it as legitimate. <paramref name="spellBySlot"/>: slot → the spellbook's ability guid there.</summary>
+    public static bool IsSpellbookMod(SlotModEntry e, int slot, IReadOnlyDictionary<int, int> spellBySlot) =>
+        spellBySlot != null && spellBySlot.TryGetValue(slot, out int g) && g != 0 && e.SetToGuid == g;
+
     /// <summary>Entity (index, version) packed into one comparable id.</summary>
     public static long Id(int index, int version) => ((long)index << 32) | (uint)version;
 }
@@ -147,8 +152,9 @@ public sealed class SlotPurgeDecision
 
     /// <param name="sourcePrefabName">prefab name of an entry's source entity ("" when unknown).</param>
     /// <param name="isProtected">true for the character itself and its slot entities — never destroyed.</param>
+    /// <param name="keep">a mod never popped nor its source destroyed — the slot's spellbook spell (D33); null = none.</param>
     public static SlotPurgeDecision Decide(SlotModParse parse, Func<SlotModEntry, string> sourcePrefabName,
-        Func<SlotModEntry, bool> isProtected)
+        Func<SlotModEntry, bool> isProtected, Func<SlotModEntry, bool> keep = null)
     {
         // Unreadable → touch nothing on this slot (D24); the readback reports it and the reset is never clean.
         if (parse == null || !parse.Readable) return new SlotPurgeDecision { Skipped = true };
@@ -161,6 +167,7 @@ public sealed class SlotPurgeDecision
             // mods, so the per-slot gear count stays equal run to run (no pile-up, D10). The engine dump repeats
             // a mod id; each id is popped ONCE — a second pop of a gone id is an engine LogError (D33). Real
             // stacked entries are caught by PopSlotModifications' re-pop rounds (D32).
+            if (keep != null && keep(e)) continue;   // the player's own spellbook spell stays on its key (D33)
             if (popIds.Add(e.ModId)) d.ModIdsToPop.Add(e.ModId);
             if (isProtected(e) || GearRule.IsGearSource(sourcePrefabName(e) ?? "")) continue;
             if (seen.Add((e.SourceIndex, e.SourceVersion))) d.SourcesToDestroy.Add((e.SourceIndex, e.SourceVersion));

@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Commands/AdminCommands.cs b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
 --- a/Beelzebub/Beelzebub/Commands/AdminCommands.cs
 +++ b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
-@@ -1251,7 +1251,7 @@
+@@ -1254,7 +1254,7 @@
      [Command("rebuildbar", description: "Alias of .beelz admin bar (read-only bar readout; the old init-state toggle is retired). Usage: .beelz admin rebuildbar [player] (default: you)", adminOnly: true)]
      public static void RebuildBar(ChatCommandContext ctx, string player = null) => Bar(ctx, player);
  

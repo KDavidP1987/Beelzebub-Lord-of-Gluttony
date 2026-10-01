@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -246,7 +246,7 @@
+@@ -278,7 +278,7 @@
                          break;
                      case BarResetStep.Readback:
                          // A null readback is a failed read, never an empty (clean) bar.

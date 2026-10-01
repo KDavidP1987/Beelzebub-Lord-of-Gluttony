@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Logic/BarReset.cs b/Beelzebub/Beelzebub/Logic/BarReset.cs
 --- a/Beelzebub/Beelzebub/Logic/BarReset.cs
 +++ b/Beelzebub/Beelzebub/Logic/BarReset.cs
-@@ -102,7 +102,7 @@
+@@ -129,7 +129,7 @@
  
      /// <summary>Pop the slot again while its GroupGuid mod count keeps falling and the cap is not reached.</summary>
      public static bool PopAgain(int previousCount, int currentCount, int roundsDone) =>

@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/docs/dod/bar-reset.md b/Beelzebub/Beelzebub/docs/dod/bar-reset.md
 --- a/Beelzebub/Beelzebub/docs/dod/bar-reset.md
 +++ b/Beelzebub/Beelzebub/docs/dod/bar-reset.md
-@@ -336,7 +336,7 @@
+@@ -338,7 +338,7 @@
    checked in the audit (D22); on a server, install the v0.136.0 DLL — still possible after data was written,
    because a reset only removes entries and v0.136 reads the same `state.json` Version 8; the new `.cfg` key is
    ignored by v0.136. Cleared binds are not restored by a rollback (they were cleared on purpose).

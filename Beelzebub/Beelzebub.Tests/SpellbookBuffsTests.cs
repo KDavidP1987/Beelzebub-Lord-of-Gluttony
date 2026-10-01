@@ -51,6 +51,30 @@ public class SpellbookBuffsTests
         Assert.Empty(SpellbookBuffs.Dangling(null));
     }
 
+    static readonly Dictionary<int, int> Spells = new() { [2] = -433204738, [5] = -880131926, [6] = 1191439206, [7] = 375131842 };
+
+    [Fact]
+    public void IsSpellbookMod_fails_when_the_slot_spell_mod_is_not_recognised_or_another_mod_is()
+    {
+        Assert.True(SpellbookBuffs.IsSpellbookMod(new SlotModEntry(1549, 375131842, 581350, 3), 7, Spells));   // T Crimson Beam
+        Assert.False(SpellbookBuffs.IsSpellbookMod(new SlotModEntry(1549, 375131842, 581350, 3), 6, Spells));  // same spell, other slot
+        Assert.False(SpellbookBuffs.IsSpellbookMod(new SlotModEntry(1600, 1621601748, 50, 1), 7, Spells));     // a granted ability
+        Assert.False(SpellbookBuffs.IsSpellbookMod(new SlotModEntry(1440, 0, 50, 1), 3, Spells));              // no spell on slot 3
+        Assert.False(SpellbookBuffs.IsSpellbookMod(new SlotModEntry(1549, 375131842, 581350, 3), 7, null));    // unreadable spellbook
+    }
+
+    [Fact]
+    public void Decide_fails_when_a_spellbook_spell_mod_is_popped_or_its_source_destroyed()
+    {
+        var parse = SlotModDump.ParseGroupGuid(
+            "- AbilityGroupSlot.GroupGuid: PrefabGuid(375131842) (Base: PrefabGuid(0))\n" +
+            "    [ModId 1549] Set PrefabGuid(375131842) from Entity(581350:3) (a)\n" +
+            "    [ModId 1600] Set PrefabGuid(1621601748) from Entity(70:2) (b)\n");
+        var d = SlotPurgeDecision.Decide(parse, _ => "", _ => false, e => SpellbookBuffs.IsSpellbookMod(e, 7, Spells));
+        Assert.Equal(new[] { 1600 }, d.ModIdsToPop);
+        Assert.Equal(new[] { (70, 2) }, d.SourcesToDestroy);
+    }
+
     [Fact]
     public void Decide_fails_when_a_duplicated_mod_id_is_popped_twice()
     {

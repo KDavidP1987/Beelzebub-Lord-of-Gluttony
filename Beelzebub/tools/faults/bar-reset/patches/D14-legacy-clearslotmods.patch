@@ -1,7 +1,7 @@
 diff --git a/Beelzebub/Beelzebub/Commands/AdminCommands.cs b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
 --- a/Beelzebub/Beelzebub/Commands/AdminCommands.cs
 +++ b/Beelzebub/Beelzebub/Commands/AdminCommands.cs
-@@ -1418,7 +1418,7 @@
+@@ -1423,7 +1423,7 @@
              $"binds={result.CountOf(Beelzebub.Logic.BarResetStep.ClearSavedBindings)} hotkeys={result.CountOf(Beelzebub.Logic.BarResetStep.ClearHotkeys)} popped={result.CountOf(Beelzebub.Logic.BarResetStep.PopSlotMods)} clean={(result.Clean ? 1 : 0)}");
      }
  
