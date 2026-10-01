@@ -391,3 +391,15 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
   its spellbook spell (and never destroy its source); the readback counts it as legitimate (`spellbook`); `[Beelz LEAK]`
   gains `kept=`. Tests 152 passed; new faults D33-spell-mod-missed, D33-other-slot-kept, D33-unreadable-kept,
   D33-kept-popped (170 entries); all non-D19 patches re-made against the new tree.
+
+### Step 10 · D33 spellbook spell buffs · review round 2 · 2026-09-30 · reviewed be78e2e (`git diff 35c9ac7..be78e2e`, code + tests)
+- Codex verdict: FINDINGS — K1, K2 and K4 confirmed fixed; the Poppable accounting and the bounded re-pop loop do not spin.
+  - K5 ACCEPTED in part (medium) — the keep rule matched slot + spell only, so a Beelzebub/gear mod setting the same spell on
+    that slot would be kept and read as legitimate. Codex's fix (require the mod's source to be the entry's ActiveBuff) is
+    REJECTED as stated: in BARRAW the spell mod's source differs from the buff (Shadowbolt mod source 581348:3, buff
+    581380:3), so it would keep nothing. Instead `IsSpellbookMod` now also requires a non-gear source — Beelzebub's slot
+    injections are equip-buff (gear) sourced and Reapply rebuilds the weapon's; the carrier is destroyed before the pop.
+    Control `IsSpellbookMod_fails_when_a_gear_sourced_mod_setting_the_spell_is_kept`; tests 153 passed.
+- Harness on be78e2e: 160 of 161 caught; D33-other-slot-kept broke the build (`IReadOnlyDictionary.ContainsValue`), not a
+  test — the fault was rewritten and split (D33-other-slot-kept, D33-granted-kept, D33-gear-kept; 172 entries), all non-D19
+  patches re-made on 64e5927; `--only D33`: 14 of 14 caught.
