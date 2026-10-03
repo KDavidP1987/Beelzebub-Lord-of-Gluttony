@@ -5,7 +5,7 @@
 
 | Plan | Title | Status | Size | Verified | Baseline items | Prediction | Parent |
 |---|---|---|---|---|---|---|---|
-| [bar-reset](bar-reset.md) | Action-bar reset that clears every layer | draft | L | 32/33 | — | — |  |
+| [bar-reset](bar-reset.md) | Action-bar reset that clears every layer | draft | L | 33/33 | — | — |  |
 
 Most-missed layers — done plans: none; open plans (provisional): none.
 Miss history — done plans: none yet.

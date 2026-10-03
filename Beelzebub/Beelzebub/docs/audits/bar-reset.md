@@ -432,3 +432,4 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
 - Release gate 2026-10-03: preflight's audit check needs the harness summary line for the current patch tree (the two
   runs above were recorded in prose). Full run on a05858a (`--skip D19`, D19 is re-made after the release):
   `harness: ok, 167 faults, 150 clauses, 5 deferred (D22: gate not met) (not run: D19), patch tree d1bd494bce490a8d58222cf81781c82454ead72b`
+- rollback (D22, 2026-10-03): `rollback: git revert --no-edit e94987865e6c807879e90e4ca45a46fb1110d23e^..0fb215ca7f55677db41247b9557a522584fad1a0`
