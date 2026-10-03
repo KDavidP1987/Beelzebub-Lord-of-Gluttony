@@ -1138,6 +1138,14 @@ internal static class TransformBuffService
         return new List<string> { "no slot entity" };
     }
 
+    /// <summary>grant-refresh: a mod whose source is a `Buff_VBlood_Ability_Replace` buff — a spellbook spell (or our
+    /// carrier). Never popped when a grant leaves a slot.</summary>
+    internal static bool IsSpellbookSourcedMod(Beelzebub.Logic.SlotModEntry e)
+    {
+        var src = new Entity { Index = e.SourceIndex, Version = e.SourceVersion };
+        return src.Exists() && src.GetPrefabGuid()._Value == CarrierBuff._Value;
+    }
+
     static string SourcePrefabName(Beelzebub.Logic.SlotModEntry e)
     {
         var src = new Entity { Index = e.SourceIndex, Version = e.SourceVersion };

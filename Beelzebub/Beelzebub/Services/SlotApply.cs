@@ -255,8 +255,10 @@ internal static class SlotApply
         try
         {
             var buffer = Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(buffEntity);
+            int removedAbility = 0;
+            for (int i = 0; i < buffer.Length; i++) if (buffer[i].Slot == slot) removedAbility = buffer[i].NewGroupId._Value;
             bool removed = RemoveSlotEntries(buffer, slot);
-            RestoreSlotBaseValue(character, buffEntity, slot);
+            RestoreSlotBaseValue(character, buffEntity, slot, removedAbility);
             if (Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
             return removed;
         }
@@ -320,9 +322,9 @@ internal static class SlotApply
 
         int slotBufLen = SlotBufferLength(character);   // v0.61.0: engine's live slot count
 
-        List<int> yielded = null;
+        List<(int Slot, int Guid)> yielded = null;
         List<int> injectedSlots = null;
-        List<int> lockedSlots = null;
+        List<(int Slot, int Guid)> lockedSlots = null;
         int injected = 0;
         // v0.135.0: pass 1 decides which binds are eligible (valid / live / compatible / not yielded); the
         // incompatibility locks then resolve over that bar, and pass 2 injects only the survivors.
@@ -353,7 +355,7 @@ internal static class SlotApply
             {
                 RemoveSlotEntries(buffer, slot);                       // strip any stale override (buffer-content only)
                 ReleaseYieldedBind(character, steamId, weapon, slot, entry.weaponSpecific);
-                (yielded ??= new List<int>()).Add(slot);
+                (yielded ??= new List<(int, int)>()).Add((slot, entry.abilityGuid));
                 continue;
             }
             eligible.Add((slot, entry.abilityGuid, entry.weaponSpecific));
@@ -370,7 +372,7 @@ internal static class SlotApply
             if (!keptBar.ContainsKey(slot))
             {
                 // Locked out: drop our override so the slot shows its vanilla base; the saved bind is untouched.
-                if (RemoveSlotEntries(buffer, slot)) (lockedSlots ??= new List<int>()).Add(slot);
+                if (RemoveSlotEntries(buffer, slot)) (lockedSlots ??= new List<(int, int)>()).Add((slot, abilityGuid));
                 continue;
             }
 
@@ -404,11 +406,11 @@ internal static class SlotApply
         // AddComponent inside RestoreSlotBaseValue is a STRUCTURAL change that would invalidate
         // the live `buffer` handle if done mid-iteration.
         if (yielded != null)
-            foreach (int slot in yielded)
-                RestoreSlotBaseValue(character, equipBuff, slot);
+            foreach (var (slot, guid) in yielded)
+                RestoreSlotBaseValue(character, equipBuff, slot, guid);
         if (lockedSlots != null)
-            foreach (int slot in lockedSlots)
-                RestoreSlotBaseValue(character, equipBuff, slot);
+            foreach (var (slot, guid) in lockedSlots)
+                RestoreSlotBaseValue(character, equipBuff, slot, guid);
 
         // v0.63.0 (#5): mark freshly-injected slots dirty so the client HUD refreshes without a
         // weapon swap. Matters for the non-equip-event callers (`.beelz refresh`, login re-apply,
@@ -504,17 +506,26 @@ internal static class SlotApply
     /// Caller must NOT be mid-iteration over the equip buff's ReplaceAbilityOnSlotBuff (the
     /// DirtyTag AddComponent is structural).
     /// </summary>
-    static void RestoreSlotBaseValue(Entity character, Entity equipBuff, int slot)
+    static void RestoreSlotBaseValue(Entity character, Entity equipBuff, int slot, int removedAbility = 0)
     {
         try
         {
             if (!TryGetSlotBase(character, slot, out var baseAbility)) return;
-            // grant-refresh: pop our earlier pushes on the slot first (they would stay under the base otherwise), put
-            // the weapon's own row back on a slot the weapon owns, and never push Empty (it masks the base, D32).
-            int restore = baseAbility._Value;
-            if (TryGetPrefabRows(equipBuff, out var prefabRows) && prefabRows != null)
-                foreach (var r in prefabRows) if (r.Slot == slot && r.NewGroupId._Value != 0) { restore = r.NewGroupId._Value; break; }
-            PushOnSlot(character, equipBuff, slot, new PrefabGUID(restore), "restore");
+            // grant-refresh: pop our earlier pushes and every mod setting the removed grant (spellbook spells kept), put
+            // the weapon's own row back on a slot the weapon owns, and never push Empty (it masks the base, D32). While
+            // a form, transform or mount owns the bar only the pop runs — a push would land on that kit.
+            int restore = 0;
+            if (!BarOwnedElsewhere(character))
+            {
+                restore = baseAbility._Value;
+                if (TryGetPrefabRows(equipBuff, out var prefabRows) && prefabRows != null)
+                {
+                    int weaponRow = Beelzebub.Logic.GrantPush.WeaponRow(
+                        prefabRows.ConvertAll(r => (r.Slot, r.NewGroupId._Value, r.Priority)), slot);
+                    if (weaponRow != 0) restore = weaponRow;
+                }
+            }
+            PushOnSlot(character, equipBuff, slot, new PrefabGUID(restore), "restore", removedAbility);
         }
         catch (Exception ex)
         {
@@ -594,6 +605,16 @@ internal static class SlotApply
         ulong sid = character.GetSteamId();
         if (Core.AbilityRegistry.GetActiveTransform(sid) is not null) return true;
         if (ShapeshiftAbilityService.IsMounted(sid)) return true;
+        // any mount (a plain horse has no Beelzebub saddle loadout, so IsMounted misses it)
+        if (Core.EntityManager.HasBuffer<BuffBuffer>(character))
+        {
+            var buffs = Core.EntityManager.GetBuffer<BuffBuffer>(character);
+            for (int i = 0; i < buffs.Length; i++)
+            {
+                if (!buffs[i].Entity.Exists() || Core.EntityManager.HasComponent<DestroyTag>(buffs[i].Entity)) continue;
+                if (ShapeshiftAbilityService.IsMountBuff(buffs[i].PrefabGuid._Value, buffs[i].PrefabGuid.GetPrefabName())) return true;
+            }
+        }
         return TransformBuffService.ListOverrideBuffs(character).Count > 0;
     }
 
@@ -611,11 +632,12 @@ internal static class SlotApply
     /// <summary>Pop the slot's earlier mods from <paramref name="equipBuff"/> (<see cref="Beelzebub.Logic.GrantPush.OwnModIds"/>),
     /// then set <paramref name="ability"/> through <c>ModifyAbilityGroupOnSlot</c> unless it is Empty, and mark the slot
     /// dirty. One <c>[Beelz GRANT]</c> line. Caller must NOT be mid-iteration over a live buffer (structural change).</summary>
-    static void PushOnSlot(Entity character, Entity equipBuff, int slot, PrefabGUID ability, string why)
+    static void PushOnSlot(Entity character, Entity equipBuff, int slot, PrefabGUID ability, string why, int removedAbility = 0)
     {
         var sgm = Core.ServerGameManager;
         var parse = TransformBuffService.ParseSlotMods(character, slot);
-        var ids = Beelzebub.Logic.GrantPush.OwnModIds(parse, equipBuff.Index, equipBuff.Version);
+        var ids = Beelzebub.Logic.GrantPush.ModsToPop(parse, equipBuff.Index, equipBuff.Version, removedAbility,
+            TransformBuffService.IsSpellbookSourcedMod);
         int popped = 0;
         foreach (int id in ids)
         {

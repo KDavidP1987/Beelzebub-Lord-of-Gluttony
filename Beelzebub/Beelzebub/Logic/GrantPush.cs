@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -22,6 +23,33 @@ public static class GrantPush
             .Select(e => e.ModId)
             .Distinct()
             .ToList();
+    }
+
+    /// <summary>Mods to pop when a grant leaves a slot (unslot, yield, lock): <see cref="OwnModIds"/> plus every mod that
+    /// sets <paramref name="removedAbility"/> — the engine applies a buff's rows at equip time under another source entity
+    /// (GRANTRAW: `from Entity(581913:259)` vs the held buff 581914:252), so a grant applied on equip is not "own".
+    /// <paramref name="keep"/> (a spellbook spell's mod) is never popped. Empty for an unreadable dump.</summary>
+    public static List<int> ModsToPop(SlotModParse parse, int equipBuffIndex, int equipBuffVersion, int removedAbility,
+                                      Func<SlotModEntry, bool> keep)
+    {
+        if (parse == null || !parse.Readable) return new List<int>();
+        return parse.Entries
+            .Where(e => (e.SourceIndex == equipBuffIndex && e.SourceVersion == equipBuffVersion)
+                        || (removedAbility != 0 && e.SetToGuid == removedAbility && (keep == null || !keep(e))))
+            .Select(e => e.ModId)
+            .Distinct()
+            .ToList();
+    }
+
+    /// <summary>The weapon's own ability for <paramref name="slot"/> from its prefab rows: the highest Priority row, the
+    /// later one on a tie (the same rule as the bar reset's Reapply); 0 when the weapon has no row there.</summary>
+    public static int WeaponRow(IEnumerable<(int Slot, int Guid, int Priority)> rows, int slot)
+    {
+        int ability = 0, best = int.MinValue;
+        if (rows == null) return 0;
+        foreach (var r in rows)
+            if (r.Slot == slot && r.Guid != 0 && r.Priority >= best) { ability = r.Guid; best = r.Priority; }
+        return ability;
     }
 
     /// <summary>Whether to push <paramref name="abilityGuid"/> after the pop. A 0 (Empty) push masks the slot's base and
