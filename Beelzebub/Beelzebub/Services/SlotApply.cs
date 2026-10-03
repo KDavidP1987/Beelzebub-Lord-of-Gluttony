@@ -216,12 +216,15 @@ internal static class SlotApply
             if (TryGetSlotBase(character, slot, out var maskedBase) && maskedBase._Value != 0 && maskedBase._Value != ability._Value)
                 Core.AbilityRegistry.SetSlotBaseline(character.GetSteamId(), weapon, slot, maskedBase._Value);
 
+            LogGrantRaw(character, slot, "before");
             var buffer = Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(buffEntity);
             ReplaceSlotEntry(character, buffer, slot, ability);
             // v0.63.0 (#5): force the client HUD to refresh this slot now (no weapon swap needed).
             // `buffer` is finished being used above, so the structural AddComponent is safe here.
             MarkSlotDirty(character, slot);
             if (Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+            LogGrantRaw(character, slot, "after");
+            ScheduleGrantRaw(character, slot);
             return true;
         }
         catch (Exception ex)
@@ -569,6 +572,79 @@ internal static class SlotApply
     {
         int resolved = CurrentSlotResolvedGuid(character, slot);
         return resolved == 0 || resolved == newGroupGuid;
+    }
+
+    // ── grant-refresh DIAGNOSTIC (temporary): why a fresh grant reaches the client only after a weapon swap ──
+
+    static readonly List<(Entity Character, int Slot, int Frame, string Phase)> _grantLate = new();
+
+    /// <summary>DIAGNOSTIC (read-only): log one slot's state as [Beelz GRANTRAW] lines — the resolved ability, the
+    /// held equip buff's rows for that slot, and the engine's raw modification dump for the slot entity.</summary>
+    internal static void LogGrantRaw(Entity character, int slot, string phase)
+    {
+        try
+        {
+            ulong sid = character.GetSteamId();
+            string rows = "no equip buff";
+            if (TryFindEquipBuff(character, out Entity eb, out string en))
+            {
+                var parts = new List<string>();
+                var b = Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(eb);
+                for (int i = 0; i < b.Length; i++)
+                    if (b[i].Slot == slot) parts.Add($"{b[i].NewGroupId.GetPrefabName() ?? b[i].NewGroupId._Value.ToString()}@p{b[i].Priority}");
+                rows = $"{en} {eb} [{string.Join(",", parts)}]";
+            }
+            int resolved = CurrentSlotResolvedGuid(character, slot);
+            string resolvedName = resolved == 0 ? "0" : (new PrefabGUID(resolved).GetPrefabName() ?? resolved.ToString());
+            Core.Log.LogInfo($"[Beelz GRANTRAW] target={sid} slot={slot} phase={phase} frame={UnityEngine.Time.frameCount} resolved={resolvedName} rows={rows}");
+            foreach (string line in TransformBuffService.RawSlotDump(character, slot))
+                Core.Log.LogInfo($"[Beelz GRANTRAW] target={sid} slot={slot} phase={phase} {line}");
+        }
+        catch (Exception ex) { Core.Log.LogWarning($"[Beelz GRANTRAW] slot={slot} phase={phase} failed: {ex.Message}"); }
+    }
+
+    /// <summary>DIAGNOSTIC: re-log the slot one frame and ~2 s after a grant (the engine may resolve the row later).</summary>
+    internal static void ScheduleGrantRaw(Entity character, int slot)
+    {
+        int f = UnityEngine.Time.frameCount;
+        _grantLate.Add((character, slot, f + 1, "next-frame"));
+        _grantLate.Add((character, slot, f + 60, "later"));
+    }
+
+    /// <summary>Heartbeat hook for <see cref="ScheduleGrantRaw"/> (no-op when nothing is pending).</summary>
+    public static void TickGrantRaw()
+    {
+        if (_grantLate.Count == 0) return;
+        int frame = UnityEngine.Time.frameCount;
+        for (int i = _grantLate.Count - 1; i >= 0; i--)
+        {
+            var p = _grantLate[i];
+            if (frame < p.Frame) continue;
+            _grantLate.RemoveAt(i);
+            if (p.Character.Exists()) LogGrantRaw(p.Character, p.Slot, p.Phase);
+        }
+    }
+
+    /// <summary>DIAGNOSTIC PROBE (admin `grant-push`): push the held equip buff's winning row for <paramref name="slot"/>
+    /// through the engine's own setter (the path the bar reset's Reapply uses), the equip buff as source, then log the
+    /// slot. Tests whether that makes a fresh grant show without a weapon swap. Returns a one-line result.</summary>
+    internal static string ProbePushRow(Entity character, int slot)
+    {
+        if (!TryFindEquipBuff(character, out Entity equipBuff, out _)) return "no weapon equip buff held";
+        if (slot < 0 || slot >= SlotBufferLength(character)) return $"slot {slot} is outside the live slot buffer";
+        var rows = Copy(Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(equipBuff));
+        PrefabGUID ability = PrefabGUID.Empty;
+        int best = int.MinValue;
+        foreach (var r in rows)
+            if (r.Slot == slot && r.Priority >= best) { ability = r.NewGroupId; best = r.Priority; }
+        if (ability._Value == 0) return $"no row on slot {slot} of the held weapon";
+        LogGrantRaw(character, slot, "push-before");
+        Core.ServerGameManager.ModifyAbilityGroupOnSlot(equipBuff, character, slot, ability);
+        MarkSlotDirty(character, slot);
+        if (Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+        LogGrantRaw(character, slot, "push-after");
+        ScheduleGrantRaw(character, slot);
+        return $"pushed {ability.GetPrefabName()} onto slot {slot}";
     }
 
     /// <summary>The ability-group GUID currently resolved on a slot (AbilityGroupSlot.StateEntity prefab

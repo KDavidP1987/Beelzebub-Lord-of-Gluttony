@@ -1282,6 +1282,16 @@ internal static partial class AdminCommands
         Audit(ctx, "bar-raw", steamId, fullName, $"lines={n}");
     }
 
+    [Command("grant-push", description: "DIAGNOSTIC PROBE (temporary): push your held weapon's row for a slot through the engine's slot setter, to test whether a fresh grant then shows without a weapon swap. Logs [Beelz GRANTRAW]. Usage: .beelz admin grant-push <slot> (the same slot number you gave .beelz grant)", adminOnly: true)]
+    public static void GrantPush(ChatCommandContext ctx, int slot)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        var character = ctx.Event.SenderCharacterEntity;
+        string result = SlotApply.ProbePushRow(character, slot);
+        ctx.Reply($"grant-push: {result} (details in LogOutput.log, [Beelz GRANTRAW]).");
+        Audit(ctx, "grant-push", character.GetSteamId(), "self", $"slot={slot} result={result}");
+    }
+
     [Command("respawn", description: "Respawn a player's character AT THEIR CURRENT SPOT — V Rising rebuilds the character fresh, which fixes a stuck/frozen ability bar (the bear-form bug). Inventory, equipment, blood, and progress are preserved (same as dying + respawning). Usage: .beelz admin respawn [player] (default: you)", adminOnly: true)]
     public static void Respawn(ChatCommandContext ctx, string player = null)
     {

@@ -1263,6 +1263,14 @@ internal static class TransformBuffService
         return result;
     }
 
+    /// <summary>DIAGNOSTIC (grant-refresh): <see cref="RawSlotDumps"/> for one slot.</summary>
+    public static List<string> RawSlotDump(Entity character, int slot)
+    {
+        foreach (var (idx, lines) in RawSlotDumps(character, slot))
+            if (idx == slot) return lines;
+        return new List<string> { "no slot entity" };
+    }
+
     static string SourcePrefabName(Beelzebub.Logic.SlotModEntry e)
     {
         var src = new Entity { Index = e.SourceIndex, Version = e.SourceVersion };

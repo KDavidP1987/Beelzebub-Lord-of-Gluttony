@@ -111,6 +111,9 @@ public class HeartbeatBehaviour : MonoBehaviour
             // v0.137.0 (bar-reset): the one-frame-later re-read after a bar reset (no-op when none is pending).
             try { Services.BarResetService.TickLate(); }
             catch { /* never let a late re-read kill the heartbeat */ }
+            // grant-refresh DIAGNOSTIC (temporary): the delayed [Beelz GRANTRAW] reads after a grant.
+            try { Services.SlotApply.TickGrantRaw(); }
+            catch { /* never let a diagnostic kill the heartbeat */ }
         }
         Heartbeat.Pulse();
     }
