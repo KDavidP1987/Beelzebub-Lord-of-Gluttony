@@ -1130,14 +1130,6 @@ internal static class TransformBuffService
         return result;
     }
 
-    /// <summary>DIAGNOSTIC (grant-refresh): <see cref="RawSlotDumps"/> for one slot.</summary>
-    public static List<string> RawSlotDump(Entity character, int slot)
-    {
-        foreach (var (idx, lines) in RawSlotDumps(character, slot))
-            if (idx == slot) return lines;
-        return new List<string> { "no slot entity" };
-    }
-
     /// <summary>grant-refresh: a mod whose source is a `Buff_VBlood_Ability_Replace` buff — a spellbook spell (or our
     /// carrier). Never popped when a grant leaves a slot.</summary>
     internal static bool IsSpellbookSourcedMod(Beelzebub.Logic.SlotModEntry e)
