@@ -57,7 +57,7 @@ A **server-side** V Rising mod that turns the whole bestiary into a collection-a
 
 **Source · issues · roadmap:** [github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony) · **License:** MIT
 
-> **Status:** active early access / **public test build (v0.136.0)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
+> **Status:** active early access / **public test build (v0.137.0)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
 
 ---
 
@@ -153,7 +153,7 @@ Install with [r2modman](https://thunderstore.io/package/ebkr/r2modman/) / Thunde
 **Summons:** `.beelz summons <stash|restore|clear|status>` (works for captured summon abilities, not just transforms) · `.beelz summon [n]` (a transformed boss's signature add-summon)
 **Transform (Dracula, Morgana, Werewolf, Golem, Gargoyle):** `.beelz transforms` · `.beelz transform <name>` · `.beelz phase [n]` · `.beelz tform <unit> abilities | set <phase> <slot> <index> | defaults` (build a form's kit) · `.beelz revert` · `.beelz refresh` (re-apply your bar if it ever goes blank) · `.beelz detonate`
 **Admin — shape abilities:** `.beelz admin ability <name|id> <field> <value>` — field ∈ `cooldown · cooldownscale · range · charges · chargetime · aoe · projspeed · leapheight · duration · healing · maxstacks · projcount · knockback · lifetime · casttime · forcetimeout · powerwindow · freelymove · interruptonhit · interruptible · freemove · castspeed · summoncap · summontimeout · summonunits · damagescale · …` (or the shorthand `.beelz admin tune <ability> <knob> <value>`); `.beelz admin ability <id> defaults` reverts one ability, `all defaults` reverts every ability · `.beelz admin ability-inspect <ability>|export` (read-only numbers + shared parts)
-**Admin — recovery (no server wipe):** `.beelz admin cleanse <player> [buff]` (strip a stuck invisible/phased state) · `.beelz admin purge <player> CONFIRM` (wipe all bar integration to vanilla, keep captures) · `.beelz admin respawn <player>` · `.beelz admin unmount <player>` · `.beelz admin buffs <player>` (diagnose) · `.beelz admin reset-character <player> CONFIRM-RESET` (last resort)
+**Admin — recovery (no server wipe):** `.beelz admin bar <player>` (start here: read-only readout of each bar slot) · `.beelz admin cleanse <player> [buff]` (strip a stuck invisible/phased state) · `.beelz admin purge <player> CONFIRM` (the layered reset plus hotkeys, keep captures; works offline) · `.beelz admin respawn <player>` · `.beelz admin unmount <player>` · `.beelz admin buffs <player>` (diagnose) · `.beelz admin reset-character <player> CONFIRM-RESET` (last resort)
 **Admin — server:** `.beelz admin set <key> <value>` · `.beelz admin devour <player> <unitGuid>` · `.beelz admin give/revoke …` · `.beelz admin transform-set <unit> <field> <value>` (enabled/difficulty/scaling/duration/cooldown) · `.beelz admin reset-loadouts <player>` (clear binds, keep collection) · `.beelz admin rules` / `deny` / `allow` / `reload` · `.beelz admin lock add|max|remove|list|check` (incompatibility locks) · `.beelz admin reseed preview|merge|replace CONFIRM` · `.beelz admin damage-stats` · `.beelz admin difficulty <basic|brutal>` · `.beelz admin broadcast <status|leaderboard on|off|…>` / `broadcast-msg <complete|leaderboard> <list|add|remove|edit>` · `.beelz admin help`
 **Settings:** `.beelz verbosity <silent|summary|verbose>` · `.beelz silent <on|off>` · `.beelz help` · `.beelz commands`
 
@@ -196,6 +196,10 @@ help confirm or break any of these, that's the most valuable feedback we can get
 - **Cross-server / config behavior is unverified.** Different presets, difficulty
   modes, populations, and hardware haven't been tested. The power-scaling modes for
   transforms in particular benefit from real-world tuning feedback.
+- **Bar resets (v0.137) are new.** `resetbar` / `reset-loadouts` / `purge` clear every layer of the bar and read
+  it back, and one reset also repairs the Space / R / C / T slots earlier versions' resets left blocked. Your spellbook spells stay on their keys through a reset, and spells earlier versions broke (key blank, spellbook still listing them) come back at your next login. They do not touch a mount's saddle bar (dismount first), a reset that ends a timed transform starts its
+  cooldown, and a row another mod put on your weapon's slots is removed too. If a bar is still stuck, send the
+  `[Beelz RESET]` / `[Beelz BAR]` / `[Beelz LEAK]` lines from the log (`.beelz admin bar-raw <player>` adds the raw per-slot data).
 - **Things we'd especially love tested:** mixing captured abilities with vanilla
   spells (assign a vanilla spell in the spellbook to a captured slot — it should
   take the slot back), the expanded action bar (`.beelz cast`),

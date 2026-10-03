@@ -4,6 +4,48 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.137.0] - 2026-09-30
+
+### One reset that actually clears a stuck action bar
+
+A spell bar could stay "stuck" after `.beelz resetbar`: the spells came back from a layer the reset had skipped
+(a saved bind, a row on your weapon, a leftover form buff, or an engine-level slot change), and often only a weapon
+swap or a relog showed the real bar. Every bar reset now goes through one path that clears all of those layers, in
+order, and then reads the bar back to prove it.
+
+- **`.beelz resetbar CONFIRM` works in one go.** It ends any transform, clears every universal / weapon / form bind
+  and every Beelzebub change on the live bar, and puts your weapon's own skills back **without a weapon swap**. It
+  then reads the bar back: the reply either says your bar is back to vanilla or names the slots (or the form buff)
+  still overriding it. Captures, unlocks, hotkeys and presets are kept.
+- **Admins: `.beelz admin reset-loadouts` and `.beelz admin purge` use the same reset.** `purge` also clears
+  hotkeys. Both now work on an **offline** player too: the saved binds are cleared at once and the live bar resets
+  when they log in.
+- **New `.beelz admin bar [player]` — start here.** A read-only readout of each bar slot (primary, 1-6, ultimate):
+  the ability it resolves to, its saved bind, whether Beelzebub put a row on the weapon, the engine's slot changes
+  (gear vs other) and any form/override buffs. It changes nothing. `.beelz admin rebuildbar` now shows the same
+  readout; `clearslotmods` / `rebuildslots` are marked legacy — use `purge`.
+- **Shapeshift forms keep their own kit by default.** A Wolf / Bear / … form with no form or universal binds used
+  to fill its bar with your first six captures; it now keeps the form's own abilities. Set
+  `Forms_AutoFillFromCaptures = true` (section `Forms`) for the old behaviour.
+- **Every reset is logged** as one `[Beelz RESET]` line plus a `[Beelz BAR]` readout, so a bar that is still stuck
+  can be diagnosed from the server log.
+- **Recovery guide rewritten** around the single flow: `resetbar` → `admin bar` → `purge` → relog.
+- Known limits: dismount before resetting (a mount's saddle bar is not touched); a reset that ends a timed transform
+  starts that transform's normal cooldown; a row another mod put on your weapon's slots is removed too.
+- **Fixed: Space, R, C and the ultimate after a reset.** Every reset since v0.43 (`resetbar`, `rebuildslots`, `purge`)
+  left a hidden "empty" slot change on every bar slot, one more per reset, saved with the world: Space lost its
+  shadow dash and the spell menu could not drop a spell onto R, C or T on the first try. The reset now only touches
+  your weapon's own slots and removes those leftovers, so **one `.beelz resetbar CONFIRM` also repairs a bar damaged
+  by an earlier version**. Admins: `.beelz admin bar-raw [player]` writes each slot's raw engine data to the server log.
+- **Fixed: your spellbook spells are yours again.** Beelzebub's transform used the same hidden buff V Rising uses
+  for every spell you pick in the spellbook (J), and logging in or resetting could delete it: the spellbook still
+  listed the spell, but its key (Space, R, C or T) went blank and picking the same spell again did nothing. Logins,
+  resets and transforms now only ever remove Beelzebub's own buff, a reset keeps your spellbook spells on their keys,
+  and **spells broken by earlier versions come back on their own at your next login**.
+- **Fixed:** `.beelz api catalog abilities` stopped partway with an error on abilities whose notes contain
+  punctuation like "—"; long API lines are now split by size in bytes, so the whole catalog streams.
+- BCH: ApiVersion 33 (additive — one new config key, no API line changes).
+
 ## [0.136.0] - 2026-09-23
 
 ### Shipped baseline from the Discord testing round
