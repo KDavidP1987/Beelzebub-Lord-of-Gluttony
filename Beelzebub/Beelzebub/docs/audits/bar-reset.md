@@ -429,3 +429,6 @@ Plan: `docs/dod/bar-reset.md` (draft, built under the owner's waiver after Codex
 - `check_bar_reset.py session %TEMP%/beelz-logs-2026-10-01-rc8-d10/LogOutput.log --target Chaos` → `ok D6 D7 D8 D9 D10`.
 - `preflight.ps1 -LogCheck` on both logs → PREFLIGHT OK; 0 errors, 2 known `[Beelz TUNE]` shared-prefab warnings.
 - Next: dod status, final preflight, `chore(release): v0.137.0`.
+- Release gate 2026-10-03: preflight's audit check needs the harness summary line for the current patch tree (the two
+  runs above were recorded in prose). Full run on a05858a (`--skip D19`, D19 is re-made after the release):
+  `harness: ok, 167 faults, 150 clauses, 5 deferred (D22: gate not met) (not run: D19), patch tree d1bd494bce490a8d58222cf81781c82454ead72b`
