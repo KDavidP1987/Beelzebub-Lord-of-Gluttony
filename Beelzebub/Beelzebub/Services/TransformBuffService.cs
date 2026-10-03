@@ -1312,6 +1312,15 @@ internal static class TransformBuffService
         }
     }
 
+    /// <summary>grant-refresh: one slot's GroupGuid parse by bar index (Unreadable when the slot entity is missing).</summary>
+    internal static Beelzebub.Logic.SlotModParse ParseSlotMods(Entity character, int slot)
+    {
+        foreach (var (idx, se) in SnapshotSlots(character))
+            if (idx == slot && se != Entity.Null && se.Exists())
+                return ParseSlot(Core.ServerGameManager.Modifications, Core.EntityManager, se);
+        return Beelzebub.Logic.SlotModParse.Failed();
+    }
+
     /// <summary>The slot's GroupGuid parse; a formatter failure yields an Unreadable parse.</summary>
     static Beelzebub.Logic.SlotModParse ParseSlot(ModificationsRegistry reg, EntityManager em, Entity slot) =>
         TryFormatEntityModifications(reg, em, slot, out string dump)

@@ -223,6 +223,8 @@ internal static class SlotApply
             // `buffer` is finished being used above, so the structural AddComponent is safe here.
             MarkSlotDirty(character, slot);
             if (Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+            // grant-refresh: the engine never reads a row added to the held buff — set the slot live as well.
+            PushLive(character, buffEntity, slot, ability, "grant");
             LogGrantRaw(character, slot, "after");
             ScheduleGrantRaw(character, slot);
             return true;
@@ -283,8 +285,11 @@ internal static class SlotApply
         try
         {
             var buffer = Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(buffEntity);
-            int applied = ResolveAndInjectGrants(character, buffEntity, weapon, buffer);
+            var live = new List<(int Slot, int Guid)>();
+            int applied = ResolveAndInjectGrants(character, buffEntity, weapon, buffer, live);
             if (Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+            // grant-refresh: rows added to the held buff are not read by the engine — set each injected slot live.
+            foreach (var (slot, guid) in live) PushLive(character, buffEntity, slot, new PrefabGUID(guid), "resolve");
             if (Beelzebub.Config.Settings.VerboseLogging.Value)
                 Core.Log.LogInfo($"[Beelz] RestoreResolvedGrants: re-applied {applied} grant(s) for {steamId} (weapon={weapon}).");
             return applied;
@@ -307,7 +312,7 @@ internal static class SlotApply
     /// Caller owns the surrounding ReplaceAbilityOnSlotSystem.OnUpdate() (the patch is itself a
     /// prefix to it; RestoreResolvedGrants drives it explicitly). Returns the count injected.
     /// </summary>
-    internal static int ResolveAndInjectGrants(Entity character, Entity equipBuff, WeaponFamily weapon, DynamicBuffer<ReplaceAbilityOnSlotBuff> buffer)
+    internal static int ResolveAndInjectGrants(Entity character, Entity equipBuff, WeaponFamily weapon, DynamicBuffer<ReplaceAbilityOnSlotBuff> buffer, List<(int Slot, int Guid)> live = null)
     {
         ulong steamId = character.GetSteamId();
         var slots = Core.AbilityRegistry.GetSlotsResolvedWithOrigin(steamId, weapon);
@@ -390,6 +395,7 @@ internal static class SlotApply
             });
             injected++;
             (injectedSlots ??= new List<int>()).Add(slot);
+            live?.Add((slot, entry.abilityGuid));
             if (Beelzebub.Config.Settings.VerboseLogging.Value)
                 Core.Log.LogInfo($"[Beelz] inject slot={slot} ability={new PrefabGUID(entry.abilityGuid).GetPrefabName()} weapon={weapon} explicit={entry.weaponSpecific} for {steamId}");
         }
@@ -503,8 +509,12 @@ internal static class SlotApply
         try
         {
             if (!TryGetSlotBase(character, slot, out var baseAbility)) return;
-            Core.ServerGameManager.ModifyAbilityGroupOnSlot(equipBuff, character, slot, baseAbility);
-            MarkSlotDirty(character, slot);
+            // grant-refresh: pop our earlier pushes on the slot first (they would stay under the base otherwise), put
+            // the weapon's own row back on a slot the weapon owns, and never push Empty (it masks the base, D32).
+            int restore = baseAbility._Value;
+            if (TryGetPrefabRows(equipBuff, out var prefabRows) && prefabRows != null)
+                foreach (var r in prefabRows) if (r.Slot == slot && r.NewGroupId._Value != 0) { restore = r.NewGroupId._Value; break; }
+            PushOnSlot(character, equipBuff, slot, new PrefabGUID(restore), "restore");
         }
         catch (Exception ex)
         {
@@ -572,6 +582,50 @@ internal static class SlotApply
     {
         int resolved = CurrentSlotResolvedGuid(character, slot);
         return resolved == 0 || resolved == newGroupGuid;
+    }
+
+    // ── grant-refresh (v0.137.1): set a slot through the engine's own setter, the held equip buff as source ──
+
+    /// <summary>True while something other than the weapon owns the bar — a transform, a form/shapeshift buff or a
+    /// mount. A live push then would land on top of that kit, so the row alone is kept (it applies on the next weapon
+    /// equip, the pre-0.137.1 behaviour).</summary>
+    static bool BarOwnedElsewhere(Entity character)
+    {
+        ulong sid = character.GetSteamId();
+        if (Core.AbilityRegistry.GetActiveTransform(sid) is not null) return true;
+        if (ShapeshiftAbilityService.IsMounted(sid)) return true;
+        return TransformBuffService.ListOverrideBuffs(character).Count > 0;
+    }
+
+    /// <summary>Live push for a grant or a re-resolve: skipped while the bar is owned elsewhere.</summary>
+    static void PushLive(Entity character, Entity equipBuff, int slot, PrefabGUID ability, string why)
+    {
+        if (BarOwnedElsewhere(character))
+        {
+            Core.Log.LogInfo($"[Beelz GRANT] target={character.GetSteamId()} slot={slot} why={why} skipped=bar-owned-elsewhere");
+            return;
+        }
+        PushOnSlot(character, equipBuff, slot, ability, why);
+    }
+
+    /// <summary>Pop the slot's earlier mods from <paramref name="equipBuff"/> (<see cref="Beelzebub.Logic.GrantPush.OwnModIds"/>),
+    /// then set <paramref name="ability"/> through <c>ModifyAbilityGroupOnSlot</c> unless it is Empty, and mark the slot
+    /// dirty. One <c>[Beelz GRANT]</c> line. Caller must NOT be mid-iteration over a live buffer (structural change).</summary>
+    static void PushOnSlot(Entity character, Entity equipBuff, int slot, PrefabGUID ability, string why)
+    {
+        var sgm = Core.ServerGameManager;
+        var parse = TransformBuffService.ParseSlotMods(character, slot);
+        var ids = Beelzebub.Logic.GrantPush.OwnModIds(parse, equipBuff.Index, equipBuff.Version);
+        int popped = 0;
+        foreach (int id in ids)
+        {
+            try { sgm.RemoveAbilityGroupModificationOnSlot(character, slot, ModificationId.NewId(id)); popped++; }
+            catch (Exception ex) { Core.Log.LogWarning($"[Beelz GRANT] slot={slot} remove ModId {id} failed: {ex.Message}"); }
+        }
+        bool push = Beelzebub.Logic.GrantPush.ShouldPush(ability._Value);
+        if (push) sgm.ModifyAbilityGroupOnSlot(equipBuff, character, slot, ability);
+        MarkSlotDirty(character, slot);
+        Core.Log.LogInfo($"[Beelz GRANT] target={character.GetSteamId()} slot={slot} why={why} set={(push ? (ability.GetPrefabName() ?? ability._Value.ToString()) : "none")} popped={popped} readable={(parse != null && parse.Readable ? 1 : 0)}");
     }
 
     // ── grant-refresh DIAGNOSTIC (temporary): why a fresh grant reaches the client only after a weapon swap ──
