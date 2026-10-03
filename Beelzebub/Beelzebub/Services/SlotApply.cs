@@ -350,9 +350,11 @@ internal static class SlotApply
 
             if (ShouldYieldSlot(character, steamId, weapon, slot, entry.abilityGuid))
             {
+                // the ability actually on the row (a stale grant may differ from the bind) is the one to pop (Codex round 3)
+                int onRow = SlotRowAbility(buffer, slot);
                 RemoveSlotEntries(buffer, slot);                       // strip any stale override (buffer-content only)
                 ReleaseYieldedBind(character, steamId, weapon, slot, entry.weaponSpecific);
-                (yielded ??= new List<(int, int)>()).Add((slot, entry.abilityGuid));
+                (yielded ??= new List<(int, int)>()).Add((slot, onRow != 0 ? onRow : entry.abilityGuid));
                 continue;
             }
             eligible.Add((slot, entry.abilityGuid, entry.weaponSpecific));
@@ -369,7 +371,8 @@ internal static class SlotApply
             if (!keptBar.ContainsKey(slot))
             {
                 // Locked out: drop our override so the slot shows its vanilla base; the saved bind is untouched.
-                if (RemoveSlotEntries(buffer, slot)) (lockedSlots ??= new List<(int, int)>()).Add((slot, abilityGuid));
+                int lockedRow = SlotRowAbility(buffer, slot);
+                if (RemoveSlotEntries(buffer, slot)) (lockedSlots ??= new List<(int, int)>()).Add((slot, lockedRow != 0 ? lockedRow : abilityGuid));
                 continue;
             }
 
