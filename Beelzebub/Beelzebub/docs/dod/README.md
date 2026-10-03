@@ -5,8 +5,10 @@
 
 | Plan | Title | Status | Size | Verified | Baseline items | Prediction | Parent |
 |---|---|---|---|---|---|---|---|
-| [bar-reset](bar-reset.md) | Action-bar reset that clears every layer | draft | L | 0/30 | — | — |  |
+| [bar-reset](bar-reset.md) | Action-bar reset that clears every layer | draft | L | 32/33 | — | — |  |
 
 Most-missed layers — done plans: none; open plans (provisional): none.
+Miss history — done plans: none yet.
+Rework — done plans: none yet.
 
 Store: `Beelzebub/Beelzebub/docs/dod`. Plans are the source of truth; this file is regenerated.
