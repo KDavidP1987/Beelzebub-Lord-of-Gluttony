@@ -1157,7 +1157,7 @@ internal static class TransformBuffService
                     || Beelzebub.Logic.GrantPush.OwnedByOtherBuff(e, live, equipBuff.Index, equipBuff.Version);
     }
 
-    static string SourcePrefabName(Beelzebub.Logic.SlotModEntry e)
+    internal static string SourcePrefabName(Beelzebub.Logic.SlotModEntry e)
     {
         var src = new Entity { Index = e.SourceIndex, Version = e.SourceVersion };
         return src.Exists() ? (src.GetPrefabGuid().GetPrefabName() ?? "") : "";
