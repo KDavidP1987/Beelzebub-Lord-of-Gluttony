@@ -72,8 +72,25 @@ def base_ref(root: str) -> str:
     return "fixture-base" if r.returncode == 0 else BASE_COMMIT
 
 
-def added_text(root: str, rel: str) -> str:
-    """Lines this feature added to <rel> since the base commit (working tree included); the whole file if untracked."""
+def shipped_at(root: str) -> str | None:
+    """The plan's release commit (subject RELEASE_SUBJECT) once it exists: the plan's scope ends there, so the paths and
+    data checks stop at it and later features' commits and working tree are not this plan's changes. None before it."""
+    for line in git(root, "log", "--format=%H%x09%s", f"{base_ref(root)}..HEAD").splitlines():
+        h, _, s = line.partition("\t")
+        if s == RELEASE_SUBJECT:
+            return h
+    return None
+
+
+def added_text(root: str, rel: str, upto: str | None = None) -> str:
+    """Lines this feature added to <rel> since the base commit (working tree included); the whole file if untracked.
+    With <upto> (the release commit): the lines added from the base up to that commit only."""
+    if upto:
+        if subprocess.run(["git", "-C", root, "cat-file", "-e", f"{base_ref(root)}:{rel}"], capture_output=True).returncode != 0:
+            r = subprocess.run(["git", "-C", root, "show", f"{upto}:{rel}"], capture_output=True, text=True, encoding="utf-8", errors="replace")
+            return r.stdout if r.returncode == 0 else ""
+        diff = git(root, "diff", base_ref(root), upto, "--", rel)
+        return "\n".join(l[1:] for l in diff.splitlines() if l.startswith("+") and not l.startswith("+++"))
     tracked = subprocess.run(["git", "-C", root, "ls-files", "--error-unmatch", rel], capture_output=True).returncode == 0
     if not tracked:
         return read(root, rel)
@@ -497,8 +514,10 @@ def check_audit(root: str) -> str:
     return "audit: ok"
 
 
-def changed_paths(root: str) -> list[str]:
-    out = set(p for p in git(root, "diff", "--name-only", f"{base_ref(root)}..HEAD").splitlines() if p)
+def changed_paths(root: str, upto: str | None = None) -> list[str]:
+    out = set(p for p in git(root, "diff", "--name-only", f"{base_ref(root)}..{upto or 'HEAD'}").splitlines() if p)
+    if upto:
+        return sorted(out - OWNER_UNTRACKED)
     for line in git(root, "status", "--porcelain=v1", "--untracked-files=all").splitlines():
         if len(line) > 3:
             p = line[3:].strip().strip('"')
@@ -508,20 +527,22 @@ def changed_paths(root: str) -> list[str]:
     return sorted(out - OWNER_UNTRACKED)
 
 
-def check_paths(root: str) -> str:
+def check_paths(root: str, bound: bool = False) -> str:
+    upto = shipped_at(root) if bound else None
     declared = paths_walked(read(root, PLAN))
     if not declared:
         raise CheckFail("no input: no Paths walked entries parsed from the plan")
     undeclared = []
-    for p in changed_paths(root):
+    for p in changed_paths(root, upto):
         if not any(p == d or (d.endswith("/") and p.startswith(d)) for d in declared):
             undeclared.append(p)
     if undeclared:
         raise CheckFail("undeclared path(s): " + ", ".join(undeclared[:8]))
-    return f"paths: ok, {len(declared)} paths"
+    return f"paths: ok, {len(declared)} paths" + (f" (up to release {upto[:7]})" if upto else "")
 
 
-def check_data(root: str) -> str:
+def check_data(root: str, bound: bool = False) -> str:
+    upto = shipped_at(root) if bound else None
     plan = read(root, PLAN)
     rows = data_rows(plan)
     if not rows:
@@ -537,7 +558,7 @@ def check_data(root: str) -> str:
         if not os.path.isfile(p):
             continue
         whole = open(p, encoding="utf-8-sig", errors="replace").read()
-        txt = added_text(root, rel)   # producers THIS feature added; pre-existing tags are not its artifacts
+        txt = added_text(root, rel, upto)   # producers THIS feature added; pre-existing tags are not its artifacts
         if rel.endswith(".cs"):
             for tag in sorted(set(re.findall(r"\[Beelz ([A-Z]+)\]", txt))):
                 if f"[Beelz {tag}]" not in blob:
@@ -559,7 +580,7 @@ def check_data(root: str) -> str:
                     bad.append(f"{rel} builds outputs with no {out} row")
     if bad:
         raise CheckFail("; ".join(bad[:6]))
-    return f"data: ok, {len(rows)} artifacts"
+    return f"data: ok, {len(rows)} artifacts" + (f" (up to release {upto[:7]})" if upto else "")
 
 
 def check_rollback(root: str) -> str:
@@ -972,7 +993,12 @@ def main(argv: list[str]) -> int:
     rc = 0
     for sub in subs:
         try:
-            line = check_session(a.root, a.log, a.target) if sub == "session" else CHECKS[sub](a.root)
+            if sub == "session":
+                line = check_session(a.root, a.log, a.target)
+            elif sub in ("paths", "data"):   # the live repo: bounded at the plan's release once shipped
+                line = CHECKS[sub](a.root, bound=True)
+            else:
+                line = CHECKS[sub](a.root)
         except CheckFail as e:
             line, rc = f"{sub}: FAIL {e}", 1
         print(line)
