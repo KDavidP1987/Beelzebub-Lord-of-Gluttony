@@ -1138,6 +1138,25 @@ internal static class TransformBuffService
         return src.Exists() && src.GetPrefabGuid()._Value == CarrierBuff._Value;
     }
 
+    /// <summary>grant-refresh (Codex round 2): the mods a grant leaving a slot must keep — a spellbook spell's, and any
+    /// mod sourced by another live buff with a prefab (form, transform, mount, override). The equip-time source of a
+    /// weapon's own rows has no prefab and is not in the BuffBuffer, so it stays poppable.</summary>
+    internal static Func<Beelzebub.Logic.SlotModEntry, bool> KeepForeignMods(Entity character, Entity equipBuff)
+    {
+        var live = new HashSet<(int Index, int Version)>();
+        if (character.Exists() && Core.EntityManager.HasBuffer<BuffBuffer>(character))
+        {
+            var buffs = Core.EntityManager.GetBuffer<BuffBuffer>(character);
+            for (int i = 0; i < buffs.Length; i++)
+            {
+                var b = buffs[i].Entity;
+                if (b.Exists() && Core.EntityManager.HasComponent<PrefabGUID>(b)) live.Add((b.Index, b.Version));
+            }
+        }
+        return e => IsSpellbookSourcedMod(e)
+                    || Beelzebub.Logic.GrantPush.OwnedByOtherBuff(e, live, equipBuff.Index, equipBuff.Version);
+    }
+
     static string SourcePrefabName(Beelzebub.Logic.SlotModEntry e)
     {
         var src = new Entity { Index = e.SourceIndex, Version = e.SourceVersion };

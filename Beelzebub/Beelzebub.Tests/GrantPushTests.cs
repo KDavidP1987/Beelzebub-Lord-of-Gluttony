@@ -88,4 +88,29 @@ public class GrantPushTests
         Assert.Equal(0, GrantPush.WeaponRow(rows, 5));
         Assert.Equal(0, GrantPush.WeaponRow(null, 1));
     }
+
+    // Codex round 2 (finding 1): unslotting a weapon grant while a form maps the same ability must keep the form's mod.
+    [Fact]
+    public void OwnedByOtherBuff_fails_when_a_form_buffs_mod_is_popped_by_ability()
+    {
+        const int Form = 600100, FormVer = 3;
+        var live = new System.Collections.Generic.HashSet<(int, int)> { (Form, FormVer), (Buff, BuffVer) };
+        var formMod = new SlotModEntry(1590, 1621601748, Form, FormVer);
+        var equipTime = new SlotModEntry(1580, 1621601748, 581913, 259);       // no prefab: not a live buff
+        var ours = new SlotModEntry(1567, 1621601748, Buff, BuffVer);
+        System.Func<SlotModEntry, bool> keep = e => GrantPush.OwnedByOtherBuff(e, live, Buff, BuffVer);
+        Assert.Equal(new[] { 1580, 1567 },
+            GrantPush.ModsToPop(Parse(formMod, equipTime, ours), Buff, BuffVer, 1621601748, keep));
+        Assert.False(GrantPush.OwnedByOtherBuff(ours, live, Buff, BuffVer));
+    }
+
+    // Codex round 2 (finding 2): a re-grant A -> B pops A's equip-time mod too, or A resurfaces when B is unslotted.
+    [Fact]
+    public void ModsToPop_fails_when_a_replaced_equip_time_grant_survives_a_regrant()
+    {
+        const int A = 1621601748, Other = -1940289109;
+        var equipTimeA = new SlotModEntry(1580, A, 581913, 259);
+        var unrelated = new SlotModEntry(1600, Other, 581913, 259);
+        Assert.Equal(new[] { 1580 }, GrantPush.ModsToPop(Parse(equipTimeA, unrelated), Buff, BuffVer, A, _ => false));
+    }
 }

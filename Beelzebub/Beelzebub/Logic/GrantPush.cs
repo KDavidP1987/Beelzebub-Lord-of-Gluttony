@@ -41,6 +41,18 @@ public static class GrantPush
             .ToList();
     }
 
+    /// <summary>Codex round 2: whether a mod belongs to another LIVE buff on the character — a form, transform, mount or
+    /// spellbook buff (<paramref name="liveBuffs"/> = the character's buffs that carry a prefab). Such a mod is never popped
+    /// by a by-ability match: unslotting a weapon grant while a form maps the same ability must leave the form's mod. The
+    /// held equip buff itself is not "another" buff (its own mods are popped by <see cref="OwnModIds"/>).</summary>
+    public static bool OwnedByOtherBuff(SlotModEntry e, ICollection<(int Index, int Version)> liveBuffs,
+                                        int equipBuffIndex, int equipBuffVersion)
+    {
+        if (e == null || liveBuffs == null) return false;
+        if (e.SourceIndex == equipBuffIndex && e.SourceVersion == equipBuffVersion) return false;
+        return liveBuffs.Contains((e.SourceIndex, e.SourceVersion));
+    }
+
     /// <summary>The weapon's own ability for <paramref name="slot"/> from its prefab rows: the highest Priority row, the
     /// later one on a tie (the same rule as the bar reset's Reapply); 0 when the weapon has no row there.</summary>
     public static int WeaponRow(IEnumerable<(int Slot, int Guid, int Priority)> rows, int slot)
