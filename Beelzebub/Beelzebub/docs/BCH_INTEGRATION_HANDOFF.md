@@ -32,6 +32,7 @@
 >   was re-equipped.) **BCH: drop any "swap your weapon to see it" hint after a grant/unslot; a single `api slots`
 >   re-read after the command is enough.** While the player is in a form, a transform or on a mount, the new grant is
 >   saved and appears when that ends (unchanged).
+>   Known (fix planned for v0.137.2): an `unslot` while in a form leaves that slot blank until a weapon re-equip.
 > - **"No Name" hover cards — the server cannot fix this; BCH can (see § 7 "BCH TODO — ability cards show No Name").**
 >   The action-bar card's name/description come from the *client's* localization table, keyed by the ability's
 >   PrefabGUID, and NPC/boss abilities have no entry there. Recommended BCH build — an **ability library**:

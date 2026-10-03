@@ -4,6 +4,21 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.137.1] - 2026-10-03
+
+### Granted abilities show up at once — no weapon swap
+
+- **`.beelz grant` now changes your action bar immediately.** Before, the ability was saved but the bar kept the old
+  one (and it would not cast) until you unequipped or swapped your weapon. The same goes for `.beelz weapon-grant`,
+  admin grants, presets, `.beelz refresh` and the bar coming back after a transform.
+- **`.beelz unslot` puts the right ability back at once** — your weapon's own skill on a weapon slot, your spellbook
+  spell on a spell slot — even for an ability that was applied when you equipped the weapon.
+- While you are in a form, a transform or on a mount, Beelzebub no longer writes your weapon bar over that kit; a
+  grant made while transformed shows when you change back (a weapon swap shows it at once).
+- Known issue: `.beelz unslot` while in a form (Wolf, etc.) leaves that slot blank until you re-equip your weapon.
+  A fix is coming next.
+- Behind the scenes: removed two unused legacy reset helpers.
+
 ## [0.137.0] - 2026-09-30
 
 ### One reset that actually clears a stuck action bar
@@ -249,17 +264,3 @@ prefab-level `forcetimeout` edits and maps every ability chain.
   summons).
 - **Tuning a name that isn't a real ability now warns you** instead of silently doing nothing — fixes the
   "it said applied but nothing changed" trap (use the ability's ID or exact prefab name).
-
-## [0.128.0] - 2026-06-05
-
-### Transformations now unlock reliably from their boss (test default)
-
-- **Transform-unlock drop chance raised to 100% by default** (was 0.15% for V-Blood bosses, 0.5% for the
-  basic werewolf) so defeating a transform boss reliably unlocks its form. The transform roll is still
-  separate from the ability/Devour rolls. This is a **test-friendly default — lower it for a balanced
-  release.** (Existing servers keep their config value until set with `.beelz admin set
-  DropChance_TransformUnlock_VBlood 1.0` / `_Regular 1.0`.)
-
-## Older versions
-
-The complete history (v0.1 onward) is in [docs/CHANGELOG_FULL.md](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/blob/main/Beelzebub/Beelzebub/docs/CHANGELOG_FULL.md) on GitHub.
