@@ -23,7 +23,26 @@
 
 ---
 
-# ⭐ BCH CATCH-UP: v0.100 → v0.137 (read this first) ⭐
+# ⭐ BCH CATCH-UP: v0.100 → v0.137.1 (read this first) ⭐
+
+> **🆕 v0.137.1 — ApiVersion stays 33 (no gate change). GRANTS SHOW AT ONCE. No wire change.**
+> - **Behaviour fix:** a `.beelz grant`, `.beelz weapon-grant`, admin grant, preset apply, `.beelz unslot` or a
+>   re-resolve (`refresh`, form exit, transform revert, lock edit) now changes the live action bar **immediately** —
+>   no weapon swap or unequip needed. (Before: the bind was saved but the bar kept the old ability until the weapon
+>   was re-equipped.) **BCH: drop any "swap your weapon to see it" hint after a grant/unslot; a single `api slots`
+>   re-read after the command is enough.** While the player is in a form, a transform or on a mount, the new grant is
+>   saved and appears when that ends (unchanged).
+> - **"No Name" hover cards — the server cannot fix this; BCH can (see § 7 "BCH TODO — ability cards show No Name").**
+>   The action-bar card's name/description come from the *client's* localization table, keyed by the ability's
+>   PrefabGUID, and NPC/boss abilities have no entry there. Recommended BCH build — an **ability library**:
+>   1. On connect (and when the catalog changes), stream **`.beelz api catalog abilities-all`** (paged; `[BEELZ:end]`
+>      gives `pages=`). Each `[BEELZ:catalog-ability]` row carries `a=<guid>`, `label=<name>` and `desc=<text|->`
+>      (SafeToken: `_` → space). Cache `guid → {label, desc, school, cooldown_seconds, …}` on disk keyed by
+>      `plugin=` from `api version`, so it is only re-pulled after a server update.
+>   2. Either draw BCH's own hover card for slots listed by `api slots` (Option 1), or write `guid → label/desc` into
+>      the client's localization table so the native card renders (Option 2 — the "library" route). Same rule as § 7:
+>      only for abilities Beelzebub granted; never touch vanilla cards.
+>   3. Name coverage is ~100%; description coverage is ~27% (`desc=-` = none yet) — show the name alone then.
 
 > **🆕 v0.137 — ApiVersion 33 (gate `api>=33`). ONE LAYERED BAR RESET. Additive — no `[BEELZ:*]` line changes shape.**
 > - **New config key:** `Forms_AutoFillFromCaptures` (section `Forms`, bool, default **false**) appears in `.beelz api
@@ -203,6 +222,7 @@ v0.120.0 callout below.
 | 31 | 0.134.0 | `maxstacks_override=` / `projcount_override=` / `knockback_override=` / `lifetime_override=` / `casttime_override=` / `cooldown_mode=` on `api info`; runtime cooldown semantics |
 | 32 | 0.135.0 | **`api locks`** (`[BEELZ:lock]`) + `type=ability-locked` event — incompatibility locks |
 | 33 | 0.137.0 | config key `Forms_AutoFillFromCaptures` in `api config`; admin `bar` diagnostic (plain chat); layered bar reset (no wire change) |
+| 33 | 0.137.1 | grants/unslots reach the live bar without a weapon swap (no wire change) |
 
 Gate each feature on `api>=N`. `api version` returns `[BEELZ:version] api=33 plugin=0.137.0 ready=…`.
 
