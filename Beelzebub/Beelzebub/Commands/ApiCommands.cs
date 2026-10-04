@@ -221,7 +221,10 @@ internal static class ApiCommands
     // v0.137.0 → 33: config key `Forms_AutoFillFromCaptures` (default false) in `api config`; admin-only `.beelz admin bar
     //   <player>` diagnostic (plain chat, no [BEELZ:*] line); resetbar / purge / reset-loadouts now share one layered
     //   reset. Additive — no line changes shape. Gate `api>=33`.
-    const int ApiVersion = 33;
+    // v0.137.3 → 34: Mounted saddle slots 3/6/7 → 5/6/7 (`form-grant mounted 3` rejected; saved slot-3 binds move to 5;
+    //   `form-slot-granted form=Mounted slot=` can carry 5); a mounted reset dismounts and its reply says so (plain
+    //   chat). No [BEELZ:*] line changes shape. Gate `api>=34`.
+    const int ApiVersion = 34;
 
     [Command("help", description: "List the Beelzebub API/BCH read commands (machine-readable data streams).")]
     public static void Help(ChatCommandContext ctx)

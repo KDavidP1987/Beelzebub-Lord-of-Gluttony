@@ -18,14 +18,28 @@
 > in the BCH workspace.
 >
 > **Canonical source of truth for the wire API:**
-> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 33`). If this doc
+> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 34`). If this doc
 > and that file ever disagree, the file wins — and this doc should be corrected.
 
 ---
 
-# ⭐ BCH CATCH-UP: v0.100 → v0.137.2 (read this first) ⭐
+# ⭐ BCH CATCH-UP: v0.100 → v0.137.3 (read this first) ⭐
 
-> **🆕 v0.137.2 — ApiVersion stays 33 (no gate change). No wire change.**
+> **🆕 v0.137.3 — ApiVersion 33 → 34 (gate `api>=34`). Behaviour change on one command; no `[BEELZ:*]` line changes shape.**
+> - **Saddle slots are now 5/6/7 (R, C, T), not 3/6/7.** Slot 3 is never drawn by the client, so a slot-3 saddle bind
+>   was live but invisible. `.beelz form-grant mounted 3 <ability>` is now rejected with: `Mounted form only uses slots
+>   5, 6, 7 (the R, C, and Ultimate keys) — the other slots are riding controls (Q/E/space) and can't hold a saddle
+>   ability. Re-grant this to slot 5, 6, or 7.` Saved slot-3 saddle binds move to slot 5 at server load (dropped if
+>   slot 5 already holds one). The existing `[BEELZ:event] type=form-slot-granted form=Mounted slot=` line can now
+>   carry `slot=5`; no field is added or removed. Additive for parsers; a behaviour change for the slot picker.
+> - **A reset while riding dismounts the player on purpose.** `.beelz resetbar CONFIRM`, `admin reset-loadouts` and
+>   `admin purge` on a mounted character remove the mount first; the reply headline gains one sentence:
+>   `You were dismounted to reset your bar; remount to ride.` (self) or `<name> was dismounted to reset the bar.`
+>   (admin). The reply stays at most two lines. Plain chat, not a `[BEELZ:*]` line.
+> - **What BCH should do:** when `api>=34`, offer R/C/T (slots 5/6/7) in the Mounted slot picker; else keep 3/6/7.
+>   Show the dismount sentence as-is if BCH surfaces reset replies.
+
+> **v0.137.2 — ApiVersion stays 33 (no gate change). No wire change.**
 > - **Behaviour fix:** an `unslot` while the player is in a vanilla form (Wolf, Bear, …) puts the weapon's skill back
 >   on that slot at once (vanilla keeps the weapon skill on a slot the form kit leaves empty); a per-form ability on
 >   the slot is left alone. A grant or unslot made while in a form, a transform or on a mount is applied when that
@@ -231,6 +245,7 @@ v0.120.0 callout below.
 | 33 | 0.137.0 | config key `Forms_AutoFillFromCaptures` in `api config`; admin `bar` diagnostic (plain chat); layered bar reset (no wire change) |
 | 33 | 0.137.1 | grants/unslots reach the live bar without a weapon swap (no wire change) |
 | 33 | 0.137.2 | in-form unslot restores the weapon skill; form/transform/mount-time bar edits apply on exit (no wire change) |
+| 34 | 0.137.3 | Mounted saddle slots 3/6/7 → 5/6/7 (form-grant rejects 3; saved slot-3 binds move to 5); a mounted reset dismounts and the reply says so |
 
 Gate each feature on `api>=N`. `api version` returns `[BEELZ:version] api=33 plugin=0.137.0 ready=…`.
 
@@ -776,7 +791,7 @@ binds slots 0–7. So on a dual-mod server **slots 1/3/4 can be claimed by eithe
 > wire bump is the catalog filter = ApiVersion 23, banner'd at the top). ACTION FOR BCH on the form roster +
 > the `forms`/`weapons` value format.** This session's BCH-facing surface, grouped:
 >
-> - **NEW form: `Mounted`.** Riding a horse is now a loadout "form" (slots **3/6/7** only = R/C/ultimate; the
+> - **NEW form: `Mounted`.** Riding a horse is now a loadout "form" (slots **3/6/7** only (slots 5/6/7 from v0.137.3) = R/C/ultimate; the
 >   horse owns primary/leap/spacebar/gallop/thrust). Bind with **`.beelz form-grant mounted <slot> <ability>`**
 >   exactly like the other forms — it emits the existing `[BEELZ:event] type=form-slot-granted form=Mounted
 >   slot= a= an=` line (and `form-slot-cleared`). **BCH ACTION:** add `Mounted` to the form roster its loadout
