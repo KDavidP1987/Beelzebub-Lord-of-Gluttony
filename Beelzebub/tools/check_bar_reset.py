@@ -39,12 +39,12 @@ API_VERSION = 33
 OWNER_UNTRACKED = {f"{PROJ}/docs/V0136_ABILITY_TEST_PLAN.xlsx", "_matrix_build.py"}
 
 # D13: reset-layer symbols a command may never call (on top of every IBarResetOps member and every other public
-# BarResetService member). Exempt: the LEGACY recovery handlers and clearbar (one chosen set; backlog clearbar-fullreset).
+# BarResetService member). Exempt: the LEGACY recovery handlers (clearbar goes through FullReset since v0.137.4).
 LAYER_SYMBOLS = ["RemoveInjectedRows", "ReapplyEquipRows", "PopSlotModifications", "ForceResetAbilitySlots",
                  "PurgeAbilitySlotModifications", "ClearAllLoadouts", "ClearAllSlots", "RestoreSlotBaseValue",
                  "TrySaveSync"]
 ALLOWED_ENTRY = {"FullReset", "ReadBar"}
-EXEMPT_COMMANDS = {"clearslotmods", "rebuildslots", "clearbar"}
+EXEMPT_COMMANDS = {"clearslotmods", "rebuildslots"}
 # the commands a player runs on their OWN bar: the only non-admin callers FullReset / ReadBar may have
 SELF_RESET_COMMANDS = {"resetbar", "clearbar"}
 
@@ -366,8 +366,8 @@ def check_commands(root: str) -> str:
         raise CheckFail("reset-layer symbol outside the allowlist: " + "; ".join(bad[:6]))
     if full_calls == 0:
         raise CheckFail("no input: no FullReset call site under Commands/")
-    if full_calls < 3:
-        raise CheckFail(f"FullReset called {full_calls} time(s); resetbar, reset-loadouts and purge need 3")
+    if full_calls < 4:
+        raise CheckFail(f"FullReset called {full_calls} time(s); resetbar, clearbar, reset-loadouts and purge need 4")
     return f"commands: ok, {len(syms)} symbols, {full_calls} FullReset call sites"
 
 
@@ -793,7 +793,7 @@ GOOD_FILES = {
         '    [Command("resetbar", description: "Reset your bar.")]\n'
         '    public static void ResetBar(ChatCommandContext ctx, string confirm = null)\n    { BarResetService.FullReset(1); }\n\n'
         '    [Command("clearbar", description: "Clear one set.")]\n'
-        '    public static void ClearBar(ChatCommandContext ctx, string bucket = null)\n    { Core.AbilityRegistry.ClearAllSlots(1); }\n}\n',
+        '    public static void ClearBar(ChatCommandContext ctx, string bucket = null)\n    { BarResetService.FullReset(1); }\n}\n',
     f"{PROJ}/Commands/AdminCommands.cs":
         '[CommandGroup("beelz admin")]\ninternal static partial class AdminCommands\n{\n'
         '    [Command("purge", adminOnly: true, description: "Purge.")]\n'

@@ -12,7 +12,7 @@ namespace Beelzebub.Services;
 
 /// <summary>
 /// v0.137.0 (bar-reset) — the ONE layered action-bar reset. `.beelz resetbar`, `.beelz admin reset-loadouts` and
-/// `.beelz admin purge` all call <see cref="FullReset"/>; `.beelz admin bar` calls <see cref="ReadBar"/>. Commands never
+/// `.beelz admin purge` all call <see cref="FullReset"/> (v0.137.4: so does `.beelz clearbar`, scope ClearSet, for one saved set); `.beelz admin bar` calls <see cref="ReadBar"/>. Commands never
 /// call a layer helper directly (tools/check_bar_reset.py `commands` enforces the allowlist).
 ///
 /// A slot resolves through five layers: (L1) saved Steam-keyed binds, (L2) ReplaceAbilityOnSlotBuff rows on the held
@@ -26,13 +26,15 @@ internal sealed class BarResetService : IBarResetOps
     readonly ulong _steamId;
     readonly BarResetScope _scope;
     readonly bool _notLive;
+    readonly BarSet _clearSet;
 
-    BarResetService(Entity character, ulong steamId, BarResetScope scope, bool notLive)
+    BarResetService(Entity character, ulong steamId, BarResetScope scope, bool notLive, BarSet clearSet)
     {
         _character = character;
         _steamId = steamId;
         _scope = scope;
         _notLive = notLive;
+        _clearSet = clearSet;
     }
 
     static int _runCounter;
@@ -41,9 +43,13 @@ internal sealed class BarResetService : IBarResetOps
     const int BarMaxSlot = 8;
 
     /// <summary>Resets <paramref name="character"/>'s bar for <paramref name="scope"/>, logs the `[Beelz RESET]` and
-    /// `[Beelz BAR]` lines, schedules the next-tick late re-read, and returns the result for the reply.</summary>
-    public static BarResetResult FullReset(Entity character, ulong steamId, string name, BarResetScope scope)
+    /// `[Beelz BAR]` lines, schedules the next-tick late re-read, and returns the result for the reply.
+    /// <paramref name="clearSet"/> is the one saved set a ClearSet run clears (clearbar-fullreset); required for that
+    /// scope, ignored by the others.</summary>
+    public static BarResetResult FullReset(Entity character, ulong steamId, string name, BarResetScope scope, BarSet clearSet = null)
     {
+        if (scope == BarResetScope.ClearSet && clearSet == null) throw new ArgumentNullException(nameof(clearSet));
+        if (scope != BarResetScope.ClearSet) clearSet = null;
         var sw = Stopwatch.StartNew();
         bool online = IsOnline(character);
         bool liveReady = online && IsLiveReady(character);
@@ -51,7 +57,7 @@ internal sealed class BarResetService : IBarResetOps
         bool mounted = online && ShapeshiftAbilityService.IsMountedAny(character);
         var steps = BarResetPlanner.Plan(scope, online, liveReady, transform, mounted);
 
-        var result = BarResetRunner.Run(new BarResetService(character, steamId, scope, online && !liveReady), steps, online, liveReady);
+        var result = BarResetRunner.Run(new BarResetService(character, steamId, scope, online && !liveReady, clearSet), steps, online, liveReady, clearSet);
         sw.Stop();
 
         int run = ++_runCounter;
@@ -166,6 +172,7 @@ internal sealed class BarResetService : IBarResetOps
         {
             BarResetScope.Purge => "admin purge",
             BarResetScope.AdminLoadouts => "admin reset-loadouts",
+            BarResetScope.ClearSet => "clearbar",   // the reason the pre-0.137.4 clearbar sent
             _ => "resetbar",
         };
         var (reverted, _) = Core.Transforms.Revert(_steamId, reason, restoreBar: false);
@@ -174,7 +181,9 @@ internal sealed class BarResetService : IBarResetOps
 
     public int ClearSavedBindings(bool keepTransformRecord)
     {
-        int n = Core.AbilityRegistry.ClearAllLoadouts(_steamId);   // universal + weapon + form binds, transform loadouts, baseline
+        int n = _clearSet == null
+            ? Core.AbilityRegistry.ClearAllLoadouts(_steamId)   // universal + weapon + form binds, transform loadouts, baseline
+            : ClearChosenSet();
         // An online character whose live bar is unreachable gets no RevertTransform, so its record is KEPT: dropping it
         // would leave the form buff and summons with nothing left to end them. The reset is not clean (Unreadable) and
         // the reply sends the admin to relog/respawn and re-run, which reverts it.
@@ -186,6 +195,21 @@ internal sealed class BarResetService : IBarResetOps
         }
         return n;
     }
+
+    /// <summary>ClearSet: exactly the pre-0.137.4 clearbar's saved-data clear (business rule 1) — `all` keeps the
+    /// transform loadouts, unlike resetbar's ClearAllLoadouts.</summary>
+    int ClearChosenSet() => _clearSet.Kind switch
+    {
+        BarSetKind.All => Core.AbilityRegistry.ClearAllSlots(_steamId),
+        BarSetKind.Universal => Core.AbilityRegistry.ClearUniversalBucket(_steamId),
+        BarSetKind.Weapon => Core.AbilityRegistry.ClearWeaponBucket(_steamId, Enum.Parse<WeaponFamily>(_clearSet.Name)),
+        BarSetKind.Form => Core.AbilityRegistry.ClearFormBucket(_steamId, Enum.Parse<ShapeshiftForm>(_clearSet.Name)),
+        _ => throw new InvalidOperationException($"unknown set {_clearSet.Label}"),
+    };
+
+    /// <summary>ClearSet: re-injects the held weapon's resolved binds from the sets the clear kept (it skips a
+    /// transformed player — RevertTransform ran first).</summary>
+    public int RestoreKept() => SlotApply.RestoreResolvedGrants(RequireEquipBuff());
 
     public int ClearHotkeys()
     {

@@ -735,31 +735,32 @@ internal static class BeelzCommands
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
         Entity character = ctx.Event.SenderCharacterEntity;
         ulong steamId = character.GetSteamId();
+        if (steamId == 0) { ctx.Reply("Could not resolve your Steam ID."); return; }
+        string name = ctx.Event.User.CharacterName.ToString();
         string b = (bucket ?? "all").Trim().ToLowerInvariant();
 
-        int cleared;
+        Beelzebub.Logic.BarSet set;
         string what;
         if (b is "all" or "")
         {
-            Core.Transforms.Revert(steamId, "clearbar", restoreBar: false);   // end any active transform first
-            cleared = Core.AbilityRegistry.ClearAllSlots(steamId);
+            set = Beelzebub.Logic.BarSet.All;
             what = "ALL loadouts (universal + every weapon + every form)";
         }
         else if (b is "universal" or "basic" or "any")
         {
-            cleared = Core.AbilityRegistry.ClearUniversalBucket(steamId);
+            set = Beelzebub.Logic.BarSet.Universal;
             what = "your universal loadout";
         }
         else if (System.Enum.TryParse<Beelzebub.Services.WeaponFamily>(b, ignoreCase: true, out var weapon)
                  && weapon != Beelzebub.Services.WeaponFamily.None && weapon != Beelzebub.Services.WeaponFamily.Magic)
         {
-            cleared = Core.AbilityRegistry.ClearWeaponBucket(steamId, weapon);
+            set = Beelzebub.Logic.BarSet.Weapon(weapon.ToString());
             what = $"your {weapon} loadout";
         }
         else if (System.Enum.TryParse<Beelzebub.Services.ShapeshiftForm>(b, ignoreCase: true, out var form)
                  && form != Beelzebub.Services.ShapeshiftForm.None)
         {
-            cleared = Core.AbilityRegistry.ClearFormBucket(steamId, form);
+            set = Beelzebub.Logic.BarSet.Form(form.ToString());
             what = $"your {form} form loadout";
         }
         else
@@ -768,16 +769,11 @@ internal static class BeelzCommands
             return;
         }
 
-        // Re-resolve the LIVE bar now: wipe our overrides (0-7) then re-apply whatever's left for the
-        // active weapon. The cleared set is gone, so its binds don't come back.
-        for (int slot = Beelzebub.Services.AbilityRegistry.PrimarySlot; slot <= Beelzebub.Services.AbilityRegistry.UltimateSlot; slot++)
-            Beelzebub.Services.SlotApply.ClearGrant(character, slot);
-        try { Beelzebub.Services.SlotApply.RestoreResolvedGrants(character); } catch { /* re-resolve best-effort */ }
-        Core.Persistence.RequestSave();
-
-        ctx.Reply(cleared > 0
-            ? $"Cleared {what} — {cleared} binding(s) removed. Captured abilities kept; re-grant anytime."
-            : $"Nothing was bound in {what}.");
+        // v0.137.4 (clearbar-fullreset): the ONE layered reset, limited to the chosen set — it ends a transform,
+        // dismounts a rider, clears every live layer, then re-injects the binds of the sets it kept.
+        var result = BarResetService.FullReset(character, steamId, name, Beelzebub.Logic.BarResetScope.ClearSet, set);
+        foreach (string line in Beelzebub.Logic.BarResetReply.ForClear(result, what))
+            ctx.Reply(line);
         Core.Chat.SendEvent(character, $"[BEELZ:event] type=slot-cleared");
     }
 
