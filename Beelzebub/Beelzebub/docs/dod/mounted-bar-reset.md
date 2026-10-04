@@ -270,7 +270,7 @@ and makes the reset's dismount deliberate and announced instead of accidental. I
   then start the server per CLAUDE.md procedure 6. After the migration has written state.json, v0.137.2 reads a Mounted bind on slot 5, which its
   `BuildMountedBar` filters out (`Array.IndexOf(_mountedSlots, slot) >= 0` with {3,6,7}): an inert slot-5 bind, not
   harmful, and `resetbar` clears it. The reset change writes nothing persistent.
-- Paths this change ships, writes or regenerates (14.4), all checked by D13 and D18: `Logic/MountedSlots.cs`,
+- Paths this change ships, writes or regenerates (14.4), all checked by D13 and D18: `Logic/MountedSlots.cs`, `Logic/DestroyLedger.cs`, `DestroyLedgerTests.cs`, `Services/TransformBuffService.cs` (A1, A2),
   `Logic/BarReset.cs`, `Logic/BarResetReply.cs`, `Services/{ShapeshiftAbilityService,SlotApply,PersistenceService,
   BarResetService}.cs`, `Commands/{BeelzCommands,ApiCommands}.cs`,
   `Beelzebub.Tests/{MountedSlotsTests,BarResetTests,BarResetReplyTests}.cs`, `Beelzebub.Tests/Beelzebub.Tests.csproj`,
@@ -344,6 +344,7 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 
 ## Amendments
 - A1 · 2026-10-04 · defect · — · layer: — · D9 run=2: `Dismount:ERR` (`1 mount buff(s) still live`) then the sweep destroyed `AB_Interact_Mount_Owner_Buff_Horse`; cause unproven, so the next build adds `[Beelz DISMOUNT]` per-buff state lines (entity, tag before, destroy issued, exists/tag after) and the sweep line names the entity, before any fix
+- A2 · 2026-10-04 · defect · — · layer: — · A1 diagnostic proved it: `[Beelz DISMOUNT] buff=Entity(582145:14) ... issued=True existsAfter=True tagAfter=False`, then the orphan sweep destroyed the same Entity(582145:14) again — `DestroyUtility.Destroy` does not stamp `DestroyTag` in the same frame, so `SafeDestroyBuff`'s tag guard missed a destroy issued that frame (the double-destroy class). Fix: pure `Logic/DestroyLedger.cs` (issued destroys remembered for 30 frames, keyed by index+version) consulted by `SafeDestroyBuff` for all 8 callers; `DestroyMountBuffs` counts an issued destroy as dismounted
 
 ## Log
 - 2026-10-03 · status → draft · plan
@@ -383,3 +384,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-04 · D3 · pass · manual: fixture `"Mounted": {"3": 1621601748}` → LogOutput `[Beelz MOUNT] 76561198039548286 saddle slot 3 -> 5 (moved)`; state.json after start `{'Mounted': {'5': 1621601748}}` · fffa0b4 · claude
 - 2026-10-04 · note · in-game · D8 step 3 · mounted `bar-raw Chaos` → horse-kit source 334739:2: slot 1 AB_VampireMountLeap_Travel, slot 4 AB_Gallop, slots 5/6/7 `set=Empty`; step 5 → `saddle loadout injected on slot(s) [5]` (client view pending owner)
 - 2026-10-04 · D9 · fail · manual: `[Beelz RESET] run=2 ... Dismount:ERR,ClearEquipEntries:0,DestroyOverrideSources:1 ... clean=0`, warning `step Dismount failed: 1 mount buff(s) still live`; A1 · fffa0b4 · claude
+- 2026-10-04 · note · planted · A2 · `if (IsIssued(key, frame)) return false;` removed from `DestroyLedger.TryIssue` → `TryIssue_fails_when_the_same_entity_is_destroyed_twice_in_one_frame` and `..._inside_the_window_is_allowed` FAIL (2 of 190); restored → 190 passed

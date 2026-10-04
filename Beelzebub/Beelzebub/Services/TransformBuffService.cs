@@ -1,3 +1,4 @@
+using Beelzebub.Logic;
 using System;
 using System.Collections.Generic;
 using ProjectM;
@@ -607,15 +608,24 @@ internal static class TransformBuffService
     {
         if (!buffEntity.Exists()) return false;
         if (buffEntity.Has<DestroyTag>()) return false; // already queued for destruction — never double-destroy
+        // v0.137.3 (mounted-bar-reset A2): the tag is NOT always stamped in the same frame (the mount control buff read
+        // tagAfter=False right after Destroy), so also refuse an entity we issued a destroy for a few frames ago.
+        if (!_destroyLedger.TryIssue(DestroyLedger.Key(buffEntity.Index, buffEntity.Version), UnityEngine.Time.frameCount)) return false;
         LogIfSpellbookBuff(buffEntity);
         DestroyUtility.Destroy(Core.EntityManager, buffEntity, DestroyDebugReason.TryRemoveBuff);
         return true;
     }
 
+    static readonly DestroyLedger _destroyLedger = new();
+
+    /// <summary>A destroy of <paramref name="e"/> was issued within the ledger window (its DestroyTag may still be pending).</summary>
+    internal static bool DestroyIssued(Entity e) =>
+        _destroyLedger.IsIssued(DestroyLedger.Key(e.Index, e.Version), UnityEngine.Time.frameCount);
+
     /// <summary>v0.137.3 (mounted-bar-reset D4): destroys every live mount control buff on <paramref name="character"/>
     /// (<see cref="ShapeshiftAbilityService.IsMountBuff"/>) through the double-destroy guard — the same call the orphan
     /// sweep used to make, now deliberate and counted. <paramref name="stillLive"/> counts mount buffs that are neither
-    /// queued for destruction nor gone afterwards.</summary>
+    /// gone, tagged, nor issued a destroy (A2: the tag can lag the call by a frame).</summary>
     internal static int DestroyMountBuffs(Entity character, out int stillLive)
     {
         int destroyed = 0;
@@ -632,7 +642,7 @@ internal static class TransformBuffService
             bool issued = SafeDestroyBuff(m);
             if (issued) destroyed++;
             bool exists = m.Exists(), tagAfter = exists && m.Has<DestroyTag>();
-            if (exists && !tagAfter) stillLive++;
+            if (exists && !tagAfter && !DestroyIssued(m)) stillLive++;
             // A1 diagnostic (mounted-bar-reset): which entity Dismount saw and what the destroy did to it.
             Entity target = exists && m.Has<Buff>() ? Core.EntityManager.GetComponentData<Buff>(m).Target : Entity.Null;
             Entity owner = exists && m.Has<EntityOwner>() ? Core.EntityManager.GetComponentData<EntityOwner>(m).Owner : Entity.Null;
