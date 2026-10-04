@@ -66,10 +66,35 @@ plan rounds. The bug, reported by the owner on 2026-10-03:
     lowering the loaded-slot total; fixed in 9d5c5b2 by subtracting the map's size change.
 - Round cap: three Codex rounds were run. The R3 fix is a one-line counter change (build ok, 186 tests pass), so a
   fourth round is waived; the D3 live load below exercises the changed line.
-- in-game: pending (step 9: D3 fixture, D8, D9).
+- in-game: see the A1/A2 round below.
 
-Rollback range: 21b8c53..9d5c5b2
-Rollback: `git revert --no-edit 21b8c53^..9d5c5b2`, stop the server (`taskkill /PID <pid>`), then
+### A1 diagnostic + A2 destroy ledger · 2026-10-04 · 1e45206, af5405b; review round d496682
+- **D9 failed** (run=2 `Dismount:ERR`, `1 mount buff(s) still live`, then the orphan sweep destroyed the mount buff).
+  Cause unproven, so amendment A1 (1e45206) added `[Beelz DISMOUNT]` per-buff state lines before any fix.
+- **A1 proved the cause:** `buff=Entity(582145:14) ... issued=True existsAfter=True tagAfter=False`, then the sweep
+  destroyed the same Entity(582145:14). `DestroyUtility.Destroy` does not stamp `DestroyTag` in the same frame, so
+  `SafeDestroyBuff`'s tag guard missed a destroy issued that frame: a double destroy, the crash class.
+- **A2 (af5405b):** pure `Logic/DestroyLedger.cs` (issued destroys remembered 30 frames, key index+version) consulted
+  by `SafeDestroyBuff` for all 8 callers; `DestroyMountBuffs` counts an issued destroy as dismounted.
+  Planted: the `IsIssued` guard removed → 2 `DestroyLedgerTests` FAIL; restored → 190 passed.
+- Codex verdict: APPROVED (round 2) — round 1 REVISE, three findings:
+  - F1 (ledger recorded before `Destroy`; a throwing destroy reads as issued, a false dismount) · ACCEPTED · fixed in
+    d496682 (`Forget` in a catch). Planted: `Forget` emptied → `Forget_fails_when_a_destroy_that_threw_still_reads_as_issued` FAIL; restored → 191 passed.
+  - F2 (process-static ledger vs an ECS world recreated within 30 frames) · REJECTED · the dedicated server runs one
+    server World per process and a restart is a new process, so the static dies with the world.
+  - F3 (unsynchronized dictionary) · ACCEPTED as documentation · every caller is a main-thread ECS system patch or chat
+    command; the ledger says so.
+  - Round 2 (d496682 only): no findings.
+- /code-review: not run separately for this round; the two Codex rounds covered the 3-file diff, and D9 below exercised it live.
+- **in-game (af5405b deployed):** D8 pass — the owner saw Knife Throw on R after a remount, Q/E/Space the horse's own;
+  D9 pass — `[Beelz RESET] run=1 ... Dismount:1,ClearEquipEntries:0,DestroyOverrideSources:0 ... clean=1`, reply
+  `... You were dismounted to reset your bar; remount to ride.`, remount vanilla, `testmount off ... buffs=0`, on-foot
+  reset `clean=1`. LogOutput: 0 `[Error`/`Exception`; NyarDev.log: 226 `LogMissingPrefab` traces, the same count as the
+  session before the fix (startup noise). No `Couldn't remap` after the graceful restart.
+- The A1 `[Beelz DISMOUNT]` lines stay: they print only on a mounted reset and name the next failure if one comes.
+
+Rollback range: 21b8c53..d496682
+Rollback: `git revert --no-edit 21b8c53^..d496682`, stop the server (`taskkill /PID <pid>`), then
 `dotnet build Beelzebub/Beelzebub.sln -c Release` (redeploys the DLL), then start the server.
 Consequence for migrated state: a state.json already migrated by v0.137.3 holds the old slot-3 saddle bind on slot 5.
 v0.137.2's `BuildMountedBar` filters slot 5 out of {3,6,7}, so it is an inert slot-5 bind: not shown, not harmful, and
