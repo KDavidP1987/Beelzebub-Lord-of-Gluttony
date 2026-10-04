@@ -4,6 +4,20 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.137.4] - 2026-10-04
+
+### clearbar clears the whole bar for the loadout you pick
+
+- **`.beelz clearbar [all|universal|<weapon>|<form>]` now runs the same full reset as `resetbar`**, limited to the
+  loadout you name. Before, it only forgot the saved binds: a saddle ability stayed on the bar while you rode, and a
+  transform (a boss form, Wolf form) kept its abilities after `clearbar universal`.
+- **Your other loadouts are kept.** `clearbar sword` keeps your universal binds on the bar and your form loadouts saved.
+- **A clear while riding dismounts you, and a clear while transformed ends the transform, and the reply says so**
+  ("You were dismounted to reset your bar; remount to ride." / "Your transform was ended to clear the bar.").
+- If something stays stuck, the reply adds a second line naming it, and the server log gets a `[Beelz RESET]` line for
+  every clear. If the clear itself fails, the reply says "Could not clear ..." instead of "Nothing was bound".
+- Fixed a reset that ended a transform reporting the transform's buff as "still on" when it was already gone.
+
 ## [0.137.3] - 2026-10-04
 
 ### Saddle abilities use R, C and T

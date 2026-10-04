@@ -5,7 +5,7 @@ this list when its plan is created.
 
 | Slug | What | Deferred from |
 |---|---|---|
-| `clearbar-fullreset` | Fold `.beelz clearbar` into the layered reset. It clears one chosen set (universal, one weapon, one form) and already re-resolves, so it was left on its own path; the `commands` check exempts it. | bar-reset (v0.137), Out of scope |
+| `clearbar-fullreset` | DONE v0.137.4 (clearbar-fullreset): clearbar runs the layered reset for one chosen set, keeps the other sets' binds (RestoreKept), dismounts / ends a transform and says so; ApiVersion 35. | bar-reset (v0.137), Out of scope |
 | `transform-chain-guard` | A recurrence guard in `TransformService.TryActivate` against chaining transforms (the pattern that left creature kits on the bar). | bar-reset (v0.137), Out of scope |
 | `docs-consolidation` | Merge the two docs folders (`Beelzebub/docs/` and `Beelzebub/Beelzebub/docs/`) and split the oversized docs. | process adoption, 2026-09-30 |
 | `dev-snapshot` | Port `dev-snapshot.ps1` (copy both server logs + state before a restart) from Nyarlathotep. | process adoption, 2026-09-30 |

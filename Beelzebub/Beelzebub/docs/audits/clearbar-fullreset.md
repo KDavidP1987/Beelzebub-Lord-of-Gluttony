@@ -121,7 +121,7 @@ It failed 19/30 in game on v0.137.3 (plan Log, D12 dry-run).
 - Codex verdict: APPROVED (round 3) — on the A5/A6 diff; rounds 1-2 above.
 
 ### Rollback
-Rollback range: `d62be28..d520a48` (the release commit is added to the range in step 8).
+Rollback range: `d62be28..524e2c7`, plus the `chore(release): v0.137.4` commit that follows it (revert that first).
 
 To roll back:
 1. Stop the server: `vrclient.py close`, then `taskkill /PID <pid>` (no `/F`).
