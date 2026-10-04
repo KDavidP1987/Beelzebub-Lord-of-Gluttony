@@ -418,3 +418,4 @@ Completion                 vs baseline 18/18 · vs current 18/18
 Review                     codex · 3 rounds, then human READY · author 15/15 layers · reviewer 15/15 layers
 Timeline                   draft 10-03 · ready 10-04 · start 10-04 · done 10-04
 Missed probes              none — the D9 failure was a defect: `DestroyUtility.Destroy` stamps DestroyTag a frame late (now `Logic/DestroyLedger.cs`)
+- 2026-10-04 · note · feedback sent · https://github.com/KDavidP1987/dod-skill/issues/12
