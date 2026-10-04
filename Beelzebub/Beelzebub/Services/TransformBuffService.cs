@@ -627,9 +627,19 @@ internal static class TransformBuffService
             if (ShapeshiftAbilityService.IsMountBuff(buffs[i].PrefabGuid._Value, buffs[i].PrefabGuid.GetPrefabName()))
                 mounts.Add(buffs[i].Entity);
         foreach (var m in mounts)
-            if (SafeDestroyBuff(m)) destroyed++;
-        foreach (var m in mounts)
-            if (m.Exists() && !m.Has<DestroyTag>()) stillLive++;
+        {
+            bool tagBefore = m.Exists() && m.Has<DestroyTag>();
+            bool issued = SafeDestroyBuff(m);
+            if (issued) destroyed++;
+            bool exists = m.Exists(), tagAfter = exists && m.Has<DestroyTag>();
+            if (exists && !tagAfter) stillLive++;
+            // A1 diagnostic (mounted-bar-reset): which entity Dismount saw and what the destroy did to it.
+            Entity target = exists && m.Has<Buff>() ? Core.EntityManager.GetComponentData<Buff>(m).Target : Entity.Null;
+            Entity owner = exists && m.Has<EntityOwner>() ? Core.EntityManager.GetComponentData<EntityOwner>(m).Owner : Entity.Null;
+            Core.Log.LogInfo($"[Beelz DISMOUNT] buff={m} prefab={(exists ? m.GetPrefabGuid().GetPrefabName() : "?")} target={target} owner={owner} "
+                + $"character={character} tagBefore={tagBefore} issued={issued} existsAfter={exists} tagAfter={tagAfter} slotRows={(exists && m.Has<ReplaceAbilityOnSlotBuff>())}");
+        }
+        if (mounts.Count == 0) Core.Log.LogInfo($"[Beelz DISMOUNT] no mount buff in {character}'s BuffBuffer");
         return destroyed;
     }
 
@@ -1035,7 +1045,7 @@ internal static class TransformBuffService
                 {
                     if (SafeDestroyBuff(e))
                     {
-                        Core.Log.LogInfo($"[Beelz] resetbar: destroyed owned ability-slot source {e.GetPrefabGuid().GetPrefabName()} (#{e.GetPrefabGuid()._Value}).");
+                        Core.Log.LogInfo($"[Beelz] resetbar: destroyed owned ability-slot source {e.GetPrefabGuid().GetPrefabName()} (#{e.GetPrefabGuid()._Value}) {e}.");
                         destroyed++;
                     }
                 }

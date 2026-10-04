@@ -343,6 +343,7 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - [ ] D18 · **Every touched path is declared** every path changed since the recon commit `0a135f5` (tracked diff plus untracked, minus the two owner files) is named in the plan's Rollout path list · cmd: `python Beelzebub/tools/check_mounted_bar.py paths` → `paths: ok, <n> changed, <k> declared` (fails when: a changed path is not declared, or the Rollout path list is missing; nothing changed prints `FAIL no input`)
 
 ## Amendments
+- A1 · 2026-10-04 · defect · — · layer: — · D9 run=2: `Dismount:ERR` (`1 mount buff(s) still live`) then the sweep destroyed `AB_Interact_Mount_Owner_Buff_Horse`; cause unproven, so the next build adds `[Beelz DISMOUNT]` per-buff state lines (entity, tag before, destroy issued, exists/tag after) and the sweep line names the entity, before any fix
 
 ## Log
 - 2026-10-03 · status → draft · plan
@@ -379,3 +380,6 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-04 · note · planted · D18 · an untracked `Beelzebub/Beelzebub/ZzUndeclared.txt` → `paths: FAIL 1 changed path(s) not declared: ['Beelzebub/Beelzebub/ZzUndeclared.txt']`; removed
 - 2026-10-04 · status → ready · approve · review: human
 - 2026-10-04 · status → in-progress · start
+- 2026-10-04 · D3 · pass · manual: fixture `"Mounted": {"3": 1621601748}` → LogOutput `[Beelz MOUNT] 76561198039548286 saddle slot 3 -> 5 (moved)`; state.json after start `{'Mounted': {'5': 1621601748}}` · fffa0b4 · claude
+- 2026-10-04 · note · in-game · D8 step 3 · mounted `bar-raw Chaos` → horse-kit source 334739:2: slot 1 AB_VampireMountLeap_Travel, slot 4 AB_Gallop, slots 5/6/7 `set=Empty`; step 5 → `saddle loadout injected on slot(s) [5]` (client view pending owner)
+- 2026-10-04 · D9 · fail · manual: `[Beelz RESET] run=2 ... Dismount:ERR,ClearEquipEntries:0,DestroyOverrideSources:1 ... clean=0`, warning `step Dismount failed: 1 mount buff(s) still live`; A1 · fffa0b4 · claude
