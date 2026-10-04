@@ -469,8 +469,8 @@ def check_docs(root: str) -> str:
         raise CheckFail("no input: ApiVersion or the handoff banner not found")
     if api.group(1) != banner.group(1):
         bad.append(f"ApiCommands.cs {api.group(1)} != handoff banner {banner.group(1)}")
-    if int(api.group(1)) != API_VERSION:
-        bad.append(f"ApiVersion is {api.group(1)}, expected {API_VERSION}")
+    if int(api.group(1)) < API_VERSION:  # bar-reset shipped at 33; later releases may bump it (v0.137.3 → 34)
+        bad.append(f"ApiVersion is {api.group(1)}, expected >= {API_VERSION}")
     entry = re.search(r"v0\.137[^\n]*\n(.*?)(?=\n#{1,3} |\Z)", handoff, re.S)
     if not entry:
         bad.append("handoff has no v0.137 entry")
