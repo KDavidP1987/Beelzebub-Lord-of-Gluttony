@@ -241,6 +241,7 @@ commands (real IDs, no `<placeholders>`), and one line saying what PASS looks li
 | `expect-reply` never matches | DevChatEcho isn't deployed, or the reply bypasses VCF | Check `DevChatEcho loaded` in the log; else use `expect-chat` |
 | A check passes on old output | Log line from before the step | Add `mark` before the action |
 | Check tool prints "no input" | Run from the wrong folder | Run tools from the repo root |
+| The server quit when `close` ran | **Open question (2026-10-04):** the server shut down cleanly the moment `close` ran; the client had already left 15 minutes earlier. Cause not yet proven | Until it is checked, run `close` only when stopping the server anyway, and check the server is still up afterwards |
 | Python heredoc corrupts `\b` | Bash heredocs turn `\b` into a backspace | Write scripts to a file first |
 
 ---
