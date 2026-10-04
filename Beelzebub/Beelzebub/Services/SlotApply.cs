@@ -737,18 +737,6 @@ internal static class SlotApply
                     && (!onlyIfEmptyAfterPop || Beelzebub.Logic.GrantPush.SlotEmptyAfterPop(parse, poppedIds));
         if (push) sgm.ModifyAbilityGroupOnSlot(equipBuff, character, slot, ability);
         MarkSlotDirty(character, slot);
-        // form-bar-edits DIAGNOSTIC (temporary): every mod on the slot before the pop — id, the ability it sets, its
-        // source entity + prefab, and popped (P) / kept (k) — to prove which copy an unslot inside a form removes.
-        if (parse != null && parse.Readable)
-        {
-            var mods = new System.Text.StringBuilder();
-            foreach (var e in parse.Entries)
-            {
-                string src = TransformBuffService.SourcePrefabName(e);
-                mods.Append($" {(ids.Contains(e.ModId) ? 'P' : 'k')}{e.ModId}={new PrefabGUID(e.SetToGuid).GetPrefabName() ?? e.SetToGuid.ToString()}@{e.SourceIndex}:{e.SourceVersion}/{(src.Length > 0 ? src : "-")}");
-            }
-            Core.Log.LogInfo($"[Beelz GRANTMODS] target={character.GetSteamId()} slot={slot} why={why} removed={removedAbility} equip={equipBuff.Index}:{equipBuff.Version} owned-elsewhere={(BarOwnedElsewhere(character) ? 1 : 0)} mods:{mods}");
-        }
         Core.Log.LogInfo($"[Beelz GRANT] target={character.GetSteamId()} slot={slot} why={why} set={(push ? (ability.GetPrefabName() ?? ability._Value.ToString()) : "none")} popped={popped} readable={(parse != null && parse.Readable ? 1 : 0)}");
     }
 
