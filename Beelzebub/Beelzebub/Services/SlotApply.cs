@@ -289,6 +289,7 @@ internal static class SlotApply
             if (Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
             // grant-refresh: rows added to the held buff are not read by the engine — set each injected slot live.
             foreach (var (slot, guid, replaced) in live) PushLive(character, buffEntity, slot, new PrefabGUID(guid), "resolve", replaced);
+            DrainPending(character, buffEntity, live);
             if (Beelzebub.Config.Settings.VerboseLogging.Value)
                 Core.Log.LogInfo($"[Beelz] RestoreResolvedGrants: re-applied {applied} grant(s) for {steamId} (weapon={weapon}).");
             return applied;
@@ -515,18 +516,24 @@ internal static class SlotApply
             // grant-refresh: pop our earlier pushes and every mod setting the removed grant (spellbook spells kept), put
             // the weapon's own row back on a slot the weapon owns, and never push Empty (it masks the base, D32). While
             // a form, transform or mount owns the bar only the pop runs — a push would land on that kit.
-            int restore = 0;
+            int restore = baseAbility._Value;
+            if (TryGetPrefabRows(equipBuff, out var prefabRows) && prefabRows != null)
+            {
+                int weaponRow = Beelzebub.Logic.GrantPush.WeaponRow(
+                    prefabRows.ConvertAll(r => (r.Slot, r.NewGroupId._Value, r.Priority)), slot);
+                if (weaponRow != 0) restore = weaponRow;
+            }
             if (!BarOwnedElsewhere(character))
             {
-                restore = baseAbility._Value;
-                if (TryGetPrefabRows(equipBuff, out var prefabRows) && prefabRows != null)
-                {
-                    int weaponRow = Beelzebub.Logic.GrantPush.WeaponRow(
-                        prefabRows.ConvertAll(r => (r.Slot, r.NewGroupId._Value, r.Priority)), slot);
-                    if (weaponRow != 0) restore = weaponRow;
-                }
+                PushOnSlot(character, equipBuff, slot, new PrefabGUID(restore), "restore", removedAbility);
+                return;
             }
-            PushOnSlot(character, equipBuff, slot, new PrefabGUID(restore), "restore", removedAbility);
+            // form-bar-edits (v0.137.2): a form/transform/mount owns the bar. Pop the removed grant's copies; in a VANILLA
+            // form put the weapon skill back only if the slot is then empty (vanilla Wolf keeps it there). The slot is
+            // also queued: the form/transform/mount exit (or the heartbeat retry) restores it on the weapon bar.
+            PushOnSlot(character, equipBuff, slot, new PrefabGUID(InVanillaFormOnly(character) ? restore : 0),
+                       "restore-in-form", removedAbility, onlyIfEmptyAfterPop: true);
+            MarkPending(character, slot);
         }
         catch (Exception ex)
         {
@@ -605,18 +612,68 @@ internal static class SlotApply
     {
         ulong sid = character.GetSteamId();
         if (Core.AbilityRegistry.GetActiveTransform(sid) is not null) return true;
-        if (ShapeshiftAbilityService.IsMounted(sid)) return true;
-        // any mount (a plain horse has no Beelzebub saddle loadout, so IsMounted misses it)
-        if (Core.EntityManager.HasBuffer<BuffBuffer>(character))
-        {
-            var buffs = Core.EntityManager.GetBuffer<BuffBuffer>(character);
-            for (int i = 0; i < buffs.Length; i++)
-            {
-                if (!buffs[i].Entity.Exists() || Core.EntityManager.HasComponent<DestroyTag>(buffs[i].Entity)) continue;
-                if (ShapeshiftAbilityService.IsMountBuff(buffs[i].PrefabGuid._Value, buffs[i].PrefabGuid.GetPrefabName())) return true;
-            }
-        }
+        if (MountedAny(character)) return true;
         return TransformBuffService.ListOverrideBuffs(character).Count > 0;
+    }
+
+    /// <summary>Any mount, Beelzebub saddle loadout or not (a plain horse has none, so IsMounted alone misses it).</summary>
+    static bool MountedAny(Entity character)
+    {
+        if (ShapeshiftAbilityService.IsMounted(character.GetSteamId())) return true;
+        if (!Core.EntityManager.HasBuffer<BuffBuffer>(character)) return false;
+        var buffs = Core.EntityManager.GetBuffer<BuffBuffer>(character);
+        for (int i = 0; i < buffs.Length; i++)
+        {
+            if (!buffs[i].Entity.Exists() || Core.EntityManager.HasComponent<DestroyTag>(buffs[i].Entity)) continue;
+            if (ShapeshiftAbilityService.IsMountBuff(buffs[i].PrefabGuid._Value, buffs[i].PrefabGuid.GetPrefabName())) return true;
+        }
+        return false;
+    }
+
+    /// <summary>In a vanilla shapeshift form (Wolf, Bear, …) and neither in a Beelzebub transform nor mounted.</summary>
+    static bool InVanillaFormOnly(Entity character)
+        => Core.AbilityRegistry.GetActiveTransform(character.GetSteamId()) is null && !MountedAny(character)
+           && ShapeshiftAbilityService.GetCurrentForm(character) != ShapeshiftForm.None;
+
+    // form-bar-edits (v0.137.2): slots whose live push (a grant) or weapon restore (an unslot) waited on a form, transform
+    // or mount. Drained by RestoreResolvedGrants once the weapon owns the bar again (form exit, transform revert,
+    // weapon equip), with a heartbeat retry for an exit seen while the leaving buff is still listed.
+    static readonly Dictionary<ulong, (Entity Character, HashSet<int> Slots)> _pendingLive = new();
+
+    static void MarkPending(Entity character, int slot)
+    {
+        ulong sid = character.GetSteamId();
+        if (sid == 0) return;
+        if (!_pendingLive.TryGetValue(sid, out var p) || p.Character != character) p = (character, new HashSet<int>());
+        p.Slots.Add(slot);
+        _pendingLive[sid] = p;
+    }
+
+    /// <summary>Heartbeat: retry players whose queued slots wait for the bar to be the weapon's again.</summary>
+    internal static void TickPending()
+    {
+        if (_pendingLive.Count == 0) return;
+        foreach (var sid in new List<ulong>(_pendingLive.Keys))
+        {
+            var ch = _pendingLive[sid].Character;
+            if (!ch.Exists() || ch.GetSteamId() != sid) { _pendingLive.Remove(sid); continue; }
+            if (BarOwnedElsewhere(ch)) continue;
+            RestoreResolvedGrants(ch);
+            _pendingLive.Remove(sid);   // drained above; an unarmed / no-equip-buff bar is rebuilt by the next equip anyway
+        }
+    }
+
+    /// <summary>Restore each queued slot that no bind re-pushed (<paramref name="live"/>): the weapon skill goes back.</summary>
+    static void DrainPending(Entity character, Entity equipBuff, List<(int Slot, int Guid, int Replaced)> live)
+    {
+        ulong sid = character.GetSteamId();
+        if (!_pendingLive.TryGetValue(sid, out var p) || BarOwnedElsewhere(character)) return;
+        _pendingLive.Remove(sid);
+        foreach (int slot in p.Slots)
+        {
+            if (live.Exists(l => l.Slot == slot)) continue;   // a bind was pushed live above
+            RestoreSlotBaseValue(character, equipBuff, slot);
+        }
     }
 
     /// <summary>Live push for a grant or a re-resolve: skipped while the bar is owned elsewhere.</summary>
@@ -625,6 +682,7 @@ internal static class SlotApply
         if (BarOwnedElsewhere(character))
         {
             Core.Log.LogInfo($"[Beelz GRANT] target={character.GetSteamId()} slot={slot} why={why} skipped=bar-owned-elsewhere");
+            MarkPending(character, slot);   // form-bar-edits: pushed when the weapon owns the bar again
             return;
         }
         // a replaced grant (A -> B) is popped by id as well: applied at equip time, its mod has another source and would
@@ -643,7 +701,8 @@ internal static class SlotApply
     /// <summary>Pop the slot's earlier mods from <paramref name="equipBuff"/> (<see cref="Beelzebub.Logic.GrantPush.OwnModIds"/>),
     /// then set <paramref name="ability"/> through <c>ModifyAbilityGroupOnSlot</c> unless it is Empty, and mark the slot
     /// dirty. One <c>[Beelz GRANT]</c> line. Caller must NOT be mid-iteration over a live buffer (structural change).</summary>
-    static void PushOnSlot(Entity character, Entity equipBuff, int slot, PrefabGUID ability, string why, int removedAbility = 0)
+    static void PushOnSlot(Entity character, Entity equipBuff, int slot, PrefabGUID ability, string why, int removedAbility = 0,
+                           bool onlyIfEmptyAfterPop = false)
     {
         var sgm = Core.ServerGameManager;
         var parse = TransformBuffService.ParseSlotMods(character, slot);
@@ -655,7 +714,8 @@ internal static class SlotApply
             try { sgm.RemoveAbilityGroupModificationOnSlot(character, slot, ModificationId.NewId(id)); popped++; }
             catch (Exception ex) { Core.Log.LogWarning($"[Beelz GRANT] slot={slot} remove ModId {id} failed: {ex.Message}"); }
         }
-        bool push = Beelzebub.Logic.GrantPush.ShouldPush(ability._Value);
+        bool push = Beelzebub.Logic.GrantPush.ShouldPush(ability._Value)
+                    && (!onlyIfEmptyAfterPop || Beelzebub.Logic.GrantPush.SlotEmptyAfterPop(parse, ids));
         if (push) sgm.ModifyAbilityGroupOnSlot(equipBuff, character, slot, ability);
         MarkSlotDirty(character, slot);
         // form-bar-edits DIAGNOSTIC (temporary): every mod on the slot before the pop — id, the ability it sets, its

@@ -64,6 +64,16 @@ public static class GrantPush
         return ability;
     }
 
+    /// <summary>form-bar-edits (v0.137.2): whether the slot carries no mod once <paramref name="popped"/> are removed — in
+    /// a vanilla form only then does the weapon's skill go back on the slot (vanilla Wolf keeps the weapon skill on a
+    /// slot its kit leaves empty); a kept mod (a per-form ability, a spellbook spell) keeps the slot. False for an
+    /// unreadable dump.</summary>
+    public static bool SlotEmptyAfterPop(SlotModParse parse, ICollection<int> popped)
+    {
+        if (parse == null || !parse.Readable) return false;
+        return parse.Entries.All(e => popped != null && popped.Contains(e.ModId));
+    }
+
     /// <summary>Whether to push <paramref name="abilityGuid"/> after the pop. A 0 (Empty) push masks the slot's base and
     /// blocks a spellbook pick (D32), so restoring a slot whose base is 0 only pops.</summary>
     public static bool ShouldPush(int abilityGuid) => abilityGuid != 0;

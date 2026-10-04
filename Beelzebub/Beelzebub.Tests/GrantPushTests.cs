@@ -113,4 +113,25 @@ public class GrantPushTests
         var unrelated = new SlotModEntry(1600, Other, 581913, 259);
         Assert.Equal(new[] { 1580 }, GrantPush.ModsToPop(Parse(equipTimeA, unrelated), Buff, BuffVer, A, _ => false));
     }
+
+    // form-bar-edits (v0.137.2): an unslot inside Wolf pops the form's two universal-fallback copies (diagnostic
+    // [Beelz GRANTMODS] 2026-10-03: sources 582250:137 / 582258:206, no prefab) — only then is the weapon skill pushed.
+    [Fact]
+    public void SlotEmptyAfterPop_fails_when_a_kept_form_ability_still_gets_the_weapon_skill()
+    {
+        var copyA = new SlotModEntry(1590, 1621601748, 582250, 137);
+        var copyB = new SlotModEntry(1609, 1621601748, 582258, 206);
+        Assert.True(GrantPush.SlotEmptyAfterPop(Parse(copyA, copyB, copyA, copyB), new[] { 1590, 1609 }));
+        var perForm = new SlotModEntry(1612, -1940289109, 600100, 3);
+        Assert.False(GrantPush.SlotEmptyAfterPop(Parse(copyA, copyB, perForm), new[] { 1590, 1609 }));
+    }
+
+    [Fact]
+    public void SlotEmptyAfterPop_fails_when_an_unreadable_dump_allows_a_push()
+    {
+        var p = Parse();
+        p.Readable = false;
+        Assert.False(GrantPush.SlotEmptyAfterPop(p, new int[0]));
+        Assert.False(GrantPush.SlotEmptyAfterPop(null, new int[0]));
+    }
 }

@@ -80,6 +80,10 @@ internal static class Heartbeat
         try { BroadcastService.Tick(); }
         catch (Exception ex) { Core.Log.LogError($"[Beelz] Heartbeat BroadcastService.Tick failed: {ex}"); }
 
+        // v0.137.2 (form-bar-edits): restore slots whose grant push / weapon restore waited on a form, transform or mount.
+        try { Services.SlotApply.TickPending(); }
+        catch (Exception ex) { Core.Log.LogError($"[Beelz] Heartbeat SlotApply.TickPending failed: {ex}"); }
+
         // v0.101.0: inject the Mounted saddle loadout for players who just got on a horse (mounting fires
         // no EnterShapeshiftEvent, so this scan is how the Mounted form is detected). No-op when disabled.
         try { ShapeshiftAbilityService.TickMountedForms(); }
