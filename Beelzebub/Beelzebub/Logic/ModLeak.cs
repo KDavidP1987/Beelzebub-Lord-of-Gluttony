@@ -90,7 +90,10 @@ public static class ModLeak
         return (read, take < n ? read[^1] : 0);
     }
 
-    /// <summary>The boot line when the sweep found nothing to do, so an idle sweep is told apart from one that never ran.</summary>
+    /// <summary>Whether an idle pass logs <see cref="IdleLine"/>: a boot always does; a pop-armed pass only with verbose logging.</summary>
+    public static bool LogIdle(string why, bool verbose) => why == "boot" || verbose;
+
+    /// <summary>The line when the sweep found nothing to do, so an idle sweep is told apart from one that never ran.</summary>
     public static string IdleLine(string why, int holdersRead, long ms) =>
         $"[Beelz MODLEAK] sweep ({Safe(why)}): nothing stale among {holdersRead} player holder(s); {ms} ms.";
 

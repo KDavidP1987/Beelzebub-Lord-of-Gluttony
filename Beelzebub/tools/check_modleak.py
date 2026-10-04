@@ -80,6 +80,7 @@ REQUIRED_TESTS = [
     "Select_fails_when_a_holder_that_is_not_stale_now_is_cleaned",
     "Page_fails_when_a_holder_past_the_cap_is_never_read",
     "IdleLine_fails_when_an_idle_boot_is_silent_or_unnamed",
+    "LogIdle_fails_when_a_pop_pass_is_silent_under_verbose",
     "Arm_fails_when_repeated_pops_postpone_the_pass",
     "SweepLine_fails_when_a_count_or_the_cap_is_not_named",
     "RowLine_fails_when_a_name_breaks_the_line",
@@ -194,6 +195,8 @@ def check_wiring(root: str) -> str:
         bad.append("ModLeakService.Tick: does not re-arm when a holder was seen stale once, a clean failed or the pass was capped")
     if tk is None or not re.search(r"ModLeak\.IdleLine\s*\(", tk):
         bad.append("ModLeakService.Tick: an idle boot logs nothing")
+    if tk is None or not re.search(r"ModLeak\.LogIdle\s*\(", tk):
+        bad.append("ModLeakService.Tick: an idle pass does not ask ModLeak.LogIdle whether to log")
     sc = method_body(svc, "Scan")
     if sc is None or not re.search(r"ModLeak\.Page\s*\(", sc):
         bad.append("ModLeakService.Scan: does not page from the cursor (ModLeak.Page)")
@@ -426,7 +429,7 @@ internal static class ModLeakService {
     internal static void Tick()
     {
         // Clean( in a comment is not a call
-        if (none) { Core.Log.LogInfo(ModLeak.IdleLine(_dueWhy, scan.Count, 1)); return; }
+        if (none) { if (ModLeak.LogIdle(_dueWhy, verbose)) Core.Log.LogInfo(ModLeak.IdleLine(_dueWhy, scan.Count, 1)); return; }
         var confirmed = ModLeak.Select(_firstRead, verdicts);
         foreach (var h in scan) if (Clean(h, out int removed)) cleaned++;
         _dueAt = keptOnce > 0 || capped || failed > 0 ? DateTime.UtcNow + ReadGap : DateTime.MaxValue;

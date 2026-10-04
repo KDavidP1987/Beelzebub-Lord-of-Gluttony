@@ -135,6 +135,14 @@ public class ModLeakTests
     }
 
     [Fact]
+    public void LogIdle_fails_when_a_pop_pass_is_silent_under_verbose()
+    {
+        Assert.True(ModLeak.LogIdle("boot", false));
+        Assert.True(ModLeak.LogIdle("bar-reset", true));
+        Assert.False(ModLeak.LogIdle("grant", false));   // production logs stay quiet on every grant
+    }
+
+    [Fact]
     public void SweepLine_fails_when_a_count_or_the_cap_is_not_named()
     {
         Assert.Equal("[Beelz MODLEAK] sweep (boot): cleaned 7 stale holder(s), 22 leftover mod(s) removed; 0 seen stale once (rechecked next pass), 0 unreadable; 12 ms.",

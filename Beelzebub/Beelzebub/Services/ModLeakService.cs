@@ -64,8 +64,8 @@ internal static class ModLeakService
         {
             if (stale == 0 && unknown == 0 && !capped)
             {
-                // nothing to do; a boot says so, so an idle sweep is told apart from one that never ran
-                if (_dueWhy == "boot") Core.Log.LogInfo(ModLeak.IdleLine(_dueWhy, scan.Count, clock.ElapsedMilliseconds));
+                // nothing to do; a boot (and, with verbose logging, a pop) says so, so an idle sweep is told apart from one that never ran
+                if (ModLeak.LogIdle(_dueWhy, Beelzebub.Config.Settings.VerboseLogging.Value)) Core.Log.LogInfo(ModLeak.IdleLine(_dueWhy, scan.Count, clock.ElapsedMilliseconds));
                 _cursor = 0;
                 _dueAt = DateTime.MaxValue;
                 return;

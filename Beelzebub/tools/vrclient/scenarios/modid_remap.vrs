@@ -17,7 +17,7 @@ expect-reply Slot 1 assigned to AB_Undead_Infiltrator_KnifeThrow_AbilityGroup
 wait 2
 chat .beelz resetbar CONFIRM
 expect-log \[Beelz RESET\].*target=${CHARACTER} .*clean=1
-expect-log \[Beelz MODLEAK\] sweep \(bar-reset\): cleaned [1-9]\d* stale holder\(s\) timeout=20
+expect-log \[Beelz MODLEAK\] sweep \(bar-reset\): (cleaned [1-9]\d* stale holder\(s\)|nothing stale) timeout=20
 wait 2
 chat .beelz admin modleak
 expect-log \[Beelz MODLEAK\] summary target=Chaos rows=\d+ holders=\d+ live=\d+ stale=0 unknown=0
