@@ -172,7 +172,7 @@ ol.said li{padding:.15rem 0}
 </style>
 </head>
 <body>
-<header class="band"><div class="wrap band-top"><div><p class="crumb">dod · transform-chain-guard · review</p><h1>Review — transform-chain-guard - no route chains one transform into another</h1></div><div class="state"><span><span class="mono">transform-chain-guard</span> · draft · size M · parent none · 20 item(s)</span></div></div></header>
+<header class="band"><div class="wrap band-top"><div><p class="crumb">dod · transform-chain-guard · review</p><h1>Review — transform-chain-guard - no route chains one transform into another</h1></div><div class="state"><span><span class="mono">transform-chain-guard</span> · in-progress · size M · parent none · 20 item(s)</span></div></div></header>
 <main class="wrap">
 <div class="lead"><p class="fine mono">legend: D item · A amendment · S assumption · F review finding · P proposal · W work package · n.m layer.probe</p>
 
@@ -273,7 +273,7 @@ ol.said li{padding:.15rem 0}
 <p class="mono">cmd: `python Beelzebub/tools/check_transform_guard.py tests` → `tests: ok, 13 named TransformGate controls present` (fails when: any named control is missing, renamed or loses its attribute; no test file prints `FAIL no input`)</p>
 <p class="absent">no evidence line yet</p>
 <h3 id="D9"><span class="mono">D9</span> In game, nothing chains</h3>
-<p>Claude&#39;s vrclient scenario `Beelzebub/tools/vrclient/scenarios/transform_chain_guard.vrs` runs (a) `.beelz transform 1` (Dracula) then `.beelz transform 0` → `Use .beelz revert first, then transform again.` + `[Beelz TXGUARD] refused route=Activate reason=Active`, and `.beelz transform 1` again → `You&#39;re already transformed as that unit.` + `reason=SameUnit`; (b) `.beelz admin testform wolf` while Dracula → `Use .beelz revert first, then run testform again.` + `route=FormTest reason=Active`; (c) `.beelz phase 2` → `Phase 2 (Bloodmage) active`, `.beelz revert`; (d) `.beelz admin force-transform Chaos 591725925` (Morgana, async form) then at once `.beelz phase 2` → no `[Error`/`Exception`/`at Beelzebub.` line, and after 3 s `.beelz phase 2` (swaps, or replies &quot;Already in phase 2.&quot;) then `.beelz phase` → `Currently in phase 2`, then `.beelz revert`</p>
+<p>Claude&#39;s vrclient scenario `Beelzebub/tools/vrclient/scenarios/transform_chain_guard.vrs` runs (a) `.beelz transform Dracula` then `.beelz transform Beatrice` → `Use .beelz revert first, then transform again.` + `[Beelz TXGUARD] refused route=Activate reason=Active`, and `.beelz transform Dracula` again → `You&#39;re already transformed as that unit.` + `reason=SameUnit`; (b) `.beelz admin testform wolf` while Dracula → `Use .beelz revert first, then run testform again.` + `route=FormTest reason=Active`; (c) `.beelz phase 2` → `Phase 2 (Bloodmage) active`, `.beelz revert`; (d) `.beelz admin force-transform Chaos 591725925` (Morgana, async form) then at once `.beelz phase 2` → no `[Error`/`Exception`/`at Beelzebub.` line, and after 3 s `.beelz phase 2` (swaps, or replies &quot;Already in phase 2.&quot;) then `.beelz phase` → `Currently in phase 2`, then `.beelz revert`</p>
 <p class="mono">cmd: `python Beelzebub/tools/vrclient/vrclient.py run Beelzebub/tools/vrclient/scenarios/transform_chain_guard.vrs` → `SCENARIO PASS transform_chain_guard 14/14` (fails when: a second transform or testform is applied over an active transform, a refusal lacks its TXGUARD line, a phase switch on a settled form fails, an error line appears, or the client cannot join — `ensure` FAIL aborts and prints `SCENARIO FAIL`)</p>
 <p class="absent">no evidence line yet</p>
 <h3 id="D10"><span class="mono">D10</span> Older in-game paths still pass</h3>
@@ -317,7 +317,7 @@ ol.said li{padding:.15rem 0}
 <p class="mono">cmd: `python Beelzebub/tools/check_transform_guard.py selftest` → `selftest: ok, 10 checks x good/defect/empty` (fails when: any check passes its defect fixture, fails its good fixture, or passes an empty tree)</p>
 <p class="absent">no evidence line yet</p>
 <h3 id="D20"><span class="mono">D20</span> One log line per refusal, bounded</h3>
-<p>`Logic/TransformGuardLog.cs` `ShouldLog(steamId, route, verdict)` is true the first time a (player, route, reason) refusal is seen and false for every repeat and for Allow; `Allowed(steamId)` and `Forget(steamId)` drop that player&#39;s entries so their next refusal logs again; at `Cap` = 512 entries the ledger is cleared before adding, so it never holds more than 256 (worst case after a clear: one repeated line per player)</p>
+<p>`Logic/TransformGuardLog.cs` `ShouldLog(steamId, route, verdict)` is true the first time a (player, route, reason) refusal is seen and false for every repeat and for Allow; `Allowed(steamId)` and `Forget(steamId)` drop that player&#39;s entries so their next refusal logs again; at `Cap` = 512 entries the ledger is cleared before adding, so it never holds more than 512 (worst case after a clear: one repeated line per player)</p>
 <p class="mono">test: Beelzebub.Tests/TransformGateTests.cs (fails when: a repeated refusal logs twice, a different route/reason/player does not log, Allow logs, Allowed or Forget does not reset the player or touches another player, or 10 000 distinct one-time refusals leave more than 256 entries)</p>
 <p class="absent">no evidence line yet</p></section>
 </main>

@@ -180,3 +180,13 @@ Owner (Chaos), approving the proposed answers to the four rubric questions on `d
 4. Test the tests — every item has evidence that fails when its control is removed; every gating probe has one command; every build step cites its items; the rejections of Review 3 F1–F3 stand.
 15/15 layers · 49/49 probes
 VERDICT: READY
+
+## Review 5 · 2026-10-04 · human · plan commit 92fa1c3 · plan 72325 B · 20 items · files 15 · e2a34ab61317 · prompt fe77e6041d67 · scope A1,A2,A3,A4,A5,A6
+Owner (Chaos), approving the proposed answers to the four rubric questions on `docs/dod/transform-chain-guard.review.html`, scoped to A1–A6 (confirmed "READY as proposed", 2026-10-04):
+1. Coverage — each amendment names its layer and probe and re-answers it; probe 6.2 (A5) is now observed in game, not only read.
+2. Contest — each fix reuses what ApplyPhase already uses (`EffectiveSet`, `SetForPhase`); no new assumption.
+3. Hunt — the known limit stays: the pending window cannot be hit from chat (Morgana's form enriched before the phase command arrived).
+4. Test the tests — each amendment has a control planted once (`PhaseResetDue`, `PhaseHasAbilities`, the `wiring` Refresh check); Codex APPROVED on each fix diff; in game 14/14, 6/6, 32/32; the log check is OK.
+15/15 layers · 49/49 probes
+VERDICT: READY
+
