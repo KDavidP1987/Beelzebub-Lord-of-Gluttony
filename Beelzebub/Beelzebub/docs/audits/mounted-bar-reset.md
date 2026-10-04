@@ -93,10 +93,9 @@ plan rounds. The bug, reported by the owner on 2026-10-03:
   session before the fix (startup noise). No `Couldn't remap` after the graceful restart.
 - The A1 `[Beelz DISMOUNT]` lines stay: they print only on a mounted reset and name the next failure if one comes.
 
-Rollback range: 21b8c53..d496682
-Rollback: `git revert --no-edit 21b8c53^..d496682`, stop the server (`taskkill /PID <pid>`), then
+Rollback range: 21b8c53..6afcc24
+Rollback: `git revert --no-edit 21b8c53^..6afcc24`, stop the server (`taskkill /PID <pid>`), then
 `dotnet build Beelzebub/Beelzebub.sln -c Release` (redeploys the DLL), then start the server.
 Consequence for migrated state: a state.json already migrated by v0.137.3 holds the old slot-3 saddle bind on slot 5.
 v0.137.2's `BuildMountedBar` filters slot 5 out of {3,6,7}, so it is an inert slot-5 bind: not shown, not harmful, and
-cleared by `resetbar`. The reset change writes nothing persistent. (The range is widened to the release commit at
-step 10.)
+cleared by `resetbar`. The reset change writes nothing persistent. The range ends at the release commit 6afcc24.
