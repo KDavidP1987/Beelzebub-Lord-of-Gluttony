@@ -81,6 +81,7 @@ REQUIRED_TESTS = [
     "Page_fails_when_a_holder_past_the_cap_is_never_read",
     "IdleLine_fails_when_an_idle_boot_is_silent_or_unnamed",
     "LogIdle_fails_when_a_pop_pass_is_silent_under_verbose",
+    "MorePages_fails_when_a_server_over_the_cap_never_idles",
     "Arm_fails_when_repeated_pops_postpone_the_pass",
     "SweepLine_fails_when_a_count_or_the_cap_is_not_named",
     "RowLine_fails_when_a_name_breaks_the_line",
@@ -200,6 +201,12 @@ def check_wiring(root: str) -> str:
     sc = method_body(svc, "Scan")
     if sc is None or not re.search(r"ModLeak\.Page\s*\(", sc):
         bad.append("ModLeakService.Scan: does not page from the cursor (ModLeak.Page)")
+    if sc is None or not re.search(r"HasComponent<PrefabGUID>\s*\(\s*holder\s*\)\s*\)\s*continue", sc):
+        bad.append("ModLeakService.Scan: does not skip holders carrying a PrefabGUID (only prefab-less holders are candidates)")
+    if tk is None or not re.search(r"ModLeak\.MorePages\s*\(", tk):
+        bad.append("ModLeakService.Tick: capped is not decided by ModLeak.MorePages (a server over the cap never idles)")
+    if svc is not None and re.search(r"\bDateTime\.(Utc)?Now\b", svc):
+        bad.append("ModLeakService: reads the wall clock (DateTime.UtcNow/Now); the two-read gap must be monotonic")
     if bad:
         return "wiring: FAIL " + "; ".join(bad[:6])
     return f"wiring: ok, {pops} pop site(s) mark the sweep, heartbeat ticks it, boot marks it, select before clean, clear before destroy, fallbacks kept, idle boot logged, paged, pops coalesce, heartbeat guarded"
@@ -221,7 +228,7 @@ def check_actors(root: str) -> str:
         st = strip(read(root, rel))
         for c in re.finditer(r"(?<![\w.])Clean\s*\(|\bModLeakService\.Clean\s*\(", st):
             line = st[:c.start()].rsplit("\n", 1)[-1]
-            if re.search(r"\b(bool|void)\s*$", line):   # the declaration: `static bool Clean(`
+            if re.search(r"\b(bool\??|void)\s*$", line):   # the declaration: `static bool Clean(`
                 continue
             calls += 1
             if rel != SERVICE or enclosing(st, c.start()) != "Tick":
@@ -286,7 +293,7 @@ def check_data(root: str) -> str:
     vals = {k: (rows.get(k) or {}).get("FreeMoveAfterSeconds") for k in WHIRLWIND}
     if any(v is None for v in vals.values()):
         return f"data: FAIL Whirlwind group(s) or FreeMoveAfterSeconds missing: {vals}"
-    if any(float(v) != 1.0 for v in vals.values()):
+    if any(isinstance(v, bool) or not isinstance(v, (int, float)) or float(v) != 1.0 for v in vals.values()):
         return f"data: FAIL FreeMoveAfterSeconds not 1.0 on both groups: {vals}"
     return "data: ok, both Whirlwind v2 groups FreeMoveAfterSeconds 1.0"
 
@@ -299,7 +306,8 @@ def check_handoff(root: str) -> str:
     if not m or not b:
         return "handoff: FAIL no ApiVersion in " + ("ApiCommands.cs" if not m else "the handoff banner")
     api, banner = int(m[1]), int(b[1])
-    note = next((l for l in h.splitlines() if "v0.137.6" in l), "")
+    notes = [l for l in h.splitlines() if "v0.137.6" in l]
+    note = next((l for l in notes if all(t in l for t in HANDOFF_TOKENS)), notes[0] if notes else "")
     miss = [t for t in HANDOFF_TOKENS if t not in note]
     if api != API_VERSION or banner != api or miss:
         return f"handoff: FAIL api={api} banner={banner} (want {API_VERSION}) v0.137.6 line missing={miss}"
@@ -425,18 +433,20 @@ CHECKS = {"wiring": check_wiring, "actors": check_actors, "secrets": check_secre
 
 GOOD_SVC = '''
 internal static class ModLeakService {
-    internal static void MarkDue(string why) { _dueAt = ModLeak.Arm(_dueAt, DateTime.UtcNow, ReadGap); }
+    internal static void MarkDue(string why) { _dueAt = ModLeak.Arm(_dueAt, Now, ReadGap); }
     internal static void Tick()
     {
         // Clean( in a comment is not a call
+        bool capped = paged && ModLeak.MorePages(_cycleRead + pageRead, total);
         if (none) { if (ModLeak.LogIdle(_dueWhy, verbose)) Core.Log.LogInfo(ModLeak.IdleLine(_dueWhy, scan.Count, 1)); return; }
         var confirmed = ModLeak.Select(_firstRead, verdicts);
         foreach (var h in scan) if (Clean(h, out int removed)) cleaned++;
-        _dueAt = keptOnce > 0 || capped || failed > 0 ? DateTime.UtcNow + ReadGap : DateTime.MaxValue;
+        _dueAt = keptOnce > 0 || capped || failed > 0 ? Now + ReadGap : DateTime.MaxValue;
     }
     internal static List<HolderScan> Scan(Func<Entity, bool> f, int cap, ref int cursor, out bool capped)
     {
         var (page, next) = ModLeak.Page(sorted, cursor, cap);
+        if (!holder.Exists() || em.HasComponent<PrefabGUID>(holder)) continue;
     }
     static bool Clean(HolderScan h, out int removed)
     {
@@ -517,7 +527,10 @@ def _fixtures() -> dict[str, tuple[dict, dict]]:
         # defect: Clean without its catch (a throw would propagate into the heartbeat mid-pass)
         "wiring_catch": (code, dict(code, **{SERVICE: GOOD_SVC.replace("static bool Clean", "static bool CleanX")})),
         # defect: MarkDue restarts the pass on every pop (command spam would starve the sweep)
-        "wiring_arm": (code, dict(code, **{SERVICE: GOOD_SVC.replace("_dueAt = ModLeak.Arm(_dueAt, DateTime.UtcNow, ReadGap);", "_dueAt = DateTime.UtcNow + ReadGap; _firstRead = null;")})),
+        "wiring_arm": (code, dict(code, **{SERVICE: GOOD_SVC.replace("_dueAt = ModLeak.Arm(_dueAt, Now, ReadGap);", "_dueAt = Now + ReadGap; _firstRead = null;")})),
+        "wiring_prefab": (code, dict(code, **{SERVICE: GOOD_SVC.replace(" || em.HasComponent<PrefabGUID>(holder)", "")})),
+        "wiring_cycle": (code, dict(code, **{SERVICE: GOOD_SVC.replace("paged && ModLeak.MorePages(_cycleRead + pageRead, total)", "paged")})),
+        "wiring_clock": (code, dict(code, **{SERVICE: GOOD_SVC.replace("ModLeak.Arm(_dueAt, Now, ReadGap)", "ModLeak.Arm(_dueAt, DateTime.UtcNow, ReadGap)")})),
         # defect: the heartbeat calls Tick unguarded
         "wiring_try": (code, dict(code, **{HEART: "static class Heartbeat { static void Pulse() { ModLeakService.Tick(); } }\n"})),
         "actors": (code, dict(code, **{ACMDS: GOOD_ACMDS.replace(", adminOnly: true", "")})),

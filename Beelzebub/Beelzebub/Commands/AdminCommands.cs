@@ -73,6 +73,7 @@ internal static partial class AdminCommands
         ctx.Reply(".beelz admin desummon <player> / desummon-all — clean up ally summons · revert-all — end all transforms");
         ctx.Reply("-- RECOVERY (fix a stuck player, no server wipe) --");
         ctx.Reply(".beelz admin bar [player] — READ-ONLY: what drives each bar slot (start here for a stuck bar)");
+        ctx.Reply(".beelz admin modleak [player|all] — READ-ONLY: hidden slot helpers and whether any are stale (the startup 'Couldn't remap old Modification Id' errors; cleaned on their own)");
         ctx.Reply(".beelz admin purge <player> CONFIRM — reset the bar to vanilla + clear hotkeys (captures/unlocks kept; player re-slots after)");
         ctx.Reply(".beelz admin respawn <player> — respawn in place (keeps progress; keeps binds, so not a bar fix on its own)");
         ctx.Reply(".beelz admin rebuildslots / clearslotmods <player> — LEGACY slot levers (use purge)");
@@ -1294,7 +1295,7 @@ internal static partial class AdminCommands
         int cursor = 0;
         var holders = ModLeakService.Scan(all
             ? t => t.Exists() && Core.EntityManager.HasComponent<PlayerCharacter>(t)
-            : t => t == character, int.MaxValue, ref cursor, out _);
+            : t => t == character, int.MaxValue, ref cursor, out _, out _, out _);
         int rows = 0;
         var count = new System.Collections.Generic.Dictionary<Beelzebub.Logic.HolderVerdict, int>();
         foreach (var h in holders)

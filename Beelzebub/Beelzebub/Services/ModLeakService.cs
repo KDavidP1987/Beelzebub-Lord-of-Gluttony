@@ -27,12 +27,16 @@ internal static class ModLeakService
         int SpellModId, int NewGroup, LeakVerdict Verdict);
 
     internal static readonly TimeSpan ReadGap = TimeSpan.FromSeconds(2);
+    // monotonic: a wall-clock jump must not shorten the gap between the two reads
+    static readonly System.Diagnostics.Stopwatch Mono = System.Diagnostics.Stopwatch.StartNew();
+    static DateTime Now => DateTime.MinValue + Mono.Elapsed;
 
     static DateTime _dueAt = DateTime.MaxValue;   // first read of the next pass; MaxValue = no pass due
     static string _dueWhy;
     static HashSet<LeakHolder> _firstRead;         // stale holders of the first read, null between passes
     static int _cursor;                            // entity index the next capped page starts after (ModLeak.Page)
     static int _passCursor;                        // the page start both reads of one pass use
+    static int _cycleRead;                         // holders read by the earlier passes of this cycle (ModLeak.MorePages)
 
     /// <summary>Ask for a sweep pass (boot, bar reset, grant). Cheap: only arms the heartbeat; repeated calls coalesce.</summary>
     internal static void MarkDue(string why)
@@ -40,18 +44,19 @@ internal static class ModLeakService
         // coalesce: the first call arms the pass; later calls neither postpone it nor restart it (a holder a later pop
         // makes stale is "seen once" by this pass and confirmed by the next), so command spam cannot starve the sweep
         if (_dueAt == DateTime.MaxValue) _dueWhy = why;
-        _dueAt = ModLeak.Arm(_dueAt, DateTime.UtcNow, ReadGap);
+        _dueAt = ModLeak.Arm(_dueAt, Now, ReadGap);
     }
 
     /// <summary>Heartbeat: first read, then (≥ ReadGap later) the confirming read of the same page and the clean.</summary>
     internal static void Tick()
     {
-        if (!Core.IsReady || DateTime.UtcNow < _dueAt) return;
-        _dueAt = DateTime.UtcNow + ReadGap;   // a throw below retries one gap later, not every pulse
+        if (!Core.IsReady || Now < _dueAt) return;
+        _dueAt = Now + ReadGap;   // a throw below retries one gap later, not every pulse
         var clock = System.Diagnostics.Stopwatch.StartNew();
         if (_firstRead == null) _passCursor = _cursor;
         int cursor = _passCursor;
-        var scan = Scan(PlayerTarget, ModLeak.Cap, ref cursor, out bool capped);
+        var scan = Scan(PlayerTarget, ModLeak.Cap, ref cursor, out bool paged, out int pageRead, out int total);
+        bool capped = paged && ModLeak.MorePages(_cycleRead + pageRead, total);   // holders left unread this cycle
         var verdicts = new List<(LeakHolder, HolderVerdict)>(scan.Count);
         int stale = 0, unknown = 0;
         foreach (var h in scan)
@@ -67,11 +72,12 @@ internal static class ModLeakService
                 // nothing to do; a boot (and, with verbose logging, a pop) says so, so an idle sweep is told apart from one that never ran
                 if (ModLeak.LogIdle(_dueWhy, Beelzebub.Config.Settings.VerboseLogging.Value)) Core.Log.LogInfo(ModLeak.IdleLine(_dueWhy, scan.Count, clock.ElapsedMilliseconds));
                 _cursor = 0;
+                _cycleRead = 0;
                 _dueAt = DateTime.MaxValue;
                 return;
             }
             _firstRead = StaleOf(verdicts);
-            _dueAt = DateTime.UtcNow + ReadGap;
+            _dueAt = Now + ReadGap;
             return;
         }
         var confirmed = ModLeak.Select(_firstRead, verdicts);
@@ -79,15 +85,17 @@ internal static class ModLeakService
         foreach (var h in scan)
         {
             if (!confirmed.Contains(new LeakHolder(h.Holder.Index, h.Holder.Version))) continue;
-            if (Clean(h, out int removed)) { cleaned++; mods += removed; } else failed++;
+            bool? done = Clean(h, out int removed);   // null: already gone or being destroyed, nothing to retry
+            if (done == true) { cleaned++; mods += removed; } else if (done == false) failed++;
         }
         int keptOnce = stale - confirmed.Count;
         Core.Log.LogInfo(ModLeak.SweepLine(_dueWhy ?? "due", cleaned, mods, keptOnce, unknown, capped, clock.ElapsedMilliseconds));
         _firstRead = null;
-        _cursor = cursor;
+        _cycleRead = capped ? _cycleRead + pageRead : 0;
+        _cursor = capped ? cursor : 0;
         // a holder seen stale once, a failed clean or a capped pass gets another pass; an unreadable slot waits for the
         // next pop or boot (re-reading it every 2 s would not make it readable); else the sweep sleeps
-        _dueAt = keptOnce > 0 || capped || failed > 0 ? DateTime.UtcNow + ReadGap : DateTime.MaxValue;
+        _dueAt = keptOnce > 0 || capped || failed > 0 ? Now + ReadGap : DateTime.MaxValue;
     }
 
     static HashSet<LeakHolder> StaleOf(List<(LeakHolder H, HolderVerdict V)> verdicts)
@@ -100,13 +108,13 @@ internal static class ModLeakService
     static bool PlayerTarget(Entity t) => t.Exists() && Core.EntityManager.HasComponent<PlayerCharacter>(t);
 
     /// <summary>Clear the holder's leftover mods through the engine, re-resolve its slots, destroy it. False (and a
-    /// warning) when anything throws; a holder already gone or already being destroyed is skipped.</summary>
-    static bool Clean(HolderScan h, out int removed)
+    /// warning) when anything throws; null for a holder already gone or already being destroyed (skipped, not failed).</summary>
+    static bool? Clean(HolderScan h, out int removed)
     {
         removed = 0;
         var em = Core.EntityManager;
         Entity holder = h.Holder;
-        if (!holder.Exists() || em.HasComponent<DestroyTag>(holder)) return false;
+        if (!holder.Exists() || em.HasComponent<DestroyTag>(holder)) return null;
         try
         {
             removed = Core.ServerGameManager.Modifications.ClearLooseSourceModifications(holder, ref em);
@@ -128,9 +136,12 @@ internal static class ModLeakService
     /// <summary>Read every live holder (prefabs and disabled entities are not in the default query) whose rows ALL target
     /// an entity accepted by <paramref name="targetFilter"/>, and judge it. Read-only. At most <paramref name="cap"/>
     /// holders.</summary>
-    internal static List<HolderScan> Scan(Func<Entity, bool> targetFilter, int cap, ref int cursor, out bool capped)
+    internal static List<HolderScan> Scan(Func<Entity, bool> targetFilter, int cap, ref int cursor, out bool capped,
+        out int pageRead, out int total)
     {
         capped = false;
+        pageRead = 0;
+        total = 0;
         var result = new List<HolderScan>();
         var em = Core.EntityManager;
         var reg = Core.ServerGameManager.Modifications;
@@ -146,12 +157,16 @@ internal static class ModLeakService
             var sorted = new List<int>(byIndex.Keys);
             sorted.Sort();
             var (page, next) = ModLeak.Page(sorted, cursor, cap);
+            pageRead = page.Count;
+            total = sorted.Count;
             capped = next != 0;
             cursor = next;
             foreach (int idx in page)
             {
                 Entity holder = byIndex[idx];
-                if (!holder.Exists()) continue;
+                // a holder is the engine's prefab-less source entity; anything carrying a PrefabGUID (a buff, an item)
+                // is not one, whatever its buffer says
+                if (!holder.Exists() || em.HasComponent<PrefabGUID>(holder)) continue;
                 var buf = em.GetBuffer<AbilityGroupSlotModificationBuffer>(holder);
                 if (buf.Length == 0) continue;
                 var copy = new List<AbilityGroupSlotModificationBuffer>(buf.Length);

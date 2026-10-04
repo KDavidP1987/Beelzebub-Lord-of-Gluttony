@@ -118,6 +118,25 @@ public class ModLeakTests
     }
 
     [Fact]
+    public void MorePages_fails_when_a_server_over_the_cap_never_idles()
+    {
+        var idx = new List<int> { 10, 20, 30, 40, 50, 60, 70 };   // 7 holders, cap 3: never one page
+        int cursor = 0, cycleRead = 0, passes = 0;
+        bool more = true;
+        while (more && passes < 10)
+        {
+            var (read, next) = ModLeak.Page(idx, cursor, 3);
+            more = next != 0 && ModLeak.MorePages(cycleRead + read.Count, idx.Count);
+            cycleRead = more ? cycleRead + read.Count : 0;
+            cursor = more ? next : 0;
+            passes++;
+        }
+        Assert.Equal(3, passes);   // ceil(7 / 3), then the sweep may sleep
+        Assert.True(ModLeak.MorePages(3, 7));
+        Assert.False(ModLeak.MorePages(9, 7));
+    }
+
+    [Fact]
     public void Arm_fails_when_repeated_pops_postpone_the_pass()
     {
         var t0 = new System.DateTime(2026, 10, 4, 12, 0, 0, System.DateTimeKind.Utc);

@@ -90,6 +90,11 @@ public static class ModLeak
         return (read, take < n ? read[^1] : 0);
     }
 
+    /// <summary>Whether the sweep cycle still has unread holders: it has read <paramref name="readThisCycle"/> (this page
+    /// included) of <paramref name="total"/>. Once every holder was read the sweep may sleep, even when the holders never
+    /// fit one page — so a server with more than <see cref="Cap"/> holders still goes idle.</summary>
+    public static bool MorePages(int readThisCycle, int total) => readThisCycle < total;
+
     /// <summary>Whether an idle pass logs <see cref="IdleLine"/>: a boot always does; a pop-armed pass only with verbose logging.</summary>
     public static bool LogIdle(string why, bool verbose) => why == "boot" || verbose;
 
