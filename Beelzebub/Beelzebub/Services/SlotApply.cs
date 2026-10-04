@@ -639,6 +639,8 @@ internal static class SlotApply
     // or mount. Drained by RestoreResolvedGrants once the weapon owns the bar again (form exit, transform revert,
     // weapon equip), with a heartbeat retry for an exit seen while the leaving buff is still listed.
     static readonly Dictionary<ulong, (Entity Character, HashSet<int> Slots)> _pendingLive = new();
+    static readonly Dictionary<ulong, int> _pendingTries = new();
+    const int PendingMaxTries = 10;   // heartbeat retries (1 s each) once the bar is the weapon's, then give up + log
 
     static void MarkPending(Entity character, int slot)
     {
@@ -658,8 +660,14 @@ internal static class SlotApply
             var ch = _pendingLive[sid].Character;
             if (!ch.Exists() || ch.GetSteamId() != sid) { _pendingLive.Remove(sid); continue; }
             if (BarOwnedElsewhere(ch)) continue;
-            RestoreResolvedGrants(ch);
-            _pendingLive.Remove(sid);   // drained above; an unarmed / no-equip-buff bar is rebuilt by the next equip anyway
+            RestoreResolvedGrants(ch);   // DrainPending removes the entry once it ran
+            if (!_pendingLive.ContainsKey(sid)) { _pendingTries.Remove(sid); continue; }
+            // not drained (no equip buff, unarmed, a failure inside) — retry, capped (Codex round 4)
+            int tries = _pendingTries.TryGetValue(sid, out var n) ? n + 1 : 1;
+            if (tries < PendingMaxTries) { _pendingTries[sid] = tries; continue; }
+            Core.Log.LogWarning($"[Beelz GRANT] target={sid} pending slots [{string.Join(",", _pendingLive[sid].Slots)}] not restored after {tries} tries; the next weapon equip rebuilds them.");
+            _pendingLive.Remove(sid);
+            _pendingTries.Remove(sid);
         }
     }
 
@@ -709,13 +717,14 @@ internal static class SlotApply
         var ids = Beelzebub.Logic.GrantPush.ModsToPop(parse, equipBuff.Index, equipBuff.Version, removedAbility,
             TransformBuffService.KeepForeignMods(character, equipBuff));
         int popped = 0;
+        var poppedIds = new List<int>();   // only the ids actually removed decide "empty after pop" (Codex round 4)
         foreach (int id in ids)
         {
-            try { sgm.RemoveAbilityGroupModificationOnSlot(character, slot, ModificationId.NewId(id)); popped++; }
+            try { sgm.RemoveAbilityGroupModificationOnSlot(character, slot, ModificationId.NewId(id)); popped++; poppedIds.Add(id); }
             catch (Exception ex) { Core.Log.LogWarning($"[Beelz GRANT] slot={slot} remove ModId {id} failed: {ex.Message}"); }
         }
         bool push = Beelzebub.Logic.GrantPush.ShouldPush(ability._Value)
-                    && (!onlyIfEmptyAfterPop || Beelzebub.Logic.GrantPush.SlotEmptyAfterPop(parse, ids));
+                    && (!onlyIfEmptyAfterPop || Beelzebub.Logic.GrantPush.SlotEmptyAfterPop(parse, poppedIds));
         if (push) sgm.ModifyAbilityGroupOnSlot(equipBuff, character, slot, ability);
         MarkSlotDirty(character, slot);
         // form-bar-edits DIAGNOSTIC (temporary): every mod on the slot before the pop — id, the ability it sets, its
