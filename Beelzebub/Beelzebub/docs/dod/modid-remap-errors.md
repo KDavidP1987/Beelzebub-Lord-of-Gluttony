@@ -353,3 +353,8 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-04 · D21 · pass · cmd: `python Beelzebub/tools/check_modleak.py selftest` → `selftest: ok, 12 checks x good/defect/empty` · daa5b29 · claude
 - 2026-10-04 · note · in game (final build daa5b29) · boot `nothing stale among 4 player holder(s); 28 ms`, 0 remap errors; `SCENARIO PASS modid_remap 9/9`, `cast_basic 6/6`, `clearbar_fullreset 32/32`; `PREFLIGHT OK (2 checks)` -LogCheck; one in-play bar-reset pass cleaned 1 leaked holder in 268 ms (S-4 measurement, backlog `modleak-pass-cost`)
 - 2026-10-04 · note · post-audit · `docs/audits/modid-remap-errors.md`: /code-review 2 findings (CR1 → A2, CR2 → A3) + 1 note rejected; Codex diff rounds 1–3 (R1: F2 F3 F6 F8 accepted → A3 A4, five rejected; R2: F1 → A5; R3: checker-only F1 fixed); round cap reached
+- 2026-10-04 · D15 · pass · cmd: `python Beelzebub/tools/check_modleak.py handoff` → `handoff: ok, api 35, banner 35, v0.137.6 note carries 3 tokens` · 105a20e · claude
+- 2026-10-04 · D16 · pass · cmd: `pwsh Beelzebub/tools/preflight.ps1` → `PREFLIGHT OK (10 checks)` with `versions csproj 0.137.6, thunderstore.toml 0.137.6` · 105a20e · claude
+- 2026-10-04 · D18 · pass · cmd: `python Beelzebub/tools/check_modleak.py status` → `status: ok, nothing uncommitted but 2 owner file(s)` · 105a20e · claude
+- 2026-10-04 · D19 · pass · cmd: `python Beelzebub/tools/check_modleak.py paths` → `paths: ok, 24 changed, 28 declared` · 105a20e · claude
+- 2026-10-04 · D20 · pass · cmd: `python Beelzebub/tools/check_modleak.py backlog` → `backlog: ok, modid-remap-errors DONE v0.137.6` · 105a20e · claude
