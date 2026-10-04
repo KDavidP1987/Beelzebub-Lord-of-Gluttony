@@ -508,11 +508,11 @@ internal static class SlotApply
     /// Caller must NOT be mid-iteration over the equip buff's ReplaceAbilityOnSlotBuff (the
     /// DirtyTag AddComponent is structural).
     /// </summary>
-    static void RestoreSlotBaseValue(Entity character, Entity equipBuff, int slot, int removedAbility = 0)
+    static bool RestoreSlotBaseValue(Entity character, Entity equipBuff, int slot, int removedAbility = 0)
     {
         try
         {
-            if (!TryGetSlotBase(character, slot, out var baseAbility)) return;
+            if (!TryGetSlotBase(character, slot, out var baseAbility)) return false;
             // grant-refresh: pop our earlier pushes and every mod setting the removed grant (spellbook spells kept), put
             // the weapon's own row back on a slot the weapon owns, and never push Empty (it masks the base, D32). While
             // a form, transform or mount owns the bar only the pop runs — a push would land on that kit.
@@ -526,7 +526,7 @@ internal static class SlotApply
             if (!BarOwnedElsewhere(character))
             {
                 PushOnSlot(character, equipBuff, slot, new PrefabGUID(restore), "restore", removedAbility);
-                return;
+                return true;
             }
             // form-bar-edits (v0.137.2): a form/transform/mount owns the bar. Pop the removed grant's copies; in a VANILLA
             // form put the weapon skill back only if the slot is then empty (vanilla Wolf keeps it there). The slot is
@@ -534,10 +534,12 @@ internal static class SlotApply
             PushOnSlot(character, equipBuff, slot, new PrefabGUID(InVanillaFormOnly(character) ? restore : 0),
                        "restore-in-form", removedAbility, onlyIfEmptyAfterPop: true);
             MarkPending(character, slot);
+            return true;
         }
         catch (Exception ex)
         {
             Core.Log.LogWarning($"[Beelz] RestoreSlotBaseValue slot={slot} failed: {ex.Message}");
+            return false;
         }
     }
 
@@ -646,7 +648,11 @@ internal static class SlotApply
     {
         ulong sid = character.GetSteamId();
         if (sid == 0) return;
-        if (!_pendingLive.TryGetValue(sid, out var p) || p.Character != character) p = (character, new HashSet<int>());
+        if (!_pendingLive.TryGetValue(sid, out var p) || p.Character != character)
+        {
+            p = (character, new HashSet<int>());
+            _pendingTries.Remove(sid);   // a fresh queue starts its retry count at 0 (Codex round 5)
+        }
         p.Slots.Add(slot);
         _pendingLive[sid] = p;
     }
@@ -677,11 +683,15 @@ internal static class SlotApply
         ulong sid = character.GetSteamId();
         if (!_pendingLive.TryGetValue(sid, out var p) || BarOwnedElsewhere(character)) return;
         _pendingLive.Remove(sid);
+        var failed = new List<int>();
         foreach (int slot in p.Slots)
         {
             if (live.Exists(l => l.Slot == slot)) continue;   // a bind was pushed live above
-            RestoreSlotBaseValue(character, equipBuff, slot);
+            if (!RestoreSlotBaseValue(character, equipBuff, slot)) failed.Add(slot);
         }
+        // a slot whose restore failed stays queued for the heartbeat retry (Codex round 5); a clean drain resets the count
+        if (failed.Count == 0) { _pendingTries.Remove(sid); return; }
+        _pendingLive[sid] = (character, new HashSet<int>(failed));   // re-queued directly: the retry count keeps counting
     }
 
     /// <summary>Live push for a grant or a re-resolve: skipped while the bar is owned elsewhere.</summary>
