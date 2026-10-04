@@ -610,9 +610,14 @@ internal static class TransformBuffService
         if (buffEntity.Has<DestroyTag>()) return false; // already queued for destruction — never double-destroy
         // v0.137.3 (mounted-bar-reset A2): the tag is NOT always stamped in the same frame (the mount control buff read
         // tagAfter=False right after Destroy), so also refuse an entity we issued a destroy for a few frames ago.
-        if (!_destroyLedger.TryIssue(DestroyLedger.Key(buffEntity.Index, buffEntity.Version), UnityEngine.Time.frameCount)) return false;
-        LogIfSpellbookBuff(buffEntity);
-        DestroyUtility.Destroy(Core.EntityManager, buffEntity, DestroyDebugReason.TryRemoveBuff);
+        long key = DestroyLedger.Key(buffEntity.Index, buffEntity.Version);
+        if (!_destroyLedger.TryIssue(key, UnityEngine.Time.frameCount)) return false;
+        try
+        {
+            LogIfSpellbookBuff(buffEntity);
+            DestroyUtility.Destroy(Core.EntityManager, buffEntity, DestroyDebugReason.TryRemoveBuff);
+        }
+        catch { _destroyLedger.Forget(key); throw; } // a destroy that never happened must not read as issued
         return true;
     }
 

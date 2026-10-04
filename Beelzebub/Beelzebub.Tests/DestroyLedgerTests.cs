@@ -34,6 +34,16 @@ public class DestroyLedgerTests
     }
 
     [Fact]
+    public void Forget_fails_when_a_destroy_that_threw_still_reads_as_issued()
+    {
+        var l = new DestroyLedger();
+        l.TryIssue(Mount, 100);
+        l.Forget(Mount);
+        Assert.False(l.IsIssued(Mount, 100));
+        Assert.True(l.TryIssue(Mount, 100));
+    }
+
+    [Fact]
     public void TryIssue_fails_when_an_old_destroy_blocks_forever_or_the_ledger_grows_unbounded()
     {
         var l = new DestroyLedger();

@@ -7,6 +7,7 @@ namespace Beelzebub.Logic;
 // (the mount control buff read tagAfter=False right after the call), so a DestroyTag check alone let the orphan sweep
 // destroy the same buff a second time in one frame — the double-destroy crash class. The ledger remembers each destroy
 // issued for a few frames; an entity key is (index << 32) | version, so a recycled index is a different key.
+// Not thread-safe: every caller runs on the server's main thread (ECS system patches and chat commands).
 
 public sealed class DestroyLedger
 {
@@ -31,6 +32,9 @@ public sealed class DestroyLedger
     /// <summary>A destroy of <paramref name="key"/> was issued within the window ending at <paramref name="frame"/>.</summary>
     public bool IsIssued(long key, int frame) =>
         _issued.TryGetValue(key, out int at) && frame - at >= 0 && frame - at < WindowFrames;
+
+    /// <summary>Drops <paramref name="key"/> — for a destroy that threw, so it is not reported as issued.</summary>
+    public void Forget(long key) => _issued.Remove(key);
 
     public int Count => _issued.Count;
 
