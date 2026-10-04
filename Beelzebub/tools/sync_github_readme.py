@@ -25,7 +25,7 @@ BADGES = f"""<p align="center">
 </p>
 """
 
-GET_IT = f"""## 📦 Get it
+GET_IT = f"""## Get it
 
 - **Thunderstore (recommended):** [{STORE}]({STORE}) — install with r2modman / Thunderstore Mod Manager.
 - **GitHub Releases:** [{REPO}/releases]({REPO}/releases) — the same zip; drop `BepInEx/plugins/Beelzebub.dll`
@@ -36,7 +36,7 @@ GET_IT = f"""## 📦 Get it
 
 """
 
-DEV = """## 🛠️ For developers & server admins
+DEV = """## For developers and server admins
 
 ### Documentation
 | Doc | What it covers |
@@ -95,12 +95,13 @@ def main():
     s = re.sub(r'https://raw\.githubusercontent\.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/main/', '', s)
     # relative doc links in the Thunderstore README are relative to Beelzebub/Beelzebub/
     s = re.sub(r'\]\((docs/[^)]+)\)', r'](Beelzebub/Beelzebub/\1)', s)
-    s = s.replace(f'{REPO}/blob/main/LICENSE', 'LICENSE')
+    # absolute repo links (needed on Thunderstore) become relative on GitHub
+    s = s.replace(f'{REPO}/blob/main/', '')
     # badges under the splash, before the title
     i = s.index('# Beelzebub, Lord of Gluttony')
     s = s[:i] + BADGES + '\n' + s[i:]
-    # "Get it" before Screenshots, developer section before Credits
-    for anchor, block in (('## 📸 Screenshots', GET_IT), ('## 🙏 Credits', DEV)):
+    # "Get it" before the install notes, developer section before Credits
+    for anchor, block in (('## Before you install', GET_IT), ('## Credits', DEV)):
         if anchor not in s: sys.exit(f'anchor not found: {anchor}')
         s = s.replace(anchor, block + anchor, 1)
     header = ('<!-- GENERATED from Beelzebub/Beelzebub/README.md by Beelzebub/tools/sync_github_readme.py '

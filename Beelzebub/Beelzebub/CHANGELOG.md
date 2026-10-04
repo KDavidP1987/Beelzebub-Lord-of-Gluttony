@@ -1,26 +1,28 @@
 # Changelog
 
-What's new for players. This is the canonical changelog — it ships on Thunderstore
-(bundled with the release) and lives in the repo on GitHub. For the full technical
-history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
+What's new for players and server admins, newest first. This file ships with each Thunderstore release and
+lists the ten most recent versions; older versions are in
+[CHANGELOG_FULL.md](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/blob/main/Beelzebub/Beelzebub/docs/CHANGELOG_FULL.md),
+and the technical history is the [commit log](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
 ## [0.137.5] - 2026-10-04
 
-### Transforms never chain into each other
+### Transformations can no longer stack
 
-- **Every way into or back into a transform now checks first.** That covers `.beelz transform`, `.beelz phase`, the
-  automatic phase changes, `refresh`, travel and login. While a boss form is still appearing (Morgana's serpent form
-  takes a moment), `.beelz phase` and `.beelz refresh` reply "Still transforming — give it a moment, then try again."
-  instead of re-applying over it.
-- **`.beelz admin testform` no longer switches transforms in one step.** While you're transformed it says "Use
-  .beelz revert first, then run testform again.", the same rule `.beelz transform` has followed since v0.120.
-- **Fixed: `.beelz phase` works for Dracula and Morgana again.** Since v0.100 it refused every phase above 1 with
-  "no eligible abilities", because it only looked at the boss's own tagged abilities, not the curated phase kits.
-  Automatic (HP-based) phases were not affected. The reply now counts what actually lands on your bar, including your
-  custom loadout.
-- In Auto phase mode, leaving combat while a phase's form was still appearing could skip the reset to phase 1. It now
-  retries until it applies, unless you pick a phase yourself.
-- Server log: a refused transform step writes one `[Beelz TXGUARD] refused route=… reason=…` line.
+- **One transformation at a time.** `.beelz transform`, `.beelz phase`, `.beelz refresh`, automatic phase changes,
+  travel and login now all check your current form first, so a form can no longer be applied on top of another one.
+- **A boss form gets a moment to appear.** While a form is still appearing (Morgana's takes a second),
+  `.beelz phase` and `.beelz refresh` reply "Still transforming — give it a moment, then try again."
+- **`.beelz admin testform` asks you to revert first** while you are transformed, the same rule `.beelz transform`
+  already follows.
+
+### Fixes
+
+- **`.beelz phase` works for Dracula and Morgana again.** Since v0.100 it refused every phase above 1 with
+  "no eligible abilities". Automatic phase changes were not affected. The reply now counts the abilities that land
+  on your bar, including your own loadout.
+- Leaving combat while a phase was still appearing could skip the automatic return to phase 1. It now retries until
+  it applies, unless you choose a phase yourself.
 
 ## [0.137.4] - 2026-10-04
 
@@ -70,7 +72,6 @@ history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebu
   grant made while transformed shows when you change back (a weapon swap shows it at once).
 - Known issue: `.beelz unslot` while in a form (Wolf, etc.) leaves that slot blank until you re-equip your weapon.
   Fixed in 0.137.2.
-- Behind the scenes: removed two unused legacy reset helpers.
 
 ## [0.137.0] - 2026-09-30
 
@@ -112,7 +113,7 @@ order, and then reads the bar back to prove it.
   and **spells broken by earlier versions come back on their own at your next login**.
 - **Fixed:** `.beelz api catalog abilities` stopped partway with an error on abilities whose notes contain
   punctuation like "—"; long API lines are now split by size in bytes, so the whole catalog streams.
-- BCH: ApiVersion 33 (additive — one new config key, no API line changes).
+- BloodCraftHub: API version 33 (one new config key; nothing else changed).
 
 ## [0.136.0] - 2026-09-23
 
