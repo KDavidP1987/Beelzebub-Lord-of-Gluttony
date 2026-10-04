@@ -1,6 +1,7 @@
 using Beelzebub.Logic;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ProjectM;
 using ProjectM.Shared;
 using Stunlock.Core;
@@ -434,16 +435,31 @@ internal static class ShapeshiftAbilityService
     };
 
     // The only saddle slots we inject into. BLOCKED: 0(primary), 1(leap), 2(spacebar/dodge — the
-    // vampire horse's AB_Horse_Vampire_Leap_Travel lives here; blank on the basic horse), 4(gallop),
-    // 5(thrust). That leaves slots 3, 6, 7 (≈ R / C / Ultimate-T) free on ANY horse, preserving every
-    // riding key + the dismount (KDPen-confirmed by comparing the basic vs vampire mount-buff layouts).
-    static readonly int[] _mountedSlots = { 3, 6, 7 };
+    // vampire horse's AB_Horse_Vampire_Leap_Travel lives here; blank on the basic horse), 4(gallop).
+    // v0.137.3 (mounted-bar-reset): 5, 6, 7 (R / C / Ultimate-T) — every mount buff ends them with an Empty row, and
+    // slot 3 (the old set's first key) is never drawn by the client. Source of truth: Logic/MountedSlots.cs.
+    static readonly int[] _mountedSlots = MountedSlots.Allowed.ToArray();
 
     /// <summary>The only ability-bar slots the Mounted form can inject onto — the rest of the saddle bar
     /// is taken by riding controls (Q/E movement, space leap). Used by form-grant to reject a bind to a
     /// riding slot up front (otherwise it silently never renders, as it's filtered out at injection).</summary>
     public static bool IsValidMountedSlot(int slot) => Array.IndexOf(_mountedSlots, slot) >= 0;
-    public static string MountedSlotsHint => "3, 6, 7 (the R, C, and Ultimate keys)";
+    public static string MountedSlotsHint => MountedSlots.Hint;
+
+    /// <summary>Any mount, Beelzebub saddle loadout or not (a plain horse has none, so IsMounted alone misses it).
+    /// v0.137.3: moved here from SlotApply so the bar reset can plan its Dismount step.</summary>
+    public static bool IsMountedAny(Entity character)
+    {
+        if (IsMounted(character.GetSteamId())) return true;
+        if (!Core.EntityManager.HasBuffer<BuffBuffer>(character)) return false;
+        var buffs = Core.EntityManager.GetBuffer<BuffBuffer>(character);
+        for (int i = 0; i < buffs.Length; i++)
+        {
+            if (!buffs[i].Entity.Exists() || Core.EntityManager.HasComponent<DestroyTag>(buffs[i].Entity)) continue;
+            if (IsMountBuff(buffs[i].PrefabGuid._Value, buffs[i].PrefabGuid.GetPrefabName())) return true;
+        }
+        return false;
+    }
 
     /// <summary>True if this player currently has a Mounted-form saddle loadout injected (i.e. is riding
     /// with Beelz abilities). Used to open the chain-trace for mounted casts (mounting isn't an

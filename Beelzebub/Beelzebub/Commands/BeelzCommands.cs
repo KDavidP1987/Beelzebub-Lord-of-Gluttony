@@ -942,7 +942,7 @@ internal static class BeelzCommands
         // which looked like a bug. Reject it up front with the valid set instead.
         if (form == ShapeshiftForm.Mounted && !Services.ShapeshiftAbilityService.IsValidMountedSlot(slot))
         {
-            ctx.Reply($"Mounted form only uses slots {Services.ShapeshiftAbilityService.MountedSlotsHint} — the other slots are riding controls (Q/E/space) and can't hold a saddle ability. Re-grant this to slot 3, 6, or 7.");
+            ctx.Reply(Logic.MountedSlots.RejectMessage());
             return;
         }
 

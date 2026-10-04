@@ -614,27 +614,13 @@ internal static class SlotApply
     {
         ulong sid = character.GetSteamId();
         if (Core.AbilityRegistry.GetActiveTransform(sid) is not null) return true;
-        if (MountedAny(character)) return true;
+        if (ShapeshiftAbilityService.IsMountedAny(character)) return true;
         return TransformBuffService.ListOverrideBuffs(character).Count > 0;
-    }
-
-    /// <summary>Any mount, Beelzebub saddle loadout or not (a plain horse has none, so IsMounted alone misses it).</summary>
-    static bool MountedAny(Entity character)
-    {
-        if (ShapeshiftAbilityService.IsMounted(character.GetSteamId())) return true;
-        if (!Core.EntityManager.HasBuffer<BuffBuffer>(character)) return false;
-        var buffs = Core.EntityManager.GetBuffer<BuffBuffer>(character);
-        for (int i = 0; i < buffs.Length; i++)
-        {
-            if (!buffs[i].Entity.Exists() || Core.EntityManager.HasComponent<DestroyTag>(buffs[i].Entity)) continue;
-            if (ShapeshiftAbilityService.IsMountBuff(buffs[i].PrefabGuid._Value, buffs[i].PrefabGuid.GetPrefabName())) return true;
-        }
-        return false;
     }
 
     /// <summary>In a vanilla shapeshift form (Wolf, Bear, …) and neither in a Beelzebub transform nor mounted.</summary>
     static bool InVanillaFormOnly(Entity character)
-        => Core.AbilityRegistry.GetActiveTransform(character.GetSteamId()) is null && !MountedAny(character)
+        => Core.AbilityRegistry.GetActiveTransform(character.GetSteamId()) is null && !ShapeshiftAbilityService.IsMountedAny(character)
            && ShapeshiftAbilityService.GetCurrentForm(character) != ShapeshiftForm.None;
 
     // form-bar-edits (v0.137.2): slots whose live push (a grant) or weapon restore (an unslot) waited on a form, transform

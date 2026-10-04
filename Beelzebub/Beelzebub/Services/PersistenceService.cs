@@ -67,6 +67,7 @@ internal sealed class PersistenceService
             int formSlotCount = 0;
             int verbositySet = 0;
             int transformCount = 0;
+            int mountMigrated = 0;
             foreach (var (key, player) in dto.Players)
             {
                 ulong steamId = ulong.Parse(key);
@@ -116,6 +117,17 @@ internal sealed class PersistenceService
                         }
                         if (slots.Count > 0) perForm[form] = slots;
                         formSlotCount += slots.Count;
+                    }
+                    // v0.137.3 (mounted-bar-reset D3): a pre-0.137.3 saddle bind on slot 3 (never drawn) moves to R (5).
+                    if (perForm.TryGetValue(ShapeshiftForm.Mounted, out var mounted))
+                    {
+                        var mig = Logic.MountedSlots.Migrate(mounted);
+                        if (mig != Logic.MountedMigration.None)
+                        {
+                            mountMigrated++;
+                            Core.Log.LogInfo($"[Beelz MOUNT] {steamId} saddle slot 3 -> 5 ({(mig == Logic.MountedMigration.Moved ? "moved" : "dropped: slot 5 taken")})");
+                        }
+                        if (mounted.Count == 0) perForm.Remove(ShapeshiftForm.Mounted);
                     }
                     if (perForm.Count > 0)
                     {
@@ -179,6 +191,7 @@ internal sealed class PersistenceService
                 }
             }
 
+            if (mountMigrated > 0) RequestSave();
             Core.Log.LogInfo($"Loaded {registry.PlayerCount} player(s), {slotCount} universal slot(s), {weaponSlotCount} weapon-specific slot(s), {formSlotCount} form-specific slot(s), {verbositySet} verbosity, {transformCount} transform unlock(s) from {StateFilePath}.");
         }
         catch (Exception e)
