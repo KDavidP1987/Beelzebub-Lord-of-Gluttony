@@ -205,7 +205,7 @@ def check_wiring(root: str) -> str:
         bad.append("ModLeakService.Scan: does not skip holders carrying a PrefabGUID (only prefab-less holders are candidates)")
     if tk is None or not re.search(r"ModLeak\.MorePages\s*\(", tk):
         bad.append("ModLeakService.Tick: capped is not decided by ModLeak.MorePages (a server over the cap never idles)")
-    if md is None or "_popMidCycle = true" not in md or tk is None or not re.search(r"\|\|\s*fresh\b", tk):
+    if md is None or not re.search(r"if\s*\(\s*_firstRead\s*!=\s*null\s*\|\|\s*_cycleRead\s*>\s*0\s*\)\s*_popMidCycle\s*=\s*true", md) or tk is None or not re.search(r"\|\|\s*fresh\b", tk):
         bad.append("ModLeakService: a pop during a paged cycle does not schedule a fresh cycle (it may sit behind the cursor)")
     if svc is not None and re.search(r"\bDateTime\.(Utc)?Now\b", svc):
         bad.append("ModLeakService: reads the wall clock (DateTime.UtcNow/Now); the two-read gap must be monotonic")
@@ -435,7 +435,7 @@ CHECKS = {"wiring": check_wiring, "actors": check_actors, "secrets": check_secre
 
 GOOD_SVC = '''
 internal static class ModLeakService {
-    internal static void MarkDue(string why) { if (_cycleRead > 0) _popMidCycle = true; _dueAt = ModLeak.Arm(_dueAt, Now, ReadGap); }
+    internal static void MarkDue(string why) { if (_firstRead != null || _cycleRead > 0) _popMidCycle = true; _dueAt = ModLeak.Arm(_dueAt, Now, ReadGap); }
     internal static void Tick()
     {
         // Clean( in a comment is not a call
@@ -531,6 +531,7 @@ def _fixtures() -> dict[str, tuple[dict, dict]]:
         # defect: MarkDue restarts the pass on every pop (command spam would starve the sweep)
         "wiring_arm": (code, dict(code, **{SERVICE: GOOD_SVC.replace("_dueAt = ModLeak.Arm(_dueAt, Now, ReadGap);", "_dueAt = Now + ReadGap; _firstRead = null;")})),
         "wiring_midcycle": (code, dict(code, **{SERVICE: GOOD_SVC.replace(" || fresh ?", " ?")})),
+        "wiring_midpage": (code, dict(code, **{SERVICE: GOOD_SVC.replace("_firstRead != null || _cycleRead > 0", "_cycleRead > 0")})),
         "wiring_prefab": (code, dict(code, **{SERVICE: GOOD_SVC.replace(" || em.HasComponent<PrefabGUID>(holder)", "")})),
         "wiring_cycle": (code, dict(code, **{SERVICE: GOOD_SVC.replace("paged && ModLeak.MorePages(_cycleRead + pageRead, total)", "paged")})),
         "wiring_clock": (code, dict(code, **{SERVICE: GOOD_SVC.replace("ModLeak.Arm(_dueAt, Now, ReadGap)", "ModLeak.Arm(_dueAt, DateTime.UtcNow, ReadGap)")})),
