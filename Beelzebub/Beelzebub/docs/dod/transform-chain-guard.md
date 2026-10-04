@@ -294,3 +294,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-04 · note · planted · A2 · `resetDue` dropped from PhaseResetDue → `PhaseResetDue_fails_when_a_refused_reset_is_dropped` fails (1/1); `!inCombat` dropped → fails (1/1); restored → passes
 - 2026-10-04 · note · planted · A3 · Refresh's PhaseGate replaced by Allow → `wiring: FAIL Refresh command: ReapplyActiveTransform without or before PhaseGate`; restored → ok
 - 2026-10-04 · note · amend A4 · from Codex audit round 2 (F2 part, F3); built after recording
+- 2026-10-04 · note · build step 5 · audit `docs/audits/transform-chain-guard.md`: /code-review 2 findings (A2, A3), Codex audit 3 rounds → APPROVED (round 3), A4 from round 2; `rollback: ok`
