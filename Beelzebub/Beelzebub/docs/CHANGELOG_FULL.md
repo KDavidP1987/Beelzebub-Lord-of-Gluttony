@@ -3,6 +3,26 @@
 Every version, newest first. The shipped [CHANGELOG.md](../CHANGELOG.md) keeps the ten most recent; the technical
 history is the [commit log](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.137.6] - 2026-10-04
+
+### Server startup errors fixed
+
+- **No more `Couldn't remap old Modification Id` errors at startup.** Clearing or changing a spell slot could leave
+  a hidden helper object behind. It was saved with your world, and every startup logged an error for it. Beelzebub
+  now finds these leftovers after each startup and each bar change and removes them, after checking twice, 2 seconds
+  apart, that nothing uses them any more. The first startup on this version cleans up the ones already saved.
+- **Slot 7's cooldown sharing is right again.** Those leftovers could force the slot-7 spell's shared-cooldown
+  setting off, and change slot 1's spell modifiers. Removing them restores the real values.
+- **New admin tool: `.beelz admin modleak [player|all]`.** It is read-only and lists the hidden slot helpers and
+  whether any are stale. You won't need it normally: the cleanup runs on its own, and the server log shows
+  `[Beelz MODLEAK] sweep` lines.
+
+### Fixes
+
+- **Militia Leader's Whirlwind no longer logs a conflict warning at startup.** Its two versions disagreed on when
+  you can move again (1 s and 10 s). Both now use 1 s. Existing servers pick this up with
+  `.beelz admin reseed merge`.
+
 ## [0.137.5] - 2026-10-04
 
 ### Transformations can no longer stack

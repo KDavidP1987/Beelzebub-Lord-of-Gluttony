@@ -5,6 +5,26 @@ lists the ten most recent versions; older versions are in
 [CHANGELOG_FULL.md](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/blob/main/Beelzebub/Beelzebub/docs/CHANGELOG_FULL.md),
 and the technical history is the [commit log](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.137.6] - 2026-10-04
+
+### Server startup errors fixed
+
+- **No more `Couldn't remap old Modification Id` errors at startup.** Clearing or changing a spell slot could leave
+  a hidden helper object behind. It was saved with your world, and every startup logged an error for it. Beelzebub
+  now finds these leftovers after each startup and each bar change and removes them, after checking twice, 2 seconds
+  apart, that nothing uses them any more. The first startup on this version cleans up the ones already saved.
+- **Slot 7's cooldown sharing is right again.** Those leftovers could force the slot-7 spell's shared-cooldown
+  setting off, and change slot 1's spell modifiers. Removing them restores the real values.
+- **New admin tool: `.beelz admin modleak [player|all]`.** It is read-only and lists the hidden slot helpers and
+  whether any are stale. You won't need it normally: the cleanup runs on its own, and the server log shows
+  `[Beelz MODLEAK] sweep` lines.
+
+### Fixes
+
+- **Militia Leader's Whirlwind no longer logs a conflict warning at startup.** Its two versions disagreed on when
+  you can move again (1 s and 10 s). Both now use 1 s. Existing servers pick this up with
+  `.beelz admin reseed merge`.
+
 ## [0.137.5] - 2026-10-04
 
 ### Transformations can no longer stack
@@ -222,19 +242,3 @@ with `.beelz admin ability <name> …`.
   abilities and says why.
 - All of them are shown by `ability-inspect`, protected by the shared-part guard, and restored by `defaults`
   or a restart.
-
-## [0.133.0] - 2026-09-23
-
-### Per-hit damage scaling (off by default)
-
-- **New `Damage_Mode` setting.** `Off` (default) keeps the old short power boost around a captured cast.
-  `Telemetry` works out which of your casts caused each hit and counts what per-hit scaling *would* do,
-  without changing anything; check it with `.beelz admin damage-stats`. `Scale` applies your `DamageScale` to
-  each of those hits directly, with no power window, so nearby attacks aren't boosted by accident.
-- Damage keeps following your own Spell/Physical power (level, gear, potions). Boost or nerf with
-  `DamageScale`, clamp the result with `Damage_MinFactor` / `Damage_MaxFactor`, and choose whether the flat
-  part scales with `Damage_FlatPolicy`. %-of-max-HP damage is never scaled. Only players' captured abilities
-  are affected; bosses stay vanilla, and a hit that can't be traced to exactly one cast is left alone.
-- **`Summon_PowerMode`**: new servers use `OwnerRelative`, where a captured summon's power follows yours.
-  Existing servers stay on `Legacy` (the unit's own stats) until you switch.
-- Recommended: play one session in `Telemetry`, check that attribution reads *reliable*, then switch to `Scale`.

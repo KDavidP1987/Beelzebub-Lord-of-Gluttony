@@ -17,7 +17,7 @@
 a rare jackpot teaches you its entire kit at once. Slot what you collect on your action bar, bind the rest to extra
 hotkeys, and take the forms of the bosses you defeat.
 
-> **Status:** early access, **public test build (v0.137.5)**. Works end to end on dedicated servers. Expect rough
+> **Status:** early access, **public test build (v0.137.6)**. Works end to end on dedicated servers. Expect rough
 > edges, and expect test servers to be wiped. Feedback goes to the
 > [issue tracker](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/issues).
 
@@ -168,6 +168,7 @@ The full list, with every option, is in
 | `give` · `revoke` · `devour <player> <unitGuid>` · `transform-set <unit> <field> <value>` | Grants and transform rules |
 | `lock add/max/remove/list/check` · `reseed preview/merge/replace CONFIRM` | Locks · take new shipped defaults |
 | `bar <player>` · `purge <player> CONFIRM` · `cleanse <player>` · `respawn <player>` | Recovery: start with `bar` |
+| `modleak [player\|all]` | Read-only: hidden slot helpers and whether any are stale (the sweep cleans them on its own) |
 | `broadcast …` · `damage-stats` · `difficulty basic/brutal` | Server announcements and tuning |
 
 ## Configuration
@@ -191,6 +192,9 @@ The full list, with every option, is in
   `.beelz admin damage-stats` first.
 - **A boss form takes a moment to appear.** Until it does, `.beelz phase` and `.beelz refresh` reply "Still
   transforming". If a form never finishes, `.beelz revert` clears it.
+- **A deleted character's leftovers stay.** The startup cleanup only touches slot helpers that belong to a living
+  character. If a deleted character left any, they can keep logging one `Couldn't remap old Modification Id`
+  error at startup. It is harmless.
 - **Untested at scale:** other mods, other server presets and large populations.
 
 Especially useful to test: mixing captures with vanilla spells, hotkeys, the bar after weapon swaps, transforms and

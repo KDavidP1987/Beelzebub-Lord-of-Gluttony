@@ -23,9 +23,15 @@
 
 ---
 
-# ⭐ BCH CATCH-UP: v0.100 → v0.137.5 (read this first) ⭐
+# ⭐ BCH CATCH-UP: v0.100 → v0.137.6 (read this first) ⭐
 
-> **🆕 v0.137.5 — ApiVersion stays 35 (no gate change). No wire change.**
+> **🆕 v0.137.6 — modleak admin command; ApiVersion stays 35, no wire change.** New admin-only, read-only
+> `.beelz admin modleak [player|all]` (a server-log diagnostic; chat reply `modleak <who>: <n> slot-override holder(s) …`).
+> A heartbeat sweep cleans stale slot-override holders after boot and after every bar change, logging
+> `[Beelz MODLEAK] sweep …` to the server log only. No `[BEELZ:*]` line, player command or config key changed.
+> **What BCH should do:** nothing.
+>
+> **v0.137.5 — ApiVersion stays 35 (no gate change). No wire change.**
 > - **Transforms never chain.** Every route that applies or re-applies a transform form asks one gate first. Two
 >   replies are new or newly reachable:
 >   - `.beelz phase <n>` while the form is still spawning (Morgana's async serpent form, the first tick or two after

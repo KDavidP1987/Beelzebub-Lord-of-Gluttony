@@ -7,11 +7,11 @@
 |---|---|---|---|---|---|---|---|
 | [bar-reset](bar-reset.md) | Action-bar reset that clears every layer | draft | L | 33/33 | — | — |  |
 | [clearbar-fullreset](clearbar-fullreset.md) | clearbar - clear one set through the layered reset | done | M | 24/24 | 24 | 83 % |  |
-| [modid-remap-errors](modid-remap-errors.md) | modid-remap-errors - no stale slot-override holder outlives a pop | in-progress | M | 0/22 | 22 | 100 % |  |
+| [modid-remap-errors](modid-remap-errors.md) | modid-remap-errors - no stale slot-override holder outlives a pop | in-progress | M | 17/22 | 22 | 76 % |  |
 | [mounted-bar-reset](mounted-bar-reset.md) | Mounted bar - visible saddle keys and an honest reset on a horse | done | M | 18/18 | 18 | 100 % |  |
 | [transform-chain-guard](transform-chain-guard.md) | transform-chain-guard - no route chains one transform into another | done | M | 20/20 | 20 | 80 % |  |
 
-Most-missed layers — done plans: layer 6.2 (5), layer 4.5 (1), layer 13.2 (1), layer 7.3 (1), layer 11.2 (1); open plans (provisional): none.
+Most-missed layers — done plans: layer 6.2 (5), layer 4.5 (1), layer 13.2 (1), layer 7.3 (1), layer 11.2 (1); open plans (provisional): layer 7.2 (2), layer 11.4 (1), layer 13.2 (1).
 Miss history — done plans: 6.2 (2 of 3)
 Rework — done plans: 0 of 10 misses corrected an earlier amendment.
 

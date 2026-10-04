@@ -339,3 +339,17 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-04 · note · build (post-audit round 2) · `_popMidCycle` flag in MarkDue, fresh cycle at cycle end in Tick (A5); `check_modleak.py` requires it (`wiring_midcycle` fixture); Release build ok; `dotnet test` 260/260
 - 2026-10-04 · note · planted · D5 · fresh-cycle re-arm removed → `wiring: FAIL ModLeakService: a pop during a paged cycle does not schedule a fresh cycle …`; restored
 - 2026-10-04 · note · build (post-audit round 3) · Codex diff round 3 F1 (checker only): `wiring` now requires MarkDue's exact mid-cycle condition `_firstRead != null || _cycleRead > 0` (`wiring_midpage` fixture); planted (condition narrowed to `_cycleRead > 0`) → `wiring: FAIL ModLeakService: a pop during a paged cycle …`; restored
+- 2026-10-04 · D1 · pass · test: Beelzebub.Tests/ModLeakTests.cs → `Passed!  - Failed: 0, Passed: 260` (15 named ModLeak controls, each planted once) · daa5b29 · claude
+- 2026-10-04 · D2 · pass · test: Beelzebub.Tests/ModLeakTests.cs → `Passed!  - Failed: 0, Passed: 260` (15 named ModLeak controls, each planted once) · daa5b29 · claude
+- 2026-10-04 · D3 · pass · test: Beelzebub.Tests/ModLeakTests.cs → `Passed!  - Failed: 0, Passed: 260` (15 named ModLeak controls, each planted once) · daa5b29 · claude
+- 2026-10-04 · D4 · pass · test: Beelzebub.Tests/ModLeakTests.cs → `Passed!  - Failed: 0, Passed: 260` (15 named ModLeak controls, each planted once) · daa5b29 · claude
+- 2026-10-04 · D22 · pass · test: Beelzebub.Tests/ModLeakTests.cs → `Passed!  - Failed: 0, Passed: 260` (15 named ModLeak controls, each planted once) · daa5b29 · claude
+- 2026-10-04 · D5 · pass · cmd: `python Beelzebub/tools/check_modleak.py wiring` → `wiring: ok, 2 pop site(s) mark the sweep, heartbeat ticks it, boot marks it, select before clean, clear before destroy, fallbacks kept, idle boot logged, paged, pops coalesce, heartbeat guarded` · daa5b29 · claude
+- 2026-10-04 · D6 · pass · cmd: `python Beelzebub/tools/check_modleak.py actors` → `actors: ok, modleak adminOnly, 1 Clean call(s), all inside ModLeakService.Tick, 3 MarkDue call(s) in 3 allowed methods, pop entry points guarded` · daa5b29 · claude
+- 2026-10-04 · D7 · pass · cmd: `python Beelzebub/tools/check_modleak.py secrets` → `secrets: ok, 86 files, 0 hits` · daa5b29 · claude
+- 2026-10-04 · D8 · pass · cmd: `python Beelzebub/tools/check_modleak.py tests` → `tests: ok, 15 named ModLeak controls present` · daa5b29 · claude
+- 2026-10-04 · D9 · pass · cmd: `python Beelzebub/tools/check_modleak.py data` → `data: ok, both Whirlwind v2 groups FreeMoveAfterSeconds 1.0` · daa5b29 · claude
+- 2026-10-04 · D17 · pass · cmd: `python Beelzebub/tools/check_modleak.py rollback` → `rollback: ok, 3e3715c..daa5b29` · daa5b29 · claude
+- 2026-10-04 · D21 · pass · cmd: `python Beelzebub/tools/check_modleak.py selftest` → `selftest: ok, 12 checks x good/defect/empty` · daa5b29 · claude
+- 2026-10-04 · note · in game (final build daa5b29) · boot `nothing stale among 4 player holder(s); 28 ms`, 0 remap errors; `SCENARIO PASS modid_remap 9/9`, `cast_basic 6/6`, `clearbar_fullreset 32/32`; `PREFLIGHT OK (2 checks)` -LogCheck; one in-play bar-reset pass cleaned 1 leaked holder in 268 ms (S-4 measurement, backlog `modleak-pass-cost`)
+- 2026-10-04 · note · post-audit · `docs/audits/modid-remap-errors.md`: /code-review 2 findings (CR1 → A2, CR2 → A3) + 1 note rejected; Codex diff rounds 1–3 (R1: F2 F3 F6 F8 accepted → A3 A4, five rejected; R2: F1 → A5; R3: checker-only F1 fixed); round cap reached
