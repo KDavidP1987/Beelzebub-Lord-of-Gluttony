@@ -88,8 +88,37 @@ It failed 19/30 in game on v0.137.3 (plan Log, D12 dry-run).
   - build: 0 errors. tests: 221/221.
   - `check_clearbar` all ok (`paths` first caught the undeclared `Services/SlotApply.cs`, then was declared).
   - `check_bar_reset all` ok.
-- Round 2 (Codex, `d520a48..1488f99`): APPROVED, no findings — the post-audit is finished.
+- Round 2 (Codex, `d520a48..1488f99`): APPROVED, no findings.
 - Plan: A2/A3 name gating probe 6.2, so `review: pending` — a fresh plan review is owed before `close`.
+
+### Step 7 · 2026-10-04 · d91c1bd (A5 diagnostic), f7c51c2 (A6 fix)
+- **Deploy and runs:** each deploy closed the client, backed up both logs to `%TEMP%\beelz-logs-2026-10-04-clearbar*`,
+  stopped the server with `taskkill /PID` (no `/F`), built, checked the DLL with `cmp` (identical), then started the
+  server and ran `vrclient ensure`.
+  1. **On 1488f99:** `clearbar_fullreset` 30/32.
+     - Both RevertTransform runs read `survivors=none clean=0`: case f (`set=universal` while Beatrice) and case c
+       (`set=form:Wolf`).
+     - The reply's second line named `override buff still on: AB_Tailor_Shapeshift_Gargoyle_Buff` / `AB_Shapeshift_Wolf_Buff`.
+     - The cause was not proven, so the next build was a diagnostic (procedure 4, amendment A5).
+  2. **On d91c1bd:** 30/32 again.
+     - `[Beelz READBACK] override buff=Entity(582732:35) prefab=AB_Tailor_Shapeshift_Gargoyle_Buff … tag=False
+       issued=True` — the very entity `Remove` destroyed in the same reset. The DestroyTag lags the deferred destroy
+       (the mounted-bar-reset A2 class).
+  3. **On f7c51c2 (A6):** the readback also skips a buff whose destroy the ledger issued. `SlotApply.BarOwnedElsewhere`
+     keeps the tag-only test.
+     - Twins `IsLive` (spellbook repair) and the orphan sweep's source skip were left unchanged, with the reasons in A6.
+     - Results: `SCENARIO PASS clearbar_fullreset 32/32`, `SCENARIO PASS mounted_reset 14/14`,
+       `SCENARIO PASS cast_basic 6/6`, and no `[Beelz READBACK] … still live` line.
+     - Shots read: after `clearbar all` while mounted, the bar shows the plain Sword kit plus the vampire spells, with
+       no saddle ability.
+- log check: `pwsh Beelzebub/tools/preflight.ps1 -LogCheck` → PREFLIGHT OK (2 checks).
+  - LogOutput: 0 Beelzebub stack frames, 0 errors. The 2 warnings are the startup `[Beelz TUNE]` notices.
+  - NyarDev: 0 errors. Its 226 `LogMissingPrefab` stack lines appear in every backup of the day (pre-existing).
+- `check_bar_reset.py session`: every ClearSet line parsed (the A4 fix works — no D30). It fails only the bar-reset
+  scenario's own D6/D8/D9 steps, which this session did not run.
+- Round 3 (Codex, `985bebc..f7c51c2`, sources pasted, no reads attempted): APPROVED, no findings. The post-audit is
+  finished at round 3 of 3.
+- Codex verdict: APPROVED (round 3) — on the A5/A6 diff; rounds 1-2 above.
 
 ### Rollback
 Rollback range: `d62be28..d520a48` (the release commit is added to the range in step 8).
