@@ -271,7 +271,7 @@ internal static class TransformCommands
         // count it the way EffectiveSet does (only phases the form defines), or the command refuses it.
         int curatedCount = 0;
         if (BossFormRegistry.TryResolve(active.UnitPrefabGuid, abilities, out var bossForm) && n <= bossForm.FormCount)
-            foreach (int ab in bossForm.SetForPhase(n)) if (ab != 0) curatedCount++;
+            foreach (int ab in bossForm.SetForPhase(n) ?? System.Array.Empty<int>()) if (ab != 0) curatedCount++;
         if (!TransformGate.PhaseHasAbilities(curatedCount, abilities.Count, customCount))
         {
             ctx.Reply($"Phase {n} has no eligible abilities for {Core.AbilityMetadata.ResolveUnitName(pg._Value)}. Aborting.");
@@ -293,7 +293,14 @@ internal static class TransformCommands
         string applyHint = appliedNow ? "Spell bar swapped." : "Spell bar will swap this frame.";
         string name = PhaseName(active.UnitPrefabGuid, n);
         string phaseLabel = name != null ? $"Phase {n} ({name})" : $"Phase {n}";
-        ctx.Reply($"{phaseLabel} active: {System.Math.Max(curatedCount, abilities.Count)} abilities now on the bar. {applyHint}");
+        // A6: count what ApplyPhase put on the bar — the merged curated + custom set for a form unit.
+        int barCount = abilities.Count;
+        if (bossForm != null)
+        {
+            barCount = 0;
+            foreach (int ab in Core.Transforms.EffectiveSet(steamId, active.UnitPrefabGuid, n, bossForm)) if (ab != 0) barCount++;
+        }
+        ctx.Reply($"{phaseLabel} active: {barCount} abilities now on the bar. {applyHint}");
     }
 
     /// <summary>v0.43.1: the curated name of a boss form-phase (e.g. "Humanoid"/"Serpent"), or null.</summary>

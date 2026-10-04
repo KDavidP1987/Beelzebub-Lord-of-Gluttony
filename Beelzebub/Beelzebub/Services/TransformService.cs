@@ -1405,7 +1405,7 @@ internal sealed class TransformService
     /// layered over the curated default FormSet (slots the player didn't set keep the default). Slot-indexed
     /// (index = slot). A phase beyond the unit's default count uses ONLY the player's custom slots.
     /// </summary>
-    int[] EffectiveSet(ulong steamId, int unitGuid, int phase, Services.BossFormRegistry.BossForm bossForm)
+    internal int[] EffectiveSet(ulong steamId, int unitGuid, int phase, Services.BossFormRegistry.BossForm bossForm)
     {
         int defaultCount = bossForm?.FormCount ?? 0;
         int[] def = (bossForm != null && phase >= 1 && phase <= defaultCount)
