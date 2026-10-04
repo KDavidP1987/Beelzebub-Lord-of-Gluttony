@@ -980,7 +980,8 @@ internal sealed class TransformService
     public bool ReapplyActiveTransform(ulong steamId, ActiveTransform active, Entity character)
     {
         if (active == null || !character.Exists()) return false;
-        // v0.137.5: never re-apply over a form buff that is still spawning — the next re-apply trigger retries.
+        // v0.137.5: never re-apply over a form buff that is still spawning. Not re-tried here: the caller reports
+        // false (refresh replies the gate text); a form that never spawns is left to .beelz revert.
         if (PhaseGate(steamId, active, TransformRoute.Reapply) != TransformGateVerdict.Allow) return false;
         // v0.47.0: a native-form test resumes by re-applying its form buff + custom set
         // directly (single set, no phases). Exempt from the non-boss guard below.
@@ -1082,6 +1083,7 @@ internal sealed class TransformService
                 && (TransformBuffService.ReapplyFormAbilitiesInPlace(character, formBuf, set)
                     || TransformBuffService.ApplyForm(character, formBuf, set, dur));
             active.CurrentPhase = phase;
+            active.PhaseResetDue = false;
             Core.AbilityRegistry.SetActiveTransform(steamId, active);
             if (character.Exists())
             {
@@ -1098,6 +1100,7 @@ internal sealed class TransformService
             appliedNow = TransformBuffService.Reapply(character, abilities);
 
         active.CurrentPhase = phase;
+        active.PhaseResetDue = false;
         Core.AbilityRegistry.SetActiveTransform(steamId, active);
 
         if (character.Exists())
@@ -1123,7 +1126,20 @@ internal sealed class TransformService
     {
         foreach (var (steamId, active) in Core.AbilityRegistry.AllActiveTransforms())
         {
-            if (active == null || !active.InCombat) continue;
+            if (active == null) continue;
+            // v0.137.5 (A2): re-try a combat-end reset the gate refused (form still spawning); refused again → next pass.
+            if (TransformGate.PhaseResetDue(active.PhaseResetDue, active.InCombat, active.CurrentPhase))
+            {
+                Entity owner = active.Character.Exists() ? active.Character : EntityExtensions.FindCharacterBySteamId(steamId);
+                if (owner.Exists())
+                {
+                    bool reset = ApplyPhase(steamId, active, owner, 1);
+                    if (Beelzebub.Config.Settings.VerboseLogging.Value)
+                        Core.Log.LogInfo($"[Beelz PHASE] combat-end reset retry {steamId} → phase 1 applied={reset} due={active.PhaseResetDue}.");
+                }
+                continue;
+            }
+            if (!active.InCombat) continue;
             Entity character = active.Character;
             if (!character.Exists()) continue;
             if (!character.TryGetComponent<Health>(out var health)) continue;

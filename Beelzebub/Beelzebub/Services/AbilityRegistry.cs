@@ -140,6 +140,9 @@ internal sealed class ActiveTransform : SummonOwnerState
     // doubles as the one-way ratchet: it only climbs while InCombat, and resets
     // to 1 when combat ends (mirrors a boss leash-reset).
     public bool InCombat;
+    // v0.137.5: the combat-end reset to phase 1 was asked for and not applied yet (the gate refused it while a
+    // form was spawning); the Auto-HP tick re-tries it. Cleared by any applied phase. Runtime-only.
+    public bool PhaseResetDue;
     public Unity.Entities.Entity Character;
     // v0.43.7: when set, the owner is DISCONNECTED and this transform is parked in the
     // reconnect-grace window (Transform_ReconnectGraceSeconds). TransformService.Tick

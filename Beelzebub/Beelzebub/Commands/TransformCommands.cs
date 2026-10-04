@@ -338,6 +338,13 @@ internal static class TransformCommands
         {
             string unitName = Core.AbilityMetadata?.ResolveUnitName(active.UnitPrefabGuid)
                               ?? new PrefabGUID(active.UnitPrefabGuid).GetPrefabName();
+            // v0.137.5 (A3): say why when the form is still spawning, instead of "see server log".
+            var verdict = Core.Transforms.PhaseGate(steamId, active, TransformRoute.Reapply);
+            if (verdict != TransformGateVerdict.Allow)
+            {
+                ctx.Reply(TransformGate.Message(verdict, TransformRoute.Reapply, null));
+                return;
+            }
             bool ok = Core.Transforms.ReapplyActiveTransform(steamId, active, character);
             ctx.Reply(ok
                 ? $"Re-applied your {unitName} transformation bar."

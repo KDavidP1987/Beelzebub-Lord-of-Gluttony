@@ -93,4 +93,12 @@ public static class TransformGate
         };
         return $"[Beelz TXGUARD] refused route={route} reason={reason} steamId={steamId} unit={unit}";
     }
+
+    /// <summary>
+    /// v0.137.5 (A2): is the combat-end reset to phase 1 still owed? The reset runs once, when combat ends; the gate
+    /// can refuse it while a phase's async form is spawning, so the Auto-HP tick re-tries it while this is true.
+    /// A flag rather than "out of combat ⇒ phase 1": Auto mode still lets the player pick a phase by hand.
+    /// </summary>
+    public static bool PhaseResetDue(bool resetDue, bool inCombat, int currentPhase) =>
+        resetDue && !inCombat && currentPhase > 1;
 }

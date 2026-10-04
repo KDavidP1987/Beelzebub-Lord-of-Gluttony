@@ -92,6 +92,7 @@ def enclosing(st: str, pos: int) -> str | None:
     return name
 
 REQUIRED_TESTS = [
+    "PhaseResetDue_fails_when_a_refused_reset_is_dropped",
     "Decide_fails_when_a_pending_form_allows_any_route",
     "Decide_fails_when_an_active_transform_allows_a_second_activate",
     "Decide_fails_when_the_same_unit_reads_as_another_unit",
@@ -178,6 +179,13 @@ def check_wiring(root: str) -> str:
         g, a = first(ph, [r"\bPhaseGate\s*\("]), first(ph, [r"\bApplyPhase\s*\("])
         if g is None or (a is not None and a < g):
             bad.append("Phase command: ApplyPhase without or before PhaseGate")
+    rf = method_body(cmd, "Refresh")
+    if rf is None:
+        bad.append("Refresh command: not found")
+    else:
+        g, a = first(rf, [r"\bPhaseGate\s*\("]), first(rf, [r"\bReapplyActiveTransform\s*\("])
+        if g is None or (a is not None and a < g):
+            bad.append("Refresh command: ReapplyActiveTransform without or before PhaseGate")
     if bad:
         return "wiring: FAIL " + "; ".join(bad)
     return "wiring: ok, 4 routes gated, testform never reverts, phase command gated, revert forgets the ledger, login clears a stale pending form"
@@ -422,6 +430,12 @@ public static void Phase(ChatCommandContext ctx, int n = -1)
 [Command("revert", description: "Revert.")]
 public static void Revert(ChatCommandContext ctx)
 {
+}
+[Command("refresh", description: "Refresh.")]
+public static void Refresh(ChatCommandContext ctx)
+{
+    if (Core.Transforms.PhaseGate(steamId, active, TransformRoute.Reapply) != TransformGateVerdict.Allow) { return; }
+    bool ok = Core.Transforms.ReapplyActiveTransform(steamId, active, character);
 }
 '''
 GOOD_ACMDS = '''

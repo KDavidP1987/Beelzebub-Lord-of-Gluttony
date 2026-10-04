@@ -129,6 +129,9 @@ internal static class UpdateBuffsBufferDestroyPatch
                                     == Beelzebub.Config.Settings.PhaseControlMode.Auto
                                 && activeT.CurrentPhase > 1)
                             {
+                                // v0.137.5 (A2): owed until applied — the gate refuses while a form is still
+                                // spawning, and the Auto-HP tick re-tries it (any applied phase clears the flag).
+                                activeT.PhaseResetDue = true;
                                 try { Core.Transforms.ApplyPhase(steamId, activeT, target, 1); }
                                 catch (Exception ex)
                                 {

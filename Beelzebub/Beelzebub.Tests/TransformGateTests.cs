@@ -146,6 +146,16 @@ public class TransformGateTests
         }
     }
 
+    [Fact]
+    public void PhaseResetDue_fails_when_a_refused_reset_is_dropped()
+    {
+        Assert.True(TransformGate.PhaseResetDue(resetDue: true, inCombat: false, currentPhase: 2));
+        Assert.True(TransformGate.PhaseResetDue(resetDue: true, inCombat: false, currentPhase: 3));
+        Assert.False(TransformGate.PhaseResetDue(resetDue: true, inCombat: true, currentPhase: 2));    // auto-advance owns combat
+        Assert.False(TransformGate.PhaseResetDue(resetDue: true, inCombat: false, currentPhase: 1));   // already reset
+        Assert.False(TransformGate.PhaseResetDue(resetDue: false, inCombat: false, currentPhase: 2));  // a manual phase stays
+    }
+
     [Theory]
     [InlineData(TransformRoute.Activate, TransformGateVerdict.RefuseActive, "route=Activate reason=Active")]
     [InlineData(TransformRoute.Activate, TransformGateVerdict.RefuseSameUnit, "route=Activate reason=SameUnit")]
