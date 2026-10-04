@@ -83,9 +83,9 @@ public class ModLeakTests
     [Fact]
     public void SweepLine_fails_when_a_count_or_the_cap_is_not_named()
     {
-        Assert.Equal("[Beelz MODLEAK] sweep (boot): cleaned 7 stale holder(s), 22 leftover mod(s) removed; 0 seen stale once (rechecked next pass), 0 unreadable.",
-            ModLeak.SweepLine("boot", 7, 22, 0, 0, false));
-        Assert.Contains($"capped at {ModLeak.Cap} holders", ModLeak.SweepLine("boot", 0, 0, 2, 1, true));
+        Assert.Equal("[Beelz MODLEAK] sweep (boot): cleaned 7 stale holder(s), 22 leftover mod(s) removed; 0 seen stale once (rechecked next pass), 0 unreadable; 12 ms.",
+            ModLeak.SweepLine("boot", 7, 22, 0, 0, false, 12));
+        Assert.Contains($"capped at {ModLeak.Cap} holders", ModLeak.SweepLine("boot", 0, 0, 2, 1, true, 3));
     }
 
     [Fact]

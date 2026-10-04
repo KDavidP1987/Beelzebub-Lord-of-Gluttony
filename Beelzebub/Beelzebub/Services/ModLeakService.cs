@@ -46,6 +46,7 @@ internal static class ModLeakService
     internal static void Tick()
     {
         if (!Core.IsReady || DateTime.UtcNow < _dueAt) return;
+        var clock = System.Diagnostics.Stopwatch.StartNew();
         var scan = Scan(PlayerTarget, ModLeak.Cap, out bool capped);
         var stale = new HashSet<LeakHolder>();
         int unknown = 0;
@@ -69,7 +70,7 @@ internal static class ModLeakService
             if (Clean(h, out int removed)) { cleaned++; mods += removed; }
         }
         int keptOnce = stale.Count - confirmed.Count;
-        Core.Log.LogInfo(ModLeak.SweepLine(_dueWhy ?? "due", cleaned, mods, keptOnce, unknown, capped));
+        Core.Log.LogInfo(ModLeak.SweepLine(_dueWhy ?? "due", cleaned, mods, keptOnce, unknown, capped, clock.ElapsedMilliseconds));
         _firstRead = null;
         // a holder seen stale once, an unreadable slot or a capped pass gets one more pass; else the sweep sleeps
         _dueAt = keptOnce > 0 || capped ? DateTime.UtcNow + ReadGap : DateTime.MaxValue;

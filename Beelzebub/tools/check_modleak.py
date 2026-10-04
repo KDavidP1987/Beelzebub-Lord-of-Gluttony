@@ -55,7 +55,16 @@ SECRET_RE = re.compile(r"(?i)\b(password|passwd|api[_-]?key|secret|bearer|access
 CONSEQUENCE = "save-data-nyardev"
 ROLLBACK_STEPS = ["git revert", "dotnet build Beelzebub/Beelzebub.sln -c Release", "taskkill /PID"]
 SOURCE_EXT = (".cs", ".json", ".toml")
-POP = re.compile(r"\bRemoveAbilityGroupModificationOnSlot\s*\(")
+POP = re.compile(r"\bRemoveAbilityGroupModificationOnSlot\s*\(|\bModifications\.Remove\w*\s*\(")
+# (file, outermost method) -> may arm the sweep. Arming only moves WHEN a pass runs; what a pass cleans is decided by
+# ModLeak alone, so no route can choose a holder to destroy.
+MARK_CALLERS = {(f"{PROJ}/Core.cs", "TryInitialize"), (f"{PROJ}/Services/SlotApply.cs", "PushOnSlot"),
+                (f"{PROJ}/Services/TransformBuffService.cs", "PopSlotModifications")}
+REMAP = "Couldn't remap old Modification Id"
+WHIRL_REJECT = "AB_Militia_Leader_Whirlwind_v2_Cast rejected"
+SWEEP_BOOT = re.compile(r"\[Beelz MODLEAK\] sweep \(boot\): cleaned (\d+) stale holder\(s\), (\d+) leftover mod\(s\) removed; (\d+) seen stale once .*?, (\d+) unreadable.*?; (\d+) ms\.")
+CLEAN_FAIL = re.compile(r"\[Beelz MODLEAK\] clean holder=\S+ failed")
+BOOT_BUDGET_MS = 250
 MARK = re.compile(r"\bModLeakService\.MarkDue\s*\(|(?<![.\w])MarkDue\s*\(")
 DECL = re.compile(r"(\w+)\s*\([^;{}()]*\)\s*(?:where[^{]*)?\{")
 KEYWORDS = {"if", "for", "foreach", "while", "switch", "catch", "using", "lock", "fixed", "else", "return", "new"}
@@ -167,9 +176,18 @@ def check_wiring(root: str) -> str:
         bad.append("ModLeakService.Tick: no ModLeak.Confirm before Clean")
     if not _order(method_body(svc, "Clean"), r"\bClearLooseSourceModifications\s*\(", r"\bDestroyUtility\.Destroy\s*\("):
         bad.append("ModLeakService.Clean: no ClearLooseSourceModifications before DestroyUtility.Destroy")
+    cl = method_body(svc, "Clean")
+    if cl is None or not re.search(r"\bcatch\b", cl) or not re.search(r"\bDestroyTag\b", cl):
+        bad.append("ModLeakService.Clean: no catch (a throw must keep the holder) or no DestroyTag skip")
+    rs = method_body(svc, "ReadSlot")
+    if rs is None or not re.search(r"\bcatch\b", rs) or "SlotModParse.Failed()" not in rs:
+        bad.append("ModLeakService.ReadSlot: a failed dump does not read as SlotModParse.Failed()")
+    tk = method_body(svc, "Tick")
+    if tk is None or not re.search(r"keptOnce\s*>\s*0\s*\|\|\s*capped", tk):
+        bad.append("ModLeakService.Tick: does not re-arm when a holder was seen stale once or the pass was capped")
     if bad:
         return "wiring: FAIL " + "; ".join(bad[:6])
-    return f"wiring: ok, {pops} pop site(s) mark the sweep, heartbeat ticks it, boot marks it, confirm before clean, clear before destroy"
+    return f"wiring: ok, {pops} pop site(s) mark the sweep, heartbeat ticks it, boot marks it, confirm before clean, clear before destroy, fallbacks kept"
 
 
 def check_actors(root: str) -> str:
@@ -193,9 +211,20 @@ def check_actors(root: str) -> str:
             calls += 1
             if rel != SERVICE or enclosing(st, c.start()) != "Tick":
                 bad.append(f"{rel}:{enclosing(st, c.start())} calls Clean")
+    marks = 0
+    for rel in files:
+        if rel == SERVICE:
+            continue
+        st = strip(read(root, rel))
+        for c in re.finditer(r"\bModLeakService\.MarkDue\s*\(", st):
+            marks += 1
+            span = outer_span(st, c.start())
+            if (rel, span[0] if span else None) not in MARK_CALLERS:
+                bad.append(f"{rel}:{span[0] if span else None} arms the sweep")
     if bad:
         return f"actors: FAIL {bad[:6]}"
-    return f"actors: ok, modleak adminOnly, {calls} Clean call(s), all inside ModLeakService.Tick"
+    return (f"actors: ok, modleak adminOnly, {calls} Clean call(s), all inside ModLeakService.Tick, "
+            f"{marks} MarkDue call(s) in {len(MARK_CALLERS)} allowed methods")
 
 
 def check_secrets(root: str) -> str:
@@ -320,6 +349,49 @@ def check_status(root: str) -> str:
     return f"status: ok, nothing uncommitted but {len(lines)} owner file(s)"
 
 
+def check_bootsweep(root: str, log: str | None = None, minimum: int = 7) -> str:
+    """D10: the first boot of the build logged exactly one boot sweep that cleaned >= minimum holders, read none as
+    unreadable, stayed under BOOT_BUDGET_MS, and no clean failed."""
+    path = log or os.path.join(root, "BepInEx", "LogOutput.log")
+    if not os.path.isfile(path):
+        return f"bootsweep: FAIL no input ({path} missing)"
+    with open(path, encoding="utf-8", errors="replace") as f:
+        text = f.read()
+    if not text.strip():
+        return f"bootsweep: FAIL no input ({path} empty)"
+    sweeps = SWEEP_BOOT.findall(text)
+    fails = CLEAN_FAIL.findall(text)
+    if len(sweeps) != 1:
+        return f"bootsweep: FAIL {len(sweeps)} boot sweep line(s), want 1"
+    cleaned, mods, once, unread, ms = map(int, sweeps[0])
+    if cleaned < minimum or unread or fails or ms > BOOT_BUDGET_MS:
+        return (f"bootsweep: FAIL cleaned={cleaned} (want >= {minimum}) unreadable={unread} failed={len(fails)} "
+                f"ms={ms} (budget {BOOT_BUDGET_MS})")
+    return f"bootsweep: ok, cleaned {cleaned} holder(s), {mods} leftover mod(s), {ms} ms, 0 failed"
+
+
+def check_restarts(root: str, dirs: list[str] | None = None) -> str:
+    """D12: every named restart backup holds both logs of a completed boot, with 0 remap errors and 0 Whirlwind rejects."""
+    if not dirs:
+        return "restarts: FAIL no input (no backup folders given; pass --dirs <r1> <r2>)"
+    out = []
+    for d in dirs:
+        ny, lo = os.path.join(d, "NyarDev.log"), os.path.join(d, "LogOutput.log")
+        if not (os.path.isfile(ny) and os.path.isfile(lo)):
+            return f"restarts: FAIL no input ({d} lacks NyarDev.log or LogOutput.log)"
+        with open(ny, encoding="utf-8", errors="replace") as f:
+            nt = f.read()
+        with open(lo, encoding="utf-8", errors="replace") as f:
+            lt = f.read()
+        if "Server Setup Complete" not in nt:
+            return f"restarts: FAIL no input ({ny} is not a completed boot)"
+        r, w = nt.count(REMAP), lt.count(WHIRL_REJECT)
+        if r or w:
+            return f"restarts: FAIL {os.path.basename(os.path.normpath(d))}: {r} remap error(s), {w} Whirlwind reject(s)"
+        out.append(os.path.basename(os.path.normpath(d)))
+    return f"restarts: ok, {len(out)} boot(s) ({', '.join(out)}): 0 remap errors, 0 Whirlwind rejects"
+
+
 CHECKS = {"wiring": check_wiring, "actors": check_actors, "secrets": check_secrets, "tests": check_tests,
           "data": check_data, "handoff": check_handoff, "backlog": check_backlog}
 
@@ -333,12 +405,23 @@ internal static class ModLeakService {
         // Clean( in a comment is not a call
         var confirmed = ModLeak.Confirm(_firstRead, stale);
         foreach (var h in scan) if (Clean(h, out int removed)) cleaned++;
+        _dueAt = keptOnce > 0 || capped ? DateTime.UtcNow + ReadGap : DateTime.MaxValue;
     }
     static bool Clean(HolderScan h, out int removed)
     {
-        removed = Core.ServerGameManager.Modifications.ClearLooseSourceModifications(holder, ref em);
-        DestroyUtility.Destroy(em, holder, DestroyDebugReason.None);
-        return true;
+        if (!holder.Exists() || em.HasComponent<DestroyTag>(holder)) return false;
+        try
+        {
+            removed = Core.ServerGameManager.Modifications.ClearLooseSourceModifications(holder, ref em);
+            DestroyUtility.Destroy(em, holder, DestroyDebugReason.None);
+            return true;
+        }
+        catch (Exception ex) { return false; }
+    }
+    static SlotModParse ReadSlot(ModificationsRegistry reg, EntityManager em, Entity slotEnt)
+    {
+        try { return SlotModDump.ParseGroupGuid(Dump(slotEnt)); }
+        catch (Exception ex) { return SlotModParse.Failed(); }
     }
 }
 '''
@@ -391,13 +474,17 @@ def _fixtures() -> dict[str, tuple[dict, dict]]:
             "static class O { static void Pop() { sgm.RemoveAbilityGroupModificationOnSlot(c, 1, m); } }\n"})),
         # defect: Clean destroys before clearing the mods (they would stay leaked, sourced by a dead entity)
         "wiring_order": (code, dict(code, **{SERVICE: GOOD_SVC.replace(
-            "        removed = Core.ServerGameManager.Modifications.ClearLooseSourceModifications(holder, ref em);\n        DestroyUtility.Destroy(em, holder, DestroyDebugReason.None);\n",
-            "        DestroyUtility.Destroy(em, holder, DestroyDebugReason.None);\n        removed = Core.ServerGameManager.Modifications.ClearLooseSourceModifications(holder, ref em);\n")})),
+            "            removed = Core.ServerGameManager.Modifications.ClearLooseSourceModifications(holder, ref em);\n            DestroyUtility.Destroy(em, holder, DestroyDebugReason.None);\n",
+            "            DestroyUtility.Destroy(em, holder, DestroyDebugReason.None);\n            removed = Core.ServerGameManager.Modifications.ClearLooseSourceModifications(holder, ref em);\n")})),
         # defect: Tick cleans without the two-read confirm
         "wiring_confirm": (code, dict(code, **{SERVICE: GOOD_SVC.replace("var confirmed = ModLeak.Confirm(_firstRead, stale);", "var confirmed = stale;")})),
         # defect: the pop sits in a local function and the outer method never marks
         "wiring_local": (dict(code, **{POPF: "static class S { static int P(Entity c) { void Pop(int id) { sgm.RemoveAbilityGroupModificationOnSlot(c, 1, m); } Pop(1); if (popped > 0) ModLeakService.MarkDue(\"bar-reset\"); return 1; } }\n"}),
                          dict(code, **{POPF: "static class S { static int P(Entity c) { void Pop(int id) { sgm.RemoveAbilityGroupModificationOnSlot(c, 1, m); } Pop(1); return 1; } }\n"})),
+        # defect: a command arms the sweep (only boot and the two pops may)
+        "actors_mark": (code, dict(code, **{ACMDS: GOOD_ACMDS + 'public static void Arm(ChatCommandContext ctx) { ModLeakService.MarkDue("x"); }\n'})),
+        # defect: Clean without its catch (a throw would propagate into the heartbeat mid-pass)
+        "wiring_catch": (code, dict(code, **{SERVICE: GOOD_SVC.replace("static bool Clean", "static bool CleanX")})),
         "actors": (code, dict(code, **{ACMDS: GOOD_ACMDS.replace(", adminOnly: true", "")})),
         # defect: a command cleans holders directly, outside the confirmed sweep
         "actors_clean": (code, dict(code, **{ACMDS: GOOD_ACMDS + "public static void Wipe(ChatCommandContext ctx) { ModLeakService.Clean(h, out _); }\n"})),
@@ -414,6 +501,32 @@ def _fixtures() -> dict[str, tuple[dict, dict]]:
 def selftest(_root: str) -> str:
     global RECON
     bad = []
+    boot_ok = ("[Info   : Beelzebub] [Beelz MODLEAK] sweep (boot): cleaned 7 stale holder(s), 22 leftover mod(s) removed; "
+               "0 seen stale once (rechecked next pass), 0 unreadable; 9 ms.\n")
+    with tempfile.TemporaryDirectory() as t:
+        lg = os.path.join(t, "l.log")
+        for text, want in ((boot_ok, "ok"), (boot_ok.replace("cleaned 7", "cleaned 3"), "FAIL"),
+                           (boot_ok + "[Warning: Beelzebub] [Beelz MODLEAK] clean holder=1:1 failed: x\n", "FAIL"),
+                           (boot_ok + boot_ok, "FAIL"), (boot_ok.replace("9 ms", "900 ms"), "FAIL"), ("", "no input")):
+            with open(lg, "w", encoding="utf-8") as f:
+                f.write(text)
+            line = check_bootsweep(t, lg)
+            ok = {"ok": ": ok" in line, "FAIL": ": FAIL" in line and "no input" not in line,
+                  "no input": "no input" in line}[want]
+            if not ok:
+                bad.append(f"bootsweep want {want}, got: {line}")
+        r1, r2 = os.path.join(t, "r1"), os.path.join(t, "r2")
+        for d in (r1, r2):
+            _write(d, {"NyarDev.log": "Server Setup Complete\n", "LogOutput.log": "Beelzebub initialized\n"})
+        line = check_restarts(t, [r1, r2])
+        if ": ok" not in line:
+            bad.append("restarts want ok: " + line)
+        _write(r2, {"NyarDev.log": "Server Setup Complete\n" + REMAP + " 1587\n"})
+        line = check_restarts(t, [r1, r2])
+        if ": FAIL" not in line or "no input" in line:
+            bad.append("restarts want FAIL: " + line)
+        if "no input" not in check_restarts(t, []):
+            bad.append("restarts want no input")
 
     def expect(name: str, line: str, want: str) -> None:
         ok = {"ok": ": ok" in line, "FAIL": ": FAIL" in line and "no input" not in line,
@@ -457,18 +570,27 @@ def selftest(_root: str) -> str:
             RECON = saved
     if bad:
         return f"selftest: FAIL {len(bad)}: " + " | ".join(bad)
-    return f"selftest: ok, {len(CHECKS) + 3} checks x good/defect/empty"
+    return f"selftest: ok, {len(CHECKS) + 5} checks x good/defect/empty"
 
 
-CHECKS_ALL = dict(CHECKS, rollback=check_rollback, paths=check_paths, status=check_status, selftest=selftest)
+CHECKS_ALL = dict(CHECKS, rollback=check_rollback, paths=check_paths, status=check_status, selftest=selftest,
+                  bootsweep=check_bootsweep, restarts=check_restarts)
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("check", choices=sorted(CHECKS_ALL))
     ap.add_argument("--root", default=".")
+    ap.add_argument("--log", help="bootsweep: the LogOutput.log of the build's first boot")
+    ap.add_argument("--min", type=int, default=7, help="bootsweep: fewest holders the boot sweep must clean")
+    ap.add_argument("--dirs", nargs="*", help="restarts: the log backup folders of each restart")
     a = ap.parse_args()
-    line = CHECKS_ALL[a.check](a.root)
+    if a.check == "bootsweep":
+        line = check_bootsweep(a.root, a.log, a.min)
+    elif a.check == "restarts":
+        line = check_restarts(a.root, a.dirs)
+    else:
+        line = CHECKS_ALL[a.check](a.root)
     print(line)
     return 1 if ": FAIL" in line else 0
 

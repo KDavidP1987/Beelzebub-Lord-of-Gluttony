@@ -58,10 +58,11 @@ public static class ModLeak
         return set;
     }
 
-    /// <summary>The one line per sweep pass that found anything.</summary>
-    public static string SweepLine(string why, int cleaned, int modsCleared, int keptOnce, int unknown, bool capped) =>
+    /// <summary>The one line per sweep pass that found anything. A capped pass read only the first <see cref="Cap"/>
+    /// player holders in query order; the rest are not read until earlier ones are cleaned (the line says so).</summary>
+    public static string SweepLine(string why, int cleaned, int modsCleared, int keptOnce, int unknown, bool capped, long ms) =>
         $"[Beelz MODLEAK] sweep ({Safe(why)}): cleaned {cleaned} stale holder(s), {modsCleared} leftover mod(s) removed; " +
-        $"{keptOnce} seen stale once (rechecked next pass), {unknown} unreadable{(capped ? $"; capped at {Cap} holders, the rest next pass" : "")}.";
+        $"{keptOnce} seen stale once (rechecked next pass), {unknown} unreadable{(capped ? $"; capped at {Cap} holders, the rest not read" : "")}; {ms} ms.";
 
     /// <summary>One diagnostic line per holder row.</summary>
     public static string RowLine(string holder, LeakHolder h, HolderVerdict hv, int slot, int modId, int copyCooldownId,
