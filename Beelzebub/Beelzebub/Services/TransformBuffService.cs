@@ -945,8 +945,10 @@ internal static class TransformBuffService
     }
 
     /// <summary>v0.137.0 (bar-reset D6): read-only — the prefab names of the buffs on the character that
-    /// <see cref="RemoveAllFormsAndShapeshifts"/> would destroy.</summary>
-    public static List<string> ListOverrideBuffs(Entity character, bool diagnose = false)
+    /// <see cref="RemoveAllFormsAndShapeshifts"/> would destroy. <paramref name="readback"/> (the bar reset's readback):
+    /// a buff this frame already issued a destroy for counts as gone too — its DestroyTag can lag the call by a frame
+    /// (clearbar-fullreset A6, the mounted-bar-reset A2 class) — and each buff still listed is logged.</summary>
+    public static List<string> ListOverrideBuffs(Entity character, bool readback = false)
     {
         var names = new List<string>();
         if (!character.Exists() || !Core.EntityManager.HasBuffer<BuffBuffer>(character)) return names;
@@ -954,14 +956,14 @@ internal static class TransformBuffService
         var buffs = Core.EntityManager.GetBuffer<BuffBuffer>(character);
         for (int i = 0; i < buffs.Length; i++)
         {
-            if (!buffs[i].Entity.Exists() || buffs[i].Entity.Has<DestroyTag>()) continue;   // queued: destroyed this frame
+            Entity b = buffs[i].Entity;
+            if (!b.Exists() || b.Has<DestroyTag>()) continue;   // queued: destroyed this frame
+            if (readback && DestroyIssued(b)) continue;         // A6: destroy issued, tag not stamped yet
             string name = buffs[i].PrefabGuid.GetPrefabName() ?? "";
-            if (IsBarOverrideBuff(buffs[i].PrefabGuid._Value, name, buffs[i].Entity, spellbookIds))
+            if (IsBarOverrideBuff(buffs[i].PrefabGuid._Value, name, b, spellbookIds))
             {
                 names.Add(name.Length > 0 ? name : buffs[i].PrefabGuid._Value.ToString());
-                // clearbar-fullreset A5 diagnostic (readback only): is a listed buff one whose destroy was issued but not yet tagged?
-                if (diagnose) Core.Log.LogInfo($"[Beelz READBACK] override buff={buffs[i].Entity} prefab={name} frame={UnityEngine.Time.frameCount} "
-                    + $"tag={buffs[i].Entity.Has<DestroyTag>()} issued={DestroyIssued(buffs[i].Entity)}");
+                if (readback) Core.Log.LogInfo($"[Beelz READBACK] override buff={b} prefab={name} frame={UnityEngine.Time.frameCount} still live");
             }
         }
         return names;
