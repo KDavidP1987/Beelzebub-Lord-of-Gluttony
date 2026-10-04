@@ -5,16 +5,16 @@ kind: backlog
 id: dod-20261004-c4f1
 slug: clearbar-fullreset
 title: clearbar - clear one set through the layered reset
-status: in-progress
+status: done
 size: M
 parent: none
 created: 2026-10-04
 baselined: 2026-10-04
-closed: none
+closed: 2026-10-04
 recon_commit: 265e98c
 coverage_author: 15/15 layers · 49/49 probes
 coverage_reviewer: 15/15 layers · 49/49 probes
-review: pending
+review: human
 ---
 
 # DoD: clearbar - clear one set through the layered reset
@@ -368,3 +368,19 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-04 · D22 · pass · cmd: `python Beelzebub/tools/check_clearbar.py entry` → `entry: ok, 79 files, commands reach clearbar/resetbar only through VCF chat` · 33f7fbb · claude
 - 2026-10-04 · D23 · pass · cmd: `python Beelzebub/tools/check_clearbar.py actors` → `actors: ok - entry: ok, 79 files, … | selfonly: ok, 2 self-only commands | auth: ok, 70 admin commands, 5 reset callers` · 33f7fbb · claude
 - 2026-10-04 · D24 · pass · cmd: `python Beelzebub/tools/check_clearbar.py scratch` → `scratch: ok, 4 scratch names absent from the temp folder` · 33f7fbb · claude
+- 2026-10-04 · note · re-review A1 A2 A3 A4 A5 A6 · Review 5 READY
+- 2026-10-04 · note · close · A4 shown to the owner with its why and confirmed `defect` (plan-mode decision 2, option A)
+- 2026-10-04 · status → done · close
+
+## Report · 2026-10-04
+Baseline items            24
+Discovered (planning gaps) 5 amendments · 5 design changes (wrong 3 · missed 2) · probes: 6.2 (4), 4.5 (1)
+Corrected (reversals)      0            (counts in the rate)
+Requested scope changes    0    (excluded)
+Emergent / defect / external 0 · 1 · 0  (excluded; A4 confirmed defect by the owner)
+Prediction rate            24 / (24 + 5) = 83 %   target ≥ 90 %
+Rework                     0 of 5 misses corrected an earlier amendment
+Completion                 vs baseline 24/24 · vs current 24/24
+Review                     codex · 3 rounds, then human (Review 4 READY, Review 5 re-review of A1-A6 READY) · author 15/15 layers · reviewer 15/15 layers
+Timeline                   draft 10-04 · ready 10-04 · start 10-04 · done 10-04
+Missed probes              6.2 dependency slow / down / garbage, including internal collaborators — four misses: a collaborator that swallows its failure as 0 (A3), a step whose failure the reply read as an empty result (A2), and the deferred-destroy tag lag seen by the readback (A5, A6). Add to docs/dod/profile.md: "for every collaborator a step calls, name how it reports failure (throws / returns 0 / logs only) and how a deferred engine effect (DestroyTag, buffer playback) is observed in the same frame"

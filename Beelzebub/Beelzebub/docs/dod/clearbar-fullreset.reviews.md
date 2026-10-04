@@ -169,3 +169,12 @@ Owner (Chaos), approving the proposed answers to the four rubric questions on `d
 4. Test the tests — every item has evidence that fails when its control is removed; every gating probe has one command; every build step cites its items; the rejections of Review 3 F5 and F6 stand.
 15/15 layers · 49/49 probes
 VERDICT: READY
+
+## Review 5 · 2026-10-04 · human · plan commit dfbbff1 · plan 83857 B · 24 items · files 18 · 1effb4aeaac3 · prompt 9f7143195b4c · scope A1,A2,A3,A4,A5,A6
+Owner (Chaos), approving the proposed answers to the four rubric questions for the amendments A1-A6 on `docs/dod/clearbar-fullreset.review.html` (plan-mode decision, 2026-10-04, option A):
+1. Coverage — unchanged, 15/15 layers and 49/49 probes; each control an amendment added re-answers 4.2, 4.5 and 12.4 in its amendment line.
+2. Contest — every amendment's cause is evidenced: /code-review findings 1-3 (A4, A1, A2), Codex audit round 1 F2 (A3), and the A5 diagnostic line `tag=False issued=True` that proved A6.
+3. Hunt — two deliberate, recorded limits: a wheel-entered vanilla form ends with no form-ended reply suffix (Review 4), and the tag-only twins `IsLive` (spellbook repair) and the orphan sweep's source skip stay unchanged (reasons in A6).
+4. Test the tests — every amendment has a failing case run once against the real code or a copy of it (plan Log `planted` notes for A1-A4; the A5 in-game run, 30/32, is A6's failing case). A4 stays classified `defect`: D5 specified the `set=` field; the old session tool was not updated.
+15/15 layers · 49/49 probes
+VERDICT: READY
