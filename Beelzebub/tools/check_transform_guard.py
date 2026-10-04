@@ -8,8 +8,10 @@ A check that scans nothing FAILs with "no input" — a check that finds nothing 
   wiring    TryActivate, ApplyPhase, ReapplyActiveTransform and ApplyNativeFormTest ask the gate
             (TransformGate.Decide, or PhaseGate for the phase routes) before any state-changing call;
             ApplyNativeFormTest never calls Revert; the `phase` command asks PhaseGate before ApplyPhase
-  actors    transform / phase / revert stay self-only, testform / force-transform stay adminOnly, and no file outside
-            the known four calls TryActivate / ApplyNativeFormTest / ApplyPhase
+  actors    transform / phase / revert stay self-only, testform / force-transform stay adminOnly; every call of
+            TryActivate / ApplyNativeFormTest / ApplyPhase sits in a known (file, method) caller, and every form apply
+            (TransformBuffService.ApplyForm / Apply / Reapply / ReapplyFormAbilitiesInPlace) sits inside one of the four
+            gated route methods — a new caller anywhere in the plugin, even inside an allowed file, FAILs
   secrets   no credential-shaped literal in the plugin's .cs / .json / .toml sources
   tests     every named TransformGate control (D1-D3) exists as a [Fact]/[Theory] method
   handoff   ApiVersion stays 35, the banner equals it, and the handoff carries the v0.137.5 note
@@ -66,8 +68,28 @@ STATE = [r"\bApplyForm\s*\(", r"TransformBuffService\.Apply\s*\(", r"\bReapplyFo
          r"\bRevert\s*\(", r"\bApplyPhase\s*\(", r"\bSendEvent\s*\("]
 SELF_ONLY = {"Transform": "transform", "Phase": "phase", "Revert": "revert"}
 ADMIN_ONLY = {"TestForm": "testform", "ForceTransform": "force-transform"}
-ROUTE_CALL = re.compile(r"\.(TryActivate|ApplyNativeFormTest|ApplyPhase)\s*\(")
-ALLOWED_CALLERS = {SERVICE, TCMDS, ACMDS, f"{PROJ}/Patches/UpdateBuffsBufferDestroyPatch.cs"}
+ROUTE_CALL = re.compile(r"\b(TryActivate|ApplyNativeFormTest|ApplyPhase)\s*\(")
+# (file, enclosing method) -> may call a route. Each is a self-only command, an adminOnly command, or an automatic
+# path acting on the player its event fired for (the combat-end buff target, the Auto-HP tick's own transform record).
+ALLOWED_CALLERS = {
+    (TCMDS, "Transform"), (TCMDS, "Phase"), (ACMDS, "TestForm"), (ACMDS, "ForceTransform"),
+    (f"{PROJ}/Patches/UpdateBuffsBufferDestroyPatch.cs", "OnUpdatePostfix"),
+    (SERVICE, "AutoAdvancePhases"), (SERVICE, "ReapplyActiveTransform"),
+}
+FORM_APPLY = re.compile(r"\bTransformBuffService\.(ApplyForm|Apply|Reapply|ReapplyFormAbilitiesInPlace)\s*\(")
+DECL = re.compile(r"(\w+)\s*\([^;{}()]*\)\s*(?:where[^{]*)?\{")
+KEYWORDS = {"if", "for", "foreach", "while", "switch", "catch", "using", "lock", "fixed", "else", "return", "new"}
+
+
+def enclosing(st: str, pos: int) -> str | None:
+    """The method whose declaration most recently precedes pos (keywords skipped)."""
+    name = None
+    for m in DECL.finditer(st, 0, pos):
+        before = st[:m.start()].rstrip()
+        if m[1] in KEYWORDS or before.endswith("new") or before.endswith("."):
+            continue
+        name = m[1]
+    return name
 
 REQUIRED_TESTS = [
     "Decide_fails_when_a_pending_form_allows_any_route",
@@ -79,6 +101,10 @@ REQUIRED_TESTS = [
     "Message_fails_when_a_refusal_text_drifts",
     "Message_fails_when_a_text_exceeds_the_chat_cap",
     "LogLine_fails_when_route_or_reason_is_missing",
+    "Message_fails_when_a_name_breaks_the_line",
+    "GuardLog_fails_when_a_repeat_refusal_logs_again",
+    "GuardLog_fails_when_allow_or_forget_does_not_reset",
+    "GuardLog_fails_when_it_grows_past_its_cap",
 ]
 
 
@@ -135,6 +161,9 @@ def check_wiring(root: str) -> str:
     nf = method_body(svc, "ApplyNativeFormTest")
     if nf is not None and re.search(r"\bRevert\s*\(", nf):
         bad.append("ApplyNativeFormTest: calls Revert")
+    rv = method_body(svc, "Revert")
+    if rv is None or not re.search(r"\bForget\s*\(", rv):
+        bad.append("Revert: does not Forget the player's TXGUARD ledger")
     ph = method_body(cmd, "Phase")
     if ph is None:
         bad.append("Phase command: not found")
@@ -144,7 +173,7 @@ def check_wiring(root: str) -> str:
             bad.append("Phase command: ApplyPhase without or before PhaseGate")
     if bad:
         return "wiring: FAIL " + "; ".join(bad)
-    return "wiring: ok, 4 routes gated, testform never reverts, phase command gated"
+    return "wiring: ok, 4 routes gated, testform never reverts, phase command gated, revert forgets the ledger"
 
 
 def _attr(src: str, meth: str, cmd: str):
@@ -181,15 +210,28 @@ def check_actors(root: str) -> str:
             bad.append(f"{cmd}: not found")
         elif "adminOnly: true" not in m[1]:
             bad.append(f"{cmd}: not adminOnly")
-    calls = 0
+    calls = applies = 0
     for rel in files:
-        for m in ROUTE_CALL.finditer(strip(read(root, rel))):
+        st = strip(read(root, rel))
+        for m in ROUTE_CALL.finditer(st):
+            line = st[:m.start()].rsplit("\n", 1)[-1]
+            if re.search(r"\b(public|internal|private|protected)\b", line):   # the route's own declaration
+                continue
             calls += 1
-            if rel not in ALLOWED_CALLERS:
-                bad.append(f"{rel}: calls {m[1]}")
+            meth = enclosing(st, m.start())
+            if (rel, meth) not in ALLOWED_CALLERS:
+                bad.append(f"{rel}:{meth} calls {m[1]}")
+        if rel.endswith("/TransformBuffService.cs"):
+            continue
+        for m in FORM_APPLY.finditer(st):
+            applies += 1
+            meth = enclosing(st, m.start())
+            if rel != SERVICE or meth not in ROUTES:
+                bad.append(f"{rel}:{meth} applies a form ({m[1]})")
     if bad:
         return f"actors: FAIL {bad[:6]}"
-    return f"actors: ok, {len(SELF_ONLY)} self-only, {len(ADMIN_ONLY)} admin-only, {calls} route callers in {len(ALLOWED_CALLERS)} allowed files"
+    return (f"actors: ok, {len(SELF_ONLY)} self-only, {len(ADMIN_ONLY)} admin-only, {calls} route calls in "
+            f"{len(ALLOWED_CALLERS)} allowed methods, {applies} form applies inside the 4 gated routes")
 
 
 def check_secrets(root: str) -> str:
@@ -323,6 +365,15 @@ public class TransformService {
         if (TransformGate.Decide(TransformRoute.Reapply, p, a, a) != TransformGateVerdict.Allow) return false;
         return ApplyPhase(steamId, active, character, active.CurrentPhase);
     }
+    public (bool reverted, bool appliedNow) Revert(ulong steamId, string reason = null, bool restoreBar = true)
+    {
+        _guardLog.Forget(steamId);
+        return (true, true);
+    }
+    void AutoAdvancePhases()
+    {
+        bool ok = ApplyPhase(steamId, active, character, target);
+    }
     public (bool ok, string message) ApplyNativeFormTest(ulong steamId, Entity character, int form, int[] set, string label)
     {
         var v = TransformGate.Decide(TransformRoute.FormTest, p, a, form);
@@ -384,8 +435,17 @@ def _fixtures() -> dict[str, tuple[dict, dict]]:
         "wiring": (code, dict(code, **{SERVICE: GOOD_SVC.replace(
             "        if (PhaseGate(steamId, active) != TransformGateVerdict.Allow) return false;\n        active.CurrentPhase = phase;\n",
             "        active.CurrentPhase = phase;\n        if (PhaseGate(steamId, active) != TransformGateVerdict.Allow) return false;\n")})),
-        # defect: a timer service calls ApplyPhase from a file outside the allowed callers
-        "actors": (code, dict(code, **{f"{PROJ}/Services/Timer.cs": "class T { void Go() { Core.Transforms.ApplyPhase(s, a, c, 2); } }"})),
+        # defect (review F15): a new helper INSIDE an allowed file calls ApplyPhase for another player, not adminOnly
+        "actors": (code, dict(code, **{ACMDS: GOOD_ACMDS + '''
+[Command("phase-other", description: "Phase another player.")]
+public static void PhaseOther(ChatCommandContext ctx, string player, int n)
+{
+    Core.Transforms.ApplyPhase(s, a, c, n);
+}
+'''})),
+        # defect (review F4): a new form apply inside TransformService, outside the four gated routes
+        "actors_apply": (code, dict(code, **{SERVICE: GOOD_SVC.replace("    void AutoAdvancePhases()",
+            "    public void Sneak(Entity c) { TransformBuffService.ApplyForm(c, 1, s, null); }\n    void AutoAdvancePhases()")})),
         "secrets": ({f"{PROJ}/A.cs": 'var name = "hello world";'}, {f"{PROJ}/c.json": '{ "api_key": "abcdefgh12345678" }'}),
         "tests": ({TESTS: tests_good}, {TESTS: tests_good.replace(REQUIRED_TESTS[0] + "(", "Renamed(")}),
         "handoff": ({HANDOFF: handoff_good, API: "public const int ApiVersion = 35;"},
@@ -406,10 +466,11 @@ def selftest(_root: str) -> str:
         if not ok:
             bad.append(f"{name} want {want}, got: {line}")
     for name, (good, defect) in _fixtures().items():
+        check = CHECKS[name.split("_")[0]]
         for files, want in ((good, "ok"), (defect, "FAIL"), ({}, "no input")):
             with tempfile.TemporaryDirectory() as t:
                 _write(t, files)
-                expect(name, CHECKS[name](t), want)
+                expect(name, check(t), want)
     with tempfile.TemporaryDirectory() as t:
         expect("rollback", check_rollback(t), "no input")
         _git(t, "init", "-q")
