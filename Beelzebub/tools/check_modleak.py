@@ -371,7 +371,7 @@ def check_status(root: str) -> str:
 
 def check_bootsweep(root: str, log: str | None = None, minimum: int = 7) -> str:
     """D10: the first boot of the build logged exactly one boot sweep that cleaned >= minimum holders, read none as
-    unreadable, stayed under BOOT_BUDGET_MS, and no clean failed."""
+    unreadable, and no clean failed. Its ms is recorded; over BOOT_BUDGET_MS is named, not failed (decision 9-A)."""
     path = log or os.path.join(root, "BepInEx", "LogOutput.log")
     if not os.path.isfile(path):
         return f"bootsweep: FAIL no input ({path} missing)"
@@ -384,10 +384,11 @@ def check_bootsweep(root: str, log: str | None = None, minimum: int = 7) -> str:
     if len(sweeps) != 1:
         return f"bootsweep: FAIL {len(sweeps)} boot sweep line(s), want 1"
     cleaned, mods, once, unread, ms = map(int, sweeps[0])
-    if cleaned < minimum or unread or fails or ms > BOOT_BUDGET_MS:
+    if cleaned < minimum or unread or fails:
         return (f"bootsweep: FAIL cleaned={cleaned} (want >= {minimum}) unreadable={unread} failed={len(fails)} "
-                f"ms={ms} (budget {BOOT_BUDGET_MS})")
-    return f"bootsweep: ok, cleaned {cleaned} holder(s), {mods} leftover mod(s), {ms} ms, 0 failed"
+                f"ms={ms}")
+    over = f" (over the {BOOT_BUDGET_MS} ms budget, recorded)" if ms > BOOT_BUDGET_MS else ""
+    return f"bootsweep: ok, cleaned {cleaned} holder(s), {mods} leftover mod(s), {ms} ms{over}, 0 failed"
 
 
 def check_restarts(root: str, dirs: list[str] | None = None) -> str:
@@ -538,11 +539,12 @@ def selftest(_root: str) -> str:
         lg = os.path.join(t, "l.log")
         for text, want in ((boot_ok, "ok"), (boot_ok.replace("cleaned 7", "cleaned 3"), "FAIL"),
                            (boot_ok + "[Warning: Beelzebub] [Beelz MODLEAK] clean holder=1:1 failed: x\n", "FAIL"),
-                           (boot_ok + boot_ok, "FAIL"), (boot_ok.replace("9 ms", "900 ms"), "FAIL"), ("", "no input")):
+                           (boot_ok + boot_ok, "FAIL"), (boot_ok.replace("9 ms", "900 ms"), "over"), ("", "no input")):
             with open(lg, "w", encoding="utf-8") as f:
                 f.write(text)
             line = check_bootsweep(t, lg)
-            ok = {"ok": ": ok" in line, "FAIL": ": FAIL" in line and "no input" not in line,
+            ok = {"ok": ": ok" in line and "budget" not in line,
+                  "over": ": ok" in line and "over the 250 ms budget" in line, "FAIL": ": FAIL" in line and "no input" not in line,
                   "no input": "no input" in line}[want]
             if not ok:
                 bad.append(f"bootsweep want {want}, got: {line}")
