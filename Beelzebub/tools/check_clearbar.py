@@ -42,6 +42,8 @@ SECRET_RE = re.compile(r"(?i)\b(password|passwd|api[_-]?key|secret|bearer|access
 CONSEQUENCE = "no saved-data migration"
 ROLLBACK_STEPS = ["git revert", "dotnet build Beelzebub/Beelzebub.sln -c Release", "taskkill /PID"]
 COMMANDS = f"{PROJ}/Commands/BeelzCommands.cs"
+SERVICE = f"{PROJ}/Services/BarResetService.cs"
+GOOD_SERVICE = "    public int RestoreKept() => SlotApply.RestoreResolvedGrantsOrThrow(RequireEquipBuff());\n"
 SELF_ONLY = {"ClearBar": "clearbar", "ResetBar": "resetbar"}
 TARGET_PARAM = re.compile(r"(?i)^(player|target|name|steam\w*|victim|who)$")
 PLAN = f"{PROJ}/docs/dod/clearbar-fullreset.md"
@@ -180,9 +182,16 @@ def check_wiring(root: str) -> str:
     full = re.search(r"\bFullReset\s*\(", body)
     if not refusal or (full and refusal.start() > full.start()):
         bad.append("no steamId == 0 refusal before the reset")
+    # A3: the RestoreKept step must use the throwing restore, never the one that swallows a failure as 0
+    svc = read(root, SERVICE)
+    if svc is None:
+        return "wiring: FAIL no input (BarResetService.cs missing)"
+    rk = re.search(r"\bint\s+RestoreKept\s*\(\s*\)\s*(=>[^;]*;|\{.*?\n\s*\})", svc, re.S)
+    if not rk or "RestoreResolvedGrantsOrThrow(" not in rk[1] or re.search(r"\bRestoreResolvedGrants\s*\(", rk[1]):
+        bad.append("RestoreKept does not call RestoreResolvedGrantsOrThrow")
     if bad:
         return "wiring: FAIL " + "; ".join(bad)
-    return "wiring: ok, ClearBar calls FullReset(ClearSet) once, 0 bypass calls"
+    return "wiring: ok, ClearBar calls FullReset(ClearSet) once, 0 bypass calls, RestoreKept throws on failure"
 
 
 def check_paths(root: str) -> str:
@@ -378,8 +387,8 @@ def _fixtures() -> dict[str, tuple[dict, dict]]:
                     {f"{PROJ}/A.cs": "x", f"{PROJ}/c.json": '{ "api_key": "abcdefgh12345678" }'}),
         "selfonly": ({COMMANDS: GOOD_CMDS},
                      {COMMANDS: GOOD_CMDS.replace("string set = \"all\"", "string player, string set = \"all\"")}),
-        "wiring": ({COMMANDS: GOOD_CMDS},
-                   {COMMANDS: GOOD_CMDS.replace("// ClearAllSlots( is only", "SlotApply.ClearAllSlots(e); // only")}),
+        "wiring": ({COMMANDS: GOOD_CMDS, SERVICE: GOOD_SERVICE},
+                   {COMMANDS: GOOD_CMDS.replace("// ClearAllSlots( is only", "SlotApply.ClearAllSlots(e); // only"), SERVICE: GOOD_SERVICE}),
         "backlog": ({BACKLOG: "| `clearbar-fullreset` | DONE v0.137.4 (clearbar-fullreset): ... | x |\n"},
                     {BACKLOG: "| `clearbar-fullreset` | Fold clearbar into the layered reset | x |\n"}),
     }

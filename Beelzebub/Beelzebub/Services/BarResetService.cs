@@ -209,7 +209,7 @@ internal sealed class BarResetService : IBarResetOps
 
     /// <summary>ClearSet: re-injects the held weapon's resolved binds from the sets the clear kept (it skips a
     /// transformed player — RevertTransform ran first).</summary>
-    public int RestoreKept() => SlotApply.RestoreResolvedGrants(RequireEquipBuff());
+    public int RestoreKept() => SlotApply.RestoreResolvedGrantsOrThrow(RequireEquipBuff());
 
     public int ClearHotkeys()
     {

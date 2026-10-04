@@ -366,6 +366,16 @@ public class BarResetTests
     }
 
     [Fact]
+    public void ClearSet_fails_when_a_form_bind_hides_a_leftover_row()
+    {
+        // A1: the reset ends every form, so a form bind cannot drive the readback bar — a row on its slot is a leftover
+        var r = RunClear(BarSet.Universal, Bar(new BarSlotReading { Slot = 1, Bind = "form:Wolf", Row = true },
+                                               new BarSlotReading { Slot = 4, Bind = "weapon:Sword", Row = true }));
+        Assert.Equal(new List<int> { 1 }, r.Survivors);
+        Assert.False(r.Clean);
+    }
+
+    [Fact]
     public void ClearSet_fails_when_a_run_without_RestoreKept_or_with_a_thrown_RestoreKept_reads_clean()
     {
         var bar = Bar(new BarSlotReading { Slot = 0, Gear = 1 });

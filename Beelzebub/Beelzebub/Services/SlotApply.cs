@@ -280,25 +280,43 @@ internal static class SlotApply
         if (Core.AbilityRegistry.GetActiveTransform(steamId) is not null) return 0;
         if (!TryFindEquipBuff(character, out Entity buffEntity, out string equipName)) return 0;
 
-        var weapon = DetectFamily(equipName);
         try
         {
-            var buffer = Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(buffEntity);
-            var live = new List<(int Slot, int Guid, int Replaced)>();
-            int applied = ResolveAndInjectGrants(character, buffEntity, weapon, buffer, live);
-            if (Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
-            // grant-refresh: rows added to the held buff are not read by the engine — set each injected slot live.
-            foreach (var (slot, guid, replaced) in live) PushLive(character, buffEntity, slot, new PrefabGUID(guid), "resolve", replaced);
-            DrainPending(character, buffEntity, live);
-            if (Beelzebub.Config.Settings.VerboseLogging.Value)
-                Core.Log.LogInfo($"[Beelz] RestoreResolvedGrants: re-applied {applied} grant(s) for {steamId} (weapon={weapon}).");
-            return applied;
+            return RestoreOnto(character, steamId, buffEntity, equipName);
         }
         catch (Exception ex)
         {
             Core.Log.LogError($"[Beelz] SlotApply.RestoreResolvedGrants failed: {ex}");
             return 0;
         }
+    }
+
+    /// <summary>v0.137.4 (clearbar-fullreset A3): <see cref="RestoreResolvedGrants"/> for the reset's RestoreKept step —
+    /// throws instead of returning 0 when it cannot run or fails, so the step reads failed and the clear is not clean.</summary>
+    public static int RestoreResolvedGrantsOrThrow(Entity character)
+    {
+        if (!character.Exists()) throw new InvalidOperationException("character gone");
+        ulong steamId = character.GetSteamId();
+        if (Core.AbilityRegistry.GetActiveTransform(steamId) is not null)
+            throw new InvalidOperationException("a transform still owns the bar");
+        if (!TryFindEquipBuff(character, out Entity buffEntity, out string equipName))
+            throw new InvalidOperationException("no held equip buff");
+        return RestoreOnto(character, steamId, buffEntity, equipName);
+    }
+
+    static int RestoreOnto(Entity character, ulong steamId, Entity buffEntity, string equipName)
+    {
+        var weapon = DetectFamily(equipName);
+        var buffer = Core.EntityManager.GetBuffer<ReplaceAbilityOnSlotBuff>(buffEntity);
+        var live = new List<(int Slot, int Guid, int Replaced)>();
+        int applied = ResolveAndInjectGrants(character, buffEntity, weapon, buffer, live);
+        if (Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+        // grant-refresh: rows added to the held buff are not read by the engine — set each injected slot live.
+        foreach (var (slot, guid, replaced) in live) PushLive(character, buffEntity, slot, new PrefabGUID(guid), "resolve", replaced);
+        DrainPending(character, buffEntity, live);
+        if (Beelzebub.Config.Settings.VerboseLogging.Value)
+            Core.Log.LogInfo($"[Beelz] RestoreResolvedGrants: re-applied {applied} grant(s) for {steamId} (weapon={weapon}).");
+        return applied;
     }
 
     /// <summary>

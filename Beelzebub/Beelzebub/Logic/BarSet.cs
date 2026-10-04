@@ -43,6 +43,10 @@ public sealed class BarSet
         return !string.Equals(bindOrigin, Label, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>True for a `form:<Name>` origin (case-insensitive).</summary>
+    public static bool IsFormOrigin(string origin) =>
+        IsKnownOrigin(origin) && origin.StartsWith("form:", StringComparison.OrdinalIgnoreCase);
+
     /// <summary>The closed origin grammar BindOrigins writes: `universal`, `weapon:<Name>`, `form:<Name>` with one
     /// non-empty name and no further colon. `none`, empty and anything else are not a set.</summary>
     public static bool IsKnownOrigin(string origin)

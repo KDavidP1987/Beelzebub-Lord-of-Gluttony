@@ -70,8 +70,10 @@ public static class BarResetReply
     {
         r ??= new BarResetResult();
         int n = r.CountOf(BarResetStep.ClearSavedBindings);
-        string head = n > 0
-            ? $"Cleared {what} — {n} binding(s) removed. Captured abilities kept; re-grant anytime."
+        // A2: CountOf skips failed steps, so a failed clear must not read as an empty set
+        bool clearFailed = r.Steps.Any(s => s.Step == BarResetStep.ClearSavedBindings && s.Failed);
+        string head = clearFailed ? $"Could not clear {what}."
+            : n > 0 ? $"Cleared {what} — {n} binding(s) removed. Captured abilities kept; re-grant anytime."
             : $"Nothing was bound in {what}.";
         if (r.CountOf(BarResetStep.Dismount) > 0) head += " " + DismountedSelf;
         if (r.CountOf(BarResetStep.RevertTransform) > 0) head += " " + TransformEndedSelf;

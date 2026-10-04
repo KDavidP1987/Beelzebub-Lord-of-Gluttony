@@ -284,7 +284,10 @@ public sealed class BarResetResult
     public List<int> Survivors => Readback == null
         ? new List<int>()
         : Readback.Slots.Where(s => s.Overridden && !s.Unreadable && !IsKept(s)).Select(s => s.Slot).ToList();
-    bool IsKept(BarSlotReading s) => ClearSet != null && s.Other == 0 && ClearSet.Keeps(s.Bind);
+    // A1: the reset ends every form, so a form bind stays saved but never drives the readback bar — an injected row on
+    // its slot is a leftover, not the kept bind
+    bool IsKept(BarSlotReading s) => ClearSet != null && s.Other == 0 && ClearSet.Keeps(s.Bind)
+        && !(s.Row && BarSet.IsFormOrigin(s.Bind));
     /// <summary>Override buffs (carrier / form / shapeshift) still on the character at the readback — each one can
     /// re-patch the bar through its own ReplaceAbilityOnSlotBuff, which no slot reading shows.</summary>
     public List<string> OverrideBuffsLeft => Readback?.OverrideBuffs ?? new List<string>();

@@ -262,6 +262,15 @@ public class BarResetReplyTests
     }
 
     [Fact]
+    public void ForClear_fails_when_a_failed_clear_says_nothing_was_bound()
+    {
+        // A2: CountOf skips a failed step, so the headline must not read as an empty set
+        var lines = BarResetReply.ForClear(Clear(BarSet.Weapon("Sword"), binds: 2, fail: S.ClearSavedBindings), "your Sword loadout");
+        Assert.Equal("Could not clear your Sword loadout.", lines[0]);
+        Assert.Contains("failed: ClearSavedBindings", lines[1]);
+    }
+
+    [Fact]
     public void ForClear_fails_when_a_line_exceeds_480_bytes()
     {
         var lines = BarResetReply.ForClear(Clear(BarSet.All, transform: true, mounted: true, fail: S.PopSlotMods), new string('x', 600));

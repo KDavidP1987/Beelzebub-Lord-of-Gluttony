@@ -611,7 +611,8 @@ def check_rollback(root: str) -> str:
 
 _BAR = re.compile(r"\[Beelz BAR\] target=(?P<t>.*?) \((?P<id>\d+)\) binds=(?P<binds>\d+) rows=(?P<rows>\d+) "
                   r"gear=(?P<gear>\d+) other=(?P<other>\w+) slots=(?P<slots>\S*)(?: part=(?P<k>\d+)/(?P<n>\d+))?")
-_RESET = re.compile(r"\[Beelz RESET\] run=(?P<run>\d+) scope=(?P<scope>\w+) target=(?P<t>.*?) \((?P<id>\d+)\) "
+# v0.137.4: a ClearSet line carries ` set=<label>` between scope and target (BarResetLog.Format)
+_RESET = re.compile(r"\[Beelz RESET\] run=(?P<run>\d+) scope=(?P<scope>\w+)(?: set=(?P<set>\S+))? target=(?P<t>.*?) \((?P<id>\d+)\) "
                     r"ms=(?P<ms>\d+) steps=(?P<steps>\S+) survivors=(?P<surv>\S+) clean=(?P<clean>[01])(?: slow=1)?\s*$")
 _LATE = re.compile(r"\[Beelz RESET\] late-survivor target=(?P<t>.*?) \((?P<id>\d+)\) run=(?P<run>\d+) slot=(?P<slot>\d+)")
 _FORM = re.compile(r"\[Beelz FORM\] target=(?P<id>\d+) form=(?P<form>\w+) source=(?P<src>\w+)")
@@ -777,6 +778,8 @@ GOOD_SESSION = "\n".join([
     "[Info   :Beelzebub] [Beelz RESET] run=3 scope=PlayerReset target=PerpetualChaos (7) ms=9 steps=ClearSavedBindings:0," + _STEPS + " survivors=none clean=1",
     "[Info   :Beelzebub] [Beelz BAR] target=PerpetualChaos (7) binds=0 rows=0 gear=9 other=0 slots=none",
     "[Info   :Beelzebub] [Beelz RESET] run=4 scope=Purge target=PerpetualChaos (7) ms=9 steps=ClearSavedBindings:2,ClearHotkeys:1," + _STEPS + " survivors=none clean=1",
+    # clearbar (v0.137.4): the set= field must parse, never read as a malformed line
+    "[Info   :Beelzebub] [Beelz RESET] run=5 scope=ClearSet set=weapon:Sword target=PerpetualChaos (7) ms=9 steps=ClearSavedBindings:1," + _STEPS + ",RestoreKept:1 survivors=none clean=1",
     "",
 ])
 
