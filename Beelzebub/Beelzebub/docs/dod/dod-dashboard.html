@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; script-src 'sha256-RwIIiwew4Rpz+NyCiq+EZdUDB/06TUQv8WSXYy5wKgo='">
+<title>docs/dod · dod dashboard</title>
+<style>
+:root{color-scheme:light dark;--f-body:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,"Helvetica Neue",sans-serif;--f-head:"Sitka Heading","Sitka Text","Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;--f-num:Bahnschrift,"DIN Alternate","Roboto Condensed","Arial Narrow",system-ui,sans-serif;--f-mono:"Cascadia Mono",Consolas,"SF Mono",ui-monospace,monospace;--band:#10293b;--band-ink:#eef2ee;--band-muted:#a9bfc6;--ground:#f4efe3;--paper:#fffcf4;--ink:#16222c;--ink-muted:#46525a;--ink-faint:#6b7479;--rule:#e2d9c4;--rule-strong:#c9bd9f;--track:#e9e1cc;--tide:#2f8fa8;--link:#1d5e79;--focus:#d0731f;--ok:#2f7a55;--bad:#b23a2a;--tide-fill:#2f8fa833;--selection:#bfe0e6;--on-ok:#ffffff;--on-kind:#ffffff;--muted-bar:#9aa9a6;--kind-discovered:#b5461f;--kind-corrected:#a7740c;--kind-requested:#2c7a6c;--kind-emergent:#6a4f9e;--kind-defect:#55636c;--kind-external:#73762a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--band:#071119;--band-muted:#8aa4ad;--ground:#0d1a24;--paper:#12222e;--ink:#e6ebe6;--ink-muted:#a9b6ba;--ink-faint:#84939a;--rule:#1f3443;--rule-strong:#2f4a5c;--track:#1b2f3d;--tide:#5fb2c9;--tide-fill:#5fb2c92e;--link:#7cc6da;--focus:#f0a050;--ok:#5cb487;--bad:#f07a66;--selection:#24546a;--on-ok:#06140d;--on-kind:#0b1218;--muted-bar:#56686f;--kind-discovered:#ec8058;--kind-corrected:#d9a63c;--kind-requested:#58b5a3;--kind-emergent:#a891e0;--kind-defect:#93a3ad;--kind-external:#b5b85a}}
+:root[data-theme="dark"]{color-scheme:dark;--band:#071119;--band-muted:#8aa4ad;--ground:#0d1a24;--paper:#12222e;--ink:#e6ebe6;--ink-muted:#a9b6ba;--ink-faint:#84939a;--rule:#1f3443;--rule-strong:#2f4a5c;--track:#1b2f3d;--tide:#5fb2c9;--tide-fill:#5fb2c92e;--link:#7cc6da;--focus:#f0a050;--ok:#5cb487;--bad:#f07a66;--selection:#24546a;--on-ok:#06140d;--on-kind:#0b1218;--muted-bar:#56686f;--kind-discovered:#ec8058;--kind-corrected:#d9a63c;--kind-requested:#58b5a3;--kind-emergent:#a891e0;--kind-defect:#93a3ad;--kind-external:#b5b85a}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-padding-top:4rem}
+body{margin:0;background:var(--ground);color:var(--ink);font:16px/1.55 var(--f-body);font-variant-numeric:tabular-nums}
+body,p,td,th,li,dd,summary,caption,h1,h2,h3{overflow-wrap:anywhere}
+::selection{background:var(--selection);color:var(--ink)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:2px}
+a{color:var(--link);text-underline-offset:.2em}
+h1,h2,h3{margin:0;text-wrap:balance}
+p{margin:0}
+code,.mono{font:.86em/1.4 var(--f-mono);overflow-wrap:anywhere}
+.wrap{max-width:72rem;margin:0 auto;padding-inline:clamp(16px,4vw,40px)}
+.band{background:var(--band);color:var(--band-ink)}
+.band-top{display:flex;flex-wrap:wrap;gap:1rem 2rem;align-items:flex-end;justify-content:space-between;padding-top:1.6rem;padding-bottom:1.1rem}
+.crumb{font:500 .8rem/1.2 var(--f-num);color:var(--band-muted)}
+.band h1{font:600 2rem/1.05 var(--f-head);letter-spacing:-.01em;margin-top:.45rem}
+@media (min-width:48rem){.band h1{font-size:2.5rem}}
+@media (min-width:60rem){.band h1{font-size:3rem}}
+.state{display:flex;flex-wrap:wrap;gap:.4rem 1.2rem;align-items:center;font:500 .95rem var(--f-num);color:var(--band-muted)}
+.tabs{display:flex;gap:.2rem;overflow-x:auto;scrollbar-width:none;margin-inline:-.6rem}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{appearance:none;background:none;border:0;color:var(--band-muted);font:500 .95rem/1 var(--f-body);padding:.85rem .6rem .95rem;cursor:pointer;white-space:nowrap;border-bottom:3px solid transparent}
+.tabs button:hover{color:var(--band-ink)}
+.tabs button[aria-selected=true]{color:var(--band-ink);border-bottom-color:var(--tide)}
+.tabs .cnt{font:600 .75rem var(--f-num);opacity:.8;margin-left:.15rem}
+.tabs button:focus-visible{outline-offset:-3px}
+.notice{font-size:.88rem;color:var(--ink-muted);padding:.9rem 0 0}
+main.wrap{padding-bottom:3rem}
+.nojs-h{display:none}
+.js .tp[hidden]{display:none}
+html:not(.js) .tabs{display:none}
+html:not(.js) .nojs-h{display:block;margin:2.5rem 0 1rem;font:700 1.4rem/1.2 var(--f-head)}
+.panel{background:var(--paper);border:1px solid var(--rule);padding:clamp(1rem,3vw,1.75rem);margin-top:2.25rem}
+.panel h2{font:600 1.3rem/1.2 var(--f-head)}
+.panel h3{font:600 1.08rem/1.35 var(--f-head);margin:1.4rem 0 .5rem}
+.ph{display:grid;gap:.3rem;margin-bottom:1rem}
+.ph p,.fine{color:var(--ink-muted);max-width:68ch}
+.fine{font-size:.86rem;margin-top:.6rem}
+.lead{padding:2.2rem 0 .4rem;display:grid;gap:.8rem;max-width:62rem}
+.dek{font:500 clamp(1.2rem,2.6vw,1.55rem)/1.3 var(--f-head);color:var(--ink)}
+.story p{font-size:1.06rem;max-width:66ch;color:var(--ink-muted)}
+.nr{color:var(--ink-faint);font-style:italic}
+.dim{color:var(--ink-faint);font-size:.82em;font-weight:400}
+.tag{display:inline-block;font:600 .68rem/1 var(--f-num);letter-spacing:.07em;text-transform:uppercase;padding:.22rem .38rem;border:1px solid var(--rule-strong);color:var(--ink-muted);border-radius:2px;vertical-align:.12em;margin-left:.3rem}
+.chart{margin:0;overflow-x:auto;overscroll-behavior-x:contain}
+.chart svg{display:block;width:100%;min-width:540px;height:auto}
+.chart .tick{font:12.5px var(--f-num);fill:var(--ink-faint)}
+.chart .lbl{font:12.5px var(--f-num);fill:var(--ink-muted)}
+.chart .lbl.halo{paint-order:stroke;stroke:var(--paper);stroke-width:3px;stroke-linejoin:round}
+.chart .grid{stroke:var(--rule);stroke-width:1}
+.chart .predicted{stroke:var(--tide);stroke-width:2.2;stroke-dasharray:7 5;fill:none}
+.chart .predicted.pre{stroke-width:1.4;opacity:.65}
+.chart .observed{stroke:var(--ink);stroke-width:2.6;fill:none;stroke-linejoin:round}
+.chart .verified{fill:var(--tide-fill);stroke:var(--tide);stroke-width:1}
+.chart .phase{fill:var(--track);opacity:.55}
+.chart .mk circle{fill:var(--k);stroke:var(--paper);stroke-width:2}
+.chart .mk text{font:700 9.5px var(--f-num);fill:var(--on-kind)}
+.chart .bandfill{fill:var(--tide-fill)}
+.chart .ref{stroke:var(--tide);stroke-dasharray:4 4}
+.chart .trendline{stroke:var(--ink-faint);stroke-width:1.4;fill:none}
+.chart .pt{fill:var(--paper);stroke:var(--ink-muted);stroke-width:1.6}
+.chart .pt.me{fill:var(--kind-discovered);stroke:var(--paper);stroke-width:2}
+.legend{display:flex;flex-wrap:wrap;gap:.4rem 1.1rem;margin-top:.7rem;font-size:.84rem;color:var(--ink-muted)}
+.legend span{display:inline-flex;align-items:center;gap:.4rem}
+.lg{display:inline-block;width:1.4rem;height:.7rem}
+.lg.pred{border-top:2.2px dashed var(--tide);height:0}
+.lg.obs{border-top:2.6px solid var(--ink);height:0}
+.lg.ver{background:var(--tide-fill);border:1px solid var(--tide)}
+[class*="k-"]{--k:var(--kind-defect)}
+.k-discovered{--k:var(--kind-discovered)}.k-corrected{--k:var(--kind-corrected)}.k-requested{--k:var(--kind-requested)}.k-emergent{--k:var(--kind-emergent)}.k-defect{--k:var(--kind-defect)}.k-external{--k:var(--kind-external)}
+.chip{display:inline-flex;align-items:center;gap:.35rem;font:500 .84rem var(--f-num)}
+.chip i{width:.7rem;height:.7rem;border-radius:50%;background:var(--k)}
+.im{display:inline-grid;place-items:center;min-width:1.9rem;height:1.25rem;padding:0 .3rem;border-radius:.65rem;background:var(--k);color:var(--on-kind);font:700 .72rem/1 var(--f-num);vertical-align:.1em}
+.st{display:inline-block;font:600 .74rem/1 var(--f-num);letter-spacing:.06em;text-transform:uppercase;padding:.3rem .5rem;background:var(--ok);color:var(--on-ok);border-radius:2px}
+.st.open{background:var(--track);color:var(--ink)}
+.st.big{font-size:.82rem;padding:.4rem .65rem}
+.two{display:grid;gap:2.25rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.tw{overflow-x:auto}
+table.data{width:100%;border-collapse:collapse;font-size:.9rem}
+table.data caption{text-align:left;font:700 1.05rem/1.3 var(--f-head);padding-bottom:.8rem;caption-side:top}
+table.data th,table.data td{text-align:left;padding:.5rem .6rem;border-bottom:1px solid var(--rule);vertical-align:top}
+table.data thead th{font:600 .74rem/1.2 var(--f-num);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-muted);border-bottom:1px solid var(--rule-strong);white-space:nowrap}
+table.data tbody th{font-weight:500}
+table.data .n{text-align:right;white-space:nowrap}
+table.data tbody tr:nth-child(5n) th,table.data tbody tr:nth-child(5n) td{border-bottom-color:var(--rule-strong)}
+table.data tfoot th,table.data tfoot td{font-weight:700;border-bottom:0;border-top:1px solid var(--rule-strong)}
+details.nums{margin-top:.8rem}
+details>summary{cursor:pointer;color:var(--link);font-size:.88rem;width:fit-content}
+details[open]>summary{margin-bottom:.6rem}
+.kpi td.v{font:700 1.35rem/1.1 var(--f-num);letter-spacing:-.01em;white-space:nowrap}
+.kpi td.v .nr,.kpi td.v .tag{font:italic 400 .9rem var(--f-body)}
+.kpi td.v .tag{font:600 .68rem/1 var(--f-num);font-style:normal}
+.kpi td.m{color:var(--ink-muted);max-width:52ch}
+.sc{position:relative;display:block;height:.7rem;background:var(--track);min-width:8rem}
+.sc-f{position:absolute;inset:0 auto 0 0;width:var(--v);background:var(--tide)}
+.sc-t{position:absolute;top:-.3rem;bottom:-.3rem;left:var(--t);width:2px;background:var(--ink)}
+.sc-l{display:block;font:.76rem var(--f-num);color:var(--ink-muted);margin-top:.35rem}
+.gantt{display:grid;font-size:.86rem}
+.g-row{display:grid;grid-template-columns:minmax(0,15rem) 1fr 6rem;gap:.8rem;align-items:center;min-height:2rem;padding:.5rem 0;border-bottom:1px solid var(--rule)}
+.g-lab{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.g-num{text-align:right;font:500 .8rem var(--f-num);color:var(--ink-muted)}
+.g-track{position:relative;height:2rem}
+.g-bar{position:absolute;top:.55rem;height:.9rem;background:var(--tide);min-width:3px}
+.g-plan .g-bar{background:var(--muted-bar)}
+.g-group{min-height:2.2rem;border-bottom-color:var(--rule-strong)}
+.g-group .g-lab{font-weight:700;padding-top:.5rem}
+.g-head{border-bottom:1px solid var(--rule-strong);min-height:1.8rem}
+.g-head .g-lab,.g-head .g-num{font:600 .72rem var(--f-num);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-muted)}
+.g-scale span{position:absolute;top:.55rem;transform:translateX(-50%);font:.72rem var(--f-num);color:var(--ink-faint);white-space:nowrap}
+.g-scale span:first-child{transform:none}.g-scale span:last-child{transform:translateX(-100%)}
+.g-mark{position:absolute;top:.15rem;transform:translateX(-50%)}
+.g-mark .im{min-width:1.7rem;height:1.15rem}
+.tideline{list-style:none;margin:0;padding:0}
+.tideline li{display:grid;grid-template-columns:6.4rem 5.4rem 1fr auto;gap:.9rem;align-items:baseline;padding:.55rem 0;border-bottom:1px solid var(--rule);font-size:.92rem}
+.tideline li:nth-child(5n){border-bottom-color:var(--rule-strong)}
+.tl-t{font:600 .9rem var(--f-num);color:var(--ink-muted)}
+.tl-r{font:700 .86rem var(--f-num)}
+.tideline li.base{background:var(--tide-fill);margin-inline:-.6rem;padding:.55rem .6rem}
+.tideline .amv .tl-r{color:var(--k)}
+.tl-s{color:var(--ink-faint)}
+.glance{margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr));gap:0 2rem}
+.glance div{padding:.6rem 0;border-bottom:1px solid var(--rule)}
+.glance dt{font:600 .72rem/1.2 var(--f-num);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-muted);margin-bottom:.25rem}
+.glance dd{margin:0}
+.log{list-style:none;margin:0;padding:0;font-size:.86rem}
+.log li{padding:.4rem 0 .4rem 1rem;border-bottom:1px solid var(--rule);position:relative}
+.log li::before{content:"";position:absolute;left:0;top:.85rem;width:.4rem;height:.4rem;background:var(--ink-faint)}
+.log .tr{font-weight:700}.log .tr::before{background:var(--ink)}
+.log .ps::before{background:var(--ok)}.log .fl::before{background:var(--bad)}
+.amlist{list-style:none;margin:0;padding:0}
+.am{padding:1.1rem 0;border-top:1px solid var(--rule)}
+.am h3{margin:0;display:flex;gap:.6rem;align-items:baseline}
+.am-meta{font-size:.84rem;color:var(--ink-muted);margin:.35rem 0 .5rem;display:flex;flex-wrap:wrap;gap:.25rem .5rem;align-items:center}
+.am p{max-width:80ch}
+.issue{white-space:pre-wrap;font:.84rem/1.5 var(--f-mono);background:var(--ground);border:1px solid var(--rule);padding:1rem;overflow-x:auto}
+.foot{color:var(--ink-faint);font-size:.82rem;padding-top:1rem;padding-bottom:2.5rem}
+.bad{color:var(--bad)}.ok{color:var(--ok)}
+@media (max-width:760px){
+ .g-row{grid-template-columns:1fr 5rem;gap:.1rem .6rem}
+ .g-lab{grid-column:1/-1;padding-top:.45rem}
+ .g-track{grid-column:1}
+ .g-head .g-lab{display:none}
+ .g-scale span:nth-child(even){display:none}
+ .g-group .g-track,.g-group .g-num{display:none}
+ .tideline li{grid-template-columns:5.6rem 1fr;gap:.2rem .7rem}.tl-w{grid-column:1/-1}.tl-s{display:none}
+ .kpi thead{display:none}
+ .kpi tr{display:grid;grid-template-columns:1fr auto;gap:.2rem 1rem;padding:.6rem 0;border-bottom:1px solid var(--rule)}
+ .kpi td,.kpi th{border:0;padding:.1rem 0}
+ .kpi td.a,.kpi td.m{grid-column:1/-1}
+}
+@media (prefers-reduced-motion:no-preference){.js .tp:not([hidden]){animation:in .22s cubic-bezier(.16,1,.3,1)}@keyframes in{from{opacity:.4;transform:translateY(4px)}}}
+@media print{.tabs{display:none}.js .tp[hidden]{display:block}}
+
+</style>
+</head>
+<body>
+<header class="band"><div class="wrap band-top"><div><p class="crumb">dod · docs/dod · dashboard</p><h1>Project dashboard</h1></div><div class="state"><span>2 plans</span><span>1 done</span></div></div><div class="wrap"><nav class="tabs" role="tablist" aria-label="Dashboard sections"><button role="tab" id="tab-overview" aria-controls="p-overview" aria-selected="true" tabindex="0" type="button">Overview</button><button role="tab" id="tab-plans" aria-controls="p-plans" aria-selected="false" tabindex="-1" type="button">Plans <span class="cnt">2</span></button><button role="tab" id="tab-analysis" aria-controls="p-analysis" aria-selected="false" tabindex="-1" type="button">Analysis</button><button role="tab" id="tab-effort" aria-controls="p-effort" aria-selected="false" tabindex="-1" type="button">Effort</button></nav></div></header>
+<main class="wrap">
+<p class="notice">This page holds your plans&#39; own text and names — share it as you would the plans.</p>
+<div class="tp" role="tabpanel" id="p-overview" aria-labelledby="tab-overview" tabindex="0"><h2 class="nojs-h">Overview</h2><div class="lead"><p class="dek">2 plans in this store, 1 done.</p><div class="story"><p>Across the done plans the prediction rate averages 100 % (median 100 %, 1 plan).</p></div></div><section class="panel"><div class="ph"><h2>Prediction rate across the store</h2><p>Each done plan in closing order; the band is the 75–90 % range between the floor and the target.</p></div><figure class="chart"><svg viewBox="0 0 650 220" role="img" aria-labelledby="rate-t" data-plot="52 628 16 180"><title id="rate-t">Prediction rate of each done plan, in closing order</title><rect class="bandfill" x="52" y="48.8" width="576" height="49.2"/><line class="ref" x1="52" x2="628" y1="98.0" y2="98.0"/><text class="tick" x="44" y="102.0" text-anchor="end">75 %</text><line class="ref" x1="52" x2="628" y1="48.8" y2="48.8"/><text class="tick" x="44" y="52.8" text-anchor="end">90 %</text><line class="grid" x1="52" x2="628" y1="180.0" y2="180.0"/><text class="tick" x="44" y="184.0" text-anchor="end">50 %</text><line class="grid" x1="52" x2="628" y1="16.0" y2="16.0"/><text class="tick" x="44" y="20.0" text-anchor="end">100 %</text><path class="trendline" d="M340.0,16.0"/><circle class="pt" cx="340.0" cy="16.0" r="5"><title>mounted-bar-reset · 100 %</title></circle></svg></figure><details class="nums"><summary>Show the numbers</summary><div class="tw"><table class="data"><caption>Prediction rate by plan</caption><thead><tr><th scope="col">plan</th><th scope="col" class="n">closed</th><th scope="col" class="n">rate</th></tr></thead><tbody><tr><th scope="row">mounted-bar-reset</th><td class="n">2026-10-04</td><td class="n">100 %</td></tr></tbody></table></div></details></section><section class="panel"><div class="ph"><h2>Averages over the done plans</h2><p>Mean and median; a plan whose measure is not recorded is left out of that measure and the count says so.</p></div><div class="tw"><table class="data"><caption>Mean and median per measure</caption><thead><tr><th scope="col">Measure</th><th scope="col">Mean · median</th><th scope="col" class="n">Plans counted</th></tr></thead><tbody><tr><th scope="row">Prediction rate</th><td>100 % · 100 % <span class="dim">n 1</span></td><td class="n">1</td></tr><tr><th scope="row">Design changes</th><td>0 · 0 <span class="dim">n 1</span></td><td class="n">1</td></tr><tr><th scope="row">Rework</th><td>0 · 0 <span class="dim">n 1</span></td><td class="n">1</td></tr><tr><th scope="row">Review rounds</th><td>4 · 4 <span class="dim">n 1</span></td><td class="n">1</td></tr><tr><th scope="row">Draft to done (days)</th><td>1 · 1 <span class="dim">n 1</span></td><td class="n">1</td></tr><tr><th scope="row">Items verified per day</th><td>18 · 18 <span class="dim">n 1</span></td><td class="n">1</td></tr><tr><th scope="row">Hours</th><td><span class="nr">not recorded</span></td><td class="n">0</td></tr><tr><th scope="row">Tokens (k)</th><td><span class="nr">not recorded</span></td><td class="n">0</td></tr></tbody></table></div></section></div>
+<div class="tp" role="tabpanel" id="p-plans" aria-labelledby="tab-plans" tabindex="0"><h2 class="nojs-h">Plans</h2><section class="panel"><div class="ph"><h2>Plans</h2><p>Every plan in the store, open and done.</p></div><div class="tw"><table class="data"><caption>Every plan</caption><thead><tr><th scope="col">Plan</th><th scope="col">Status</th><th scope="col">Size</th><th scope="col">Kind</th><th scope="col">Verified</th><th scope="col">Rate</th><th scope="col">Rounds</th><th scope="col">Draft to done</th><th scope="col">Hours</th><th scope="col">Tokens</th></tr></thead><tbody><tr><th scope="row"><span class="mono">bar-reset</span> Action-bar reset that clears every layer</th><td>draft</td><td>L</td><td>feature</td><td>33/33</td><td>n/a</td><td><span class="nr">not recorded</span></td><td>n/a</td><td><span class="nr">not recorded</span></td><td><span class="nr">not recorded</span></td></tr><tr><th scope="row"><span class="mono">mounted-bar-reset</span> Mounted bar - visible saddle keys and an honest reset on a horse</th><td>done</td><td>M</td><td>backlog</td><td>18/18</td><td>100 %</td><td>4</td><td>1 day</td><td><span class="nr">not recorded</span></td><td><span class="nr">not recorded</span></td></tr></tbody></table></div></section></div>
+<div class="tp" role="tabpanel" id="p-analysis" aria-labelledby="tab-analysis" tabindex="0"><h2 class="nojs-h">Analysis</h2><section class="panel"><div class="ph"><h2>Most-missed probes across the store</h2><p>Probes the done plans&#39; discovered and corrected amendments named in two or more plans, and the profile&#39;s own probes.</p></div><p class="nr">none yet</p></section><section class="panel"><div class="ph"><h2>Design changes by kind</h2><p>Every amendment of every plan, summed.</p></div><div class="tw"><table class="data"><caption>Changes by kind</caption><thead><tr><th scope="col">Kind</th><th scope="col" class="n">Amendments</th></tr></thead><tbody><tr><th scope="row"><span class="chip k-discovered"><i></i>discovered</span></th><td class="n">0</td></tr><tr><th scope="row"><span class="chip k-corrected"><i></i>corrected</span></th><td class="n">0</td></tr><tr><th scope="row"><span class="chip k-requested"><i></i>requested</span></th><td class="n">0</td></tr><tr><th scope="row"><span class="chip k-emergent"><i></i>emergent</span></th><td class="n">0</td></tr><tr><th scope="row"><span class="chip k-defect"><i></i>defect</span></th><td class="n">2</td></tr><tr><th scope="row"><span class="chip k-external"><i></i>external</span></th><td class="n">0</td></tr></tbody></table></div></section></div>
+<div class="tp" role="tabpanel" id="p-effort" aria-labelledby="tab-effort" tabindex="0"><h2 class="nojs-h">Effort</h2><section class="panel"><div class="ph"><h2>Effort</h2><p>Hours and tokens from each plan&#39;s effort lines; plans without them say not recorded.</p></div><div class="tw"><table class="data"><caption>Effort per plan</caption><thead><tr><th scope="col">Plan</th><th scope="col" class="n">Hours</th><th scope="col" class="n">Tokens</th></tr></thead><tbody><tr><th scope="row"><span class="mono">bar-reset</span></th><td class="n"><span class="nr">not recorded</span></td><td class="n"><span class="nr">not recorded</span></td></tr><tr><th scope="row"><span class="mono">mounted-bar-reset</span></th><td class="n"><span class="nr">not recorded</span></td><td class="n"><span class="nr">not recorded</span></td></tr></tbody></table></div></section></div>
+</main>
+<footer class="wrap foot">Generated by dod · works offline and loads nothing</footer>
+<script>(function(){var d=document;d.documentElement.classList.add('js');var tabs=[].slice.call(d.querySelectorAll('[role=tab]'));if(!tabs.length)return;var panels=tabs.map(function(t){return d.getElementById(t.getAttribute('aria-controls'))});function show(i,focus){tabs.forEach(function(t,j){var on=i===j;t.setAttribute('aria-selected',on);t.tabIndex=on?0:-1;panels[j].hidden=!on});if(focus)tabs[i].focus();var b=tabs[i],l=b.parentNode;if(l.scrollWidth>l.clientWidth)l.scrollLeft=b.offsetLeft-l.offsetLeft-(l.clientWidth-b.offsetWidth)/2;if(history.replaceState)history.replaceState(null,'','#'+tabs[i].id.slice(4))}tabs.forEach(function(t,i){t.addEventListener('click',function(){show(i)});t.addEventListener('keydown',function(e){var n=e.key==='ArrowRight'||e.key==='ArrowDown'?i+1:e.key==='ArrowLeft'||e.key==='ArrowUp'?i-1:e.key==='Home'?0:e.key==='End'?tabs.length-1:null;if(n===null)return;e.preventDefault();show((n+tabs.length)%tabs.length,true)})});function fromHash(){var h=location.hash.slice(1),s=-1;tabs.forEach(function(t,k){if(t.id==='tab-'+h)s=k});show(s<0?0:s)}fromHash();addEventListener('hashchange',fromHash)})();</script>
+</body>
+</html>

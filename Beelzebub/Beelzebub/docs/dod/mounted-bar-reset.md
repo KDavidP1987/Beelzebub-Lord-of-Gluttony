@@ -5,12 +5,12 @@ kind: backlog
 id: dod-20261003-m7b3
 slug: mounted-bar-reset
 title: Mounted bar - visible saddle keys and an honest reset on a horse
-status: in-progress
+status: done
 size: M
 parent: none
 created: 2026-10-03
 baselined: 2026-10-04
-closed: none
+closed: 2026-10-04
 recon_commit: 0a135f5
 coverage_author: 15/15 layers · 49/49 probes
 coverage_reviewer: 15/15 layers · 49/49 probes
@@ -403,3 +403,18 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-04 · D16 · pass · cmd: `python Beelzebub/tools/check_mounted_bar.py secrets` → `secrets: ok, 78 files, 0 hits` · 6afcc24 · claude
 - 2026-10-04 · D17 · pass · cmd: `python Beelzebub/tools/check_mounted_bar.py selfonly` → `selfonly: ok, 2 self-only commands` · 6afcc24 · claude
 - 2026-10-04 · D18 · pass · cmd: `python Beelzebub/tools/check_mounted_bar.py paths` → `paths: ok, 30 changed, 32 declared` · 6afcc24 · claude
+- 2026-10-04 · note · close · owner confirmed A1 and A2 as `defect` (the plan's D9 outcome held; the implementation missed that DestroyTag lands a frame late)
+- 2026-10-04 · status → done · close
+
+## Report · 2026-10-04
+Baseline items            18
+Discovered (planning gaps) 0 amendments · 0 design changes (wrong 0 · missed 0)
+Corrected (reversals)      0            (counts in the rate)
+Requested scope changes    0    (excluded)
+Emergent / defect / external 0 · 2 · 0  (excluded; A1 diagnostic, A2 destroy ledger — owner-confirmed defect)
+Prediction rate            18 / (18 + 0) = 100 %   target ≥ 90 %
+Rework                     0 of 0 misses corrected an earlier amendment
+Completion                 vs baseline 18/18 · vs current 18/18
+Review                     codex · 3 rounds, then human READY · author 15/15 layers · reviewer 15/15 layers
+Timeline                   draft 10-03 · ready 10-04 · start 10-04 · done 10-04
+Missed probes              none — the D9 failure was a defect: `DestroyUtility.Destroy` stamps DestroyTag a frame late (now `Logic/DestroyLedger.cs`)
