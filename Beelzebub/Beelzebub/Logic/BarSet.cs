@@ -39,7 +39,20 @@ public sealed class BarSet
     public bool Keeps(string bindOrigin)
     {
         if (Kind == BarSetKind.All) return false;
-        if (string.IsNullOrEmpty(bindOrigin) || string.Equals(bindOrigin, "none", StringComparison.OrdinalIgnoreCase)) return false;
+        if (!IsKnownOrigin(bindOrigin)) return false;   // fail closed: an origin outside the grammar is a survivor
         return !string.Equals(bindOrigin, Label, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>The closed origin grammar BindOrigins writes: `universal`, `weapon:<Name>`, `form:<Name>` with one
+    /// non-empty name and no further colon. `none`, empty and anything else are not a set.</summary>
+    public static bool IsKnownOrigin(string origin)
+    {
+        if (string.IsNullOrEmpty(origin)) return false;
+        if (string.Equals(origin, "universal", StringComparison.OrdinalIgnoreCase)) return true;
+        int colon = origin.IndexOf(':');
+        if (colon <= 0 || colon == origin.Length - 1 || origin.IndexOf(':', colon + 1) >= 0) return false;
+        string kind = origin.Substring(0, colon);
+        return string.Equals(kind, "weapon", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(kind, "form", StringComparison.OrdinalIgnoreCase);
     }
 }

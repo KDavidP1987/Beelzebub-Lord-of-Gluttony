@@ -11,7 +11,11 @@ A check that scans nothing FAILs with "no input" — a check that finds nothing 
             states the revert / rebuild / redeploy commands and the no-migration consequence
   selfonly  `clearbar` and `resetbar` take no player/target parameter and are not adminOnly (caller only)
   wiring    the ClearBar handler calls BarResetService.FullReset(..., BarResetScope.ClearSet, ...) exactly once and
-            none of the calls the old handler used to change binds or the bar (business rule 6 of the plan)
+            none of the calls the old handler used to change binds or the bar (business rule 6 of the plan), and
+            refuses a sender whose SteamID resolves to 0 before it
+  tests     every named ClearSet control (D1-D5) exists as a [Fact]/[Theory] method
+  entry     nothing in the plugin dispatches commands besides VCF's chat hook (no CommandRegistry.Handle, no direct
+            ClearBar/ResetBar call, no RCON/console command)
   paths     every path changed since the plan's recon commit is declared in the plan's Rollout path list
   backlog   docs/BACKLOG.md's `clearbar-fullreset` row says `DONE v0.137.4`
   selftest  runs every check above on temp fixtures: a good fixture must pass, a defect fixture must FAIL, and an
@@ -171,6 +175,11 @@ def check_wiring(root: str) -> str:
         bad.append(f"{len(calls)} FullReset call(s), want 1")
     elif "BarResetScope.ClearSet" not in calls[0]:
         bad.append("FullReset is not called with BarResetScope.ClearSet")
+    # the refusal block (`{ ctx.Reply(""); return; }` once strings are blanked) must return, and come before FullReset
+    refusal = re.search(r"if\s*\(\s*steamId\s*==\s*0\s*\)\s*(?:\{[^}]*\breturn\s*;[^}]*\}|return\s*;)", body)
+    full = re.search(r"\bFullReset\s*\(", body)
+    if not refusal or (full and refusal.start() > full.start()):
+        bad.append("no steamId == 0 refusal before the reset")
     if bad:
         return "wiring: FAIL " + "; ".join(bad)
     return "wiring: ok, ClearBar calls FullReset(ClearSet) once, 0 bypass calls"
@@ -214,7 +223,77 @@ def check_backlog(root: str) -> str:
     return "backlog: ok, clearbar-fullreset DONE v0.137.4"
 
 
-CHECKS = {"wiring": check_wiring, "selfonly": check_selfonly, "paths": check_paths, "handoff": check_handoff,
+TESTS_DIR = "Beelzebub/Beelzebub.Tests"
+# D-item -> (test file, the named controls that must exist as [Fact]/[Theory] methods). A filtered `dotnet test` passes
+# when these are deleted; this check does not.
+REQUIRED_TESTS = {
+    "D1": ("BarResetTests.cs", ["ClearSet_plan_fails_when_RestoreKept_is_missing_or_not_right_after_Reapply",
+                                "Plan_fails_when_RestoreKept_leaks_into_another_scope",
+                                "ClearSet_plan_fails_when_it_clears_hotkeys_or_an_offline_plan_has_a_live_step"]),
+    "D2": ("BarSetTests.cs", ["Keeps_fails_when_all_keeps_any_origin",
+                              "Keeps_fails_when_a_set_keeps_its_own_origin_or_drops_another",
+                              "Keeps_fails_when_none_is_kept_or_the_comparison_is_case_sensitive",
+                              "Keeps_fails_when_an_unknown_origin_is_kept", "Label_fails_when_a_label_differs"]),
+    "D3": ("BarResetTests.cs", ["ClearSet_fails_when_a_kept_universal_bind_makes_clearbar_sword_unclean",
+                                "ClearSet_fails_when_a_bind_of_the_cleared_set_reads_as_kept",
+                                "ClearSet_fails_when_a_kept_slot_with_an_other_mod_reads_clean",
+                                "ClearSet_fails_when_a_run_without_RestoreKept_or_with_a_thrown_RestoreKept_reads_clean",
+                                "ClearSet_fails_when_clearbar_all_keeps_a_bind_of_any_set",
+                                "Run_fails_when_a_reset_without_a_clear_set_keeps_any_bind"]),
+    "D4": ("BarResetReplyTests.cs", ["ForClear_fails_when_a_clean_clear_has_a_second_line_or_another_headline",
+                                     "ForClear_fails_when_a_suffix_appears_without_its_step",
+                                     "ForClear_fails_when_a_failed_step_or_a_leftover_is_not_named",
+                                     "ForClear_fails_when_a_line_exceeds_480_bytes"]),
+    "D5": ("BarResetLogTests.cs", ["Format_fails_when_a_ClearSet_line_lacks_set_or_another_scope_gains_it"]),
+}
+
+
+def check_tests(root: str) -> str:
+    missing, seen, files = [], 0, 0
+    for d, (fname, names) in REQUIRED_TESTS.items():
+        src = read(root, f"{TESTS_DIR}/{fname}")
+        if src is None:
+            continue
+        files += 1
+        for n in names:
+            if re.search(r"\[(Fact|Theory)\][^{;]*?public void " + re.escape(n) + r"\(", src, re.S):
+                seen += 1
+            else:
+                missing.append(f"{d} {n}")
+    if files == 0:
+        return "tests: FAIL no input (no test files)"
+    want = sum(len(v[1]) for v in REQUIRED_TESTS.values())
+    if missing or seen != want:
+        return f"tests: FAIL {want - seen} required control(s) missing: {missing[:4]}"
+    return f"tests: ok, {seen} named ClearSet controls present"
+
+
+# the only way a player command runs is VCF's ChatMessageSystem prefix (a chat event from a connected User entity);
+# any of these in the plugin would open a second entry channel for clearbar / resetbar
+ENTRY_BYPASS = [r"\bCommandRegistry\.Handle\s*\(", r"\b(?:BeelzCommands\.)?(?:ClearBar|ResetBar)\s*\(\s*(?!ChatCommandContext)",
+                r"(?i)\brcon\w*", r"\bConsoleCommand\w*"]
+
+
+def check_entry(root: str) -> str:
+    files = [f for f in cs_files(root) if f.endswith(".cs")]
+    if not files:
+        return "entry: FAIL no input (no .cs files)"
+    hits = []
+    for rel in files:
+        st = re.sub(r"//[^\n]*", "", read(root, rel))
+        st = re.sub(r'"(?:\\.|[^"\\])*"', '""', st)
+        for pat in ENTRY_BYPASS:
+            for m in re.finditer(pat, st):
+                line = st[:m.start()].rsplit("\n", 1)[-1]
+                if "public static void" in line:   # the handler's own declaration
+                    continue
+                hits.append(f"{rel}:{st.count(chr(10), 0, m.start()) + 1} {m.group(0).strip()}")
+    if hits:
+        return f"entry: FAIL second entry channel(s): {hits[:5]}"
+    return f"entry: ok, {len(files)} files, commands reach clearbar/resetbar only through VCF chat"
+
+
+CHECKS = {"tests": check_tests, "entry": check_entry, "wiring": check_wiring, "selfonly": check_selfonly, "paths": check_paths, "handoff": check_handoff,
           "secrets": check_secrets, "rollback": check_rollback, "backlog": check_backlog}
 
 
@@ -224,6 +303,7 @@ GOOD_CMDS = '''
 [Command("clearbar", description: "Clear [all|universal|<weapon>|<form>]")]
 public static void ClearBar(ChatCommandContext ctx, string set = "all")
 {
+    if (steamId == 0) { ctx.Reply("Could not resolve your Steam ID."); return; }
     // ClearAllSlots( is only mentioned in this comment
     var r = BarResetService.FullReset(ctx.Event.SenderCharacterEntity, BarResetScope.ClearSet, "clearbar", parsed);
     ctx.Reply("ClearGrant( inside a string");
@@ -252,7 +332,17 @@ def _git(root: str, *args: str) -> str:
 def _fixtures() -> dict[str, tuple[dict, dict]]:
     """check -> (good files, defect files). Each file map is written into its own empty temp tree."""
     handoff_good = "ApiVersion = 35\n" + "\n".join(HANDOFF_TOKENS)
+    tests_good: dict[str, str] = {}
+    for fname, names in REQUIRED_TESTS.values():
+        rel = f"{TESTS_DIR}/{fname}"
+        tests_good[rel] = tests_good.get(rel, "") + "".join(f"    [Fact]\n    public void {n}() {{ }}\n" for n in names)
+    tests_bad = dict(tests_good)
+    first = REQUIRED_TESTS["D3"][1][0]
+    tests_bad[f"{TESTS_DIR}/BarResetTests.cs"] = tests_bad[f"{TESTS_DIR}/BarResetTests.cs"].replace(f"public void {first}(", "public void Renamed(")
     return {
+        "tests": (tests_good, tests_bad),
+        "entry": ({COMMANDS: GOOD_CMDS},
+                  {COMMANDS: GOOD_CMDS, f"{PROJ}/Services/Rcon.cs": "static class X { static void Go(ChatCommandContext c) { CommandRegistry.Handle(c, \".beelz clearbar\"); } }"}),
         "handoff": ({HANDOFF: handoff_good, API: "public const int ApiVersion = 35;"},
                     {HANDOFF: handoff_good.replace("ApiVersion = 35", "ApiVersion = 34"), API: "public const int ApiVersion = 35;"}),
         "secrets": ({f"{PROJ}/A.cs": 'var name = "hello world";', f"{PROJ}/t.toml": 'versionNumber = "0.137.4"'},

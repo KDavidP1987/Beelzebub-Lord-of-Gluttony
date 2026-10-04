@@ -34,6 +34,20 @@ public class BarSetTests
         Assert.True(BarSet.Weapon("Sword").Keeps("weapon:Spear"));
     }
 
+    [Theory]
+    [InlineData("weapon:Sword:legacy")]
+    [InlineData("weapon:")]
+    [InlineData(":Sword")]
+    [InlineData("mount:Horse")]
+    [InlineData("transform:Beatrice")]
+    [InlineData("universalx")]
+    public void Keeps_fails_when_an_unknown_origin_is_kept(string origin)
+    {
+        Assert.False(BarSet.Universal.Keeps(origin), origin);
+        Assert.False(BarSet.Weapon("Spear").Keeps(origin), origin);
+        Assert.False(BarSet.IsKnownOrigin(origin), origin);
+    }
+
     [Fact]
     public void Label_fails_when_a_label_differs()
     {
