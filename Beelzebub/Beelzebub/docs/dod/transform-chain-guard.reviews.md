@@ -171,3 +171,12 @@ VERDICT: REVISE
 - F7 · accepted · the Morgana retry now ends with `.beelz phase` → `Currently in phase 2`, which only the show-mode reply prints
 - F8 · accepted · S-3's fallback now says what changes if the budget is missed (auto routes stop consulting the ledger) and that the owner re-decides the budget
 - F9 · rejected · summary of F1–F3, answered there
+
+## Review 4 · 2026-10-04 · human · plan commit c314983 · plan 49864 B · 20 items
+Owner (Chaos), approving the proposed answers to the four rubric questions on `docs/dod/transform-chain-guard.review.html` (plan-mode decision, 2026-10-04, option A; confirmed "READY as proposed"):
+1. Coverage — every Considered layer answers all of its probes, no N/A; the reviewer's 46/49 gap is exactly F1–F3 of Review 3 (3.3, 12.4, 14.4), each rejected with reasons.
+2. Contest — every pointer answers its probe; S-1 and S-2 were validated by spike; S-3 is reversible with a real fallback (the auto routes stop consulting the ledger; the owner re-decides the budget); no decision-required assumption.
+3. Hunt — one recorded limit: the async pending window cannot be hit on demand from chat, so D9 (d) proves "no error, the phase lands" rather than forcing a refusal; a never-returning player's pending entry is kept until login or restart (accepted, in memory).
+4. Test the tests — every item has evidence that fails when its control is removed; every gating probe has one command; every build step cites its items; the rejections of Review 3 F1–F3 stand.
+15/15 layers · 49/49 probes
+VERDICT: READY
