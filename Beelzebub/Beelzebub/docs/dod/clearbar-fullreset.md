@@ -1,0 +1,234 @@
+---
+dod: 2
+rubric: 2
+kind: backlog
+id: dod-20261004-c4f1
+slug: clearbar-fullreset
+title: clearbar - clear one set through the layered reset
+status: draft
+size: M
+parent: none
+created: 2026-10-04
+baselined: none
+closed: none
+recon_commit: 265e98c
+coverage_author: 15/15 layers · 49/49 probes
+coverage_reviewer: pending
+review: pending
+---
+
+# DoD: clearbar - clear one set through the layered reset
+
+**Size:** M — touches `Logic/`, `Services/BarResetService.cs`, `Commands/BeelzCommands.cs`, two check tools and the BCH handoff; no schema change, no new external dependency (L test failed: one module family, no new dependency).
+**Planned:** interactively (owner approved the decision set in `~/.claude/plans/virtual-seeking-rose.md` on 2026-10-04, every recommendation taken: clearbar behaves like resetbar on a horse / in a form or transform — dismount or end it and say so; ApiVersion 34 → 35 additive; transform-chain-guard is its own plan and release)
+**Request:** "proceed into the next phase of development. You'll need to try to run tests yourself, applying abilities, using abilities, and performing actions" — the next backlog row, `clearbar-fullreset` in `Beelzebub/Beelzebub/docs/BACKLOG.md`: "Fold `.beelz clearbar` into the layered reset."
+
+## Definition of Done
+- [ ] D1 · **ClearSet plan order** `BarResetPlanner.Plan(BarResetScope.ClearSet, online, liveReady, transform, mounted)` returns, online and liveReady: [RevertTransform when transform], ClearSavedBindings, SaveBindings, [Dismount when mounted], ClearEquipEntries, DestroyOverrideSources, PopSlotMods, EmptyPush, Reapply, RestoreKept, Readback; offline: ClearSavedBindings, SaveBindings; online not liveReady: ClearSavedBindings, SaveBindings, Readback; ClearSet never plans ClearHotkeys; RestoreKept is planned for ClearSet only · test: Beelzebub.Tests/BarResetTests.cs (fails when: RestoreKept is missing, is not directly after Reapply, appears in a PlayerReset/AdminLoadouts/Purge plan, ClearHotkeys appears in a ClearSet plan, or an offline ClearSet plan contains a live step)
+- [ ] D2 · **Which binds a clear keeps** `Logic/BarSet.cs` `BarSet` (`All`, `Universal`, `Weapon(name)`, `Form(name)`) with `Keeps(string bindOrigin)`: All keeps nothing; Universal keeps every origin but `universal`; `Weapon("Sword")` every origin but `weapon:Sword`; `Form("Wolf")` every origin but `form:Wolf` (names compared case-insensitively); the origin `none` is never kept; `Label` is `all`, `universal`, `weapon:<Name>`, `form:<Name>` · test: Beelzebub.Tests/BarSetTests.cs (fails when: All keeps any origin, a set keeps its own origin, a set drops another set's origin, `none` is kept, the comparison is case-sensitive, or a label differs)
+- [ ] D3 · **A kept bind is not a survivor** `BarResetRunner.Run(ops, steps, online, liveReady, BarSet clearSet = null)`: with a clearSet, a readback slot whose `Bind` the set keeps, with `Other == 0` and readable, is not a survivor; a kept slot with `Other > 0` is; RestoreKept joins the steps a clean run needs; with `clearSet == null` survivors and Clean are exactly as before · test: Beelzebub.Tests/BarResetTests.cs (fails when: a kept universal bind after `clearbar sword` makes the run unclean, a slot bound by the cleared set reads as kept, a kept slot with other=1 reads clean, a ClearSet run without RestoreKept reads clean, or any pre-existing BarResetTests case changes result)
+- [ ] D4 · **The clearbar reply** `BarResetReply.ForClear(result, what)`: headline `Cleared <what> — <n> binding(s) removed. Captured abilities kept; re-grant anytime.` (n = ClearSavedBindings count) or `Nothing was bound in <what>.` when n is 0; the headline gains ` You were dismounted to reset your bar; remount to ride.` when Dismount counted, and ` Your transform was ended to clear the bar.` when RevertTransform counted; a second line only when something went wrong — the same problem texts as `ForReset` (not saved, `failed: <steps>`, could not read, `still overridden: <slots> — ask an admin for .beelz admin bar`, override buff still on, live bar not reachable); every line ≤ 480 UTF-8 bytes · test: Beelzebub.Tests/BarResetReplyTests.cs (fails when: a clean run has a second line, a headline differs from the exact text, a dismount or transform suffix appears without its step count, a failed step has no `failed:` line, or a line exceeds 480 bytes)
+- [ ] D5 · **The log names the set** `BarResetLog.Format(result, scope, name, steamId, ms, run, clearSet)` writes ` set=<Label>` right after ` scope=ClearSet` and nothing new for the other scopes · test: Beelzebub.Tests/BarResetLogTests.cs (fails when: a ClearSet line lacks `set=weapon:Sword` after `scope=ClearSet`, or a PlayerReset line gains a `set=` field)
+- [ ] D6 · **clearbar uses only FullReset** the `ClearBar` handler parses the set, then calls `BarResetService.FullReset(character, steamId, name, BarResetScope.ClearSet, set)` once and calls none of `ClearGrant`, `RestoreResolvedGrants`, `ClearAllSlots`, `ClearUniversalBucket`, `ClearWeaponBucket`, `ClearFormBucket`, `ClearAllLoadouts`, `Transforms.Revert`; `check_bar_reset.py` no longer exempts clearbar and needs 4 FullReset call sites · cmd: `python Beelzebub/tools/check_clearbar.py wiring` → `wiring: ok, ClearBar calls FullReset(ClearSet) once, 0 bypass calls` (fails when: ClearBar calls any listed symbol, calls FullReset zero or two times, or with another scope; a missing BeelzCommands.cs or ClearBar handler prints `FAIL no input`)
+- [ ] D7 · **Reset layers stay behind the allowlist** `python Beelzebub/tools/check_bar_reset.py commands` passes with clearbar removed from `EXEMPT_COMMANDS` and the FullReset minimum raised to 4 · cmd: `python Beelzebub/tools/check_bar_reset.py commands` → `commands: ok, <n> symbols, 4 FullReset call sites` (fails when: a command other than the LEGACY handlers calls a reset-layer symbol, or fewer than 4 FullReset call sites exist)
+- [ ] D8 · **Reset callers stay authorised** every caller of `FullReset`/`ReadBar` is the self-only `ResetBar` or `ClearBar` handler or an adminOnly method; every `beelz admin` command keeps `adminOnly: true` · cmd: `python Beelzebub/tools/check_bar_reset.py auth` → `auth: ok, <n> admin commands, 5 reset callers` (fails when: a patch, service or non-admin handler other than ResetBar/ClearBar calls FullReset or ReadBar, an admin command loses adminOnly, or fewer than 50 admin commands parse)
+- [ ] D9 · **clearbar stays self-only** `clearbar` (`ClearBar`) and `resetbar` (`ResetBar`) take no player/target/name/steam parameter and are not adminOnly · cmd: `python Beelzebub/tools/check_clearbar.py selfonly` → `selfonly: ok, 2 self-only commands` (fails when: either gains a target-like parameter, becomes adminOnly, or is not found; a missing BeelzCommands.cs prints `FAIL no input`)
+- [ ] D10 · **No credential in the plugin** no C# source under `Beelzebub/Beelzebub` holds a credential-shaped literal · cmd: `python Beelzebub/tools/check_clearbar.py secrets` → `secrets: ok, <n> files, 0 hits` (fails when: any `password|api_key|secret|bearer|access_token = "<8+ chars>"` literal appears; no .cs files prints `FAIL no input`)
+- [ ] D11 · **BCH contract is ApiVersion 35** `Commands/ApiCommands.cs` `ApiVersion = 35`; the handoff banner reads `ApiVersion = 35` and carries a `v0.137.4` block with `api>=35`, `clearbar`, `scope=ClearSet` and `Your transform was ended to clear the bar.`, plus the version-table row `| 35 | 0.137.4 |` · cmd: `python Beelzebub/tools/check_clearbar.py handoff` → `handoff: ok, api 35, banner 35, 6 tokens` (fails when: ApiVersion is not 35, the banner differs, or any token is missing; a missing file prints `FAIL no input`)
+- [ ] D12 · **In game, every clear ends clean** Claude's vrclient scenario `Beelzebub/tools/vrclient/scenarios/clearbar_fullreset.vrs` runs (a) `clearbar universal`, (b) `clearbar sword`, (c) `clearbar wolf` on foot, (d) `clearbar all` while riding with a saddle bind on R, (e) `clearbar sword` with a universal bind kept on Q, (f) `clearbar universal` while transformed (`.beelz transform 0`), each followed by its `[Beelz RESET] scope=ClearSet set=<label>` line with `clean=1`; (d) also shows `Dismount:1` and the dismount reply and a blank R in the `spells` screenshot, (e) shows `bind=universal` on slot 1 and a cast of 1621601748 on Q, (f) shows `RevertTransform:1` and the transform reply · cmd: `python Beelzebub/tools/vrclient/vrclient.py run Beelzebub/tools/vrclient/scenarios/clearbar_fullreset.vrs` → `SCENARIO PASS clearbar_fullreset <n>/<n>` (fails when: any case logs `clean=0`, lacks its expected step count or reply, or the client cannot join — `ensure` FAIL aborts the run and prints `SCENARIO FAIL`)
+- [ ] D13 · **Older in-game paths still pass** the v0.137.3 mounted reset and a plain cast are unchanged · cmd: `python Beelzebub/tools/vrclient/vrclient.py run Beelzebub/tools/vrclient/scenarios/mounted_reset.vrs` → `SCENARIO PASS mounted_reset 14/14`, then the same for `cast_basic.vrs` → `SCENARIO PASS cast_basic 6/6` (fails when: any check of either scenario fails)
+- [ ] D14 · **Session logs are clean** after the in-game runs and before any restart, the session's logs hold no Beelzebub stack frame and no error · cmd: `pwsh Beelzebub/tools/preflight.ps1 -LogCheck` → `PREFLIGHT OK (2 checks)` with `0 Beelzebub stack frame(s), 0 error(s)` for LogOutput.log (fails when: either log has a Beelzebub stack frame or an `[Error` line; a missing log FAILs)
+- [ ] D15 · **Release surfaces in sync** csproj and thunderstore.toml read 0.137.4, CHANGELOG.md has `## [0.137.4]` under its size cap, the README status names v0.137.4 and the root README is regenerated · cmd: `pwsh Beelzebub/tools/preflight.ps1` → `PREFLIGHT OK` with `versions csproj 0.137.4, thunderstore.toml 0.137.4` (fails when: the versions differ, CHANGELOG.md lacks the entry, the README names another version, or the root README is stale)
+- [ ] D16 · **Rollback range recorded** the audit states the first and last commit of this build, the revert/rebuild/redeploy steps and that a rollback needs `no saved-data migration` · cmd: `python Beelzebub/tools/check_clearbar.py rollback` → `rollback: ok, <first>..<last>` (fails when: the audit is missing (`FAIL no input`), the range line is absent or unresolvable, first is not an ancestor of last, or a step or the consequence is missing)
+- [ ] D17 · **Every written path is committed** after the release commit `git status --porcelain` lists nothing but the owner's two private files (`Beelzebub/Beelzebub/docs/V0136_ABILITY_TEST_PLAN.xlsx`, `_matrix_build.py`) · cmd: `git status --porcelain` → no other line (fails when: any other path is listed; outside a repository git exits 128, a FAIL)
+- [ ] D18 · **Every touched path is declared** every path changed since `265e98c` (tracked diff plus untracked, minus the owner files) is named in the Rollout path list · cmd: `python Beelzebub/tools/check_clearbar.py paths` → `paths: ok, <n> changed, <k> declared` (fails when: a changed path is undeclared or the list is missing; nothing changed prints `FAIL no input`)
+- [ ] D19 · **Backlog row closed** `Beelzebub/Beelzebub/docs/BACKLOG.md` marks `clearbar-fullreset` done in v0.137.4 · file: Beelzebub/Beelzebub/docs/BACKLOG.md contains "| clearbar-fullreset | DONE v0.137.4"
+
+## Purpose & typical use
+A player who wants to drop one of their saved loadouts types `.beelz clearbar [all|universal|<weapon>|<form>]`. It
+needs no confirmation and keeps their captured abilities. Today it only clears the saved set and re-applies the
+weapon's rows, so it skips two of the five layers a slot resolves through (CLAUDE.md "the action bar is five layers
+deep"): form/mount override buffs (L3) and engine slot mods (L4). The 2026-10-04 probe (`scenarios/clearbar_probe.vrs`)
+showed the result: after `clearbar all` while riding, Knife Throw stayed live on R (`[Beelz BAR] binds=0 … other=7`,
+screenshot `clearbar_probe-after-clearbar-all-mounted`). This slice makes clearbar run the same layered reset as
+`resetbar`, limited to the chosen set: the other sets' binds come back afterwards. It extends `bar-reset` (v0.137.0)
+and `mounted-bar-reset` (v0.137.3) and adds no new user or job.
+
+## Use cases
+### Typical
+- A player runs `.beelz clearbar sword`; the sword loadout is gone from the bar and the save, their universal binds stay on their keys, and the reply says how many binds went (D1, D3, D4, D12 e).
+- A rider runs `.beelz clearbar all`; they land on foot, the reply says so, and R is blank (D1, D4, D12 d).
+- A transformed player runs `.beelz clearbar universal`; the transform ends, the reply says so, and the bar is the weapon's (D1, D4, D12 f).
+### Minimal stretch
+- `clearbar` with no argument means `all` (unchanged). A set with no binds: the reset still runs, the reply reads `Nothing was bound in <what>.` (D4).
+- An unknown set name: the usage text, nothing is cleared, no reset runs (unchanged parser, D6).
+- A player whose live bar is unreachable (mid-respawn): saved set cleared, reply says the live bar is not reachable (D1, D4).
+### Maximal stretch
+- Repeated `clearbar` spam: each run is one synchronous reset of a few ms (the 2026-10-04 resets took 4–9 ms); the second finds nothing bound and says so; nothing accumulates — the reset pops every mod it pushes (bar-reset D10) (D1, D4).
+- A player with binds in every set (universal, several weapons, several forms, Mounted): clearing one set leaves the others in the save and RestoreKept re-injects the ones the held weapon resolves (D2, D3).
+- Abuse: clearbar acts only on the caller (D9); a player cannot clear someone else's bar.
+
+## Business rules
+1. The set → saved-data clear is exactly today's: `all` → `AbilityRegistry.ClearAllSlots` (universal + every weapon + every form; transform loadouts KEPT, unlike resetbar's `ClearAllLoadouts`), `universal|basic|any` → `ClearUniversalBucket`, a weapon family → `ClearWeaponBucket`, a form → `ClearFormBucket`. The count it returns is the reply's n (D4).
+2. Every clearbar runs the full live reset (owner decision 1, option A): ends an active or parked transform (RevertTransform), dismounts a rider (Dismount), removes form/shapeshift buffs and orphan slot sources (DestroyOverrideSources), pops slot mods, pushes Empty on the weapon's own slots and re-applies its rows — then RestoreKept re-injects the binds of the sets not cleared (`SlotApply.RestoreResolvedGrants`) (D1).
+3. Clean (D3) = today's rule, except a slot bound by a KEPT set (D2) with no `other` mod and readable is expected, not a survivor. A kept slot that also carries an `other` mod is still a survivor.
+4. Precedence: the chosen set's clear wins over any live layer that would show it (all live layers are wiped, then only kept binds return). Between kept sets the existing resolver decides (weapon set over universal — `AbilityRegistry` resolved map, unchanged). The owner decides exceptions; no per-server setting.
+5. Time: none; a clear applies immediately and persists via SaveBindings.
+6. "Every bypass symbol" (D6) is the list of calls the old handler made to change binds or the bar: `ClearGrant`, `RestoreResolvedGrants`, `ClearAllSlots`, `ClearUniversalBucket`, `ClearWeaponBucket`, `ClearFormBucket`, `ClearAllLoadouts`, `Transforms.Revert` — computed by reading `BeelzCommands.ClearBar` at `265e98c` plus the resetbar-only `ClearAllLoadouts`; after the change they live in `BarResetService` only. The `wiring` check reads the ClearBar method body only, so a helper method the handler calls would hide a bypass; `check_bar_reset.py commands` (D7) covers that for the layer symbols.
+
+## Interfaces
+### Internal — reads / writes / changes (paths or symbols)
+- Code read for this plan (repo paths): `Beelzebub/Beelzebub/Commands/BeelzCommands.cs` (`ClearBar`, `ResetBar`),
+  `Beelzebub/Beelzebub/Logic/BarReset.cs`, `Beelzebub/Beelzebub/Logic/BarResetReply.cs`, `Beelzebub/Beelzebub/Logic/BarResetLog.cs`,
+  `Beelzebub/Beelzebub/Services/BarResetService.cs`, `Beelzebub/Beelzebub/Services/SlotApply.cs` (`RestoreResolvedGrants`,
+  `ReapplyEquipRows`, `ClearGrant`), `Beelzebub/Beelzebub/Services/AbilityRegistry.cs` (`ClearAllSlots`, `Clear*Bucket`,
+  `ClearAllLoadouts`), `Beelzebub/tools/check_bar_reset.py` (`EXEMPT_COMMANDS`, `check_commands`, `check_auth`),
+  `Beelzebub/tools/check_clearbar.py`, `Beelzebub/tools/vrclient/vrclient.py`, `Beelzebub/tools/vrclient/scenarios/clearbar_probe.vrs`,
+  `Beelzebub/Beelzebub.Tests/BarResetTests.cs`.
+- New `Logic/BarSet.cs` (pure; linked into `Beelzebub.Tests` like the other `Logic/*.cs`) (D2).
+- `Logic/BarReset.cs`: `BarResetScope.ClearSet`, `BarResetStep.RestoreKept`, `IBarResetOps.RestoreKept()`, planner and runner changes (D1, D3).
+- `Logic/BarResetReply.cs`: `ForClear` (D4). `Logic/BarResetLog.cs`: the `set=` field (D5).
+- `Services/BarResetService.cs`: `FullReset(..., BarSet clearSet = null)`; `ClearSavedBindings` clears only the chosen set for ClearSet (rule 1); `RestoreKept()` = `SlotApply.RestoreResolvedGrants(_character)`; `RevertTransform` reason `clearbar` for ClearSet (the transform-ended wire reason BCH already sees from the old handler) (D1, D6).
+- `Commands/BeelzCommands.cs` `ClearBar`: parse → `FullReset` → `ForClear` reply → `[BEELZ:event] type=slot-cleared` (unchanged line) (D6).
+- Test fakes in `BarResetTests` gain `RestoreKept()` (D1, D3).
+- What breaks if wrong: a missed RestoreKept wipes kept binds (D12 e shows it); a too-wide Keeps hides a real leftover (D3 cases).
+- Contract (BCH): clearbar's syntax and its `[BEELZ:event] type=slot-cleared` line are unchanged; the reply can carry the dismount and transform suffixes and a problem line; the server log gains `scope=ClearSet set=<label>` lines; `ApiVersion` 34 → 35 additive (D11).
+### External — dependencies and their failure behaviour
+- V Rising server ECS — the same calls `resetbar` makes. A step that throws is recorded as `<Step>:ERR`, the rest still run (bar-reset D12), the run is not clean, and the reply's second line names it (D3, D4).
+- The game client, through vrclient (test tooling only): if the client cannot join, `ensure` fails and the scenario prints `SCENARIO FAIL` (D12); the owner is then asked to look.
+- Supported game: `VRisingServer v1.1.15.0-r101082` (dev server boot line, 2026-10-04); no other build is claimed.
+- Test mode: `.beelz admin testmount on|off` (admin-only) for the riding case; `.beelz transform 0` (Chaos's Beatrice unlock) for the transform case; both exist today and are used only by D12.
+- Collaborators: the Codex post-audit is a review aid; if it cannot read the diff, its verdict is discarded and rerun with the diff on stdin.
+
+## Design
+### Data
+- state.json (`BepInEx/config/kdpen.Beelzebub/state.json`): clearbar removes the chosen set's binds and saves synchronously (SaveBindings), exactly as resetbar does; format unchanged, no migration (D16).
+- By-products: `[Beelz RESET]`/`[Beelz BAR]` lines in `BepInEx/LogOutput.log` (overwritten at the next start; the procedure backs the logs up first); vrclient results JSON and screenshots in `%TEMP%\vrclient\` (the owner's temp, left for OS cleanup); the audit and plan files in git (D16, D17).
+### States
+- On foot, riding, in a vanilla form, transformed (active or parked), offline-impossible (clearbar is self, the caller is online), live bar unreachable — the planner covers each (D1).
+- Concurrency: the reset runs synchronously in one VCF command on the main thread; no remount, swap or second command interleaves between planning and the readback. A cast already in flight is caught by the existing late re-read (`[Beelz RESET] late re-read`).
+- Interrupted: a server stop before SaveBindings leaves the old save; clearbar can be run again (idempotent).
+- Undo: none besides re-granting (unchanged); a dismount or ended transform is undone by remounting / re-transforming.
+### Permissions
+- Actors (2.1): (a) a connected player reaches `.beelz clearbar` on their own SteamID only (D9); (b) admins have no new path — admin resets stay `reset-loadouts`/`purge` (D8); (c) an unauthenticated caller has no path (the game drops the connection before chat exists); (d) the server console/RCON do not run VCF commands; (e) no patch, service or timer calls FullReset (D8).
+- Unauthorised path (2.2): none new — clearbar is a player command on the caller; admin commands keep VCF's standard deny.
+- Ownership (2.3): binds are keyed by SteamID; clearbar never touches another player's binds (D9).
+### UX
+- Discovery: `.beelz clearbar` help text (unchanged usage), the help lines in `BeelzCommands` that already list it.
+- Feedback: the D4 reply — one line when clean, two when something went wrong; chat only, plain text, nothing colour-dependent.
+- Activation: clearbar runs only when typed; the dismount/transform suffixes appear only when those steps ran (D4).
+
+## Security
+- Authorization unchanged and kept by D8/D9. Inputs: the set name is matched against fixed tokens and the `WeaponFamily`/`ShapeshiftForm` enums; nothing reaches a shell, query or URL. Secrets: none read, stored or logged; D10 scans the plugin. Personal data: the SteamID already on every `[Beelz]` line.
+
+## Failure & observability
+- Failure classes: a step `:ERR` → reply line `failed: <Step> (see [Beelz RESET] in the server log)`; not saved → `not saved — binds may return after a restart, run it again`; leftovers → `still overridden: <slots> — ask an admin for .beelz admin bar` (D4).
+- Logged: `[Beelz RESET] run=<n> scope=ClearSet set=<label> target=… steps=… survivors=… clean=<0|1>` and the `[Beelz BAR]` readback (D5).
+- In production: a tester log with `scope=ClearSet … clean=0`, read by `preflight.ps1 -LogCheck` sessions (D14).
+- Gating controls and the one command behind each (12.4):
+
+  | Probe | Command | Fails when |
+  |---|---|---|
+  | 2.1 | `python Beelzebub/tools/check_clearbar.py selfonly` (D9), with `check_bar_reset.py auth` (D8) | clearbar gains a target or becomes adminOnly; a non-self handler calls FullReset |
+  | 3.3 | `dotnet test Beelzebub/Beelzebub.Tests --filter FullyQualifiedName~BarResetTests` (D1) | a ClearSet plan lacks SaveBindings or RestoreKept |
+  | 4.4 | `dotnet test Beelzebub/Beelzebub.Tests --filter FullyQualifiedName~BarSetTests` (D2) | a set keeps its own origin or drops another's |
+  | 6.2 | `dotnet test Beelzebub/Beelzebub.Tests --filter FullyQualifiedName~BarResetTests` (D3) | a ClearSet run without RestoreKept, or with a thrown step, reads clean |
+  | 10.1 | `python Beelzebub/tools/check_bar_reset.py auth` (D8) | a patch/service/non-admin handler calls FullReset |
+  | 10.3 | `python Beelzebub/tools/check_clearbar.py secrets` (D10) | a credential-shaped literal appears |
+  | 12.4 | each check's planted fault (Log `note · planted`) | a planted fault does not fail its check |
+  | 14.3 | `python Beelzebub/tools/check_clearbar.py rollback` (D16) | the range is missing/unresolvable or a step is missing |
+  | 14.4 | `python Beelzebub/tools/check_clearbar.py paths` (D18), with `git status --porcelain` (D17) | a touched path is undeclared or uncommitted |
+
+## Performance
+- One reset per command, the same work as resetbar plus one `RestoreResolvedGrants` (≤ 9 slots): 4–9 ms measured for resetbar on 2026-10-04. No hot path changes.
+- Bounds: the bar is slots 0–8 (`BarMaxSlot`), unchanged.
+
+## Build plan
+1. Create `Beelzebub/Beelzebub/Logic/BarSet.cs` (`BarSet` with `All`, `Universal`, `Weapon(name)`, `Form(name)`, `Keeps`, `Label`) and link it in `Beelzebub/Beelzebub.Tests/Beelzebub.Tests.csproj`; add `Beelzebub.Tests/BarSetTests.cs` with the D2 `fails when` cases; plant (make `Keeps` keep its own origin) once · satisfies D2
+2. `Logic/BarReset.cs`: `BarResetScope.ClearSet`, `BarResetStep.RestoreKept`, `IBarResetOps.RestoreKept()`; planner adds RestoreKept after Reapply for ClearSet; runner `Run(..., BarSet clearSet = null)` with the kept-slot survivor rule and RestoreKept required when clearSet is set (`BarResetResult` carries the set so `Survivors` applies the rule). Extend `BarResetTests` (fake member + D1/D3 cases); plant (drop RestoreKept from the plan; treat Other>0 kept slots as clean) once each · satisfies D1, D3
+3. `Logic/BarResetReply.cs` `ForClear`; `Logic/BarResetLog.cs` `set=` field; tests in `BarResetReplyTests` and `BarResetLogTests`; plant (drop the dismount CountOf guard; always write `set=`) once each · satisfies D4, D5
+4. `Services/BarResetService.cs`: `FullReset(..., BarSet clearSet = null)`, the ClearSet branch of `ClearSavedBindings` (rule 1, keeping the transform-record logic), `RestoreKept()`, RevertTransform reason `clearbar`; `Commands/BeelzCommands.cs` `ClearBar` rewritten to parse → FullReset → ForClear → event. `tools/check_bar_reset.py`: remove `clearbar` from `EXEMPT_COMMANDS`, raise the FullReset minimum to 4, allow `ClearBar` beside `ResetBar` in `check_auth`, update its selftest fixtures; `tools/check_clearbar.py`: add `wiring` (D6). Run `check_bar_reset.py` (all) and `check_clearbar.py wiring selfonly secrets`; plant (a `ClearAllSlots` call in ClearBar) once · satisfies D6, D7, D8, D9, D10
+5. `Commands/ApiCommands.cs` `ApiVersion = 35`; handoff banner, `v0.137.4` block (clearbar now runs the layered reset; reply suffixes `You were dismounted to reset your bar; remount to ride.` and `Your transform was ended to clear the bar.`; log `scope=ClearSet set=<label>`; "BCH: no change needed to send clearbar; when api>=35 expect up to two reply lines"), the version-table row `| 35 | 0.137.4 |`; `check_clearbar.py handoff` must print ok · satisfies D11
+6. Release build `dotnet build Beelzebub/Beelzebub.sln -c Release -p:VRisingServerPath="C:/nonexistent"`, `dotnet test`; post-audit `Beelzebub/Beelzebub/docs/audits/clearbar-fullreset.md` (Codex on the diff via stdin, ≤ 3 rounds, one commit per round) with `Rollback range: <first>..<last>` and the `no saved-data migration` sentence · satisfies D1–D5, D16
+7. Write `Beelzebub/tools/vrclient/scenarios/clearbar_fullreset.vrs` (cases a–f of D12). Deploy per CLAUDE.md procedure 6 (close the client, back up both logs to `%TEMP%\beelz-logs-2026-10-04-clearbar\`, stop, build, `cmp` the DLL, start); `python vrclient.py ensure`; run `clearbar_fullreset.vrs`, `mounted_reset.vrs`, `cast_basic.vrs`; read the screenshots; then `pwsh Beelzebub/tools/preflight.ps1 -LogCheck` · satisfies D12, D13, D14
+8. `chore(release): v0.137.4` — csproj + toml, CHANGELOG.md (drop the oldest entry) + CHANGELOG_FULL.md, README status/caveats + `python Beelzebub/tools/sync_github_readme.py`, BACKLOG row DONE; `pwsh Beelzebub/tools/preflight.ps1` → PREFLIGHT OK; `check_clearbar.py paths` → ok; `git status --porcelain` · satisfies D15, D17, D18, D19
+
+## Rollout
+- Ships all at once in v0.137.4 (no flag); a server owner turns it off by installing v0.137.3.
+- Backward compatibility: clearbar syntax unchanged; an old BCH (api 34) sends the same command and gets a reply with at most two lines; other commands unchanged.
+- Rollback: `git revert --no-edit <first>^..<last>` over the audit's `Rollback range:` (D16), stop the server (`taskkill /PID <pid>`), `dotnet build Beelzebub/Beelzebub.sln -c Release` (redeploys the DLL), start per CLAUDE.md procedure 6. No saved-data migration: state.json's shape is unchanged, so v0.137.3 reads it as-is.
+- Paths this change ships, writes or regenerates (14.4), checked by D17 and D18: `Logic/BarSet.cs`, `Logic/BarReset.cs`, `Logic/BarResetReply.cs`, `Logic/BarResetLog.cs`,
+  `Services/BarResetService.cs`, `Commands/{BeelzCommands,ApiCommands}.cs`,
+  `Beelzebub.Tests/{BarSetTests,BarResetTests,BarResetReplyTests,BarResetLogTests}.cs`, `Beelzebub.Tests/Beelzebub.Tests.csproj`,
+  `docs/BCH_INTEGRATION_HANDOFF.md`, `docs/BACKLOG.md`, `docs/audits/clearbar-fullreset.md`,
+  `docs/dod/clearbar-fullreset.md`, `docs/dod/clearbar-fullreset.reviews.md`, `docs/dod/clearbar-fullreset.review.html`, `docs/dod/clearbar-fullreset.html`, `docs/dod/dod-dashboard.html`, `docs/dod/README.md` (index),
+  release files (`Beelzebub.csproj`, `thunderstore.toml`, `CHANGELOG.md`, `docs/CHANGELOG_FULL.md`, `README.md`, repo-root `README.md`),
+  `tools/check_clearbar.py` (new), `tools/check_bar_reset.py`, `tools/vrclient/scenarios/clearbar_fullreset.vrs` (new);
+  `dist/` (gitignored, staged by the build); outside git: the deployed DLL, the dev server's state.json and logs, `%TEMP%\vrclient\`.
+
+## Out of scope
+- Making admin resets (`reset-loadouts`, `purge`) set-scoped — excluded: no request; they reset everything by design.
+- Keeping a rider mounted or a player transformed through a clear (owner decision 1, options B/C) — excluded 2026-10-04.
+- `transform-chain-guard`, `modid-remap-errors`, `dev-snapshot`, `docs-consolidation` — the next backlog rows (`docs/BACKLOG.md`), each with its own plan (owner decision 3).
+
+## Also considered
+- Compliance/legal, localisation, running cost: not applicable — chat-only server mod, English text, no service cost.
+- Operational ownership: the owner runs the dev server; tester servers get the release notes.
+- Documentation and changelog: CHANGELOG entry, README scan, BCH handoff block (D11, D15).
+- Analytics: none; the `[Beelz RESET] scope=ClearSet` lines are the measure.
+- Decommissioning: the old clearbar path (ClearGrant loop + RestoreResolvedGrants in the handler) is removed (D6).
+- Support tooling: `.beelz admin bar <player>` shows the result, unchanged.
+
+## Assumptions
+- S-1 · validated · `SlotApply.RestoreResolvedGrants` re-injects the held weapon's resolved binds (weapon set over universal) and returns the count, and skips a transformed player · source: `Services/SlotApply.cs:276-283` read 2026-10-04; the old clearbar used it after its own wipe
+- S-2 · validated · a vanilla wolf form is not needed live for case (c): clearing the Wolf set on foot proves the saved clear and the clean readback; entering a form through the shapeshift wheel is not automatable today · source: vrclient has no wheel step; D12 (d) and (f) cover the live override layers (mount buff, transform)
+
+## Coverage
+| # | Layer | Status | Probes | Pointer / reason |
+|---|---|---|---|---|
+| 1 | Purpose & typical use | Considered | 3/3 | Purpose & typical use |
+| 2 | Actors & permissions | Considered | 3/3 | Design › Permissions › 2.1 D8 D9; 2.2 prose: no new unauthorised path, VCF standard deny unchanged; 2.3 D9 |
+| 3 | Inputs, outputs & data | Considered | 4/4 | Design › Data › 3.1 D6; 3.2 D4 D5 D11; 3.3 D1 D17; 3.4 D16 |
+| 4 | Business rules & invariants | Considered | 5/5 | Business rules › 4.1 D1 D4; 4.2 D3; 4.3 prose: no time rule, a clear applies at once; 4.4 D2 D3; 4.5 D6 D7 |
+| 5 | Internal interfaces | Considered | 3/3 | Interfaces › Internal › 5.1 D6; 5.2 D12 D13; 5.3 D5 D11 |
+| 6 | External dependencies & contracts | Considered | 3/3 | Interfaces › External › 6.1 D12; 6.2 D3 D12; 6.3 D12 |
+| 7 | States & lifecycle | Considered | 3/3 | Design › States › 7.1 D1 D4; 7.2 D1; 7.3 D4 D12 |
+| 8 | Minimal stretch | Considered | 2/2 | Use cases › Minimal stretch › 8.1 D4; 8.2 D3 D14 |
+| 9 | Maximal stretch | Considered | 3/3 | Use cases › Maximal stretch › 9.1 D3; 9.2 D9; 9.3 D4 D12 |
+| 10 | Security & privacy | Considered | 4/4 | Security › 10.1 D8; 10.2 prose: set names match fixed tokens and enums only; 10.3 D10; 10.4 prose: only the SteamID already logged |
+| 11 | Design & UX | Considered | 4/4 | Design › UX › 11.1 D4; 11.2 D4; 11.3 prose: chat text only, nothing colour-dependent; 11.4 D4 |
+| 12 | Failure handling & observability | Considered | 4/4 | Failure & observability › 12.1 D4; 12.2 D5; 12.3 D14; 12.4 D1 D2 D3 D4 D5 D6 D7 D8 D9 D10 D11 D16 D18 |
+| 13 | Performance & scale | Considered | 2/2 | Performance › 13.1 prose: one reset per command, 4-9 ms measured; 13.2 D1 |
+| 14 | Rollout & compatibility | Considered | 4/4 | Rollout › 14.1 D15; 14.2 D11 D13; 14.3 D16; 14.4 D17 D18 |
+| 15 | Out of scope | Considered | 2/2 | Out of scope |
+Gate — acceptance & testability: passed — every Considered layer 2–14 maps to ≥ 1 D-item
+
+## Log
+- 2026-10-04 · status → draft · plan
+- 2026-10-04 · note · spike · `python vrclient.py run scenarios/clearbar_probe.vrs` → 16/16; `clearbar universal` → `[Beelz BAR] … binds=0 rows=0 gear=10 other=0`; `clearbar sword` → `binds=0 rows=0 gear=8 other=0`; `clearbar all` while riding → `[Beelz BAR] … binds=0 rows=0 gear=4 other=7 slots=1:none:0:1,…,5:none:1:1,…`, screenshot shows Knife Throw still on R
+- 2026-10-04 · note · spike · `python vrclient.py run scenarios/cast_basic.vrs` → `SCENARIO PASS cast_basic 7/7`, `[Beelz SUMMON][cast] … ability=AB_Undead_Infiltrator_KnifeThrow_AbilityGroup guid=1621601748`
+- 2026-10-04 · note · spike · `.beelz transforms` as Chaos → `Transformation unlocks (2)`: `0: Beatrice the Tailor`, `1: Dracula the Immortal King`
+- 2026-10-04 · note · dry-run · D14 · cmd: `pwsh Beelzebub/tools/preflight.ps1 -LogCheck` → `ok log LogOutput.log 0 Beelzebub stack frame(s), 0 error(s), 2 warning(s), 472 [Beelz lines` · `PREFLIGHT OK (2 checks)`
+- 2026-10-04 · note · dry-run · D9 · cmd: `python Beelzebub/tools/check_clearbar.py selfonly` → `selfonly: ok, 2 self-only commands` (the first run printed `clearbar: not found` — the attribute regex stopped at the `]` inside clearbar's description; fixed to match lazily up to `)]`)
+- 2026-10-04 · note · dry-run · D10 · cmd: `python Beelzebub/tools/check_clearbar.py secrets` → `secrets: ok, 78 files, 0 hits`
+- 2026-10-04 · note · dry-run · D11 · cmd: `python Beelzebub/tools/check_clearbar.py handoff` → `handoff: FAIL api=34 banner=34 (want 35) missing=['| 35 | 0.137.4 |', 'v0.137.4', 'api>=35', 'scope=ClearSet', 'Your transform was ended to clear the bar.']` (built in step 5)
+- 2026-10-04 · note · dry-run · D16 · cmd: `python Beelzebub/tools/check_clearbar.py rollback` → `rollback: FAIL no input (Beelzebub/Beelzebub/docs/audits/clearbar-fullreset.md missing)` (written in step 6)
+- 2026-10-04 · note · dry-run · D1 · n/a · the ClearSet scope and RestoreKept step and their BarResetTests cases are added in build step 2
+- 2026-10-04 · note · dry-run · D2 · n/a · Beelzebub.Tests/BarSetTests.cs does not exist until build step 1
+- 2026-10-04 · note · dry-run · D3 · n/a · the kept-bind survivor rule and its BarResetTests cases are added in build step 2
+- 2026-10-04 · note · dry-run · D4 · n/a · `BarResetReply.ForClear` and its tests are added in build step 3
+- 2026-10-04 · note · dry-run · D5 · n/a · the `set=` field and its BarResetLogTests case are added in build step 3
+- 2026-10-04 · note · dry-run · D6 · cmd: `python Beelzebub/tools/check_clearbar.py wiring` → `wiring: FAIL bypass call(s) ['ClearGrant', 'RestoreResolvedGrants', 'ClearAllSlots', 'ClearUniversalBucket', 'ClearWeaponBucket', 'ClearFormBucket', 'Transforms.Revert']; 0 FullReset call(s), want 1` (today's handler — the real failing case; rewired in step 4)
+- 2026-10-04 · note · dry-run · D7 · cmd: `python Beelzebub/tools/check_bar_reset.py commands` → `commands: ok, 21 symbols, 3 FullReset call sites` (clearbar still exempt; step 4 removes the exemption and raises the minimum to 4)
+- 2026-10-04 · note · dry-run · D8 · cmd: `python Beelzebub/tools/check_bar_reset.py auth` → `auth: ok, 70 admin commands, 4 reset callers`
+- 2026-10-04 · note · dry-run · D12 · n/a · `scenarios/clearbar_fullreset.vrs` is written in build step 7; the probe it extends ran 16/16 (spike above)
+- 2026-10-04 · note · dry-run · D13 · cmd: `python Beelzebub/tools/vrclient/vrclient.py run …/mounted_reset.vrs` → `SCENARIO PASS mounted_reset 14/14`; `…/cast_basic.vrs` → `SCENARIO PASS cast_basic 6/6`
+- 2026-10-04 · note · dry-run · D15 · cmd: `pwsh Beelzebub/tools/preflight.ps1` → `versions csproj 0.137.3, thunderstore.toml 0.137.3` · PREFLIGHT OK (10 checks) — the real failing case for 0.137.4 is the version line naming 0.137.3
+- 2026-10-04 · note · dry-run · D17 · cmd: `git status --porcelain` → owner files plus `?? …/dod/clearbar-fullreset.md`, `?? Beelzebub/tools/check_clearbar.py` (a real failing case until committed)
+- 2026-10-04 · note · dry-run · D18 · cmd: `python Beelzebub/tools/check_clearbar.py paths` → `paths: ok, 2 changed, 31 declared`
+- 2026-10-04 · note · dry-run · D19 · n/a · the BACKLOG row is marked DONE in build step 8
+- 2026-10-04 · note · planted · D9 · `string player = null` added to `ClearBar` → `selfonly: FAIL ["clearbar: target parameter ['string player = null']"]`; restored
+- 2026-10-04 · note · planted · D10 · `const string apiKey = "sk-abcdefghijklmnop"` in `Logic/ZzPlanted.cs` → `secrets: FAIL 1 credential-shaped literal(s)`; removed
+- 2026-10-04 · note · planted · D8 · a `BarResetService.FullReset` call in `Patches/ZzPlanted.cs` → `auth: FAIL …/Patches/ZzPlanted.cs:2 FullReset called outside a command handler`; removed
+- 2026-10-04 · note · planted · D7 · an `IBarResetOps.PopSlotMods()` call in `Commands/ZzPlanted.cs` → `commands: FAIL reset-layer symbol outside the allowlist: …/Commands/ZzPlanted.cs:2 PopSlotMods in Go`; removed
+- 2026-10-04 · note · planted · D18 · an untracked `Beelzebub/Beelzebub/ZzUndeclared.txt` → `paths: FAIL 1 changed path(s) not declared`; removed. After all restores every check above prints ok again
