@@ -160,3 +160,12 @@ VERDICT: REVISE
 - F6 · rejected · 14.4 is answered at Rollout: D18 compares every repo path changed since the recon commit with the declaration; `dist/` is gitignored build output and the rest (deployed DLL, logs, %TEMP%) are not paths the change ships — they are listed for the record, owned in the artifact table, and D24 covers the only scratch the build creates
 - F7 · accepted · Design › States records the limit: a wheel-entered vanilla form ends through DestroyOverrideSources with no form-ended suffix (same as resetbar today); D12 (c) covers the transform-record path; a form-ended reply is out of this slice
 - F8 · accepted · Performance › Throughput: the estimate is now a worst-case single-frame stall, accepted for a self-only, typed command
+
+## Review 4 · 2026-10-04 · human · plan commit 771ef1c · plan 57330 B · 24 items
+Owner (Chaos), approving the proposed answers to the four rubric questions on `docs/dod/clearbar-fullreset.review.html` (plan-mode decision, 2026-10-04, option A):
+1. Coverage — every Considered layer answers all of its probes, no N/A; the reviewer's 43/49 gap is exactly F5/F6 of Review 3 and the layers they touch, both rejected with reasons.
+2. Contest — every pointer answers its probe; S-1 and S-2 were validated by spike; no decision-required assumption.
+3. Hunt — one deliberate, recorded limit: a wheel-entered vanilla form ends with no form-ended reply suffix (same as resetbar today), outside this slice.
+4. Test the tests — every item has evidence that fails when its control is removed; every gating probe has one command; every build step cites its items; the rejections of Review 3 F5 and F6 stand.
+15/15 layers · 49/49 probes
+VERDICT: READY
