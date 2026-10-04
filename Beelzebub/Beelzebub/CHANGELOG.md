@@ -4,6 +4,16 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.137.2] - 2026-10-03
+
+### Changing your bar while in a form now works like the weapon bar
+
+- **`.beelz unslot` while in a form (Wolf, Bear, …) puts your weapon's skill back on that slot at once**, the way
+  vanilla Wolf keeps your weapon skill on a slot its kit leaves empty. Before, the slot went blank until you
+  re-equipped your weapon. A form ability of your own on that slot is left alone.
+- **A grant or unslot made while in a form, a transform or on a mount now applies when that ends** — no weapon swap
+  needed.
+
 ## [0.137.1] - 2026-10-03
 
 ### Granted abilities show up at once — no weapon swap
@@ -16,7 +26,7 @@ history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebu
 - While you are in a form, a transform or on a mount, Beelzebub no longer writes your weapon bar over that kit; a
   grant made while transformed shows when you change back (a weapon swap shows it at once).
 - Known issue: `.beelz unslot` while in a form (Wolf, etc.) leaves that slot blank until you re-equip your weapon.
-  A fix is coming next.
+  Fixed in 0.137.2.
 - Behind the scenes: removed two unused legacy reset helpers.
 
 ## [0.137.0] - 2026-09-30
@@ -249,18 +259,3 @@ prefab-level `forcetimeout` edits and maps every ability chain.
   **base cooldown**, **base cast time**, and **spell tier**.
 - Real **descriptions** for NPC abilities aren't in the game data (only ~425 player-facing ones exist), so
   those remain blank for the team to fill — everything mineable is now prepopulated.
-
-## [0.129.0] - 2026-06-05
-
-### Unblocked abilities, tamed the "launch to space" ones, blocked two exploits
-
-- **Un-blocked 5 abilities that testers couldn't reproduce as crashes:** Dracula Bolt Spray, Morgana
-  Swarm + Orb Barrage, Leandra ShadowStep + TrippleBolt. They're capturable again.
-- **The "flings you into the sky" abilities are now usable instead of blocked** — Elena's Tower of Frost
-  (×2), Ziva's Jetpack, Toad King's Swallow/Poison Leap/Spit, and Gargoyle Fly now ship with a **height
-  limit + a cooldown** so they function without launching you off the map. (Tunable per ability with
-  `leapheight` / `cooldown`.)
-- **Blocked two exploits:** Gargoyle Wing Shield (immortality + heal) and Rat Vanguard (infinite-invuln
-  summons).
-- **Tuning a name that isn't a real ability now warns you** instead of silently doing nothing — fixes the
-  "it said applied but nothing changed" trap (use the ability's ID or exact prefab name).

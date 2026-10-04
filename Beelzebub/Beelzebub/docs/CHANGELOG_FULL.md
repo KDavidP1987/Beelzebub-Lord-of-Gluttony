@@ -4,6 +4,16 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.137.2] - 2026-10-03
+
+### Changing your bar while in a form now works like the weapon bar
+
+- **`.beelz unslot` while in a form (Wolf, Bear, …) puts your weapon's skill back on that slot at once**, the way
+  vanilla Wolf keeps your weapon skill on a slot its kit leaves empty. Before, the slot went blank until you
+  re-equipped your weapon. A form ability of your own on that slot is left alone.
+- **A grant or unslot made while in a form, a transform or on a mount now applies when that ends** — no weapon swap
+  needed.
+
 ## [0.137.1] - 2026-10-03
 
 ### Granted abilities show up at once — no weapon swap
@@ -16,7 +26,7 @@ history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebu
 - While you are in a form, a transform or on a mount, Beelzebub no longer writes your weapon bar over that kit; a
   grant made while transformed shows when you change back (a weapon swap shows it at once).
 - Known issue: `.beelz unslot` while in a form (Wolf, etc.) leaves that slot blank until you re-equip your weapon.
-  A fix is coming next.
+  Fixed in 0.137.2.
 - Behind the scenes: removed two unused legacy reset helpers.
 
 ## [0.137.0] - 2026-09-30

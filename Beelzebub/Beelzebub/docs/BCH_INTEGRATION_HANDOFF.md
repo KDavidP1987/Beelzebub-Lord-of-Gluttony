@@ -23,7 +23,13 @@
 
 ---
 
-# ⭐ BCH CATCH-UP: v0.100 → v0.137.1 (read this first) ⭐
+# ⭐ BCH CATCH-UP: v0.100 → v0.137.2 (read this first) ⭐
+
+> **🆕 v0.137.2 — ApiVersion stays 33 (no gate change). No wire change.**
+> - **Behaviour fix:** an `unslot` while the player is in a vanilla form (Wolf, Bear, …) puts the weapon's skill back
+>   on that slot at once (vanilla keeps the weapon skill on a slot the form kit leaves empty); a per-form ability on
+>   the slot is left alone. A grant or unslot made while in a form, a transform or on a mount is applied when that
+>   ends, with no weapon swap. **BCH: re-read `api slots` after the form/transform/mount ends if it shows the bar.**
 
 > **🆕 v0.137.1 — ApiVersion stays 33 (no gate change). GRANTS SHOW AT ONCE. No wire change.**
 > - **Behaviour fix:** a `.beelz grant`, `.beelz weapon-grant`, admin grant, preset apply, `.beelz unslot` or a
@@ -32,7 +38,7 @@
 >   was re-equipped.) **BCH: drop any "swap your weapon to see it" hint after a grant/unslot; a single `api slots`
 >   re-read after the command is enough.** While the player is in a form, a transform or on a mount, the new grant is
 >   saved and appears when that ends (unchanged).
->   Known (fix planned for v0.137.2): an `unslot` while in a form leaves that slot blank until a weapon re-equip.
+>   (v0.137.2: this now applies on exit with no swap, and an in-form `unslot` restores the weapon skill.)
 > - **"No Name" hover cards — the server cannot fix this; BCH can (see § 7 "BCH TODO — ability cards show No Name").**
 >   The action-bar card's name/description come from the *client's* localization table, keyed by the ability's
 >   PrefabGUID, and NPC/boss abilities have no entry there. Recommended BCH build — an **ability library**:
@@ -224,6 +230,7 @@ v0.120.0 callout below.
 | 32 | 0.135.0 | **`api locks`** (`[BEELZ:lock]`) + `type=ability-locked` event — incompatibility locks |
 | 33 | 0.137.0 | config key `Forms_AutoFillFromCaptures` in `api config`; admin `bar` diagnostic (plain chat); layered bar reset (no wire change) |
 | 33 | 0.137.1 | grants/unslots reach the live bar without a weapon swap (no wire change) |
+| 33 | 0.137.2 | in-form unslot restores the weapon skill; form/transform/mount-time bar edits apply on exit (no wire change) |
 
 Gate each feature on `api>=N`. `api version` returns `[BEELZ:version] api=33 plugin=0.137.0 ready=…`.
 

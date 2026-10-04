@@ -75,3 +75,40 @@ cast, until a weapon swap or unequip.
   later features do not trip the shipped plan. Fault: with the bound off, the live repo fails `paths` (undeclared
   `GrantPush.cs`, `GrantPushTests.cs`) and `data` (`[Beelz GRANT]` with no row). Bounded, both are ok; selftest
   stays at 41 cases ok.
+
+## Pre-audit — form-bar-edits (v0.137.2)
+### Diagnostic · 2026-10-03 · ae3f340 `[Beelz GRANTMODS]` (removed in efaeab5)
+- Owner decision (plan mode): ship v0.137.1, then fix `unslot-in-form` and `grant-in-form` as v0.137.2. Not
+  planned as a dod plan: a defect fix, cause proven by the diagnostic, and the owner asked for speed (deviation
+  from the approved plan, stated to the owner).
+- Diagnostic result (unslot 1 in Wolf):
+  - The slot's only mods were the form's two Knife Throw copies under prefab-less sources (`582250:137`,
+    `582258:206`). The sword's Whirlwind mod no longer existed (the grant had replaced it), so popping left Q empty.
+  - After the exit, `admin bar` showed `slot 1: ? · gear=0 · other=0` until the weapon was re-equipped.
+
+## Post-audit — form-bar-edits (v0.137.2)
+### Fix · 2026-10-03 · 807abc9, 2c6273a, 308f666
+- Fix:
+  - `RestoreSlotBaseValue` always computes the weapon skill (`GrantPush.WeaponRow`, else the base).
+  - While a form, transform or mount owns the bar, it pops the removed grant's copies. In a vanilla form only
+    (`InVanillaFormOnly`), it pushes the weapon skill when the slot is then empty (`GrantPush.SlotEmptyAfterPop`, on
+    the ids actually popped).
+  - The slot is then queued (`MarkPending`). A grant push skipped for the same reason is queued too.
+  - `RestoreResolvedGrants` drains the queue (`DrainPending`) once the weapon owns the bar. A failed slot stays
+    queued, and the heartbeat `SlotApply.TickPending` retries up to 10 times, then logs a warning.
+- compile: 0 errors. tests: 169 passed.
+- planted faults:
+  - `SlotEmptyAfterPop_fails_when_a_kept_form_ability_still_gets_the_weapon_skill` (fault: All → Any; 1 failed)
+  - `SlotEmptyAfterPop_fails_when_an_unreadable_dump_allows_a_push` (fault: ignore `Readable`; 1 failed)
+- Codex round 1 — FINDINGS, both ACCEPTED (2c6273a):
+  1. A failed pop was counted as removed, so the weapon skill could be pushed over a form ability.
+  2. A failed drain dropped the queue.
+- Codex round 2 — FINDINGS, both ACCEPTED (308f666):
+  1. A per-slot restore failure was dropped. Now `RestoreSlotBaseValue` returns bool and a failed slot is re-queued.
+  2. The retry count leaked across queues.
+- Codex verdict: CLEAN (round 3).
+- in-game (final build, 2026-10-03, owner): steps 1–8 PASS, all of them:
+  - Q showed Whirlwind in Wolf after the unslot (`why=restore-in-form set=AB_Vampire_Sword_Whirlwind_Spin_AbilityGroup popped=2`).
+  - Q showed Whirlwind after the exit (`why=restore … popped=1`).
+  - A grant in Wolf was skipped and queued, then pushed on the exit (`why=resolve set=…KnifeThrow…`, re-applied 1 grant).
+  - Both resets were clean, and the log has no `[Error`.
