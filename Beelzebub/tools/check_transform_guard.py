@@ -125,7 +125,7 @@ def strip(src: str) -> str:
 
 def method_body(st: str, name: str) -> str | None:
     """The brace-balanced body of the method declared as `<modifiers> <type> <name>(...)` in stripped source."""
-    m = re.search(r"\b(?:public|internal|private|protected)\b[^;{}=]*?\b" + name + r"\s*\([^)]*\)\s*\{", st)
+    m = re.search(r"\b" + name + r"\s*\([^;{}()]*\)\s*\{", st)
     if not m:
         return None
     i = m.end() - 1
@@ -161,6 +161,13 @@ def check_wiring(root: str) -> str:
     nf = method_body(svc, "ApplyNativeFormTest")
     if nf is not None and re.search(r"\bRevert\s*\(", nf):
         bad.append("ApplyNativeFormTest: calls Revert")
+    rl = method_body(svc, "ReconcileOnLogin")
+    if rl is None:
+        bad.append("ReconcileOnLogin: not found")
+    else:
+        c, r = first(rl, [r"\bClearPendingForm\s*\("]), first(rl, [r"\bReapplyActiveTransform\s*\("])
+        if c is None or (r is not None and r < c):
+            bad.append("ReconcileOnLogin: no ClearPendingForm before ReapplyActiveTransform")
     rv = method_body(svc, "Revert")
     if rv is None or not re.search(r"\bForget\s*\(", rv):
         bad.append("Revert: does not Forget the player's TXGUARD ledger")
@@ -173,7 +180,7 @@ def check_wiring(root: str) -> str:
             bad.append("Phase command: ApplyPhase without or before PhaseGate")
     if bad:
         return "wiring: FAIL " + "; ".join(bad)
-    return "wiring: ok, 4 routes gated, testform never reverts, phase command gated, revert forgets the ledger"
+    return "wiring: ok, 4 routes gated, testform never reverts, phase command gated, revert forgets the ledger, login clears a stale pending form"
 
 
 def _attr(src: str, meth: str, cmd: str):
@@ -325,6 +332,18 @@ def check_backlog(root: str) -> str:
     return "backlog: ok, transform-chain-guard DONE v0.137.5"
 
 
+def check_status(root: str) -> str:
+    """D15: after the release commit nothing is uncommitted but the owner's two private files."""
+    r = subprocess.run(["git", "-C", root, "status", "--porcelain"], capture_output=True, text=True)
+    if r.returncode:
+        return f"status: FAIL no input (git exited {r.returncode}: {r.stderr.strip()[:80]})"
+    lines = [l for l in r.stdout.splitlines() if l.strip()]
+    other = [l for l in lines if l[3:].strip().strip('"') not in OWNER_PATHS]
+    if other:
+        return f"status: FAIL {len(other)} uncommitted path(s): {other[:6]}"
+    return f"status: ok, nothing uncommitted but {len(lines)} owner file(s)"
+
+
 def check_profile(root: str) -> str:
     t = read(root, PROFILE)
     if t is None:
@@ -373,6 +392,11 @@ public class TransformService {
     void AutoAdvancePhases()
     {
         bool ok = ApplyPhase(steamId, active, character, target);
+    }
+    void ReconcileOnLogin(ulong steamId, Entity character)
+    {
+        TransformBuffService.ClearPendingForm(steamId);
+        bool reapplied = ReapplyActiveTransform(steamId, active, character);
     }
     public (bool ok, string message) ApplyNativeFormTest(ulong steamId, Entity character, int form, int[] set, string label)
     {
@@ -472,12 +496,17 @@ def selftest(_root: str) -> str:
                 _write(t, files)
                 expect(name, check(t), want)
     with tempfile.TemporaryDirectory() as t:
+        expect("status", check_status(t), "no input")      # not a repository: git exits 128
         expect("rollback", check_rollback(t), "no input")
         _git(t, "init", "-q")
         _write(t, {"f.txt": "1"}); _git(t, "add", "-A"); _git(t, "commit", "-qm", "a")
         a = _git(t, "rev-parse", "--short", "HEAD")
         _write(t, {"f.txt": "2"}); _git(t, "add", "-A"); _git(t, "commit", "-qm", "b")
         b = _git(t, "rev-parse", "--short", "HEAD")
+        expect("status", check_status(t), "ok")
+        _write(t, {"stray.txt": "x"})
+        expect("status", check_status(t), "FAIL")
+        os.remove(os.path.join(t, "stray.txt"))
         body = " ".join(ROLLBACK_STEPS) + " " + CONSEQUENCE
         _write(t, {AUDIT: f"Rollback range: `{a}..{b}`\n{body}\n"})
         expect("rollback", check_rollback(t), "ok")
@@ -498,10 +527,10 @@ def selftest(_root: str) -> str:
             RECON = saved
     if bad:
         return f"selftest: FAIL {len(bad)}: " + " | ".join(bad)
-    return f"selftest: ok, {len(CHECKS) + 2} checks x good/defect/empty"
+    return f"selftest: ok, {len(CHECKS) + 3} checks x good/defect/empty"
 
 
-CHECKS_ALL = dict(CHECKS, rollback=check_rollback, paths=check_paths, selftest=selftest)
+CHECKS_ALL = dict(CHECKS, rollback=check_rollback, paths=check_paths, status=check_status, selftest=selftest)
 
 
 def main() -> int:

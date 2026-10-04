@@ -69,3 +69,62 @@ VERDICT: REVISE
 - F14 · accepted · `GuardLog_fails_when_it_grows_past_its_cap` (10 000 distinct one-time refusals ≤ 256 entries), planted
 - F15 · accepted · the exact defect is planted twice: in the selftest fixture and against the real AdminCommands.cs (`actors: FAIL ['…/AdminCommands.cs:PhaseOther calls ApplyPhase']`)
 - F16 · accepted · S-3 removed; Design › States states the known test limit (the pending window cannot be hit from chat; the in-game run proves no-error and the retry; the refusal is proven by D1/D4/D5) — no debug hook added
+
+## Review 2 · 2026-10-04 · codex · plan commit 8913810 · plan 46291 B · 20 items · files 15 · 8d9f6edd47e5 · prompt 1b77ff4ea737
+F1 [blocking] Probe `3.3` is unanswered as a control: `wiring` detects premature transform-state mutation, but no evidence command fails when an artifact’s storage, owner, retention, deletion, or copy policy is omitted or changed.
+Fix: Add a persistence-contract D-item and command validating every artifact row, including logs, temporary copies, `dist/`, deployed DLL, plan/review outputs, and whether each has one or multiple copies.
+
+F2 [blocking] Probe `4.5` is unanswered: “every route” is derived from a hand-selected API list that omits valid misses such as a new mutation API, reflection/delegate dispatch, or direct transform-record/form-buffer manipulation; the plan never states who reviews those misses.
+Fix: Define the complete route-source set and its known blind spots, name the reviewer, and make one command fail when an untracked transform/form mutation path is planted.
+
+F3 [blocking] Probe `6.2` is unanswered as an enforced dependency contract: `wiring` proves gate order but does not fail when `ApplyForm`, enrichment, reapply, revert, vrclient, or review-tool failure is swallowed or interpreted incorrectly; the prose also inaccurately describes `Revert` as returning `(false, msg)`.
+Fix: Specify each collaborator’s exact return/throw contract and add a fault-injection command that fails when false, exception, missing entity, permanently pending spawn, or unavailable test client produces the wrong state or recovery path.
+
+F4 [blocking] Probe `10.1` is unanswered on every indirect path: `actors` allowlists selected route/form calls but does not fail for a new job, hook, console/RCON dispatcher, or direct transform-state mutation that bypasses those symbols.
+Fix: Add one authorization-boundary command that enumerates all entry channels and state/form mutation sinks and fails when an unauthenticated, cross-player, non-admin, console, job, or hook path reaches them without the stated authority.
+
+F5 [blocking] Probe `10.3` is unanswered as a control: `secrets` only detects a narrow class of assigned literal strings and would pass if code read a credential from configuration/environment and logged or exported it; it does not enforce storage, rotation, or never-log policy.
+Fix: State that the feature accepts no credentials, then make the evidence command fail on credential-source reads, credential-bearing log/export calls, and representative secret fixtures rather than only literal assignments.
+
+F6 [blocking] Probe `12.4` is explicitly a Gap: D9’s real scenario has never been run, while rubric 2 says an unrun failing case is a Gap; D10 and D15 are also recorded as `n/a`, and several checks lack recorded real planted-failure output, silent input, and empty-input behavior.
+Fix: Run every real check once before approval, record its output, and for each check record a failing input, a silent/pass input, and empty-input output that does not read as a pass.
+
+F7 [blocking] Probe `14.4` is unanswered by its command: `paths` only compares non-ignored repository changes, so an undeclared gitignored/generated package file, deployed file, temporary artifact, or review-process output can be created without making it fail.
+Fix: Add a manifest-based path walker covering every Build-plan step, generated and ignored outputs, deployment destinations, plan/review files, and temporary artifacts; plant one undeclared path in each class and record failure.
+
+F8 [advisory] Probe `13.1` gives no measurable latency or throughput budget: “far cheaper than ECS work” and “no hot path changes measurably” provide neither a bound nor a measurement command.
+Fix: State a concrete gate-call budget or explicitly adopt a reversible threshold with `fallback:`, then record the measurement source or three-run spread.
+
+F9 [advisory] Scenario, probe `7.3`: logout or disconnect while a LifeTime-less form is pending may leave no character for `Revert`→`Remove(character)` to clear `_pendingForms`, contradicting the claimed “revert/logout” recovery.
+Fix: Define and test the pending-entry lifecycle when the character entity disappears before enrichment, including reconnect and eventual cleanup.
+
+F10 [advisory] Scenario, probe `9.3`: an admin `force-transform` racing an automatic reapply/phase callback on the same target across adjacent frames is not exercised; the scenario covers player phase-after-force only.
+Fix: Add a fixture or scenario for admin activation immediately adjacent to automatic travel-end, login, or combat-end reapply and assert exactly one allowed state transition.
+
+F11 [advisory] Scenario, probe `2.2`: the plan delegates unauthorized `testform`/`force-transform` behavior to “VCF standard deny” but supplies no expected reply, audit behavior, or negative scenario for a non-admin.
+Fix: Record the exact VCF denial behavior and add a non-admin invocation to the scenario or authorization fixture.
+
+F12 [advisory] D15 is not independently verifiable by a stranger as written because “nothing but the owner’s two private files” requires manually interpreting porcelain output and does not turn unexpected lines or git exit 128 into the promised explicit `FAIL`.
+Fix: Replace the raw `git status --porcelain` evidence with a named checker that allowlists the two paths, prints one summary line, and returns nonzero for any other path or repository error.
+
+F13 [advisory] Build-plan step 5 cites D1–D5 and D14 collectively, but the post-audit/build actions do not themselves satisfy D1–D5; those items are implemented and evidenced in steps 1 and 3.
+Fix: Remove D1–D5 from step 5 or cite only the regression commands in step 5 that reverify them.
+
+EARLIER: all resolved
+8/15 layers · 41/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · rejected · repeat of review 1 F3 (rejected there with the reason): 3.3 is the artifact table under Design › Data; this change adds one in-memory artifact, the TXGUARD ledger, bounded and cleaned by D20; the rest are pre-existing by-products of the dev procedure
+- F2 · accepted · Business rules 5 now names the known blind spots of the route computation (delegate/reflection calls, a direct `DebugEventsSystem.ApplyBuff` with a form GUID — none exist outside TransformBuffService today — and a new form-apply API under another name) and who reviews them: the `/code-review` and fresh Codex pass of every post-audit; no further command — a scanner for "any future mutation path" has no finite definition
+- F3 · accepted in part · the Revert row was wrong and is corrected (`(reverted: false, appliedNow: false)` with no transform; the pending entry is dropped only through a live character). The fault-injection command is rejected as in review 1 F5: the slice adds one collaborator read (`HasPendingForm`), the IL2CPP collaborators have no injection harness, and their reporting is tabulated
+- F4 · rejected · repeat of review 1 F1/F8, answered by D6: every route call and every form apply in the plugin is placed in a known method; console/RCON do not run VCF commands (Design › Permissions); a "direct transform-state mutation" without the routes cannot apply a form (the form applies are the scanned sink)
+- F5 · rejected · repeat of review 1 F9: the mod accepts no credentials (Security), so there is no source, storage, rotation or sink to control
+- F6 · accepted in part · D15 now runs (`status: ok, nothing uncommitted but 2 owner file(s)`); every introduced check has good/defect/empty runs in its selftest (10 checks) and the real failing case recorded in the Log. D9 cannot run before the guard exists (it tests the new refusals; the scenario is written and its 14 checks counted) and D10 ran on this same code path today (v0.137.4) — both keep their recorded reason, the clearbar-fullreset precedent (review 1 F10/F13)
+- F7 · rejected · same answer the clearbar-fullreset review accepted (its review 3 F6): D16 compares every repository path changed since the recon commit; `dist/` is gitignored build output and the deployed DLL, logs and %TEMP% artifacts are not paths the change ships — they are listed for the record and owned in the artifact table
+- F8 · accepted · S-3 (reversible): the gate budget (< 1 µs per call), why it is not measured, and the fallback (a timing loop if a session shows a hitch)
+- F9 · accepted · a real gap: the pending entry is keyed by SteamID and dropped only through a live character, so a logout mid-spawn left a stale entry and the gate would refuse the login re-apply. D5 now requires `ReconcileOnLogin` to `ClearPendingForm(steamId)` before `ReapplyActiveTransform`; the `wiring` check fails without it (fixture planted); new use case line
+- F10 · rejected · advisory: every route runs on the server main thread (Design › States), so an admin force-transform and an automatic re-apply are ordered, never simultaneous; whichever runs second sees the first's state through the stateless gate (a force-transform after a re-apply is refused as Active — ForceTransform's own clear-transform requirement — and a re-apply after a force-transform sees the new record). No new state transition exists to test
+- F11 · rejected · advisory: the owner's test character is an admin, so a non-admin call cannot be run in game; `actors` (D6) fails when testform or force-transform lose `adminOnly: true`, and VCF's deny path for adminOnly commands is unchanged by this slice
+- F12 · accepted · `check_transform_guard.py status` (allowlists the two owner files, one summary line, `FAIL no input` outside a repository); D15 uses it; selftest covers ok / FAIL / no input
+- F13 · accepted · step 5 now satisfies D14 only and names the regression commands it re-runs; step 7 uses `status`
