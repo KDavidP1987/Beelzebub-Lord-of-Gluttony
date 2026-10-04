@@ -249,6 +249,9 @@ internal static class TransformCommands
             return;
         }
 
+        // v0.137.5 (A4): naming a phase is a manual choice — it cancels a combat-end reset still owed (A2).
+        active.PhaseResetDue = false;
+
         if (!available.Contains(n))
         {
             ctx.Reply($"Phase {n} isn't defined for {Core.AbilityMetadata.ResolveUnitName(pg._Value)}. Available: {string.Join(", ", available)}.");

@@ -1134,8 +1134,8 @@ internal sealed class TransformService
                 if (owner.Exists())
                 {
                     bool reset = ApplyPhase(steamId, active, owner, 1);
-                    if (Beelzebub.Config.Settings.VerboseLogging.Value)
-                        Core.Log.LogInfo($"[Beelz PHASE] combat-end reset retry {steamId} → phase 1 applied={reset} due={active.PhaseResetDue}.");
+                    if (reset && Beelzebub.Config.Settings.VerboseLogging.Value)   // A4: once, not every refused pass
+                        Core.Log.LogInfo($"[Beelz PHASE] combat-end reset retry {steamId} → phase 1 applied.");
                 }
                 continue;
             }
