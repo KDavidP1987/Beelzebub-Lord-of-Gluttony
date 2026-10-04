@@ -3607,8 +3607,8 @@
       "Notes": "[v0.136 baseline] Soft-disabled (admin can re-enable). Tester: Militia Leader Dodge Roll Right: Category: Other   Creature: Humanoid Dodge to 45 deg right of center line. funtions like intended but unsure if really usable? …"
     },
     "AB_Militia_Leader_Whirlwind_v2_AbilityGroup": {
-      "FreeMoveAfterSeconds": 10.0,
-      "Notes": "[v0.136 baseline] Soft verdict fixed by preset: FreeMoveAfterSeconds=10.0. Tester: Militia Leader Whirlwind v 2: Category: Melee   Creature: Humanoid Multiple Spinning sword attack. player is surrounded by spinning sword also. moves forward di…"
+      "FreeMoveAfterSeconds": 1.0,
+      "Notes": "[v0.136 baseline] Soft verdict fixed by preset: FreeMoveAfterSeconds=10.0; v0.137.6: 1.0 to match the Init group (startup conflict warning). Tester: Militia Leader Whirlwind v 2: Category: Melee   Creature: Humanoid Multiple Spinning sword attack. player is surrounded by spinning sword also. moves forward di…"
     },
     "AB_Militia_Leader_Whirlwind_v2_Init_AbilityGroup": {
       "FreeMoveAfterSeconds": 1.0,
