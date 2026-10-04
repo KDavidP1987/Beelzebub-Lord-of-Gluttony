@@ -93,9 +93,38 @@ frame. No in-game failure had been seen on those routes; this is a recurrence gu
   `tests` ok (14 named controls).
 - dod status: 0/20 verified so far; evidence lines are added at `status` after the in-game step.
 
+### Step 6 finding · 2026-10-04 · d2ec401, 3d9b435, 84eb186 (A5, A6)
+- **First in-game run** (v0.137.5 build, dev server):
+  - `cast_basic` 6/6.
+  - `transform_chain_guard` 12/14. Every guard refusal and its TXGUARD line passed; both `.beelz phase 2` replies
+    failed.
+  - `clearbar_fullreset` 31/32 (test data — see below).
+- **A5 (discovered 6.2, owner chose "fix in v0.137.5"):**
+  - `.beelz phase` pre-checked a phase from the prefab's phase-tagged abilities plus the custom loadout, never the
+    curated `BossForm.SetForPhase` set that `ApplyPhase` applies.
+  - Since v0.100 (4ea3778), every Dracula/Morgana phase above 1 was refused with `Phase 2 has no eligible
+    abilities … Aborting.`. Auto-HP was unaffected.
+  - S-2 had been validated by reading code, not by running the command.
+  - Fix: `TransformGate.PhaseHasAbilities(curated, natural, custom)`. Control
+    `PhaseHasAbilities_fails_when_a_curated_phase_reads_empty`, planted once.
+- **A6 (defect in A5's build):**
+  - The reply count now comes from the same `EffectiveSet` ApplyPhase uses.
+  - `BossForm.SetForPhase` never returns null.
+- **Test data:**
+  - The guard scenario's `force-transform … 591725925` gave Chaos a Morgana unlock, which shifted the unlock indexes
+    (`transform 0` became Morgana).
+  - Both scenarios now name units (`Dracula`, `Beatrice`).
+- Build 0 errors; `dotnet test` 245/245; `wiring`/`actors`/`tests` ok (15 named controls).
+- Codex on the A5/A6 fix diff:
+  - Pass 1: REVISE. F1 (reply ignores the custom loadout) ACCEPTED → A6. F2 (a null curated entry throws)
+    ACCEPTED → A6.
+  - Pass 2: REVISE. F1 (`EffectiveSet` can still get null) ACCEPTED: hardened at `SetForPhase`.
+  - Pass 3: APPROVED, no findings.
+- Rollback range is extended to `84eb186` (it was `b6b9318..05f217f`): revert `84eb186`, `3d9b435`, `d2ec401` as well.
+
 ### Rollback
-Rollback range: `b6b9318..05f217f`, plus the `chore(release): v0.137.5` commit that follows it (revert that first).
-The range covers the wiring (b6b9318), the handoff note (fb8638c) and the two audit fixes (8fcfd8b, 05f217f). The
+Rollback range: `b6b9318..84eb186`, plus the `chore(release): v0.137.5` commit that follows it (revert that first).
+The range covers the wiring (b6b9318), the handoff note (fb8638c), the two audit fixes (8fcfd8b, 05f217f) and the phase-command fix (d2ec401, 3d9b435, 84eb186). The
 pure Logic, tests and check tool from 8913810 can stay: nothing calls them once the wiring is reverted.
 
 To roll back:
