@@ -176,6 +176,48 @@ public class BarResetReplyTests
         Assert.Equal("", BarResetReply.Cap(null));
     }
 
+    // ── mounted-bar-reset D5: the dismount is said, on the headline, only when it happened ─────────────────
+
+    [Fact]
+    public void ForReset_fails_when_a_dismount_is_not_said()
+    {
+        var self = BarResetReply.ForReset(Run(BarResetScope.PlayerReset, mounted: true), BarResetScope.PlayerReset, "Chaos");
+        Assert.Equal(2, self.Count);
+        Assert.EndsWith(" You were dismounted to reset your bar; remount to ride.", self[0]);
+        var admin = BarResetReply.ForReset(Run(BarResetScope.AdminLoadouts, mounted: true), BarResetScope.AdminLoadouts, "Chaos");
+        Assert.EndsWith(" Chaos was dismounted to reset the bar.", admin[0]);
+    }
+
+    [Fact]
+    public void ForReset_fails_when_a_dismount_line_appears_without_a_dismount()
+    {
+        foreach (var r in new[]
+        {
+            Run(BarResetScope.PlayerReset),                                   // no Dismount step
+            Run(BarResetScope.PlayerReset, mounted: true, fail: S.Dismount),  // Dismount:ERR
+        })
+            Assert.DoesNotContain(BarResetReply.ForReset(r, BarResetScope.PlayerReset, "Chaos"), l => l.Contains("dismounted"));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(S.PopSlotMods)]
+    public void ForReset_fails_when_a_mounted_reset_replies_in_more_than_two_lines(S? fail)
+    {
+        var survivors = new BarReadback { Slots = { new BarSlotReading { Slot = 1, Other = 2 } } };
+        foreach (var r in new[]
+        {
+            Run(BarResetScope.PlayerReset, mounted: true, fail: fail),
+            Run(BarResetScope.PlayerReset, mounted: true, fail: fail, reading: survivors),
+            Run(BarResetScope.Purge, mounted: true, fail: fail, saved: false),
+        })
+        {
+            var lines = BarResetReply.ForReset(r, BarResetScope.PlayerReset, "Chaos");
+            Assert.InRange(lines.Count, 1, 2);
+            Assert.All(lines, l => Assert.True(Bytes(l) <= BarResetReply.MaxReplyBytes));
+        }
+    }
+
     sealed class Ops : IBarResetOps
     {
         public S? Throw;

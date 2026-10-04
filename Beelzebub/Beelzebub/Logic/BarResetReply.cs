@@ -18,6 +18,7 @@ public static class BarResetReply
     public const string CouldNotRead = "could not read slot mods — run .beelz admin bar";
     public const string OfflineBar = "offline: live bar resets on next login";
     public const string AskAdmin = "still stuck? ask an admin for .beelz admin bar";
+    public const string DismountedSelf = "You were dismounted to reset your bar; remount to ride.";
     const int MaxListed = 12;
     const int MaxPrefabName = 64;
 
@@ -59,6 +60,10 @@ public static class BarResetReply
             problems.Add($"still overridden: {Slots(r.Survivors)} — {ladder}");
         if (r.Online && r.LiveReady && r.OverrideBuffsLeft.Count > 0)
             problems.Add($"override buff still on: {string.Join(", ", r.OverrideBuffsLeft.Take(3).Select(b => Text(b, MaxPrefabName)))} — {ladder}");
+
+        // mounted-bar-reset D5: the dismount is said on the headline, so a reset still replies in at most two lines
+        if (r.CountOf(BarResetStep.Dismount) > 0 && lines.Count > 0)
+            lines[0] += " " + (self ? DismountedSelf : $"{who} was dismounted to reset the bar.");
 
         if (problems.Count > 0) lines.Add(string.Join("; ", problems));
         else if (self && r.Online) lines.Add(AskAdmin);
