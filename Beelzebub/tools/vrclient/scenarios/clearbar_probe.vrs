@@ -1,0 +1,46 @@
+# clearbar_probe.vrs — baseline (recon spike for dod clearbar-fullreset): what does `.beelz clearbar` leave behind
+# on each layer? Grants universal + sword binds, runs clearbar per set, reads the bar after each.
+# Needs: Chaos holds a sword; captured 1621601748 (Knife Throw).
+ensure
+console TPHome
+wait 3
+chat .beelz resetbar CONFIRM
+expect-log \[Beelz RESET\].*target=${CHARACTER} .*clean=1
+# --- universal set ---
+chat .beelz grant 1 1621601748
+expect-reply Slot 1 assigned
+wait 2
+chat .beelz clearbar universal
+expect-reply Cleared your universal loadout
+wait 2
+chat .beelz admin bar ${CHARACTER}
+expect-log \[Beelz BAR\].*target=${CHARACTER} .*binds=0 rows=0 .*other=0
+# --- weapon set ---
+chat .beelz weapon-grant sword 4 1621601748
+expect-reply sword
+wait 2
+chat .beelz clearbar sword
+expect-reply Cleared your Sword loadout
+wait 2
+chat .beelz admin bar ${CHARACTER}
+expect-log \[Beelz BAR\].*target=${CHARACTER} .*binds=0 rows=0 .*other=0
+# --- all, while mounted ---
+chat .beelz admin testmount on ${CHARACTER}
+expect-log action=testmount.*on ok=True
+chat .beelz form-grant mounted 5 1621601748
+expect-reply Mounted slot 5
+expect-screen Hold to Mount timeout=8
+hold f 2.5
+expect-log saddle loadout injected on slot\(s\) \[5\] timeout=10
+wait 2
+chat .beelz clearbar all
+expect-reply Cleared ALL loadouts
+wait 2
+shot spells after-clearbar-all-mounted
+chat .beelz admin bar ${CHARACTER}
+expect-log \[Beelz BAR\].*target=${CHARACTER} .*binds=0
+# cleanup
+chat .beelz resetbar CONFIRM
+expect-log \[Beelz RESET\].*target=${CHARACTER}
+chat .beelz admin testmount off ${CHARACTER}
+expect-log action=testmount.*off

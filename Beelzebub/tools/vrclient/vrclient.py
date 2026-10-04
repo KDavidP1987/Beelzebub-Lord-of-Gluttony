@@ -624,6 +624,12 @@ class Scenario:
 
 # ---------------------------------------------------------------------------------------------------- CLI
 def main() -> int:
+    # mod log lines carry non-ASCII (→, —); a cp1252 console would raise on print and abort the run
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
     ap = argparse.ArgumentParser(description="Drive the V Rising client for in-game self-tests.")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("status")
