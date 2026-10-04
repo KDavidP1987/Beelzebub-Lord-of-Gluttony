@@ -86,7 +86,7 @@ internal sealed class BarResetService : IBarResetOps
         {
             Transform = transform,
             Hotkeys = hotkeys,
-            OverrideBuffs = TransformBuffService.ListOverrideBuffs(character),
+            OverrideBuffs = TransformBuffService.ListOverrideBuffs(character, diagnose: true),
         };
         var binds = BindOrigins(character, steamId);
         var injected = SlotApply.InjectedRowSlots(character, out var anyRow);
