@@ -23,7 +23,22 @@
 
 ---
 
-# ⭐ BCH CATCH-UP: v0.100 → v0.137.4 (read this first) ⭐
+# ⭐ BCH CATCH-UP: v0.100 → v0.137.5 (read this first) ⭐
+
+> **🆕 v0.137.5 — ApiVersion stays 35 (no gate change). No wire change.**
+> - **Transforms never chain.** Every route that applies or re-applies a transform form asks one gate first. Two
+>   replies are new or newly reachable:
+>   - `.beelz phase <n>` while the form is still spawning (Morgana's async serpent form, the first tick or two after
+>     `transform`) replies `Still transforming — give it a moment, then try again.`
+>   - `.beelz admin testform <wolf|bear>` while transformed replies `You're already transformed as <unit>. Use .beelz
+>     revert first, then run testform again.` It used to revert and apply in one frame.
+>
+>   The `transform` refusals keep their texts.
+> - **Events:** a refused phase switch records no phase and emits no `[BEELZ:event] type=transform-phase-shift`. The
+>   event fires on the retry that applies, with unchanged fields. The server logs `[Beelz TXGUARD] refused route=…
+>   reason=…` (server log, not chat).
+> - **What BCH should do:** nothing is required. If BCH drives `phase`, treat `Still transforming` as "retry shortly",
+>   and key the phase display off the `transform-phase-shift` event, not off having sent the command.
 
 > **🆕 v0.137.4 — ApiVersion 34 → 35 (gate `api>=35`). Behaviour change on one command; no `[BEELZ:*]` line changes shape.**
 > - **`clearbar` now runs the full layered bar reset, limited to the chosen set.** `.beelz clearbar [all|universal|<weapon>|<form>]`
