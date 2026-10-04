@@ -11,7 +11,7 @@ namespace Beelzebub.Logic;
 /// </summary>
 public sealed class TransformGuardLog
 {
-    public const int Cap = 256;
+    public const int Cap = 512;
     readonly HashSet<(ulong, TransformRoute, TransformGateVerdict)> _logged = new();
 
     public int Count => _logged.Count;

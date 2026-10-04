@@ -128,3 +128,46 @@ VERDICT: REVISE
 - F11 · rejected · advisory: the owner's test character is an admin, so a non-admin call cannot be run in game; `actors` (D6) fails when testform or force-transform lose `adminOnly: true`, and VCF's deny path for adminOnly commands is unchanged by this slice
 - F12 · accepted · `check_transform_guard.py status` (allowlists the two owner files, one summary line, `FAIL no input` outside a repository); D15 uses it; selftest covers ok / FAIL / no input
 - F13 · accepted · step 5 now satisfies D14 only and names the regression commands it re-runs; step 7 uses `status`
+
+## Review 3 · 2026-10-04 · codex · plan commit ba581d7 · plan 48782 B · 20 items · files 15 · b31445e757ec · prompt 257688689991
+F1 [blocking] Probe `3.3` is unanswered as a control: the artifact table states retention decisions, but `wiring` only inspects transform state ordering and cannot fail if a new log, temporary file, screenshot, or persistent artifact lacks ownership, retention, or deletion rules; satisfaction requires one evidence command that compares every produced artifact with an enforceable persistence inventory.
+Fix: Add an artifact-inventory check covering runtime, test, build, deployment, and review by-products, with a planted undeclared artifact that makes it fail.
+
+F2 [blocking] Probe `12.4` is unanswered: D9 is explicitly recorded as `n/a`, D10 uses prior-release passes, and several controls have only synthetic selftest fixtures, despite rubric 2 requiring every failing input to be run once against the real check before approval; satisfaction requires recorded real failing, silent, and empty-input runs for every introduced check.
+Fix: Run and record each real negative case, including the vrclient scenario before the guard is wired or with a reversible planted bypass, plus its silent and unavailable-input cases.
+
+F3 [blocking] Probe `14.4` is unanswered as a control: `paths` sees only Git diff and non-ignored untracked files, so it cannot fail when `dist/`, deployed DLLs, logs, screenshots, temporary backups, or another ignored/generated output is omitted from the rollout list; satisfaction requires one command that walks and validates tracked, ignored, generated, deployed, temporary, plan-store, and review-process paths.
+Fix: Extend the paths check with explicit generated/outside-repository manifests and planted omissions for ignored and temporary outputs.
+
+F4 [advisory] The maximal-volume justification is arithmetically wrong: 40 players × 4 routes × 5 reasons is 800 possible keys, so a cap of 256 does not “cover every live refusal … many times over”; clearing the whole ledger can cause repeated log bursts under varied refusal traffic (`9.1`, `12.2`, `13.2`).
+Fix: Correct the stated bound and either justify 256 from reachable simultaneous verdicts or use bounded per-player/LRU eviction.
+
+F5 [advisory] Scenario: a player starts an async form, disconnects, and never reconnects; the plan says the stale pending entry remains until login, so one-time use can linger indefinitely despite the `8.2` claim that only a bounded guard-ledger entry remains.
+Fix: State that indefinite pending-entry retention is accepted, or add disconnect/timeout cleanup and evidence for it.
+
+F6 [advisory] Scenario: a future form is applied through `DebugEventsSystem.ApplyBuff`, reflection, a delegate, or a newly named `TransformBuffService` API; the plan admits D6 cannot discover it, so “every route” depends on manual review rather than the advertised mechanical invariant (`4.5`, `10.1`).
+Fix: Centralize form mutation behind an enforced API or expand the checker to detect raw form-buff application and all state-mutating service entry points.
+
+F7 [advisory] Scenario: the Morgana retry replies with an unrelated line containing “phase 2”; D9’s broad `expect-reply phase 2` can pass without proving the requested phase became active (`7.3`, `9.3`, `12.1`).
+Fix: Assert one exact accepted success reply and the `transform-phase-shift … phase=2` event, or verify the active phase through a read command.
+
+F8 [advisory] S-3 is not genuinely reversible: its fallback merely adds a benchmark after a hitch and does not say what implementation or budget decision applies if the `<1 µs` assumption is false (`13.1`).
+Fix: Measure three runs before approval or state a real fallback such as removing per-call logging lookup, changing the data structure, or revising an owner-approved budget.
+
+F9 [advisory] Blind rescore: Considered — 1 Purpose; 2 Permissions; 4 Business rules; 5 Internal interfaces; 6 Dependencies; 7 Lifecycle; 8 Minimal stretch; 9 Maximal stretch; 10 Security; 11 UX; 13 Performance; 15 Out of scope. Gap — 3 (`3.3` evidence), 12 (`12.4` real failing runs), 14 (`14.4` complete path control). No layer is legitimately N/A.
+Fix: Close F1–F3, then all 15 layers and 49 probes can score Considered.
+
+EARLIER: all resolved
+12/15 layers · 46/49 probes
+VERDICT: REVISE
+
+### Dispositions
+- F1 · rejected · third repeat (review 1 F3, review 2 F1): probe 3.3 is answered by the artifact table under Design › Data; the one new artifact is the in-memory TXGUARD ledger, bounded and tested by D20. A repository-wide "every by-product" inventory is a project-level tool, not this slice's — the clearbar-fullreset plan closed on the same answer
+- F2 · rejected · third repeat (review 1 F10/F13, review 2 F6): every introduced check has its real failing case recorded (the `wiring` FAIL against the unwired tree; the 10 selftest defect/empty fixtures; 10 planted unit-test faults). A pre-guard D9 run would deliberately drive the very async-form chain the guard exists to stop on the shared dev server; D9 runs after step 3, and its fails-when cases are each a scenario check that prints SCENARIO FAIL
+- F3 · rejected · third repeat (review 1, review 2 F7): D16 walks every repository path the change ships; ignored build output, the deployed DLL, logs and %TEMP% files are not shipped paths and are owned in the artifact table — same answer the clearbar-fullreset review accepted
+- F4 · accepted · the arithmetic was wrong: 9 reachable (route, reason) pairs × 40 players = 360 keys; `Cap` raised to 512 with the derivation in Bounds; D20's text follows
+- F5 · accepted · indefinite retention of a never-returning player's pending entry is stated and accepted in the 8.2 use case (in-memory, one pair per player, cleared at login or restart)
+- F6 · rejected · repeat of review 2 F2: the blind spots and their reviewer are named in Business rules 5; a raw `ApplyBuff` with a form GUID has no finite static signature (GUIDs are data)
+- F7 · accepted · the Morgana retry now ends with `.beelz phase` → `Currently in phase 2`, which only the show-mode reply prints
+- F8 · accepted · S-3's fallback now says what changes if the budget is missed (auto routes stop consulting the ledger) and that the owner re-decides the budget
+- F9 · rejected · summary of F1–F3, answered there

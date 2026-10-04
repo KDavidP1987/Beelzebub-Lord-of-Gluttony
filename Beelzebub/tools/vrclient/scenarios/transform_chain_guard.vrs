@@ -36,7 +36,8 @@ chat .beelz phase 2
 expect-no-log (\[Error|Exception|at Beelzebub\.)
 wait 3
 chat .beelz phase 2
-expect-reply phase 2
+chat .beelz phase
+expect-reply Currently in phase 2
 shot full morgana-phase2
 chat .beelz revert
 expect-reply Reverted from
