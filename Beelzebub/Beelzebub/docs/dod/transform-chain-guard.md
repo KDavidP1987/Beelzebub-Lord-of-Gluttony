@@ -179,7 +179,9 @@ or job.
   `docs/BCH_INTEGRATION_HANDOFF.md`, `docs/BACKLOG.md`, `docs/audits/transform-chain-guard.md`, `docs/dod/profile.md`,
   `docs/dod/transform-chain-guard.md`, `docs/dod/transform-chain-guard.reviews.md`, `docs/dod/transform-chain-guard.review.html`, `docs/dod/transform-chain-guard.html`, `docs/dod/dod-dashboard.html`, `docs/dod/README.md` (index),
   release files (`Beelzebub.csproj`, `thunderstore.toml`, `CHANGELOG.md`, `docs/CHANGELOG_FULL.md`, `README.md`, repo-root `README.md`),
-  `tools/check_transform_guard.py` (new), `tools/vrclient/scenarios/transform_chain_guard.vrs` (new);
+  `tools/check_transform_guard.py` (new), `tools/vrclient/scenarios/transform_chain_guard.vrs` (new),
+  from the amendments: `Patches/UpdateBuffsBufferDestroyPatch.cs` and `Services/AbilityRegistry.cs` (A2), `Services/BossFormRegistry.cs` (A6),
+  `tools/vrclient/scenarios/clearbar_fullreset.vrs` (A5, unit names);
   `dist/` (gitignored, staged by the build); outside git (D16 checks the repo only; listed for the record): the deployed DLL, the dev server's state.json and logs, the log backup `%TEMP%\beelz-logs-2026-10-04-txguard\`, `%TEMP%\vrclient\` (results, shots).
 
 ## Out of scope
@@ -305,3 +307,4 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-04 · note · amend A6 · from the Codex pass on the A5 fix diff (REVISE: F1 blocking, F2 advisory, both accepted); built after recording
 - 2026-10-04 · note · build step 6 · deployed 84eb186 build (`cmp` identical), logs backed up to `%TEMP%\beelz-logs-2026-10-04-txguard\` and `…-txguard-run1\`; `transform_chain_guard` 14/14, `cast_basic` 6/6, `clearbar_fullreset` 32/32; Morgana's async form enriched (log 332) before the immediate `phase 2` (336), so (d) proved a clean swap with no error, not a Pending refusal — the recorded chat-latency limit; `preflight -LogCheck` → `PREFLIGHT OK (2 checks)`, 0 errors in both logs
 - 2026-10-04 · note · review 5 (human, scope A1–A6) · owner confirmed the four rubric answers, `15/15 layers · 49/49 probes`, VERDICT: READY; review: human
+- 2026-10-04 · note · build step 7 · release v0.137.5: csproj + toml, CHANGELOG (0.132.0 dropped, 10 entries) + CHANGELOG_FULL, README status + caveat, root README synced, BACKLOG row DONE + `timed-revert-orphan` follow-up; `pwsh Beelzebub/tools/preflight.ps1` → `PREFLIGHT OK (10 checks)`; `paths backlog handoff profile rollback` ok

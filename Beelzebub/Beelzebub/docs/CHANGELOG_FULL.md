@@ -4,6 +4,24 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.137.5] - 2026-10-04
+
+### Transforms never chain into each other
+
+- **Every way into or back into a transform now checks first.** That covers `.beelz transform`, `.beelz phase`, the
+  automatic phase changes, `refresh`, travel and login. While a boss form is still appearing (Morgana's serpent form
+  takes a moment), `.beelz phase` and `.beelz refresh` reply "Still transforming — give it a moment, then try again."
+  instead of re-applying over it.
+- **`.beelz admin testform` no longer switches transforms in one step.** While you're transformed it says "Use
+  .beelz revert first, then run testform again.", the same rule `.beelz transform` has followed since v0.120.
+- **Fixed: `.beelz phase` works for Dracula and Morgana again.** Since v0.100 it refused every phase above 1 with
+  "no eligible abilities", because it only looked at the boss's own tagged abilities, not the curated phase kits.
+  Automatic (HP-based) phases were not affected. The reply now counts what actually lands on your bar, including your
+  custom loadout.
+- In Auto phase mode, leaving combat while a phase's form was still appearing could skip the reset to phase 1. It now
+  retries until it applies, unless you pick a phase yourself.
+- Server log: a refused transform step writes one `[Beelz TXGUARD] refused route=… reason=…` line.
+
 ## [0.137.4] - 2026-10-04
 
 ### clearbar clears the whole bar for the loadout you pick

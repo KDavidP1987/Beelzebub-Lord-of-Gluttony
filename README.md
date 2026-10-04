@@ -57,7 +57,7 @@ A **server-side** V Rising mod that turns the whole bestiary into a collection-a
 
 **Source · issues · roadmap:** [github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony) · **License:** MIT
 
-> **Status:** active early access / **public test build (v0.137.4)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
+> **Status:** active early access / **public test build (v0.137.5)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
 
 ---
 
@@ -200,6 +200,9 @@ help confirm or break any of these, that's the most valuable feedback we can get
   it back, and one reset also repairs the Space / R / C / T slots earlier versions' resets left blocked. Your spellbook spells stay on their keys through a reset, and spells earlier versions broke (key blank, spellbook still listing them) come back at your next login. A reset while riding dismounts you and says so (saddle abilities sit on R / C / T, slots 5-7), a reset that ends a timed transform starts its
   cooldown, and a row another mod put on your weapon's slots is removed too. If a bar is still stuck, send the
   `[Beelz RESET]` / `[Beelz BAR]` / `[Beelz LEAK]` lines from the log (`.beelz admin bar-raw <player>` adds the raw per-slot data).
+- **Transform steps are checked (v0.137.5).** A boss form that is still appearing refuses a phase switch or refresh for a
+  moment ("Still transforming"), and testform/transform need a `.beelz revert` first. If a form never finishes appearing,
+  `.beelz revert` clears it. `.beelz phase` works for Dracula and Morgana again (broken since v0.100).
 - **Things we'd especially love tested:** mixing captured abilities with vanilla
   spells (assign a vanilla spell in the spellbook to a captured slot — it should
   take the slot back), the expanded action bar (`.beelz cast`),

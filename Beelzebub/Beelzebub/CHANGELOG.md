@@ -4,6 +4,24 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.137.5] - 2026-10-04
+
+### Transforms never chain into each other
+
+- **Every way into or back into a transform now checks first.** That covers `.beelz transform`, `.beelz phase`, the
+  automatic phase changes, `refresh`, travel and login. While a boss form is still appearing (Morgana's serpent form
+  takes a moment), `.beelz phase` and `.beelz refresh` reply "Still transforming — give it a moment, then try again."
+  instead of re-applying over it.
+- **`.beelz admin testform` no longer switches transforms in one step.** While you're transformed it says "Use
+  .beelz revert first, then run testform again.", the same rule `.beelz transform` has followed since v0.120.
+- **Fixed: `.beelz phase` works for Dracula and Morgana again.** Since v0.100 it refused every phase above 1 with
+  "no eligible abilities", because it only looked at the boss's own tagged abilities, not the curated phase kits.
+  Automatic (HP-based) phases were not affected. The reply now counts what actually lands on your bar, including your
+  custom loadout.
+- In Auto phase mode, leaving combat while a phase's form was still appearing could skip the reset to phase 1. It now
+  retries until it applies, unless you pick a phase yourself.
+- Server log: a refused transform step writes one `[Beelz TXGUARD] refused route=… reason=…` line.
+
 ## [0.137.4] - 2026-10-04
 
 ### clearbar clears the whole bar for the loadout you pick
@@ -219,47 +237,3 @@ with `.beelz admin ability <name> …`.
 - **`Summon_PowerMode`**: new servers use `OwnerRelative`, where a captured summon's power follows yours.
   Existing servers stay on `Legacy` (the unit's own stats) until you switch.
 - Recommended: play one session in `Telemetry`, check that attribution reads *reliable*, then switch to `Scale`.
-
-## [0.132.0] - 2026-09-23
-
-**Server restart required** (a full restart, not `.beelz admin reload`) — it clears the old
-prefab-level `forcetimeout` edits and maps every ability chain.
-
-### Ability tuning is safer and easier to see
-
-- **New `.beelz admin ability-inspect <ability>`** shows every number behind an ability, read-only: cooldown,
-  cast time, charges, range, projectile speed/range, how long effects last, AoE and hit radius, **damage
-  factors**, heals, buff duration/stacks, knockback, max stacks and projectile/minion counts. It also shows
-  which parts are **shared with other abilities or bosses**, and warns about flat or %-of-HP damage.
-  `.beelz admin ability-inspect export` writes every ability to `inspect_export.csv` in the Beelzebub config
-  folder.
-- **Tuning no longer leaks into other abilities.** Many boss abilities share projectiles, areas or buffs. A
-  tuned value (cooldown, range, AoE, projectile speed, duration, healing and so on) is now **skipped on any
-  part another ability also uses**, unless every ability that uses it asks for the same value. Admins can
-  opt in with `allowglobalsharededit on`, which logs every other ability it changes.
-- **`forcetimeout` now only affects players.** It no longer changes game data, so bosses keep their own
-  effects. When a player casts the captured ability, their own never-ending buff from it is removed after
-  the set time.
-- **`leapheight` and field aliases (`cd`, `radius`, `interrupt`, …) now apply immediately**, not only
-  after a restart. `tune` and `ability` share one field list, and out-of-range or non-number values are
-  rejected with the allowed range.
-
-### Weapon and form restrictions fixed
-
-- **`forms !Mounted`-style blocks now work everywhere.** Blocked forms are no longer shown as *allowed*,
-  and a form's fallback abilities now respect `enabled` and the form lock.
-- **Block-only weapon lists work** (`weapons !Sword` = any weapon except swords). `DualHammers` is rejected
-  with a message, since it isn't a real weapon family.
-- **`.beelz cast` now honors the ability's weapon and form restrictions**, the same way the spell bar does.
-
-### Crash-safety re-blocks (from tester reports)
-
-- **Re-blocked 4 abilities that were unblocked in 0.129:** Morgana Swarm and Orb Barrage (server crash when
-  chained together), and Leandra ShadowStep and TrippleBolt (killed the caster; minions never despawned).
-  Existing servers still need their `ability_rules.json` re-seeded to pick up the data-side block, but the
-  code-side block applies right away.
-
-### For BloodCraftHub
-
-- API version **29**: `api info` adds `form_blocks=` / `weapon_blocks=`, and `forms=` now lists only the
-  allowed forms.

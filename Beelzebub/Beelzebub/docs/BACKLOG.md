@@ -6,7 +6,8 @@ this list when its plan is created.
 | Slug | What | Deferred from |
 |---|---|---|
 | `clearbar-fullreset` | DONE v0.137.4 (clearbar-fullreset): clearbar runs the layered reset for one chosen set, keeps the other sets' binds (RestoreKept), dismounts / ends a transform and says so; ApiVersion 35. | bar-reset (v0.137), Out of scope |
-| `transform-chain-guard` | A recurrence guard in `TransformService.TryActivate` against chaining transforms (the pattern that left creature kits on the bar). | bar-reset (v0.137), Out of scope |
+| `transform-chain-guard` | DONE v0.137.5 (transform-chain-guard): one pure gate (`Logic/TransformGate.cs`) on every transform route — no re-apply over a still-spawning form, no transform-to-transform chain (testform too), refused phase switches change no state and a refused combat-end reset is retried; `.beelz phase` counts curated boss phases again (broken since v0.100); ApiVersion stays 35. | bar-reset (v0.137), Out of scope |
+| `timed-revert-orphan` | The timed auto-revert (`TransformService.Tick`) clears the transform without `TransformBuffService.MarkReverted`, so an async form buff landing after a timed expiry is not destroyed by the revert-orphan guard (pre-existing; found by the transform-chain-guard audit, Codex round 1 F2). Route timed expiry through `Revert`'s cleanup. | transform-chain-guard (v0.137.5) audit |
 | `docs-consolidation` | Merge the two docs folders (`Beelzebub/docs/` and `Beelzebub/Beelzebub/docs/`) and split the oversized docs. | process adoption, 2026-09-30 |
 | `dev-snapshot` | Port `dev-snapshot.ps1` (copy both server logs + state before a restart) from Nyarlathotep. | process adoption, 2026-09-30 |
 | mounted-bar-reset | DONE v0.137.3 (mounted-bar-reset): saddle slots are R/C/T (5/6/7), saved slot-3 binds move to 5, a reset while riding dismounts on purpose and says so. | bar-reset (v0.137), Business rules 4 |
