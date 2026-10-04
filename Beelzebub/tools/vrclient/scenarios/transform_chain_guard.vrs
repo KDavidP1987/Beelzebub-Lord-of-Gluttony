@@ -1,0 +1,43 @@
+# transform_chain_guard.vrs — dod transform-chain-guard D9 (v0.137.5): no route chains one transform into another.
+# Cases: (a) a second transform while transformed is refused (other unit, same unit) and logged; (b) admin testform
+# while transformed is refused ("revert first") instead of reverting + applying in one frame; (c) a phase switch on
+# a settled form still works; (d) Morgana (async SnakePhase form): a phase switch right after the transform either
+# swaps or says "Still transforming" — never an error — and a retry lands.
+# Needs: Chaos has transform unlocks 0 (Beatrice) and 1 (Dracula); admin rights (ensure runs adminauth).
+ensure
+console TPHome
+wait 3
+chat .beelz admin clear-transform Chaos
+wait 2
+# --- (a) chain refused ---
+chat .beelz transform 1
+expect-reply Transformed into Dracula
+wait 3
+chat .beelz transform 0
+expect-reply Use .beelz revert first, then transform again.
+expect-log \[Beelz TXGUARD\] refused route=Activate reason=Active
+chat .beelz transform 1
+expect-reply You're already transformed as that unit.
+expect-log \[Beelz TXGUARD\] refused route=Activate reason=SameUnit
+# --- (b) testform refused while transformed ---
+chat .beelz admin testform wolf
+expect-reply Use .beelz revert first, then run testform again.
+expect-log \[Beelz TXGUARD\] refused route=FormTest reason=Active
+# --- (c) phase switch on a settled form ---
+chat .beelz phase 2
+expect-reply Phase 2 (Bloodmage) active
+shot full dracula-phase2
+chat .beelz revert
+expect-reply Reverted from
+wait 3
+# --- (d) Morgana: phase right after the transform ---
+chat .beelz admin force-transform Chaos 591725925
+chat .beelz phase 2
+expect-no-log (\[Error|Exception|at Beelzebub\.)
+wait 3
+chat .beelz phase 2
+expect-reply phase 2
+shot full morgana-phase2
+chat .beelz revert
+expect-reply Reverted from
+expect-no-log (\[Error|Exception|at Beelzebub\.)
