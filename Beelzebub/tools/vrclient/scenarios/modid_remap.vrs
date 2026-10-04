@@ -1,0 +1,26 @@
+# modid_remap.vrs — modid-remap-errors: no stale slot-override holder survives the boot sweep, a grant + bar reset
+# leaves a stale holder that the next sweep cleans, and slot 7's CopyCooldown reads its base value again.
+# Needs: Chaos holds a sword; VerboseLogging may be off. Restores its own test data: `admin give` re-adds the
+# Knife Throw capture (1621601748, from Undead Infiltrator 613251918) — it replies "already has" when present.
+# The boot sweep runs before the client joins; its line is checked from the log (dod D10), not here.
+ensure
+console TPHome
+wait 3
+chat .beelz admin give Chaos 613251918 1621601748
+wait 2
+chat .beelz admin modleak
+expect-log \[Beelz MODLEAK\] summary target=Chaos rows=\d+ holders=\d+ live=\d+ stale=0 unknown=0
+chat .beelz admin bar-raw
+expect-log \[Beelz BARRAW\] target=Chaos .*slot=7 - AbilityGroupSlot\.CopyCooldown: True \(Base: True\)
+chat .beelz grant 1 1621601748
+expect-reply Slot 1 assigned to AB_Undead_Infiltrator_KnifeThrow_AbilityGroup
+wait 2
+chat .beelz resetbar CONFIRM
+expect-log \[Beelz RESET\].*target=${CHARACTER} .*clean=1
+expect-log \[Beelz MODLEAK\] sweep \(bar-reset\): cleaned [1-9]\d* stale holder\(s\) timeout=20
+wait 2
+chat .beelz admin modleak
+expect-log \[Beelz MODLEAK\] summary target=Chaos rows=\d+ holders=\d+ live=\d+ stale=0 unknown=0
+chat .beelz admin modleak all
+expect-log \[Beelz MODLEAK\] summary target=all players rows=\d+ holders=\d+ live=\d+ stale=0
+expect-no-log \[Error|Exception|at Beelzebub\.
