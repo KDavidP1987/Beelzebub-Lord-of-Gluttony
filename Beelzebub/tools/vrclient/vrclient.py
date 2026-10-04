@@ -322,10 +322,17 @@ def click_text(label: str, timeout: float = 20, wait: float = 1.0, exact: bool =
     return False
 
 
-def in_world() -> bool:
+def in_world(tries: int = 3) -> bool:
     """The HP readout ("1,136 / 1,136") above the blood orb exists only once the character is in the world."""
-    # OCR often drops the slash ("1,136 136"): two numbers in the readout area is enough
-    return len(re.findall(r"\d[\d,.]*", ocr_text("hp"))) >= 2
+    # OCR often drops the slash ("1,136 136"): two numbers in the readout area is enough. The first capture right
+    # after focus() can be blank (the window has not redrawn yet) — retry before deciding we are NOT in the world,
+    # or connect() would leave a live session for the menu.
+    for i in range(tries):
+        if len(re.findall(r"\d[\d,.]*", ocr_text("hp"))) >= 2:
+            return True
+        if i < tries - 1:
+            time.sleep(1)
+    return False
 
 
 # ---------------------------------------------------------------------------------------------------- logs

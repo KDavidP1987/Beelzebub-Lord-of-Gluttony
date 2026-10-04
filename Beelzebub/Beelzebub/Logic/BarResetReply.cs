@@ -19,6 +19,7 @@ public static class BarResetReply
     public const string OfflineBar = "offline: live bar resets on next login";
     public const string AskAdmin = "still stuck? ask an admin for .beelz admin bar";
     public const string DismountedSelf = "You were dismounted to reset your bar; remount to ride.";
+    public const string TransformEndedSelf = "Your transform was ended to clear the bar.";
     const int MaxListed = 12;
     const int MaxPrefabName = 64;
 
@@ -44,22 +45,13 @@ public static class BarResetReply
         else
             lines.Add($"{whose} bar reset ran but is NOT clean yet (cleared {binds} bind(s){hot}).");
 
-        var problems = new List<string>();
-        if (r.Steps.Any(s => s.Step == BarResetStep.SaveBindings) && !r.Saved) problems.Add(NotSaved);
-        var failed = r.Steps.Where(s => s.Failed && s.Step != BarResetStep.SaveBindings)
-            .Select(s => s.Step.ToString()).Distinct().ToList();
-        if (failed.Count > 0) problems.Add($"failed: {string.Join(", ", failed)} (see [Beelz RESET] in the server log)");
-        if (r.Online && r.LiveReady && r.Unreadable) problems.Add(CouldNotRead);
         string ladder = scope switch
         {
             BarResetScope.PlayerReset => "ask an admin for .beelz admin bar",
             BarResetScope.Purge => $"if they stay after a relog: .beelz admin reset-character {who} CONFIRM-RESET",
             _ => $"run .beelz admin bar {who}; if they stay: .beelz admin purge {who} CONFIRM",
         };
-        if (r.Survivors.Count > 0)
-            problems.Add($"still overridden: {Slots(r.Survivors)} — {ladder}");
-        if (r.Online && r.LiveReady && r.OverrideBuffsLeft.Count > 0)
-            problems.Add($"override buff still on: {string.Join(", ", r.OverrideBuffsLeft.Take(3).Select(b => Text(b, MaxPrefabName)))} — {ladder}");
+        var problems = Problems(r, ladder);
 
         // mounted-bar-reset D5: the dismount is said on the headline, so a reset still replies in at most two lines
         if (r.CountOf(BarResetStep.Dismount) > 0 && lines.Count > 0)
@@ -68,6 +60,43 @@ public static class BarResetReply
         if (problems.Count > 0) lines.Add(string.Join("; ", problems));
         else if (self && r.Online) lines.Add(AskAdmin);
         return lines.Select(Cap).ToList();
+    }
+
+    /// <summary>v0.137.4 (clearbar-fullreset D4) — the `.beelz clearbar` reply: the pre-0.137.4 headline (how many binds
+    /// the chosen set held), a dismount / ended-transform suffix when those steps ran, and a second line only when
+    /// something went wrong (the same problem texts as <see cref="ForReset"/>). <paramref name="what"/> names the set
+    /// ("your Sword loadout").</summary>
+    public static List<string> ForClear(BarResetResult r, string what)
+    {
+        r ??= new BarResetResult();
+        int n = r.CountOf(BarResetStep.ClearSavedBindings);
+        string head = n > 0
+            ? $"Cleared {what} — {n} binding(s) removed. Captured abilities kept; re-grant anytime."
+            : $"Nothing was bound in {what}.";
+        if (r.CountOf(BarResetStep.Dismount) > 0) head += " " + DismountedSelf;
+        if (r.CountOf(BarResetStep.RevertTransform) > 0) head += " " + TransformEndedSelf;
+
+        var problems = Problems(r, "ask an admin for .beelz admin bar");
+        if (r.Online && !r.LiveReady) problems.Insert(0, $"the {NotReachable}");
+        var lines = new List<string> { head };
+        if (problems.Count > 0) lines.Add(string.Join("; ", problems));
+        return lines.Select(Cap).ToList();
+    }
+
+    /// <summary>Everything that kept a reset from being clean, in reply words; empty when nothing went wrong.</summary>
+    static List<string> Problems(BarResetResult r, string ladder)
+    {
+        var problems = new List<string>();
+        if (r.Steps.Any(s => s.Step == BarResetStep.SaveBindings) && !r.Saved) problems.Add(NotSaved);
+        var failed = r.Steps.Where(s => s.Failed && s.Step != BarResetStep.SaveBindings)
+            .Select(s => s.Step.ToString()).Distinct().ToList();
+        if (failed.Count > 0) problems.Add($"failed: {string.Join(", ", failed)} (see [Beelz RESET] in the server log)");
+        if (r.Online && r.LiveReady && r.Unreadable) problems.Add(CouldNotRead);
+        if (r.Survivors.Count > 0)
+            problems.Add($"still overridden: {Slots(r.Survivors)} — {ladder}");
+        if (r.Online && r.LiveReady && r.OverrideBuffsLeft.Count > 0)
+            problems.Add($"override buff still on: {string.Join(", ", r.OverrideBuffsLeft.Take(3).Select(b => Text(b, MaxPrefabName)))} — {ladder}");
+        return problems;
     }
 
     /// <summary>`.beelz admin bar` lines: offline → the saved state; online → a header, override buffs, and one line per

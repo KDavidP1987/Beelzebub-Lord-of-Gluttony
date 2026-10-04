@@ -44,7 +44,9 @@ public static class BarResetLog
     {
         var sb = new StringBuilder("[Beelz RESET] ");
         sb.Append("run=").Append(runId)
-          .Append(" scope=").Append(scope)
+          .Append(" scope=").Append(scope);
+        if (scope == BarResetScope.ClearSet && result?.ClearSet != null) sb.Append(" set=").Append(LogSafe.Field(result.ClearSet.Label));
+        sb
           .Append(" target=").Append(LogSafe.Field(targetName)).Append(" (").Append(steamId).Append(')')
           .Append(" ms=").Append(Math.Max(0, elapsedMs))
           .Append(" steps=");

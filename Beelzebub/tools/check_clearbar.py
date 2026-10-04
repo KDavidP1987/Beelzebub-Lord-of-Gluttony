@@ -6,13 +6,16 @@ Each subcommand prints exactly one summary line, `<name>: ok ...` or `<name>: FA
 A check that scans nothing FAILs with "no input" — a check that finds nothing never passes.
 
   handoff   the BCH handoff carries the v0.137.4 contract and its banner equals ApiCommands.ApiVersion (35)
-  secrets   no credential-shaped literal in the plugin's C# sources (the only code that writes state, replies, logs)
+  secrets   no credential-shaped literal in the plugin's .cs / .json / .toml sources (code, embedded data, manifest)
   rollback  the audit's `Rollback range: <first>..<last>` resolves, first is an ancestor of last, and the audit
             states the revert / rebuild / redeploy commands and the no-migration consequence
   selfonly  `clearbar` and `resetbar` take no player/target parameter and are not adminOnly (caller only)
   wiring    the ClearBar handler calls BarResetService.FullReset(..., BarResetScope.ClearSet, ...) exactly once and
             none of the calls the old handler used to change binds or the bar (business rule 6 of the plan)
   paths     every path changed since the plan's recon commit is declared in the plan's Rollout path list
+  backlog   docs/BACKLOG.md's `clearbar-fullreset` row says `DONE v0.137.4`
+  selftest  runs every check above on temp fixtures: a good fixture must pass, a defect fixture must FAIL, and an
+            empty tree must FAIL with "no input" (paths/rollback use git and are planted against the live repo)
 
 Usage: python Beelzebub/tools/check_clearbar.py <subcommand> [--root <repo root>]
 """
@@ -31,7 +34,7 @@ AUDIT = f"{PROJ}/docs/audits/clearbar-fullreset.md"
 API_VERSION = 35
 HANDOFF_TOKENS = ["| 35 | 0.137.4 |", "v0.137.4", "api>=35", "clearbar", "scope=ClearSet",
                   "Your transform was ended to clear the bar."]
-SECRET_RE = re.compile(r"(?i)\b(password|passwd|api[_-]?key|secret|bearer|access[_-]?token)\b\s*[:=]\s*\"[^\"]{8,}\"")
+SECRET_RE = re.compile(r"(?i)\b(password|passwd|api[_-]?key|secret|bearer|access[_-]?token)\b[\"']?\s*[:=]\s*\"[^\"]{8,}\"")
 CONSEQUENCE = "no saved-data migration"
 ROLLBACK_STEPS = ["git revert", "dotnet build Beelzebub/Beelzebub.sln -c Release", "taskkill /PID"]
 COMMANDS = f"{PROJ}/Commands/BeelzCommands.cs"
@@ -50,12 +53,16 @@ def read(root: str, rel: str) -> str | None:
         return f.read()
 
 
+SOURCE_EXT = (".cs", ".json", ".toml")
+BACKLOG = f"{PROJ}/docs/BACKLOG.md"
+
+
 def cs_files(root: str) -> list[str]:
     out = []
     base = os.path.join(root, PROJ)
     for d, dirs, files in os.walk(base):
         dirs[:] = [x for x in dirs if x not in ("bin", "obj")]
-        out += [os.path.relpath(os.path.join(d, f), root).replace("\\", "/") for f in files if f.endswith(".cs")]
+        out += [os.path.relpath(os.path.join(d, f), root).replace("\\", "/") for f in files if f.endswith(SOURCE_EXT)]
     return sorted(out)
 
 
@@ -77,7 +84,7 @@ def check_handoff(root: str) -> str:
 def check_secrets(root: str) -> str:
     files = cs_files(root)
     if not files:
-        return "secrets: FAIL no input (no .cs files)"
+        return "secrets: FAIL no input (no .cs/.json/.toml files)"
     hits = [f"{rel}:{n}" for rel in files for n, line in enumerate(read(root, rel).splitlines(), 1)
             if SECRET_RE.search(line)]
     if hits:
@@ -195,15 +202,126 @@ def check_paths(root: str) -> str:
     return f"paths: ok, {len(changed)} changed, {len(declared)} declared"
 
 
-CHECKS = {"wiring": check_wiring, "selfonly": check_selfonly, "paths": check_paths, "handoff": check_handoff, "secrets": check_secrets, "rollback": check_rollback}
+def check_backlog(root: str) -> str:
+    t = read(root, BACKLOG)
+    if t is None:
+        return f"backlog: FAIL no input ({BACKLOG} missing)"
+    row = next((l for l in t.splitlines() if l.startswith("|") and "clearbar-fullreset" in l.split("|")[1]), None)
+    if row is None:
+        return "backlog: FAIL no clearbar-fullreset row"
+    if "DONE v0.137.4" not in row:
+        return "backlog: FAIL the clearbar-fullreset row is not marked `DONE v0.137.4`"
+    return "backlog: ok, clearbar-fullreset DONE v0.137.4"
+
+
+CHECKS = {"wiring": check_wiring, "selfonly": check_selfonly, "paths": check_paths, "handoff": check_handoff,
+          "secrets": check_secrets, "rollback": check_rollback, "backlog": check_backlog}
+
+
+# ---- selftest: every check against a good, a defect and an empty fixture ----
+
+GOOD_CMDS = '''
+[Command("clearbar", description: "Clear [all|universal|<weapon>|<form>]")]
+public static void ClearBar(ChatCommandContext ctx, string set = "all")
+{
+    // ClearAllSlots( is only mentioned in this comment
+    var r = BarResetService.FullReset(ctx.Event.SenderCharacterEntity, BarResetScope.ClearSet, "clearbar", parsed);
+    ctx.Reply("ClearGrant( inside a string");
+}
+[Command("resetbar", description: "Reset your bar")]
+public static void ResetBar(ChatCommandContext ctx, bool confirm = false)
+{
+    BarResetService.FullReset(ctx.Event.SenderCharacterEntity, BarResetScope.PlayerReset, "resetbar");
+}
+'''
+
+
+def _write(root: str, files: dict[str, str]) -> None:
+    for rel, text in files.items():
+        p = os.path.join(root, rel)
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        with open(p, "w", encoding="utf-8", newline="\n") as f:
+            f.write(text)
+
+
+def _git(root: str, *args: str) -> str:
+    return subprocess.run(["git", "-C", root, "-c", "user.name=t", "-c", "user.email=t@t", *args],
+                          capture_output=True, text=True, check=True).stdout.strip()
+
+
+def _fixtures() -> dict[str, tuple[dict, dict]]:
+    """check -> (good files, defect files). Each file map is written into its own empty temp tree."""
+    handoff_good = "ApiVersion = 35\n" + "\n".join(HANDOFF_TOKENS)
+    return {
+        "handoff": ({HANDOFF: handoff_good, API: "public const int ApiVersion = 35;"},
+                    {HANDOFF: handoff_good.replace("ApiVersion = 35", "ApiVersion = 34"), API: "public const int ApiVersion = 35;"}),
+        "secrets": ({f"{PROJ}/A.cs": 'var name = "hello world";', f"{PROJ}/t.toml": 'versionNumber = "0.137.4"'},
+                    {f"{PROJ}/A.cs": "x", f"{PROJ}/c.json": '{ "api_key": "abcdefgh12345678" }'}),
+        "selfonly": ({COMMANDS: GOOD_CMDS},
+                     {COMMANDS: GOOD_CMDS.replace("string set = \"all\"", "string player, string set = \"all\"")}),
+        "wiring": ({COMMANDS: GOOD_CMDS},
+                   {COMMANDS: GOOD_CMDS.replace("// ClearAllSlots( is only", "SlotApply.ClearAllSlots(e); // only")}),
+        "backlog": ({BACKLOG: "| `clearbar-fullreset` | DONE v0.137.4 (clearbar-fullreset): ... | x |\n"},
+                    {BACKLOG: "| `clearbar-fullreset` | Fold clearbar into the layered reset | x |\n"}),
+    }
+
+
+def selftest(_root: str) -> str:
+    import tempfile
+    global RECON
+    bad = []
+    def expect(name: str, line: str, want: str) -> None:
+        ok = {"ok": ": ok" in line, "FAIL": ": FAIL" in line and "no input" not in line,
+              "no input": ": FAIL no input" in line}[want]
+        if not ok:
+            bad.append(f"{name} want {want}, got: {line}")
+    for name, (good, defect) in _fixtures().items():
+        for files, want in ((good, "ok"), (defect, "FAIL"), ({}, "no input")):
+            with tempfile.TemporaryDirectory() as t:
+                _write(t, files)
+                expect(name, CHECKS[name](t), want)
+    # rollback + paths read git: build a throwaway repo
+    with tempfile.TemporaryDirectory() as t:
+        expect("rollback", check_rollback(t), "no input")
+        _git(t, "init", "-q")
+        _write(t, {"f.txt": "1"})
+        _git(t, "add", "-A"); _git(t, "commit", "-qm", "a")
+        first = _git(t, "rev-parse", "--short", "HEAD")
+        _write(t, {"f.txt": "2"})
+        _git(t, "add", "-A"); _git(t, "commit", "-qm", "b")
+        last = _git(t, "rev-parse", "--short", "HEAD")
+        body = " ".join(ROLLBACK_STEPS) + " " + CONSEQUENCE
+        _write(t, {AUDIT: f"Rollback range: `{first}..{last}`\n{body}\n"})
+        expect("rollback", check_rollback(t), "ok")
+        _write(t, {AUDIT: f"Rollback range: `{last}..{first}`\n{body}\n"})
+        expect("rollback", check_rollback(t), "FAIL")
+        # paths: recon = first; the plan declares f.txt and itself
+        saved = RECON
+        try:
+            RECON = first
+            expect("paths", check_paths(t), "no input")
+            plan = ("## Rollout\n- Paths this change ships, writes or regenerates: `f.txt`, "
+                    f"`{PLAN}`, `{AUDIT}`.\n- Next\n")
+            _write(t, {PLAN: plan})
+            expect("paths", check_paths(t), "ok")
+            _write(t, {"undeclared.txt": "x"})
+            expect("paths", check_paths(t), "FAIL")
+        finally:
+            RECON = saved
+    if bad:
+        return f"selftest: FAIL {len(bad)}: " + " | ".join(bad)
+    return f"selftest: ok, {len(CHECKS)} checks x good/defect/empty"
+
+
+CHECKS_ALL = dict(CHECKS, selftest=selftest)
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("check", choices=sorted(CHECKS))
+    ap.add_argument("check", choices=sorted(CHECKS_ALL))
     ap.add_argument("--root", default=".")
     a = ap.parse_args()
-    line = CHECKS[a.check](a.root)
+    line = CHECKS_ALL[a.check](a.root)
     print(line)
     return 1 if ": FAIL" in line else 0
 

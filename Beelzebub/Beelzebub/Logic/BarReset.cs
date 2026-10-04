@@ -20,6 +20,9 @@ public enum BarResetScope
     AdminLoadouts,
     /// <summary>`.beelz admin purge` — AdminLoadouts plus hotkeys.</summary>
     Purge,
+    /// <summary>v0.137.4 (clearbar-fullreset D1): `.beelz clearbar [set]` — ONE saved set (a <see cref="BarSet"/>), then the
+    /// same live layers as PlayerReset, then the kept sets' binds are put back (RestoreKept).</summary>
+    ClearSet,
 }
 
 public enum BarResetStep
@@ -36,6 +39,8 @@ public enum BarResetStep
     PopSlotMods,
     EmptyPush,
     Reapply,
+    /// <summary>v0.137.4 (clearbar-fullreset D1): ClearSet only — re-injects the binds of the sets the clear kept.</summary>
+    RestoreKept,
     Readback,
 }
 
@@ -67,6 +72,7 @@ public static class BarResetPlanner
             steps.Add(BarResetStep.PopSlotMods);
             steps.Add(BarResetStep.EmptyPush);
             steps.Add(BarResetStep.Reapply);
+            if (scope == BarResetScope.ClearSet) steps.Add(BarResetStep.RestoreKept);
         }
         if (online) steps.Add(BarResetStep.Readback);
         return steps;
@@ -251,6 +257,8 @@ public interface IBarResetOps
     int PopSlotMods();
     int EmptyPush();
     int Reapply();
+    /// <summary>ClearSet: re-injects the held weapon's resolved binds from the sets the clear kept.</summary>
+    int RestoreKept();
     BarReadback Readback();
 }
 
@@ -269,7 +277,14 @@ public sealed class BarResetResult
     public bool Online { get; set; }
     /// <summary>The live components every live step needs were present (see BarResetPlanner.Plan).</summary>
     public bool LiveReady { get; set; }
-    public List<int> Survivors => Readback?.Survivors ?? new List<int>();
+    /// <summary>The set a ClearSet run cleared; null for every other scope (then nothing is kept).</summary>
+    public BarSet ClearSet { get; set; }
+    /// <summary>Overridden, readable slots — except, for a ClearSet run, a slot bound by a KEPT set with no `other`
+    /// mod: the player still wants that bind (clearbar-fullreset D3).</summary>
+    public List<int> Survivors => Readback == null
+        ? new List<int>()
+        : Readback.Slots.Where(s => s.Overridden && !s.Unreadable && !IsKept(s)).Select(s => s.Slot).ToList();
+    bool IsKept(BarSlotReading s) => ClearSet != null && s.Other == 0 && ClearSet.Keeps(s.Bind);
     /// <summary>Override buffs (carrier / form / shapeshift) still on the character at the readback — each one can
     /// re-patch the bar through its own ReplaceAbilityOnSlotBuff, which no slot reading shows.</summary>
     public List<string> OverrideBuffsLeft => Readback?.OverrideBuffs ?? new List<string>();
@@ -285,9 +300,12 @@ public static class BarResetRunner
 {
     /// <summary>Runs every step in order. A step that throws is recorded as that step's failure and the rest still
     /// run (D12); a SaveBindings that returns false is a failure (D27).</summary>
-    public static BarResetResult Run(IBarResetOps ops, IReadOnlyList<BarResetStep> steps, bool online, bool liveReady)
+    /// <param name="clearSet">the set a ClearSet run clears (its kept binds are not survivors, and RestoreKept is
+    /// required for clean); null for every other scope.</param>
+    public static BarResetResult Run(IBarResetOps ops, IReadOnlyList<BarResetStep> steps, bool online, bool liveReady,
+                                     BarSet clearSet = null)
     {
-        var r = new BarResetResult { Online = online, LiveReady = online && liveReady };
+        var r = new BarResetResult { Online = online, LiveReady = online && liveReady, ClearSet = clearSet };
         foreach (var step in steps ?? Array.Empty<BarResetStep>())
         {
             try
@@ -321,7 +339,8 @@ public static class BarResetRunner
         r.Unreadable = online && (!liveReady || !readbackRan || r.Readback.Unreadable);
         // An empty plan (unknown scope) never runs SaveBindings, so r.Saved alone makes it an error result; a plan
         // that skipped a live layer (not planner-made) can never be clean either.
-        bool complete = RequiredForClean.All(req => r.Steps.Any(s => s.Step == req));
+        bool complete = RequiredForClean.All(req => r.Steps.Any(s => s.Step == req))
+                        && (clearSet == null || r.Steps.Any(s => s.Step == BarResetStep.RestoreKept));
         r.Clean = online && liveReady && complete
                   && !r.AnyStepFailed && r.Saved
                   && readbackRan && !r.Unreadable
@@ -349,6 +368,7 @@ public static class BarResetRunner
         BarResetStep.PopSlotMods => ops.PopSlotMods(),
         BarResetStep.EmptyPush => ops.EmptyPush(),
         BarResetStep.Reapply => ops.Reapply(),
+        BarResetStep.RestoreKept => ops.RestoreKept(),
         _ => throw new ArgumentOutOfRangeException(nameof(step), step, "unknown reset step"),
     };
 }

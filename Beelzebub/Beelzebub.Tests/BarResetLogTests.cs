@@ -140,4 +140,14 @@ public class BarResetLogTests
         Assert.Equal("[Beelz FORM] target=7 form=Wolf source=native", BarResetLog.FormatForm(7, "Wolf", FormBarSource.Universal, 0));
         Assert.Equal("[Beelz FORM] target=7 form=Wolf source=universal", BarResetLog.FormatForm(7, "Wolf", FormBarSource.Universal, 2));
     }
+
+    // clearbar-fullreset D5 — the reset line names the cleared set
+    [Fact]
+    public void Format_fails_when_a_ClearSet_line_lacks_set_or_another_scope_gains_it()
+    {
+        var clear = new BarResetResult { ClearSet = BarSet.Weapon("Sword") };
+        Assert.Contains(" scope=ClearSet set=weapon:Sword target=", BarResetLog.Format(clear, BarResetScope.ClearSet, "Chaos", 1, 5, 1));
+        Assert.DoesNotContain(" set=", BarResetLog.Format(clear, BarResetScope.PlayerReset, "Chaos", 1, 5, 1));
+        Assert.DoesNotContain(" set=", BarResetLog.Format(new BarResetResult(), BarResetScope.PlayerReset, "Chaos", 1, 5, 1));
+    }
 }

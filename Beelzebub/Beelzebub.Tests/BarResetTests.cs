@@ -296,6 +296,104 @@ public class BarResetTests
 
     static BarReadback Bar(params BarSlotReading[] slots) => new() { Slots = slots.ToList() };
 
+    // ── clearbar-fullreset D1: the ClearSet plan ──────────────────────────────────────────────────────────
+
+    static readonly S[] ClearSetOrder =
+    {
+        S.RevertTransform, S.ClearSavedBindings, S.SaveBindings, S.Dismount, S.ClearEquipEntries,
+        S.DestroyOverrideSources, S.PopSlotMods, S.EmptyPush, S.Reapply, S.RestoreKept, S.Readback,
+    };
+
+    [Fact]
+    public void ClearSet_plan_fails_when_RestoreKept_is_missing_or_not_right_after_Reapply()
+    {
+        Assert.Equal(ClearSetOrder, BarResetPlanner.Plan(BarResetScope.ClearSet, true, true, true, mounted: true));
+        var foot = BarResetPlanner.Plan(BarResetScope.ClearSet, true, true, false);
+        Assert.DoesNotContain(S.RevertTransform, foot);
+        Assert.DoesNotContain(S.Dismount, foot);
+        Assert.Equal(foot.IndexOf(S.Reapply) + 1, foot.IndexOf(S.RestoreKept));
+    }
+
+    [Theory]
+    [InlineData(BarResetScope.PlayerReset)]
+    [InlineData(BarResetScope.AdminLoadouts)]
+    [InlineData(BarResetScope.Purge)]
+    public void Plan_fails_when_RestoreKept_leaks_into_another_scope(BarResetScope scope)
+    {
+        Assert.DoesNotContain(S.RestoreKept, BarResetPlanner.Plan(scope, true, true, true, mounted: true));
+    }
+
+    [Fact]
+    public void ClearSet_plan_fails_when_it_clears_hotkeys_or_an_offline_plan_has_a_live_step()
+    {
+        Assert.DoesNotContain(S.ClearHotkeys, BarResetPlanner.Plan(BarResetScope.ClearSet, true, true, true, true));
+        Assert.Equal(new[] { S.ClearSavedBindings, S.SaveBindings }, BarResetPlanner.Plan(BarResetScope.ClearSet, false, false, true, true));
+        Assert.Equal(new[] { S.ClearSavedBindings, S.SaveBindings, S.Readback }, BarResetPlanner.Plan(BarResetScope.ClearSet, true, false, true, true));
+    }
+
+    // ── clearbar-fullreset D3: kept binds are not survivors ─────────────────────────────────────────────────
+
+    static BarResetResult RunClear(BarSet set, BarReadback reading, S? fail = null, bool dropRestoreKept = false)
+    {
+        var plan = BarResetPlanner.Plan(BarResetScope.ClearSet, true, true, false);
+        if (dropRestoreKept) plan.Remove(S.RestoreKept);
+        return BarResetRunner.Run(new FakeOps { Reading = reading, Throw = fail }, plan, true, true, set);
+    }
+
+    [Fact]
+    public void ClearSet_fails_when_a_kept_universal_bind_makes_clearbar_sword_unclean()
+    {
+        var r = RunClear(BarSet.Weapon("Sword"), Bar(new BarSlotReading { Slot = 1, Bind = "universal", Row = true },
+                                                      new BarSlotReading { Slot = 2, Bind = "form:Wolf" }));
+        Assert.Empty(r.Survivors);
+        Assert.True(r.Clean);
+    }
+
+    [Fact]
+    public void ClearSet_fails_when_a_bind_of_the_cleared_set_reads_as_kept()
+    {
+        var r = RunClear(BarSet.Weapon("Sword"), Bar(new BarSlotReading { Slot = 4, Bind = "weapon:Sword", Row = true }));
+        Assert.Equal(new List<int> { 4 }, r.Survivors);
+        Assert.False(r.Clean);
+    }
+
+    [Fact]
+    public void ClearSet_fails_when_a_kept_slot_with_an_other_mod_reads_clean()
+    {
+        var r = RunClear(BarSet.Universal, Bar(new BarSlotReading { Slot = 5, Bind = "form:Mounted", Other = 1 }));
+        Assert.Equal(new List<int> { 5 }, r.Survivors);
+        Assert.False(r.Clean);
+    }
+
+    [Fact]
+    public void ClearSet_fails_when_a_run_without_RestoreKept_or_with_a_thrown_RestoreKept_reads_clean()
+    {
+        var bar = Bar(new BarSlotReading { Slot = 0, Gear = 1 });
+        Assert.False(RunClear(BarSet.Universal, bar, dropRestoreKept: true).Clean);
+        var thrown = RunClear(BarSet.Universal, bar, fail: S.RestoreKept);
+        Assert.False(thrown.Clean);
+        Assert.Contains(thrown.Steps, s => s.Step == S.RestoreKept && s.Failed);
+    }
+
+    [Fact]
+    public void ClearSet_fails_when_clearbar_all_keeps_a_bind_of_any_set()
+    {
+        var r = RunClear(BarSet.All, Bar(new BarSlotReading { Slot = 1, Bind = "universal", Row = true },
+                                         new BarSlotReading { Slot = 4, Bind = "weapon:Sword", Row = true },
+                                         new BarSlotReading { Slot = 5, Bind = "form:Mounted" }));
+        Assert.Equal(new List<int> { 1, 4, 5 }, r.Survivors);
+        Assert.False(r.Clean);
+    }
+
+    [Fact]
+    public void Run_fails_when_a_reset_without_a_clear_set_keeps_any_bind()
+    {
+        var plan = BarResetPlanner.Plan(BarResetScope.PlayerReset, true, true, false);
+        var r = BarResetRunner.Run(new FakeOps { Reading = Bar(new BarSlotReading { Slot = 1, Bind = "universal" }) }, plan, true, true);
+        Assert.Equal(new List<int> { 1 }, r.Survivors);
+        Assert.False(r.Clean);
+    }
+
     sealed class FakeOps : IBarResetOps
     {
         public S? Throw;
@@ -316,6 +414,7 @@ public class BarResetTests
         public int PopSlotMods() => Hit(S.PopSlotMods);
         public int EmptyPush() => Hit(S.EmptyPush);
         public int Reapply() => Hit(S.Reapply);
+        public int RestoreKept() => Hit(S.RestoreKept);
         public BarReadback Readback() { Hit(S.Readback); return Reading; }
     }
 }

@@ -218,6 +218,56 @@ public class BarResetReplyTests
         }
     }
 
+    // ── clearbar-fullreset D4: the clearbar reply ──────────────────────────────────────────────────────────
+
+    static BarResetResult Clear(BarSet set, bool transform = false, bool mounted = false, S? fail = null,
+        BarReadback reading = null, bool liveReady = true, int binds = 1)
+    {
+        var ops = new Ops { Throw = fail, Reading = reading ?? new BarReadback { Slots = { new BarSlotReading { Slot = 0 } } }, Binds = binds };
+        return BarResetRunner.Run(ops, BarResetPlanner.Plan(BarResetScope.ClearSet, true, liveReady, transform, mounted), true, liveReady, set);
+    }
+
+    [Fact]
+    public void ForClear_fails_when_a_clean_clear_has_a_second_line_or_another_headline()
+    {
+        var lines = BarResetReply.ForClear(Clear(BarSet.Weapon("Sword"), binds: 2), "your Sword loadout");
+        Assert.Equal(new[] { "Cleared your Sword loadout — 2 binding(s) removed. Captured abilities kept; re-grant anytime." }, lines);
+        Assert.Equal(new[] { "Nothing was bound in your universal loadout." },
+                     BarResetReply.ForClear(Clear(BarSet.Universal, binds: 0), "your universal loadout"));
+    }
+
+    [Fact]
+    public void ForClear_fails_when_a_suffix_appears_without_its_step()
+    {
+        string foot = BarResetReply.ForClear(Clear(BarSet.All), "ALL loadouts")[0];
+        Assert.DoesNotContain(BarResetReply.DismountedSelf, foot);
+        Assert.DoesNotContain(BarResetReply.TransformEndedSelf, foot);
+        string both = BarResetReply.ForClear(Clear(BarSet.All, transform: true, mounted: true), "ALL loadouts")[0];
+        Assert.EndsWith(" " + BarResetReply.DismountedSelf + " " + BarResetReply.TransformEndedSelf, both);
+        string failed = BarResetReply.ForClear(Clear(BarSet.All, mounted: true, fail: S.Dismount), "ALL loadouts")[0];
+        Assert.DoesNotContain(BarResetReply.DismountedSelf, failed);
+    }
+
+    [Fact]
+    public void ForClear_fails_when_a_failed_step_or_a_leftover_is_not_named()
+    {
+        var failed = BarResetReply.ForClear(Clear(BarSet.Universal, fail: S.RestoreKept), "your universal loadout");
+        Assert.Equal(2, failed.Count);
+        Assert.Contains("failed: RestoreKept", failed[1]);
+        var left = BarResetReply.ForClear(Clear(BarSet.Universal,
+            reading: new BarReadback { Slots = { new BarSlotReading { Slot = 5, Bind = "universal" } } }), "your universal loadout");
+        Assert.Contains("still overridden: slot 5 — ask an admin for .beelz admin bar", left[1]);
+        var unreachable = BarResetReply.ForClear(Clear(BarSet.Universal, liveReady: false), "your universal loadout");
+        Assert.Contains(BarResetReply.NotReachable, unreachable[1]);
+    }
+
+    [Fact]
+    public void ForClear_fails_when_a_line_exceeds_480_bytes()
+    {
+        var lines = BarResetReply.ForClear(Clear(BarSet.All, transform: true, mounted: true, fail: S.PopSlotMods), new string('x', 600));
+        Assert.All(lines, l => Assert.True(Bytes(l) <= BarResetReply.MaxReplyBytes, $"{Bytes(l)} bytes"));
+    }
+
     sealed class Ops : IBarResetOps
     {
         public S? Throw;
@@ -225,7 +275,8 @@ public class BarResetReplyTests
         public BarReadback Reading;
         int Hit(S s) => Throw == s ? throw new InvalidOperationException($"{s} boom") : 1;
         public int RevertTransform() => Hit(S.RevertTransform);
-        public int ClearSavedBindings(bool keepTransformRecord) => Hit(S.ClearSavedBindings);
+        public int Binds = 1;
+        public int ClearSavedBindings(bool keepTransformRecord) { Hit(S.ClearSavedBindings); return Binds; }
         public int ClearHotkeys() => Hit(S.ClearHotkeys);
         public bool SaveBindings() => SaveResult;
         public int ClearEquipEntries() => Hit(S.ClearEquipEntries);
@@ -234,6 +285,7 @@ public class BarResetReplyTests
         public int PopSlotMods() => Hit(S.PopSlotMods);
         public int EmptyPush() => Hit(S.EmptyPush);
         public int Reapply() => Hit(S.Reapply);
+        public int RestoreKept() => Hit(S.RestoreKept);
         public BarReadback Readback() => Reading;
     }
 }

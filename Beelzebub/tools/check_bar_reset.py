@@ -45,6 +45,8 @@ LAYER_SYMBOLS = ["RemoveInjectedRows", "ReapplyEquipRows", "PopSlotModifications
                  "TrySaveSync"]
 ALLOWED_ENTRY = {"FullReset", "ReadBar"}
 EXEMPT_COMMANDS = {"clearslotmods", "rebuildslots", "clearbar"}
+# the commands a player runs on their OWN bar: the only non-admin callers FullReset / ReadBar may have
+SELF_RESET_COMMANDS = {"resetbar", "clearbar"}
 
 
 class CheckFail(Exception):
@@ -418,9 +420,9 @@ def check_auth(root: str) -> str:
                 admin_count += 1
             if (in_admin or targets) and not a["admin"]:
                 bad.append(f"{rel}: [Command(\"{a['name']}\")] lacks adminOnly: true")
-            if a["name"] in ("resetbar", "clearbar") and targets:
+            if a["name"] in SELF_RESET_COMMANDS and targets:
                 bad.append(f"{a['name']} takes a player/target parameter")
-            handlers[(rel, a["method"])] = a
+            handlers[(rel, a["method"])] = dict(a, targets=targets)
     if admin_count == 0:
         raise CheckFail("no input: no beelz admin commands parsed")
     if admin_count < 50:
@@ -439,7 +441,9 @@ def check_auth(root: str) -> str:
             a = handlers.get((rel, host[0])) if host else None
             if a is None:
                 bad.append(f"{rel}:{raw.count(chr(10), 0, m.start()) + 1} {m.group(1)} called outside a command handler")
-            elif not (a["admin"] or a["method"] == "ResetBar"):
+            # self-only is identified by the COMMAND name a player types, never the C# method name (a renamed
+            # handler must not inherit the exemption), and only while it takes no player/target parameter
+            elif not (a["admin"] or (a["name"] in SELF_RESET_COMMANDS and not a["targets"])):
                 bad.append(f"{rel}: {a['name']} calls {m.group(1)} without adminOnly")
     if bad:
         raise CheckFail("; ".join(bad[:6]))
