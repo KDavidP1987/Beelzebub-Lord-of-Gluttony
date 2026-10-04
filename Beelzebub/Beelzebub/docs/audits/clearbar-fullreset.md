@@ -73,7 +73,7 @@ It failed 19/30 in game on v0.137.3 (plan Log, D12 dry-run).
     It now headlines `Could not clear <what>.`.
   - Not raised, checked by the reviewer: the shapeshift-wheel form ending silently is the plan's accepted limit
     (Design).
-- Codex verdict: REVISE (round 1) — 2 findings, 1 ACCEPTED, 1 REJECTED; fixed in the round-1 commit, round 2 below.
+- Codex verdict: APPROVED (round 2) — round 1 REVISE with 2 findings (1 ACCEPTED, 1 REJECTED), fixed in 1488f99; round 2 on the fix diff `d520a48..1488f99`, sources pasted in, no reads attempted: APPROVED with no findings.
   - The first run read no file (its sandbox blocked every read) and returned APPROVED from the diff alone. That
     verdict was discarded, and round 1 was rerun with the full sources pasted into the prompt.
   - R1 F1 · REJECTED · RevertTransform/Dismount are gated on `liveReady`. That gate is the v0.137.0 planner's design
@@ -88,6 +88,7 @@ It failed 19/30 in game on v0.137.3 (plan Log, D12 dry-run).
   - build: 0 errors. tests: 221/221.
   - `check_clearbar` all ok (`paths` first caught the undeclared `Services/SlotApply.cs`, then was declared).
   - `check_bar_reset all` ok.
+- Round 2 (Codex, `d520a48..1488f99`): APPROVED, no findings — the post-audit is finished.
 - Plan: A2/A3 name gating probe 6.2, so `review: pending` — a fresh plan review is owed before `close`.
 
 ### Rollback
