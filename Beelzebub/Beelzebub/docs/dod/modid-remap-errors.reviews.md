@@ -88,3 +88,57 @@ VERDICT: REVISE
 - F19 · accepted · S-2's fallback is now decided: if D10 or D11 shows the clear did nothing, the release stops and the `fix(modleak)` commit is reverted
 - F20 · accepted · Rollout states the collateral window of the save restore (every world change since 16:30 on 2026-10-04) and that tester servers need no restore; S-3 now has the same release stop as S-2
 - F21 · accepted · D18 names both paths and points at `OWNER_PATHS` in `check_modleak.py`
+
+## Review 2 · 2026-10-04 · codex · plan commit 6a0c16e · plan 46863 B · 21 items · files 3 · bbf81cdc7c1a · prompt d0e44757ffa2
+1. Considered — Purpose & typical use: `Purpose & typical use` answers 1.1–1.3.
+2. Gap — Actors & permissions: `Design › Permissions` does not consistently answer or control 2.1.
+3. Considered — Inputs, outputs & data: `Design › Data`, `Design › UX`, and D1–D4/D17–D19 answer 3.1–3.4.
+4. Gap — Business rules & invariants: `Business rules` states 4.4, but no command enforces its precedence.
+5. Considered — Internal interfaces: `Interfaces › Internal` answers 5.1–5.3.
+6. Gap — External dependencies & contracts: `Interfaces › External` does not fully answer or control 6.2.
+7. Considered — States & lifecycle: `Design › States` answers 7.1–7.3.
+8. Considered — Minimal stretch: `Use cases › Minimal stretch` answers 8.1–8.2, although its D14 pointer is inaccurate.
+9. Considered — Maximal stretch: `Use cases › Maximal stretch` answers 9.1–9.3.
+10. Gap — Security & privacy: D6 does not enforce authorization on every indirect path required by 10.1.
+11. Considered — Design & UX: `Design › UX` answers 11.1–11.4.
+12. Gap — Failure handling & observability: the recorded dry runs do not satisfy 12.4.
+13. Gap — Performance & scale: the stated cap behavior does not handle a valid starvation case under 13.2.
+14. Considered — Rollout & compatibility: `Rollout` and D15–D19 answer 14.1–14.4.
+15. Considered — Out of scope: `Out of scope` answers 15.1–15.2.
+
+F1 [blocking] Probe 2.1 is contradictory: players allegedly cannot reach the sweep, yet their self-service `grant` and `resetbar` paths arm a global sweep, while `actors` checks only `adminOnly`, `Clean`, and `MarkDue` call sites—not which actors may invoke those callers.  
+Fix: Satisfy 2.1 by explicitly deciding whether ordinary players may trigger global maintenance and make one command fail if any triggering command has permissions or target scope outside that decision.
+
+F2 [blocking] Probe 10.1 is uncontrolled: `actors` would still pass if an existing player command became cross-player or an admin bar path lost authorization, because it inspects neither command authorization nor target ownership.  
+Fix: Satisfy 10.1 with one evidence command that enumerates every direct and indirect trigger and fails when its authorization and self-target/admin-target constraints are removed.
+
+F3 [blocking] Probe 4.4 has prose precedence but no enforcing command: D1–D3 test verdict primitives and `wiring` checks only that `Confirm` textually precedes `Clean`, so a changed `Tick` could pass live, unknown, or building holders through the cleanup pipeline without failing the cited control.  
+Fix: Satisfy 4.4 with a test of the complete scan→confirm→clean selection proving safety verdicts always outrank cleanup and only the owner-approved exception path can bypass that rule.
+
+F4 [blocking] Probe 6.2 is incomplete for collaborator failure: malformed or extreme clear counts, a destroy call that returns without producing `DestroyTag`, and a clean throw after modifications were cleared are undecided; notably D5 re-arms only for `keptOnce || capped`, so the promised retry after a clean failure is not controlled.  
+Fix: Satisfy 6.2 by deciding retry/re-arm and conservative behavior for malformed returns, silent non-destruction, partial cleanup, and slow passes, with one fault-injection command that fails when those fallbacks are removed.
+
+F5 [blocking] Probe 12.4 is not satisfied because the current `modid_remap.vrs` fixture—changed to add the missing capture—has never been run once against the real check, and the 250 ms tolerance cites only one prospective boot rather than three measured runs, a specification, or a reversible assumption with fallback; a stranger sees only `n/a` for D11.  
+Fix: Satisfy 12.4 by recording a failing run of the exact current scenario and sourcing the 250 ms threshold from three real runs with spread, a specification, or an explicitly reversible assumption with fallback.
+
+F6 [blocking] Probe 13.2's bound behavior is false for a concrete maximal case: if the first 4,096 query-ordered holders are live, none is cleaned, so stale holder 4,097 is never reached despite repeated re-arming.  
+Fix: Satisfy 13.2 by choosing and testing pagination or a persistent cursor that eventually examines holders beyond the cap even when all earlier holders remain live.
+
+F7 [advisory] S-2 and S-3 are not genuinely reversible: cleanup mutates the world save, tester servers have no backup, and restoring the dev backup discards unrelated world progress; clean logs and two restarts also cannot establish that destruction has no other gameplay effect.  
+Fix: Label them validated-before-rollout destructive assumptions, or provide a scoped recovery mechanism and evidence covering the holder’s other observable effects.
+
+F8 [advisory] The minimal clean-server path says the boot sweep logs nothing, while activation and production detection rely on a sweep line showing that it ran; an empty boot is therefore indistinguishable from failed activation.  
+Fix: Define an explicit empty-run signal or state that silent empty activation is intentional and identify another verifiable activation indicator.
+
+EARLIER: all resolved
+9/15 layers · 43/49 probes
+VERDICT: REVISE
+### Dispositions
+- F1 · accepted · Design › Permissions decides it: an ordinary player MAY arm the sweep through their own self-only grant/resetbar/clearbar; arming only schedules a coalesced pass that cleans holders `ModLeak.Select` proves stale, with no player-chosen target. `actors` now also runs `check_clearbar.py actors` (entry channel, self-only reset commands, every admin bar/purge/reset-loadouts adminOnly, every FullReset caller) and FAILs when it does
+- F2 · accepted · same change as F1: removing the self-only or adminOnly reach of any command that reaches a pop now FAILs `check_modleak.py actors`
+- F3 · accepted · the selection moved into pure `ModLeak.Select(firstRead, secondRead)`; `Select_fails_when_a_holder_that_is_not_stale_now_is_cleaned` proves Live/Unknown/Building/Empty are never selected whatever the first read said (planted once); `wiring` requires `ModLeak.Select` before `Clean` in Tick
+- F4 · accepted · decided per case in the failure table: a clean that throws (before or after the clear) keeps the holder and re-arms the sweep (`failed > 0`, checked by `wiring`); a destroy without effect is re-read and re-selected next pass; a `DestroyTag` holder is skipped; a clear count of 0 still destroys (dead-id-only holder). Slow passes are measured on the sweep line (S-4). A runtime fault-injection harness for ECS calls is rejected: the plugin has no test seam into IL2CPP ECS and the fallbacks are enforced structurally by `wiring` plus the in-game run
+- F5 · accepted · the 250 ms threshold is now S-4, a reversible assumption with a decided fallback (release stops; owner decides with three measured boots). Rejected in part: running the revised `modid_remap.vrs` before deploying the reviewed build — it needs this build's `modleak` output; its earlier form ran 6/7 (Log) and D11 is run at step 6
+- F6 · accepted · real defect in the cap design: `ModLeak.Page` pages ascending entity indices from a cursor and wraps; `Tick` keeps one page per pass and moves the cursor; D22 with `Page_fails_when_a_holder_past_the_cap_is_never_read` (planted once); `wiring` requires paging in Scan
+- F7 · rejected · the destructive step was the owner's explicit choice (decision 6-A, 2026-10-04) with the dev save copied first; S-2 and S-3 now carry a decided release stop, which is what makes them reversible before rollout — after rollout a cleaned holder held only dead ids and leftover mods, so there is nothing to restore
+- F8 · accepted · a boot pass that finds nothing logs `ModLeak.IdleLine` (`sweep (boot): nothing stale among <n> player holder(s); <ms> ms.`), tested and planted; `restarts` now FAILs a boot without a boot sweep line

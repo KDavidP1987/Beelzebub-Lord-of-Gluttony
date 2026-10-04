@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -57,6 +58,37 @@ public static class ModLeak
         foreach (var h in second) if (first.Contains(h)) set.Add(h);
         return set;
     }
+
+    /// <summary>The holders a pass may clean: Stale in this read AND in the first read. Live, Unknown, Building and
+    /// Empty holders are never selected, whatever the first read said.</summary>
+    public static HashSet<LeakHolder> Select(ICollection<LeakHolder> firstRead, IEnumerable<(LeakHolder Holder, HolderVerdict Verdict)> secondRead)
+    {
+        var now = new HashSet<LeakHolder>();
+        if (secondRead != null)
+            foreach (var (h, v) in secondRead) if (v == HolderVerdict.Stale) now.Add(h);
+        return Confirm(firstRead, now);
+    }
+
+    /// <summary>Which holders one pass reads: up to <paramref name="cap"/> of the ascending entity indices, starting at the
+    /// first index above <paramref name="cursor"/> and wrapping. NextCursor is the last index read when the pass did not
+    /// read them all (the next pass continues after it), else 0 — so every holder is read within ceil(n / cap) passes
+    /// even when every earlier one stays live.</summary>
+    public static (List<int> Read, int NextCursor) Page(IReadOnlyList<int> sortedIndices, int cursor, int cap)
+    {
+        var read = new List<int>();
+        int n = sortedIndices?.Count ?? 0;
+        if (n == 0 || cap <= 0) return (read, 0);
+        int start = 0;
+        while (start < n && sortedIndices[start] <= cursor) start++;
+        if (start == n) start = 0;
+        int take = Math.Min(cap, n);
+        for (int i = 0; i < take; i++) read.Add(sortedIndices[(start + i) % n]);
+        return (read, take < n ? read[^1] : 0);
+    }
+
+    /// <summary>The boot line when the sweep found nothing to do, so an idle sweep is told apart from one that never ran.</summary>
+    public static string IdleLine(string why, int holdersRead, long ms) =>
+        $"[Beelz MODLEAK] sweep ({Safe(why)}): nothing stale among {holdersRead} player holder(s); {ms} ms.";
 
     /// <summary>The one line per sweep pass that found anything. A capped pass read only the first <see cref="Cap"/>
     /// player holders in query order; the rest are not read until earlier ones are cleaned (the line says so).</summary>

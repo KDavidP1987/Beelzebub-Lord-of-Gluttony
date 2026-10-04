@@ -31,6 +31,8 @@ internal static class ModLeakService
     static DateTime _dueAt = DateTime.MaxValue;   // first read of the next pass; MaxValue = no pass due
     static string _dueWhy;
     static HashSet<LeakHolder> _firstRead;         // stale holders of the first read, null between passes
+    static int _cursor;                            // entity index the next capped page starts after (ModLeak.Page)
+    static int _passCursor;                        // the page start both reads of one pass use
 
     /// <summary>Ask for a sweep pass (boot, bar reset, grant). Cheap: only arms the heartbeat; repeated calls coalesce.</summary>
     internal static void MarkDue(string why)
@@ -42,38 +44,57 @@ internal static class ModLeakService
         _firstRead = null;
     }
 
-    /// <summary>Heartbeat: first read, then (≥ ReadGap later) the confirming read and the clean.</summary>
+    /// <summary>Heartbeat: first read, then (≥ ReadGap later) the confirming read of the same page and the clean.</summary>
     internal static void Tick()
     {
         if (!Core.IsReady || DateTime.UtcNow < _dueAt) return;
         var clock = System.Diagnostics.Stopwatch.StartNew();
-        var scan = Scan(PlayerTarget, ModLeak.Cap, out bool capped);
-        var stale = new HashSet<LeakHolder>();
-        int unknown = 0;
+        if (_firstRead == null) _passCursor = _cursor;
+        int cursor = _passCursor;
+        var scan = Scan(PlayerTarget, ModLeak.Cap, ref cursor, out bool capped);
+        var verdicts = new List<(LeakHolder, HolderVerdict)>(scan.Count);
+        int stale = 0, unknown = 0;
         foreach (var h in scan)
         {
-            if (h.Verdict == HolderVerdict.Stale) stale.Add(new LeakHolder(h.Holder.Index, h.Holder.Version));
+            verdicts.Add((new LeakHolder(h.Holder.Index, h.Holder.Version), h.Verdict));
+            if (h.Verdict == HolderVerdict.Stale) stale++;
             else if (h.Verdict == HolderVerdict.Unknown) unknown++;
         }
         if (_firstRead == null)
         {
-            if (stale.Count == 0 && unknown == 0 && !capped) { _dueAt = DateTime.MaxValue; return; }   // nothing to do
-            _firstRead = stale;
+            if (stale == 0 && unknown == 0 && !capped)
+            {
+                // nothing to do; a boot says so, so an idle sweep is told apart from one that never ran
+                if (_dueWhy == "boot") Core.Log.LogInfo(ModLeak.IdleLine(_dueWhy, scan.Count, clock.ElapsedMilliseconds));
+                _cursor = 0;
+                _dueAt = DateTime.MaxValue;
+                return;
+            }
+            _firstRead = StaleOf(verdicts);
             _dueAt = DateTime.UtcNow + ReadGap;
             return;
         }
-        var confirmed = ModLeak.Confirm(_firstRead, stale);
-        int cleaned = 0, mods = 0;
+        var confirmed = ModLeak.Select(_firstRead, verdicts);
+        int cleaned = 0, mods = 0, failed = 0;
         foreach (var h in scan)
         {
             if (!confirmed.Contains(new LeakHolder(h.Holder.Index, h.Holder.Version))) continue;
-            if (Clean(h, out int removed)) { cleaned++; mods += removed; }
+            if (Clean(h, out int removed)) { cleaned++; mods += removed; } else failed++;
         }
-        int keptOnce = stale.Count - confirmed.Count;
+        int keptOnce = stale - confirmed.Count;
         Core.Log.LogInfo(ModLeak.SweepLine(_dueWhy ?? "due", cleaned, mods, keptOnce, unknown, capped, clock.ElapsedMilliseconds));
         _firstRead = null;
-        // a holder seen stale once, an unreadable slot or a capped pass gets one more pass; else the sweep sleeps
-        _dueAt = keptOnce > 0 || capped ? DateTime.UtcNow + ReadGap : DateTime.MaxValue;
+        _cursor = cursor;
+        // a holder seen stale once, a failed clean or a capped pass gets another pass; an unreadable slot waits for the
+        // next pop or boot (re-reading it every 2 s would not make it readable); else the sweep sleeps
+        _dueAt = keptOnce > 0 || capped || failed > 0 ? DateTime.UtcNow + ReadGap : DateTime.MaxValue;
+    }
+
+    static HashSet<LeakHolder> StaleOf(List<(LeakHolder H, HolderVerdict V)> verdicts)
+    {
+        var set = new HashSet<LeakHolder>();
+        foreach (var (h, v) in verdicts) if (v == HolderVerdict.Stale) set.Add(h);
+        return set;
     }
 
     static bool PlayerTarget(Entity t) => t.Exists() && Core.EntityManager.HasComponent<PlayerCharacter>(t);
@@ -107,7 +128,7 @@ internal static class ModLeakService
     /// <summary>Read every live holder (prefabs and disabled entities are not in the default query) whose rows ALL target
     /// an entity accepted by <paramref name="targetFilter"/>, and judge it. Read-only. At most <paramref name="cap"/>
     /// holders.</summary>
-    internal static List<HolderScan> Scan(Func<Entity, bool> targetFilter, int cap, out bool capped)
+    internal static List<HolderScan> Scan(Func<Entity, bool> targetFilter, int cap, ref int cursor, out bool capped)
     {
         capped = false;
         var result = new List<HolderScan>();
@@ -119,9 +140,17 @@ internal static class ModLeakService
         var slotCache = new Dictionary<Entity, SlotModParse>();
         try
         {
-            for (int h = 0; h < holders.Length; h++)
+            // page in ascending entity index from the cursor (ModLeak.Page), so holders past the cap are reached too
+            var byIndex = new Dictionary<int, Entity>(holders.Length);
+            for (int h = 0; h < holders.Length; h++) byIndex[holders[h].Index] = holders[h];
+            var sorted = new List<int>(byIndex.Keys);
+            sorted.Sort();
+            var (page, next) = ModLeak.Page(sorted, cursor, cap);
+            capped = next != 0;
+            cursor = next;
+            foreach (int idx in page)
             {
-                Entity holder = holders[h];
+                Entity holder = byIndex[idx];
                 if (!holder.Exists()) continue;
                 var buf = em.GetBuffer<AbilityGroupSlotModificationBuffer>(holder);
                 if (buf.Length == 0) continue;
@@ -130,7 +159,6 @@ internal static class ModLeakService
                 bool ours = true;
                 foreach (var r in copy) if (targetFilter != null && !targetFilter(r.Target)) { ours = false; break; }
                 if (!ours) continue;
-                if (result.Count >= cap) { capped = true; break; }
                 var lh = new LeakHolder(holder.Index, holder.Version);
                 var rows = new List<RowScan>(copy.Count);
                 var inputs = new List<HolderRowInput>(copy.Count);

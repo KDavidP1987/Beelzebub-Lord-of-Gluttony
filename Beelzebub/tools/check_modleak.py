@@ -77,6 +77,9 @@ REQUIRED_TESTS = [
     "Holder_fails_when_a_dead_holder_is_not_stale",
     "Holder_fails_when_an_unfinished_or_unreadable_holder_is_stale",
     "Confirm_fails_when_a_holder_seen_stale_once_is_cleaned",
+    "Select_fails_when_a_holder_that_is_not_stale_now_is_cleaned",
+    "Page_fails_when_a_holder_past_the_cap_is_never_read",
+    "IdleLine_fails_when_an_idle_boot_is_silent_or_unnamed",
     "SweepLine_fails_when_a_count_or_the_cap_is_not_named",
     "RowLine_fails_when_a_name_breaks_the_line",
 ]
@@ -172,8 +175,8 @@ def check_wiring(root: str) -> str:
         bad.append("Heartbeat.Pulse: no ModLeakService.Tick")
     if not _order(method_body(core, "TryInitialize"), r"\bIsReady\s*=\s*true", r"\bModLeakService\.MarkDue\s*\("):
         bad.append("Core.TryInitialize: no MarkDue after IsReady = true")
-    if not _order(method_body(svc, "Tick"), r"\bModLeak\.Confirm\s*\(", r"\bClean\s*\("):
-        bad.append("ModLeakService.Tick: no ModLeak.Confirm before Clean")
+    if not _order(method_body(svc, "Tick"), r"\bModLeak\.Select\s*\(", r"\bClean\s*\("):
+        bad.append("ModLeakService.Tick: no ModLeak.Select before Clean")
     if not _order(method_body(svc, "Clean"), r"\bClearLooseSourceModifications\s*\(", r"\bDestroyUtility\.Destroy\s*\("):
         bad.append("ModLeakService.Clean: no ClearLooseSourceModifications before DestroyUtility.Destroy")
     cl = method_body(svc, "Clean")
@@ -183,11 +186,16 @@ def check_wiring(root: str) -> str:
     if rs is None or not re.search(r"\bcatch\b", rs) or "SlotModParse.Failed()" not in rs:
         bad.append("ModLeakService.ReadSlot: a failed dump does not read as SlotModParse.Failed()")
     tk = method_body(svc, "Tick")
-    if tk is None or not re.search(r"keptOnce\s*>\s*0\s*\|\|\s*capped", tk):
-        bad.append("ModLeakService.Tick: does not re-arm when a holder was seen stale once or the pass was capped")
+    if tk is None or not re.search(r"keptOnce\s*>\s*0\s*\|\|\s*capped\s*\|\|\s*failed\s*>\s*0", tk):
+        bad.append("ModLeakService.Tick: does not re-arm when a holder was seen stale once, a clean failed or the pass was capped")
+    if tk is None or not re.search(r"ModLeak\.IdleLine\s*\(", tk):
+        bad.append("ModLeakService.Tick: an idle boot logs nothing")
+    sc = method_body(svc, "Scan")
+    if sc is None or not re.search(r"ModLeak\.Page\s*\(", sc):
+        bad.append("ModLeakService.Scan: does not page from the cursor (ModLeak.Page)")
     if bad:
         return "wiring: FAIL " + "; ".join(bad[:6])
-    return f"wiring: ok, {pops} pop site(s) mark the sweep, heartbeat ticks it, boot marks it, confirm before clean, clear before destroy, fallbacks kept"
+    return f"wiring: ok, {pops} pop site(s) mark the sweep, heartbeat ticks it, boot marks it, select before clean, clear before destroy, fallbacks kept, idle boot logged, paged"
 
 
 def check_actors(root: str) -> str:
@@ -221,10 +229,18 @@ def check_actors(root: str) -> str:
             span = outer_span(st, c.start())
             if (rel, span[0] if span else None) not in MARK_CALLERS:
                 bad.append(f"{rel}:{span[0] if span else None} arms the sweep")
+    # the pops' own entry points (resetbar/clearbar self-only, admin bar/purge/reset-loadouts adminOnly, every FullReset
+    # caller) are guarded by check_clearbar.py actors; this check fails when that one does (skipped on fixtures)
+    tool = os.path.join(os.path.dirname(os.path.abspath(__file__)), "check_clearbar.py")
+    if os.path.isfile(os.path.join(root, PROJ, "Services", "BarResetService.cs")) and os.path.isfile(tool):
+        r = subprocess.run([sys.executable, tool, "actors", "--root", root], capture_output=True, text=True)
+        last = (r.stdout.strip().splitlines() or ["actors: FAIL no output"])[-1]
+        if ": FAIL" in last:
+            bad.append("pop entry points: " + last)
     if bad:
         return f"actors: FAIL {bad[:6]}"
     return (f"actors: ok, modleak adminOnly, {calls} Clean call(s), all inside ModLeakService.Tick, "
-            f"{marks} MarkDue call(s) in {len(MARK_CALLERS)} allowed methods")
+            f"{marks} MarkDue call(s) in {len(MARK_CALLERS)} allowed methods, pop entry points guarded")
 
 
 def check_secrets(root: str) -> str:
@@ -386,6 +402,8 @@ def check_restarts(root: str, dirs: list[str] | None = None) -> str:
         if "Server Setup Complete" not in nt:
             return f"restarts: FAIL no input ({ny} is not a completed boot)"
         r, w = nt.count(REMAP), lt.count(WHIRL_REJECT)
+        if "[Beelz MODLEAK] sweep (boot)" not in lt:
+            return f"restarts: FAIL {os.path.basename(os.path.normpath(d))}: no boot sweep line (the sweep did not run)"
         if r or w:
             return f"restarts: FAIL {os.path.basename(os.path.normpath(d))}: {r} remap error(s), {w} Whirlwind reject(s)"
         out.append(os.path.basename(os.path.normpath(d)))
@@ -403,9 +421,14 @@ internal static class ModLeakService {
     internal static void Tick()
     {
         // Clean( in a comment is not a call
-        var confirmed = ModLeak.Confirm(_firstRead, stale);
+        if (none) { Core.Log.LogInfo(ModLeak.IdleLine(_dueWhy, scan.Count, 1)); return; }
+        var confirmed = ModLeak.Select(_firstRead, verdicts);
         foreach (var h in scan) if (Clean(h, out int removed)) cleaned++;
-        _dueAt = keptOnce > 0 || capped ? DateTime.UtcNow + ReadGap : DateTime.MaxValue;
+        _dueAt = keptOnce > 0 || capped || failed > 0 ? DateTime.UtcNow + ReadGap : DateTime.MaxValue;
+    }
+    internal static List<HolderScan> Scan(Func<Entity, bool> f, int cap, ref int cursor, out bool capped)
+    {
+        var (page, next) = ModLeak.Page(sorted, cursor, cap);
     }
     static bool Clean(HolderScan h, out int removed)
     {
@@ -477,7 +500,7 @@ def _fixtures() -> dict[str, tuple[dict, dict]]:
             "            removed = Core.ServerGameManager.Modifications.ClearLooseSourceModifications(holder, ref em);\n            DestroyUtility.Destroy(em, holder, DestroyDebugReason.None);\n",
             "            DestroyUtility.Destroy(em, holder, DestroyDebugReason.None);\n            removed = Core.ServerGameManager.Modifications.ClearLooseSourceModifications(holder, ref em);\n")})),
         # defect: Tick cleans without the two-read confirm
-        "wiring_confirm": (code, dict(code, **{SERVICE: GOOD_SVC.replace("var confirmed = ModLeak.Confirm(_firstRead, stale);", "var confirmed = stale;")})),
+        "wiring_confirm": (code, dict(code, **{SERVICE: GOOD_SVC.replace("var confirmed = ModLeak.Select(_firstRead, verdicts);", "var confirmed = verdicts;")})),
         # defect: the pop sits in a local function and the outer method never marks
         "wiring_local": (dict(code, **{POPF: "static class S { static int P(Entity c) { void Pop(int id) { sgm.RemoveAbilityGroupModificationOnSlot(c, 1, m); } Pop(1); if (popped > 0) ModLeakService.MarkDue(\"bar-reset\"); return 1; } }\n"}),
                          dict(code, **{POPF: "static class S { static int P(Entity c) { void Pop(int id) { sgm.RemoveAbilityGroupModificationOnSlot(c, 1, m); } Pop(1); return 1; } }\n"})),
@@ -517,7 +540,8 @@ def selftest(_root: str) -> str:
                 bad.append(f"bootsweep want {want}, got: {line}")
         r1, r2 = os.path.join(t, "r1"), os.path.join(t, "r2")
         for d in (r1, r2):
-            _write(d, {"NyarDev.log": "Server Setup Complete\n", "LogOutput.log": "Beelzebub initialized\n"})
+            _write(d, {"NyarDev.log": "Server Setup Complete\n",
+                       "LogOutput.log": "[Beelz MODLEAK] sweep (boot): nothing stale among 4 player holder(s); 2 ms.\n"})
         line = check_restarts(t, [r1, r2])
         if ": ok" not in line:
             bad.append("restarts want ok: " + line)
@@ -525,6 +549,10 @@ def selftest(_root: str) -> str:
         line = check_restarts(t, [r1, r2])
         if ": FAIL" not in line or "no input" in line:
             bad.append("restarts want FAIL: " + line)
+        _write(r2, {"NyarDev.log": "Server Setup Complete\n", "LogOutput.log": "Beelzebub initialized\n"})
+        line = check_restarts(t, [r1, r2])
+        if "no boot sweep line" not in line:
+            bad.append("restarts want FAIL on a boot without a sweep line: " + line)
         if "no input" not in check_restarts(t, []):
             bad.append("restarts want no input")
 

@@ -1291,9 +1291,10 @@ internal static partial class AdminCommands
         ulong steamId = 0;
         string fullName = "all players";
         if (!all && !TryBarTarget(ctx, player, out character, out steamId, out fullName)) return;
+        int cursor = 0;
         var holders = ModLeakService.Scan(all
             ? t => t.Exists() && Core.EntityManager.HasComponent<PlayerCharacter>(t)
-            : t => t == character, int.MaxValue, out _);
+            : t => t == character, int.MaxValue, ref cursor, out _);
         int rows = 0;
         var count = new System.Collections.Generic.Dictionary<Beelzebub.Logic.HolderVerdict, int>();
         foreach (var h in holders)

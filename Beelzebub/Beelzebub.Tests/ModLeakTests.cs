@@ -81,6 +81,49 @@ public class ModLeakTests
     }
 
     [Fact]
+    public void Select_fails_when_a_holder_that_is_not_stale_now_is_cleaned()
+    {
+        var a = new LeakHolder(1, 1); var b = new LeakHolder(2, 1); var c = new LeakHolder(3, 1); var d = new LeakHolder(4, 1);
+        var e = new LeakHolder(5, 1);
+        var first = new HashSet<LeakHolder> { a, b, c, d, e };   // all stale in the first read
+        var second = new List<(LeakHolder, HolderVerdict)>
+        {
+            (a, HolderVerdict.Stale), (b, HolderVerdict.Live), (c, HolderVerdict.Unknown), (d, HolderVerdict.Building),
+            (e, HolderVerdict.Empty),
+        };
+        Assert.Equal(new HashSet<LeakHolder> { a }, ModLeak.Select(first, second));
+        Assert.Empty(ModLeak.Select(null, second));
+        Assert.Empty(ModLeak.Select(first, null));
+    }
+
+    [Fact]
+    public void Page_fails_when_a_holder_past_the_cap_is_never_read()
+    {
+        var idx = new List<int> { 10, 20, 30, 40, 50, 60, 70 };
+        var seen = new HashSet<int>();
+        int cursor = 0;
+        for (int pass = 0; pass < 3; pass++)   // ceil(7 / 3) passes, every earlier holder live (never removed)
+        {
+            var (read, next) = ModLeak.Page(idx, cursor, 3);
+            Assert.True(read.Count <= 3);
+            seen.UnionWith(read);
+            cursor = next;
+        }
+        Assert.Equal(idx.Count, seen.Count);
+        var (all, end) = ModLeak.Page(new List<int> { 10, 20 }, 0, 3);   // everything fits: no cursor left over
+        Assert.Equal(new List<int> { 10, 20 }, all);
+        Assert.Equal(0, end);
+        Assert.Empty(ModLeak.Page(new List<int>(), 5, 3).Read);
+        Assert.Equal(new List<int> { 10, 20, 30 }, ModLeak.Page(idx, 70, 3).Read);   // a cursor at the end wraps
+    }
+
+    [Fact]
+    public void IdleLine_fails_when_an_idle_boot_is_silent_or_unnamed()
+    {
+        Assert.Equal("[Beelz MODLEAK] sweep (boot): nothing stale among 11 player holder(s); 4 ms.", ModLeak.IdleLine("boot", 11, 4));
+    }
+
+    [Fact]
     public void SweepLine_fails_when_a_count_or_the_cap_is_not_named()
     {
         Assert.Equal("[Beelz MODLEAK] sweep (boot): cleaned 7 stale holder(s), 22 leftover mod(s) removed; 0 seen stale once (rechecked next pass), 0 unreadable; 12 ms.",
