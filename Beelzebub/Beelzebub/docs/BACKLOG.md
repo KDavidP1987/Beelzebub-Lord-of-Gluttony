@@ -3,6 +3,9 @@
 Deferred work with the slug each item will be planned under (`dod plan <slug>`, store `docs/dod/`). An item leaves
 this list when its plan is created.
 
+The umbrella list for 1.0 (testing, ability reconfiguration, stability, planned features) is `ROADMAP_1.0.md`;
+rows here are its engineering items. Add a row here when a roadmap item gets a slug.
+
 | Slug | What | Deferred from |
 |---|---|---|
 | `clearbar-fullreset` | DONE v0.137.4 (clearbar-fullreset): clearbar runs the layered reset for one chosen set, keeps the other sets' binds (RestoreKept), dismounts / ends a transform and says so; ApiVersion 35. | bar-reset (v0.137), Out of scope |
