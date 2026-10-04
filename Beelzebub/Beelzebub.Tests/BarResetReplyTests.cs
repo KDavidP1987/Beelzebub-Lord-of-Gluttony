@@ -11,10 +11,10 @@ using S = Beelzebub.Logic.BarResetStep;
 public class BarResetReplyTests
 {
     static BarResetResult Run(BarResetScope scope, bool online = true, bool liveReady = true,
-        bool saved = true, S? fail = null, BarReadback reading = null)
+        bool saved = true, S? fail = null, BarReadback reading = null, bool mounted = false)
     {
         var ops = new Ops { SaveResult = saved, Throw = fail, Reading = reading ?? new BarReadback { Slots = { new BarSlotReading { Slot = 0 } } } };
-        return BarResetRunner.Run(ops, BarResetPlanner.Plan(scope, online, liveReady, false), online, liveReady);
+        return BarResetRunner.Run(ops, BarResetPlanner.Plan(scope, online, liveReady, false, mounted), online, liveReady);
     }
 
     static int Bytes(string s) => Encoding.UTF8.GetByteCount(s);
@@ -187,6 +187,7 @@ public class BarResetReplyTests
         public int ClearHotkeys() => Hit(S.ClearHotkeys);
         public bool SaveBindings() => SaveResult;
         public int ClearEquipEntries() => Hit(S.ClearEquipEntries);
+        public int Dismount() => Hit(S.Dismount);
         public int DestroyOverrideSources() => Hit(S.DestroyOverrideSources);
         public int PopSlotMods() => Hit(S.PopSlotMods);
         public int EmptyPush() => Hit(S.EmptyPush);

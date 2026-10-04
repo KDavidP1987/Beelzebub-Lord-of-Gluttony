@@ -253,6 +253,45 @@ public class BarResetTests
         Assert.True(r.Steps.Single(s => s.Step == S.SaveBindings).Failed);
     }
 
+    // ── mounted-bar-reset D4: a reset while riding dismounts on purpose ───────────────────────────────────
+
+    [Theory]
+    [InlineData(BarResetScope.PlayerReset)]
+    [InlineData(BarResetScope.AdminLoadouts)]
+    [InlineData(BarResetScope.Purge)]
+    public void Plan_fails_when_Dismount_is_missing_or_after_the_orphan_sweep(BarResetScope scope)
+    {
+        var plan = BarResetPlanner.Plan(scope, true, true, false, mounted: true);
+        int d = plan.IndexOf(S.Dismount);
+        Assert.True(d >= 0, "Dismount missing for a mounted live reset");
+        Assert.True(d > plan.IndexOf(S.SaveBindings), "Dismount before SaveBindings");
+        Assert.True(d < plan.IndexOf(S.DestroyOverrideSources), "Dismount must come before DestroyOverrideSources");
+        Assert.Equal(1, plan.Count(s => s == S.Dismount));
+    }
+
+    [Theory]
+    [InlineData(false, true, true)]    // not mounted
+    [InlineData(true, false, true)]    // offline
+    [InlineData(true, true, false)]    // live bar not reachable
+    public void Plan_fails_when_Dismount_is_planned_without_a_live_mounted_character(bool mounted, bool online, bool liveReady)
+    {
+        Assert.DoesNotContain(S.Dismount, BarResetPlanner.Plan(BarResetScope.PlayerReset, online, liveReady, false, mounted));
+    }
+
+    [Fact]
+    public void Run_fails_when_a_mounted_reset_is_not_clean_or_a_failed_Dismount_is_clean()
+    {
+        var plan = BarResetPlanner.Plan(BarResetScope.PlayerReset, true, true, false, mounted: true);
+        var ok = BarResetRunner.Run(new FakeOps(), plan, true, true);
+        Assert.True(ok.Clean, "a mounted reset with every step ok must be clean");
+        Assert.Equal(1, ok.CountOf(S.Dismount));
+        Assert.DoesNotContain(S.Dismount, BarResetRunner.RequiredForClean);
+
+        var bad = BarResetRunner.Run(new FakeOps { Throw = S.Dismount }, plan, true, true);
+        Assert.False(bad.Clean, "a failed Dismount must not be clean");
+        Assert.Contains(S.DestroyOverrideSources, bad.Steps.Select(s => s.Step));
+    }
+
     // ── fakes ───────────────────────────────────────────────────────────────────────────────────────────
 
     static BarReadback Bar(params BarSlotReading[] slots) => new() { Slots = slots.ToList() };
@@ -272,6 +311,7 @@ public class BarResetTests
         public int ClearHotkeys() => Hit(S.ClearHotkeys);
         public bool SaveBindings() { Hit(S.SaveBindings); return SaveResult; }
         public int ClearEquipEntries() => Hit(S.ClearEquipEntries);
+        public int Dismount() => Hit(S.Dismount);
         public int DestroyOverrideSources() => Hit(S.DestroyOverrideSources);
         public int PopSlotMods() => Hit(S.PopSlotMods);
         public int EmptyPush() => Hit(S.EmptyPush);

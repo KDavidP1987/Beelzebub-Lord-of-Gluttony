@@ -48,7 +48,8 @@ internal sealed class BarResetService : IBarResetOps
         bool online = IsOnline(character);
         bool liveReady = online && IsLiveReady(character);
         bool transform = Core.AbilityRegistry.GetActiveTransform(steamId) is not null;
-        var steps = BarResetPlanner.Plan(scope, online, liveReady, transform);
+        bool mounted = online && ShapeshiftAbilityService.IsMountedAny(character);
+        var steps = BarResetPlanner.Plan(scope, online, liveReady, transform, mounted);
 
         var result = BarResetRunner.Run(new BarResetService(character, steamId, scope, online && !liveReady), steps, online, liveReady);
         sw.Stop();
@@ -203,6 +204,15 @@ internal sealed class BarResetService : IBarResetOps
     }
 
     public int ClearEquipEntries() => SlotApply.RemoveInjectedRows(RequireEquipBuff());
+
+    /// <summary>v0.137.3 (mounted-bar-reset D4): a reset while riding dismounts on purpose, before the orphan sweep would
+    /// take the mount buff silently. Throws when a mount buff is still live, so the run is not clean.</summary>
+    public int Dismount()
+    {
+        int destroyed = TransformBuffService.DestroyMountBuffs(_character, out int stillLive);
+        if (stillLive > 0) throw new InvalidOperationException($"{stillLive} mount buff(s) still live");
+        return destroyed;
+    }
 
     /// <summary>Also heals spellbook entries whose buff earlier versions destroyed (D33), so one reset restores them.</summary>
     public int DestroyOverrideSources()

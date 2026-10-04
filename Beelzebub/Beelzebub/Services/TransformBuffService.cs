@@ -612,6 +612,27 @@ internal static class TransformBuffService
         return true;
     }
 
+    /// <summary>v0.137.3 (mounted-bar-reset D4): destroys every live mount control buff on <paramref name="character"/>
+    /// (<see cref="ShapeshiftAbilityService.IsMountBuff"/>) through the double-destroy guard — the same call the orphan
+    /// sweep used to make, now deliberate and counted. <paramref name="stillLive"/> counts mount buffs that are neither
+    /// queued for destruction nor gone afterwards.</summary>
+    internal static int DestroyMountBuffs(Entity character, out int stillLive)
+    {
+        int destroyed = 0;
+        stillLive = 0;
+        if (!character.Exists() || !Core.EntityManager.HasBuffer<BuffBuffer>(character)) return 0;
+        var mounts = new List<Entity>();
+        var buffs = Core.EntityManager.GetBuffer<BuffBuffer>(character);
+        for (int i = 0; i < buffs.Length; i++)
+            if (ShapeshiftAbilityService.IsMountBuff(buffs[i].PrefabGuid._Value, buffs[i].PrefabGuid.GetPrefabName()))
+                mounts.Add(buffs[i].Entity);
+        foreach (var m in mounts)
+            if (SafeDestroyBuff(m)) destroyed++;
+        foreach (var m in mounts)
+            if (m.Exists() && !m.Has<DestroyTag>()) stillLive++;
+        return destroyed;
+    }
+
     /// <summary>v0.137.0 diagnostic (bar-reset A-spellbuff): Buff_VBlood_Ability_Replace is BOTH our carrier and
     /// V Rising's own equipped-spell buff (VBloodAbilityBuffEntry.ActiveBuff). Read-only: logs when a buff about to be
     /// destroyed is one the character's spellbook references, so the log names whose buff a teardown removed.</summary>

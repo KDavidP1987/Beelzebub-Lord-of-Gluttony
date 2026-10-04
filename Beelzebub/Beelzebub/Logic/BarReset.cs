@@ -28,6 +28,9 @@ public enum BarResetStep
     ClearSavedBindings,
     ClearHotkeys,
     SaveBindings,
+    /// <summary>v0.137.3 (mounted-bar-reset D4): a reset while riding removes the mount control buff on purpose,
+    /// counted and announced, instead of the orphan sweep taking it silently.</summary>
+    Dismount,
     ClearEquipEntries,
     DestroyOverrideSources,
     PopSlotMods,
@@ -45,7 +48,8 @@ public static class BarResetPlanner
     /// ClearSavedBindings also drops an active or parked transform record. An unknown scope returns an empty
     /// plan, which the runner reports as an error (Clean=false).
     /// </summary>
-    public static List<BarResetStep> Plan(BarResetScope scope, bool online, bool liveReady, bool transformActiveOrParked)
+    public static List<BarResetStep> Plan(BarResetScope scope, bool online, bool liveReady, bool transformActiveOrParked,
+                                          bool mounted = false)
     {
         var steps = new List<BarResetStep>();
         if (!Enum.IsDefined(typeof(BarResetScope), scope)) return steps;
@@ -57,6 +61,7 @@ public static class BarResetPlanner
         steps.Add(BarResetStep.SaveBindings);
         if (live)
         {
+            if (mounted) steps.Add(BarResetStep.Dismount);
             steps.Add(BarResetStep.ClearEquipEntries);
             steps.Add(BarResetStep.DestroyOverrideSources);
             steps.Add(BarResetStep.PopSlotMods);
@@ -240,6 +245,8 @@ public interface IBarResetOps
     /// <summary>Writes state.json synchronously; false when the write failed (never swallowed as success).</summary>
     bool SaveBindings();
     int ClearEquipEntries();
+    /// <summary>Removes the mount control buff(s); throws when one is still live afterwards.</summary>
+    int Dismount();
     int DestroyOverrideSources();
     int PopSlotMods();
     int EmptyPush();
@@ -337,6 +344,7 @@ public static class BarResetRunner
             keepTransformRecord: r.Steps.Any(s => s.Step == BarResetStep.RevertTransform && s.Failed)),
         BarResetStep.ClearHotkeys => ops.ClearHotkeys(),
         BarResetStep.ClearEquipEntries => ops.ClearEquipEntries(),
+        BarResetStep.Dismount => ops.Dismount(),
         BarResetStep.DestroyOverrideSources => ops.DestroyOverrideSources(),
         BarResetStep.PopSlotMods => ops.PopSlotMods(),
         BarResetStep.EmptyPush => ops.EmptyPush(),
