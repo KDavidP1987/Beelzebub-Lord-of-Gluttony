@@ -4,6 +4,17 @@ What's new for players. This is the canonical changelog — it ships on Thunders
 (bundled with the release) and lives in the repo on GitHub. For the full technical
 history, see the [commit log / releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.137.3] - 2026-10-04
+
+### Saddle abilities use R, C and T
+
+- **A saddle ability now goes on slot 5, 6 or 7 — the R, C and Ultimate keys** (`.beelz form-grant mounted 5 <id>`).
+  Slot 3 is refused: the game never draws a key for it, so an ability there was live but invisible. A saddle bind you
+  already had on slot 3 moves to slot 5 (R) the next time the server starts, unless R already has one.
+- **`.beelz resetbar` while riding now dismounts you on purpose and tells you** ("You were dismounted to reset your
+  bar; remount to ride."). Before, it threw you off the horse silently. Remount and the horse's own kit is back.
+- Fixed a reset removing the horse's control effect twice in one pass, which could report the reset as not clean.
+
 ## [0.137.2] - 2026-10-03
 
 ### Changing your bar while in a form now works like the weapon bar

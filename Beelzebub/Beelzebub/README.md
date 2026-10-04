@@ -48,7 +48,7 @@ A **server-side** V Rising mod that turns the whole bestiary into a collection-a
 
 **Source · issues · roadmap:** [github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony) · **License:** MIT
 
-> **Status:** active early access / **public test build (v0.137.2)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
+> **Status:** active early access / **public test build (v0.137.3)**. Functional end-to-end; slot changes apply instantly. Built for private/community servers — bring your testers and send feedback to the issue tracker.
 
 ---
 
@@ -179,7 +179,7 @@ help confirm or break any of these, that's the most valuable feedback we can get
   modes, populations, and hardware haven't been tested. The power-scaling modes for
   transforms in particular benefit from real-world tuning feedback.
 - **Bar resets (v0.137) are new.** `resetbar` / `reset-loadouts` / `purge` clear every layer of the bar and read
-  it back, and one reset also repairs the Space / R / C / T slots earlier versions' resets left blocked. Your spellbook spells stay on their keys through a reset, and spells earlier versions broke (key blank, spellbook still listing them) come back at your next login. They do not touch a mount's saddle bar (dismount first), a reset that ends a timed transform starts its
+  it back, and one reset also repairs the Space / R / C / T slots earlier versions' resets left blocked. Your spellbook spells stay on their keys through a reset, and spells earlier versions broke (key blank, spellbook still listing them) come back at your next login. A reset while riding dismounts you and says so (saddle abilities sit on R / C / T, slots 5-7), a reset that ends a timed transform starts its
   cooldown, and a row another mod put on your weapon's slots is removed too. If a bar is still stuck, send the
   `[Beelz RESET]` / `[Beelz BAR]` / `[Beelz LEAK]` lines from the log (`.beelz admin bar-raw <player>` adds the raw per-slot data).
 - **Things we'd especially love tested:** mixing captured abilities with vanilla
