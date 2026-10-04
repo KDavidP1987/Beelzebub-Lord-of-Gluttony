@@ -37,6 +37,7 @@ internal static class ModLeakService
     static int _cursor;                            // entity index the next capped page starts after (ModLeak.Page)
     static int _passCursor;                        // the page start both reads of one pass use
     static int _cycleRead;                         // holders read by the earlier passes of this cycle (ModLeak.MorePages)
+    static bool _popMidCycle;                      // a pop landed after this cycle began: it may sit behind the cursor
 
     /// <summary>Ask for a sweep pass (boot, bar reset, grant). Cheap: only arms the heartbeat; repeated calls coalesce.</summary>
     internal static void MarkDue(string why)
@@ -44,6 +45,8 @@ internal static class ModLeakService
         // coalesce: the first call arms the pass; later calls neither postpone it nor restart it (a holder a later pop
         // makes stale is "seen once" by this pass and confirmed by the next), so command spam cannot starve the sweep
         if (_dueAt == DateTime.MaxValue) _dueWhy = why;
+        // a pop after the cycle's first read can leave a holder behind the cursor: run one fresh cycle after this one
+        if (_firstRead != null || _cycleRead > 0) _popMidCycle = true;
         _dueAt = ModLeak.Arm(_dueAt, Now, ReadGap);
     }
 
@@ -73,7 +76,8 @@ internal static class ModLeakService
                 if (ModLeak.LogIdle(_dueWhy, Beelzebub.Config.Settings.VerboseLogging.Value)) Core.Log.LogInfo(ModLeak.IdleLine(_dueWhy, scan.Count, clock.ElapsedMilliseconds));
                 _cursor = 0;
                 _cycleRead = 0;
-                _dueAt = DateTime.MaxValue;
+                _dueAt = _popMidCycle ? Now + ReadGap : DateTime.MaxValue;   // a mid-cycle pop: one fresh cycle from 0
+                _popMidCycle = false;
                 return;
             }
             _firstRead = StaleOf(verdicts);
@@ -95,7 +99,9 @@ internal static class ModLeakService
         _cursor = capped ? cursor : 0;
         // a holder seen stale once, a failed clean or a capped pass gets another pass; an unreadable slot waits for the
         // next pop or boot (re-reading it every 2 s would not make it readable); else the sweep sleeps
-        _dueAt = keptOnce > 0 || capped || failed > 0 ? Now + ReadGap : DateTime.MaxValue;
+        bool fresh = !capped && _popMidCycle;   // the cycle ended, but a pop during it may sit behind the cursor
+        if (!capped) _popMidCycle = false;
+        _dueAt = keptOnce > 0 || capped || failed > 0 || fresh ? Now + ReadGap : DateTime.MaxValue;
     }
 
     static HashSet<LeakHolder> StaleOf(List<(LeakHolder H, HolderVerdict V)> verdicts)
