@@ -192,3 +192,14 @@ VERDICT: REVISE
 - F9 · accepted · the residual is stated in Design › Permissions: a deleted character's holders are left to vanilla and may keep logging the remap error; the README caveat names it
 - F10 · rejected · 4 096 real holders cannot be made on the dev server without reproducing the very leak this fixes; the cap is a safety bound, not an expected load (the dev boot holds 11), and every pass reports its `ms` on the sweep line so a slow pass is visible in production
 - F11 · rejected · `adminOnly` is enforced by VCF itself, and `actors` (D6) FAILs when `modleak` loses it; vrclient drives one admin character, and a second non-admin client is a multi-player hand-off the tool cannot do
+
+## Review 4 · 2026-10-04 · human · plan commit 57a69df · plan 55243 B · 22 items · files 3 · bbf81cdc7c1a · prompt be2658e0fff3
+The owner answered the rubric's four questions on the review page (`modid-remap-errors.review.html`) after the round-3 dispositions:
+1. Coverage — yes, the author's coverage stands; no layer is a Gap.
+2. Contest — yes, S-1 to S-4 are honest (S-4's over-budget behaviour decided as 9-A).
+3. Hunt — no unhandled scenario the owner can name (deleted character, 4 096 holders and non-admin are documented).
+4. Test the tests — yes, a stranger can verify every item by its command.
+
+15/15 layers · 49/49 probes
+VERDICT: READY
+### Dispositions
