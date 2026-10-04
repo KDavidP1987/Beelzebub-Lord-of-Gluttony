@@ -190,15 +190,6 @@ regex groups captured by an earlier `expect-log`). A step ending in `timeout=N` 
 
 ## 7. Porting to another server mod
 
-1. Copy `tools/vrclient/` (driver, `DevChatEcho/`, an empty `scenarios/`) into the other repo.
-2. Set environment variables instead of editing code (defaults in `CONFIG`):
-   `VR_SERVER_ROOT` (dedicated-server folder), `VR_PLUGIN_LOG` (BepInEx log), `VR_SERVER_LOG` (the `-logFile` path),
-   `VR_ADDR` (`ip:port`), `VR_CHARACTER` (the in-game character name, used for connect detection and replies),
-   `VR_APPID` (client Steam app id, 1604030), `VR_OUT` (results/screenshots folder).
-3. Build and deploy DevChatEcho to that dev server (only if the mod uses VCF; otherwise rely on log lines + OCR).
-4. Make sure the mod logs a **greppable line for every state change a test needs** (one tag per subsystem, key=value
-   fields). This is the single biggest factor in how much can be tested automatically — add the log line before
-   the test, the same way CLAUDE.md's "diagnostic before fix" rule asks.
-5. Write scenarios: `ensure` → `console TPHome` → setup commands → action (`chat`/`cast`/`hold`) →
-   `expect-log`/`expect-reply` → cleanup.
-6. Add the procedure to that project's CLAUDE.md (copy §3, §5, §6).
+The portable guide travels with the tool: `Beelzebub/tools/vrclient/README.md`. It has the porting checklist, the
+environment variables, the test loop, the server commands, troubleshooting, and a block to paste into the other mod's
+`CLAUDE.md`. Copy the whole `tools/vrclient/` folder; start new scenarios from `scenarios/_template.vrs`.

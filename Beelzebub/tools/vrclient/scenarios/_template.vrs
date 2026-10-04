@@ -1,0 +1,18 @@
+# _template.vrs — copy to <feature>.vrs and replace the .mymod commands and [MyMod …] tags with your mod's own.
+# Proves: <one sentence: what works in game if this passes>
+# Needs:  <state the character must be in: weapon held, item owned, config value, unlocks>
+ensure
+console TPHome
+wait 3
+# 1. known starting state
+chat .mymod reset
+expect-log \[MyMod RESET\].*target=${CHARACTER}
+# 2. the action under test
+chat .mymod do-the-thing
+expect-reply Done
+expect-log \[MyMod THING\].*ok=1
+shot full after-thing
+# 3. what must NOT happen
+expect-no-log \[MyMod THING\].*ok=0
+# 4. clean up so the next scenario starts clean
+chat .mymod reset
