@@ -18,12 +18,26 @@
 > in the BCH workspace.
 >
 > **Canonical source of truth for the wire API:**
-> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 34`). If this doc
+> `Beelzebub/Beelzebub/Commands/ApiCommands.cs` (`ApiVersion = 35`). If this doc
 > and that file ever disagree, the file wins — and this doc should be corrected.
 
 ---
 
-# ⭐ BCH CATCH-UP: v0.100 → v0.137.3 (read this first) ⭐
+# ⭐ BCH CATCH-UP: v0.100 → v0.137.4 (read this first) ⭐
+
+> **🆕 v0.137.4 — ApiVersion 34 → 35 (gate `api>=35`). Behaviour change on one command; no `[BEELZ:*]` line changes shape.**
+> - **`clearbar` now runs the full layered bar reset, limited to the chosen set.** `.beelz clearbar [all|universal|<weapon>|<form>]`
+>   (syntax unchanged, still no confirmation) clears that saved set, then clears every live layer the way `resetbar`
+>   does and re-applies the binds of the sets it kept — so `clearbar all` while riding no longer leaves a saddle ability
+>   on R, and `clearbar universal` while transformed ends the transform. The server logs
+>   `[Beelz RESET] run=<n> scope=ClearSet set=<all|universal|weapon:<Family>|form:<Form>> …` (server log, not chat).
+> - **Reply:** the headline is unchanged (`Cleared <what> — <n> binding(s) removed. Captured abilities kept; re-grant
+>   anytime.` or `Nothing was bound in <what>.`) and can gain ` You were dismounted to reset your bar; remount to ride.`
+>   and/or ` Your transform was ended to clear the bar.`; a second line appears only when something went wrong (the same
+>   problem texts as `resetbar`). Plain chat. The `[BEELZ:event] type=slot-cleared` event and the transform-ended event
+>   (`reason=clearbar`) are unchanged.
+> - **What BCH should do:** nothing is required to send `clearbar`. When `api>=35`, expect up to two reply lines and,
+>   after a `clearbar`, re-read `api slots` (the live bar is now fully re-resolved); a rider is on foot afterwards.
 
 > **🆕 v0.137.3 — ApiVersion 33 → 34 (gate `api>=34`). Behaviour change on one command; no `[BEELZ:*]` line changes shape.**
 > - **Saddle slots are now 5/6/7 (R, C, T), not 3/6/7.** Slot 3 is never drawn by the client, so a slot-3 saddle bind
@@ -246,8 +260,9 @@ v0.120.0 callout below.
 | 33 | 0.137.1 | grants/unslots reach the live bar without a weapon swap (no wire change) |
 | 33 | 0.137.2 | in-form unslot restores the weapon skill; form/transform/mount-time bar edits apply on exit (no wire change) |
 | 34 | 0.137.3 | Mounted saddle slots 3/6/7 → 5/6/7 (form-grant rejects 3; saved slot-3 binds move to 5); a mounted reset dismounts and the reply says so |
+| 35 | 0.137.4 | `clearbar` runs the layered reset for its set (dismounts / ends a transform and says so; problem line; log `scope=ClearSet`) — no wire change |
 
-Gate each feature on `api>=N`. `api version` returns `[BEELZ:version] api=34 plugin=0.137.3 ready=…`.
+Gate each feature on `api>=N`. `api version` returns `[BEELZ:version] api=35 plugin=0.137.4 ready=…`.
 
 ## 2. New per-row tokens on `catalog-ability` AND `api info` (all additive)
 
