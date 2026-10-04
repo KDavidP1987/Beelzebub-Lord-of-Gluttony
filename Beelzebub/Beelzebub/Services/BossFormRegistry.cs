@@ -54,7 +54,7 @@ internal static class BossFormRegistry
             if (FormSets == null || FormSets.Length == 0) return System.Array.Empty<int>();
             int idx = phase - 1;
             if (idx < 0) idx = 0; else if (idx >= FormSets.Length) idx = FormSets.Length - 1;
-            return FormSets[idx];
+            return FormSets[idx] ?? System.Array.Empty<int>();   // v0.137.5 (A6): never hand a caller null
         }
     }
 
