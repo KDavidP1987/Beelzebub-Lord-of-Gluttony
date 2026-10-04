@@ -384,3 +384,4 @@ Completion                 vs baseline 24/24 · vs current 24/24
 Review                     codex · 3 rounds, then human (Review 4 READY, Review 5 re-review of A1-A6 READY) · author 15/15 layers · reviewer 15/15 layers
 Timeline                   draft 10-04 · ready 10-04 · start 10-04 · done 10-04
 Missed probes              6.2 dependency slow / down / garbage, including internal collaborators — four misses: a collaborator that swallows its failure as 0 (A3), a step whose failure the reply read as an empty result (A2), and the deferred-destroy tag lag seen by the readback (A5, A6). Add to docs/dod/profile.md: "for every collaborator a step calls, name how it reports failure (throws / returns 0 / logs only) and how a deferred engine effect (DestroyTag, buffer playback) is observed in the same frame"
+- 2026-10-04 · note · feedback sent · https://github.com/KDavidP1987/dod-skill/issues/13
