@@ -121,11 +121,13 @@ internal sealed class PersistenceService
                     // v0.137.3 (mounted-bar-reset D3): a pre-0.137.3 saddle bind on slot 3 (never drawn) moves to R (5).
                     if (perForm.TryGetValue(ShapeshiftForm.Mounted, out var mounted))
                     {
+                        bool emptyBind = mounted.TryGetValue(Logic.MountedSlots.LegacySlot, out int legacy) && legacy == 0;
                         var mig = Logic.MountedSlots.Migrate(mounted);
                         if (mig != Logic.MountedMigration.None)
                         {
                             mountMigrated++;
-                            Core.Log.LogInfo($"[Beelz MOUNT] {steamId} saddle slot 3 -> 5 ({(mig == Logic.MountedMigration.Moved ? "moved" : "dropped: slot 5 taken")})");
+                            if (mig == Logic.MountedMigration.Dropped) formSlotCount--;   // the slot-3 bind is gone, not loaded
+                            Core.Log.LogInfo($"[Beelz MOUNT] {steamId} saddle slot 3 -> 5 ({(mig == Logic.MountedMigration.Moved ? "moved" : emptyBind ? "dropped: empty bind" : "dropped: slot 5 taken")})");
                         }
                         if (mounted.Count == 0) perForm.Remove(ShapeshiftForm.Mounted);
                     }

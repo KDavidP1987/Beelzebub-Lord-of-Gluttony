@@ -247,7 +247,7 @@ v0.120.0 callout below.
 | 33 | 0.137.2 | in-form unslot restores the weapon skill; form/transform/mount-time bar edits apply on exit (no wire change) |
 | 34 | 0.137.3 | Mounted saddle slots 3/6/7 → 5/6/7 (form-grant rejects 3; saved slot-3 binds move to 5); a mounted reset dismounts and the reply says so |
 
-Gate each feature on `api>=N`. `api version` returns `[BEELZ:version] api=33 plugin=0.137.0 ready=…`.
+Gate each feature on `api>=N`. `api version` returns `[BEELZ:version] api=34 plugin=0.137.3 ready=…`.
 
 ## 2. New per-row tokens on `catalog-ability` AND `api info` (all additive)
 
