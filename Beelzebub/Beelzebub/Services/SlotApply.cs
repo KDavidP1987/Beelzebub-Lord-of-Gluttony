@@ -737,6 +737,7 @@ internal static class SlotApply
             try { sgm.RemoveAbilityGroupModificationOnSlot(character, slot, ModificationId.NewId(id)); popped++; poppedIds.Add(id); }
             catch (Exception ex) { Core.Log.LogWarning($"[Beelz GRANT] slot={slot} remove ModId {id} failed: {ex.Message}"); }
         }
+        if (popped > 0) ModLeakService.MarkDue("grant");   // modid-remap-errors: the popped mod's holder may now be stale
         bool push = Beelzebub.Logic.GrantPush.ShouldPush(ability._Value)
                     && (!onlyIfEmptyAfterPop || Beelzebub.Logic.GrantPush.SlotEmptyAfterPop(parse, poppedIds));
         if (push) sgm.ModifyAbilityGroupOnSlot(equipBuff, character, slot, ability);

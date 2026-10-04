@@ -88,6 +88,10 @@ internal static class Heartbeat
         // no EnterShapeshiftEvent, so this scan is how the Mounted form is detected). No-op when disabled.
         try { ShapeshiftAbilityService.TickMountedForms(); }
         catch (Exception ex) { Core.Log.LogError($"[Beelz] Heartbeat TickMountedForms failed: {ex}"); }
+
+        // v0.137.6 (modid-remap-errors): clean stale slot-override holders after a boot or a pop (two reads, then clean).
+        try { ModLeakService.Tick(); }
+        catch (Exception ex) { Core.Log.LogError($"[Beelz] Heartbeat ModLeakService.Tick failed: {ex}"); }
     }
 }
 

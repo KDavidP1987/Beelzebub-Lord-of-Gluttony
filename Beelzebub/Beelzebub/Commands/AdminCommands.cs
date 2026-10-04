@@ -1282,6 +1282,39 @@ internal static partial class AdminCommands
         Audit(ctx, "bar-raw", steamId, fullName, $"lines={n}");
     }
 
+    [Command("modleak", description: "DIAGNOSTIC (read-only): list the engine's slot-override holders that point at a player's character and whether each still sets a slot or is stale (a stale one is what the startup 'Couldn't remap old Modification Id' errors name; the sweep cleans those on its own after a boot or a bar reset). Logs [Beelz MODLEAK] lines. Changes nothing. Usage: .beelz admin modleak [player|all] (default: you)", adminOnly: true)]
+    public static void ModLeak(ChatCommandContext ctx, string player = null)
+    {
+        if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }
+        bool all = string.Equals(player?.Trim(), "all", StringComparison.OrdinalIgnoreCase);
+        Entity character = Entity.Null;
+        ulong steamId = 0;
+        string fullName = "all players";
+        if (!all && !TryBarTarget(ctx, player, out character, out steamId, out fullName)) return;
+        var holders = ModLeakService.Scan(all
+            ? t => t.Exists() && Core.EntityManager.HasComponent<PlayerCharacter>(t)
+            : t => t == character, int.MaxValue, out _);
+        int rows = 0;
+        var count = new System.Collections.Generic.Dictionary<Beelzebub.Logic.HolderVerdict, int>();
+        foreach (var h in holders)
+        {
+            count[h.Verdict] = count.TryGetValue(h.Verdict, out int c) ? c + 1 : 1;
+            var lh = new Beelzebub.Logic.LeakHolder(h.Holder.Index, h.Holder.Version);
+            foreach (var r in h.Rows)
+            {
+                rows++;
+                Core.Log.LogInfo(Beelzebub.Logic.ModLeak.RowLine(h.HolderName, lh, h.Verdict, r.Slot, r.ModId, r.CopyCooldownId,
+                    r.SpellModId, r.Verdict, r.NewGroup, ModLeakService.Describe(r.Target)));
+            }
+        }
+        int N(Beelzebub.Logic.HolderVerdict v) => count.TryGetValue(v, out int c) ? c : 0;
+        string who = Beelzebub.Logic.BarResetReply.Name(fullName);
+        string tally = $"live {N(Beelzebub.Logic.HolderVerdict.Live)}, stale {N(Beelzebub.Logic.HolderVerdict.Stale)}, unreadable {N(Beelzebub.Logic.HolderVerdict.Unknown)}, building {N(Beelzebub.Logic.HolderVerdict.Building)}, empty {N(Beelzebub.Logic.HolderVerdict.Empty)}";
+        Core.Log.LogInfo($"[Beelz MODLEAK] summary target={who} rows={rows} holders={holders.Count} live={N(Beelzebub.Logic.HolderVerdict.Live)} stale={N(Beelzebub.Logic.HolderVerdict.Stale)} unknown={N(Beelzebub.Logic.HolderVerdict.Unknown)} building={N(Beelzebub.Logic.HolderVerdict.Building)} empty={N(Beelzebub.Logic.HolderVerdict.Empty)}");
+        ctx.Reply(Beelzebub.Logic.BarResetReply.Cap($"modleak {who}: {holders.Count} slot-override holder(s), {rows} row(s) — {tally}. Details: LogOutput.log [Beelz MODLEAK]."));
+        Audit(ctx, "modleak", steamId, fullName, $"holders={holders.Count} stale={N(Beelzebub.Logic.HolderVerdict.Stale)}");
+    }
+
     [Command("respawn", description: "Respawn a player's character AT THEIR CURRENT SPOT — V Rising rebuilds the character fresh, which fixes a stuck/frozen ability bar (the bear-form bug). Inventory, equipment, blood, and progress are preserved (same as dying + respawning). Usage: .beelz admin respawn [player] (default: you)", adminOnly: true)]
     public static void Respawn(ChatCommandContext ctx, string player = null)
     {

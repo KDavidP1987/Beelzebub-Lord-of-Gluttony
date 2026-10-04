@@ -1314,6 +1314,7 @@ internal static class TransformBuffService
             }
         }
         if (Core.ReplaceAbilityOnSlotSystem != null) Core.ReplaceAbilityOnSlotSystem.OnUpdate();
+        if (popped > 0) ModLeakService.MarkDue("bar-reset");   // modid-remap-errors: popped mods' holders may now be stale
         // Every slot was processed first; a failure then makes the whole step an ERR (never a silent partial pop).
         if (failures.Count > 0)
             throw new InvalidOperationException($"{failures.Count} pop failure(s): {string.Join("; ", failures.GetRange(0, Math.Min(3, failures.Count)))}");

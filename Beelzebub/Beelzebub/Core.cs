@@ -136,6 +136,7 @@ internal static class Core
             catch (System.Exception ex) { Log.LogWarning($"[Beelz] mount-disrupt neutralize failed: {ex.Message}"); }
 
             IsReady = true;
+            Services.ModLeakService.MarkDue("boot");   // v0.137.6: clean stale slot-override holders saved by earlier sessions
             Patches.DealDamageSystemPatch.LogCoPatchers(MyPluginInfo.PLUGIN_GUID);   // v0.133.0
             // v0.81.0: start the per-frame heartbeat driver (idle-safe summon timeout + cooldown enforcement).
             try { Services.Heartbeat.StartTimer(); }
