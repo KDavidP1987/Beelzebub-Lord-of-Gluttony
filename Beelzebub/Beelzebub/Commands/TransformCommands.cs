@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Beelzebub.Logic;
 using Beelzebub.Services;
 using Stunlock.Core;
 using Unity.Entities;
@@ -266,6 +267,14 @@ internal static class TransformCommands
         if (abilities.Count == 0 && !hasCustom)
         {
             ctx.Reply($"Phase {n} has no eligible abilities for {Core.AbilityMetadata.ResolveUnitName(pg._Value)}. Aborting.");
+            return;
+        }
+
+        // v0.137.5: the form may still be spawning (Morgana's async serpent) — refuse now; the next try applies.
+        var verdict = Core.Transforms.PhaseGate(steamId, active);
+        if (verdict != TransformGateVerdict.Allow)
+        {
+            ctx.Reply(TransformGate.Message(verdict, TransformRoute.PhaseSwitch, null));
             return;
         }
 

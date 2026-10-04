@@ -5,7 +5,7 @@ kind: backlog
 id: dod-20261004-7c2e
 slug: transform-chain-guard
 title: transform-chain-guard - no route chains one transform into another
-status: ready
+status: in-progress
 size: M
 parent: none
 created: 2026-10-04
@@ -43,7 +43,7 @@ review: human
 - [ ] D17 · **Backlog row closed** `Beelzebub/Beelzebub/docs/BACKLOG.md`'s `transform-chain-guard` row (first cell) says `DONE v0.137.5` · cmd: `python Beelzebub/tools/check_transform_guard.py backlog` → `backlog: ok, transform-chain-guard DONE v0.137.5` (fails when: the row is missing or lacks `DONE v0.137.5`; a missing BACKLOG.md prints `FAIL no input`)
 - [ ] D18 · **The 6.2 lesson is in the profile** `Beelzebub/Beelzebub/docs/dod/profile.md` › Project-wide notes carries a `Probe 6.2` line that asks, per collaborator, how it reports failure (throws / returns 0 / swallows) and how a deferred engine effect (DestroyTag, async form spawn) is observed in the same frame · cmd: `python Beelzebub/tools/check_transform_guard.py profile` → `profile: ok, probe 6.2 note present` (fails when: the line is missing or lacks `reports failure` or `deferred`; a missing profile.md prints `FAIL no input`)
 - [ ] D19 · **Every check catches its fault** each `check_transform_guard.py` check passes a good fixture, FAILs a planted-defect fixture and FAILs an empty tree with `no input` (rollback and paths on a throwaway git repo) · cmd: `python Beelzebub/tools/check_transform_guard.py selftest` → `selftest: ok, 10 checks x good/defect/empty` (fails when: any check passes its defect fixture, fails its good fixture, or passes an empty tree)
-- [ ] D20 · **One log line per refusal, bounded** `Logic/TransformGuardLog.cs` `ShouldLog(steamId, route, verdict)` is true the first time a (player, route, reason) refusal is seen and false for every repeat and for Allow; `Allowed(steamId)` and `Forget(steamId)` drop that player's entries so their next refusal logs again; at `Cap` = 512 entries the ledger is cleared before adding, so it never holds more than 256 (worst case after a clear: one repeated line per player) · test: Beelzebub.Tests/TransformGateTests.cs (fails when: a repeated refusal logs twice, a different route/reason/player does not log, Allow logs, Allowed or Forget does not reset the player or touches another player, or 10 000 distinct one-time refusals leave more than 256 entries)
+- [ ] D20 · **One log line per refusal, bounded** `Logic/TransformGuardLog.cs` `ShouldLog(steamId, route, verdict)` is true the first time a (player, route, reason) refusal is seen and false for every repeat and for Allow; `Allowed(steamId)` and `Forget(steamId)` drop that player's entries so their next refusal logs again; at `Cap` = 512 entries the ledger is cleared before adding, so it never holds more than 512 (worst case after a clear: one repeated line per player) · test: Beelzebub.Tests/TransformGateTests.cs (fails when: a repeated refusal logs twice, a different route/reason/player does not log, Allow logs, Allowed or Forget does not reset the player or touches another player, or 10 000 distinct one-time refusals leave more than 256 entries)
 
 ## Purpose & typical use
 A player who has unlocked a transformation types `.beelz transform <unit>`; while transformed they switch kits with
@@ -244,6 +244,7 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - [ ] D20 · **One log line per refusal, bounded** `Logic/TransformGuardLog.cs` `ShouldLog(steamId, route, verdict)` is true the first time a (player, route, reason) refusal is seen and false for every repeat and for Allow; `Allowed(steamId)` and `Forget(steamId)` drop that player's entries so their next refusal logs again; at `Cap` = 512 entries the ledger is cleared before adding, so it never holds more than 256 (worst case after a clear: one repeated line per player) · test: Beelzebub.Tests/TransformGateTests.cs (fails when: a repeated refusal logs twice, a different route/reason/player does not log, Allow logs, Allowed or Forget does not reset the player or touches another player, or 10 000 distinct one-time refusals leave more than 256 entries)
 
 ## Amendments
+- A1 · 2026-10-04 · discovered · ~D20 · layer: 13.2 · review 3 F4 raised `Cap` 256 → 512 but D20 kept "never holds more than 256", so the item contradicted its own cap; D20 now reads "more than 512" (Bounds derivation: 40 players × 9 reachable route/reason pairs = 360). Instrument re-answer: 13.2 the bound is `TransformGuardLog.Cap`, read by `GuardLog_fails_when_it_grows_past_its_cap` · fails when: the ledger holds more than `Cap` entries after 10 000 distinct refusals
 
 ## Log
 - 2026-10-04 · status → draft · plan
@@ -279,3 +280,8 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-04 · note · review round 3 (codex) · REVISE, reviewer coverage `12/15 layers · 46/49 probes`, earlier findings all resolved; blocking F1–F3 repeat rejected findings (3.3, 12.4, 14.4); advisories F4/F5/F7/F8 applied (Cap 512, pending retention stated, exact Morgana phase check, S-3 fallback); round cap reached — next step is the owner's choice
 - 2026-10-04 · note · review 4 (human) · owner confirmed the four rubric answers, `15/15 layers · 49/49 probes`, VERDICT: READY
 - 2026-10-04 · status → ready · approve · review: human
+- 2026-10-04 · status → in-progress · start
+- 2026-10-04 · note · amend A1 · D20 text vs its own cap, found while building step 3; fixed before building on
+- 2026-10-04 · note · build step 3 · TransformService (TryActivate/ApplyNativeFormTest via `TransformGate.Decide`, ApplyPhase/ReapplyActiveTransform via `PhaseGate`, `Passed` logs once per episode, Revert `Forget`, ReconcileOnLogin `ClearPendingForm`) + TransformCommands.Phase; Release build ok (1 pre-existing warning, GrantPush.cs CS8073, same at HEAD); `dotnet test` 243/243
+- 2026-10-04 · note · planted · D4 · ApplyPhase gate moved below `CurrentPhase =` → `wiring: FAIL ApplyPhase: state change before the gate (ReapplyFormAbilitiesInPlace(…)`; testform revert restored → `wiring: FAIL ApplyNativeFormTest: state change before the gate (Revert(…); ApplyNativeFormTest: calls Revert`; restored → ok
+- 2026-10-04 · note · planted · D5 · `Forget` dropped from Revert → `wiring: FAIL Revert: does not Forget the player's TXGUARD ledger`; restored → ok

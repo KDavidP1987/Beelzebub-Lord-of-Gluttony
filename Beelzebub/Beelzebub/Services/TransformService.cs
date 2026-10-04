@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Beelzebub.Config;
+using Beelzebub.Logic;
 using ProjectM;
 using Stunlock.Core;
 using Unity.Entities;
@@ -17,6 +18,36 @@ internal enum TransformMode : byte
 
 internal sealed class TransformService
 {
+    // v0.137.5: one TXGUARD line per (player, route, reason) refusal episode; bounded (TransformGuardLog.Cap).
+    readonly TransformGuardLog _guardLog = new();
+
+    /// <summary>
+    /// v0.137.5: records a gate verdict — an allow resets the player's TXGUARD ledger, a refusal writes its
+    /// <c>[Beelz TXGUARD]</c> line once per episode. Returns true when the route may proceed.
+    /// </summary>
+    bool Passed(TransformRoute route, TransformGateVerdict verdict, ulong steamId, int unit)
+    {
+        if (verdict == TransformGateVerdict.Allow) { _guardLog.Allowed(steamId); return true; }
+        if (_guardLog.ShouldLog(steamId, route, verdict))
+            Core.Log.LogInfo(TransformGate.LogLine(route, verdict, steamId, unit));
+        return false;
+    }
+
+    static string ActiveName(ActiveTransform active) =>
+        active is null ? null : new PrefabGUID(active.UnitPrefabGuid).GetPrefabName();
+
+    /// <summary>
+    /// v0.137.5: the gate for the routes that re-apply an ACTIVE transform's form (a phase switch or a re-apply).
+    /// Refuses while the async form buff is still spawning, so the caller changes no state and retries later.
+    /// </summary>
+    public TransformGateVerdict PhaseGate(ulong steamId, ActiveTransform active, TransformRoute route = TransformRoute.PhaseSwitch)
+    {
+        int unit = active?.UnitPrefabGuid ?? 0;
+        var verdict = TransformGate.Decide(route, TransformBuffService.HasPendingForm(steamId), unit, 0);
+        Passed(route, verdict, steamId, unit);
+        return verdict;
+    }
+
     public TransformMode ModeFor(TransformCategory category)
     {
         string raw = (category switch
@@ -124,16 +155,6 @@ internal sealed class TransformService
             return (false, "Only Dracula and Morgana can be transformed into in this version. Every other unit's kit is learned as abilities — see .beelz list, then .beelz grant (the rare Devour jackpot grants a whole kit at once). Full unit transformation is a postponed phase-two feature.");
         }
 
-        // v0.49.0 CRASH FIX: refuse a re-activation while this player's async (LifeTime-less)
-        // form buff is still mid-spawn. Morgana's SnakePhase form applies asynchronously; a
-        // second .beelz transform arriving before it enriches would run Revert→ApplyForm against
-        // the not-yet-collected form buff and DestroyUtility.Destroy it twice (deferred DestroyTag),
-        // crashing the server inside Burst. SafeDestroyBuff is the safety net; this is the fix.
-        if (TransformBuffService.HasPendingForm(steamId))
-        {
-            return (false, "Still transforming — give it a moment, then try again.");
-        }
-
         if (!Core.AbilityRegistry.HasTransformUnlock(steamId, unitPrefabGuid))
         {
             return (false, "You haven't unlocked transformation for that unit.");
@@ -185,18 +206,17 @@ internal sealed class TransformService
             return (false, $"On cooldown. {remaining:F0}s remaining.");
         }
 
-        // v0.120.0: do NOT switch transforms in place. Going from one transform directly into another
-        // with no intervening revert left the action bar broken on the next revert — the carrier-buff
-        // teardown raced the new form's async bar resolve (same async-form hazard as the v0.49 crash
-        // fix above). Require an explicit revert first; the player re-issues .beelz transform after.
+        // v0.137.5 (transform-chain-guard): one gate for every route (Logic/TransformGate.cs).
+        // v0.49.0 CRASH FIX: refuse while this player's async (LifeTime-less) form buff is still mid-spawn —
+        // Morgana's SnakePhase form applies asynchronously, and a second apply before it enriches destroyed the
+        // not-yet-collected buff twice (deferred DestroyTag), crashing the server inside Burst.
+        // v0.120.0: do NOT switch transforms in place — the carrier-buff teardown raced the new form's async bar
+        // resolve and left the bar broken on the next revert. Require an explicit revert first.
         var current = Core.AbilityRegistry.GetActiveTransform(steamId);
-        if (current is not null)
-        {
-            if (current.UnitPrefabGuid == unitPrefabGuid)
-                return (false, "You're already transformed as that unit. Use .beelz revert to return to normal.");
-            var curPg = new PrefabGUID(current.UnitPrefabGuid);
-            return (false, $"You're already transformed as {curPg.GetPrefabName()}. Use .beelz revert first, then transform again.");
-        }
+        var verdict = TransformGate.Decide(TransformRoute.Activate, TransformBuffService.HasPendingForm(steamId),
+            current?.UnitPrefabGuid ?? 0, unitPrefabGuid);
+        if (!Passed(TransformRoute.Activate, verdict, steamId, unitPrefabGuid))
+            return (false, TransformGate.Message(verdict, TransformRoute.Activate, ActiveName(current)));
 
         // Verify we can read the unit's ability list.
         var pgUnit = new PrefabGUID(unitPrefabGuid);
@@ -369,6 +389,7 @@ internal sealed class TransformService
     /// </summary>
     public (bool reverted, bool appliedNow) Revert(ulong steamId, string reason = null, bool restoreBar = true)
     {
+        _guardLog.Forget(steamId);   // v0.137.5: a revert ends the refusal episode
         var active = Core.AbilityRegistry.GetActiveTransform(steamId);
         if (active is null) return (false, false);
 
@@ -806,6 +827,9 @@ internal sealed class TransformService
             active.Character = character;
             Core.AbilityRegistry.SetActiveTransform(steamId, active);
 
+            // v0.137.5: a pending async form from the previous session's character is stale (its form buff died
+            // with that entity); without this the gate would refuse the login re-apply.
+            TransformBuffService.ClearPendingForm(steamId);
             bool reapplied = ReapplyActiveTransform(steamId, active, character);
 
             int restored = 0;
@@ -956,6 +980,8 @@ internal sealed class TransformService
     public bool ReapplyActiveTransform(ulong steamId, ActiveTransform active, Entity character)
     {
         if (active == null || !character.Exists()) return false;
+        // v0.137.5: never re-apply over a form buff that is still spawning — the next re-apply trigger retries.
+        if (PhaseGate(steamId, active, TransformRoute.Reapply) != TransformGateVerdict.Allow) return false;
         // v0.47.0: a native-form test resumes by re-applying its form buff + custom set
         // directly (single set, no phases). Exempt from the non-boss guard below.
         if (active.NativeFormBuffGuid != 0)
@@ -987,9 +1013,13 @@ internal sealed class TransformService
         if (set == null || set.Length == 0)
             return (false, "No abilities to load — set up your universal loadout with .beelz grant (or capture some abilities) first, then retry.");
 
-        // End any current transform first (clean carrier/form teardown).
-        if (Core.AbilityRegistry.GetActiveTransform(steamId) is not null)
-            Revert(steamId, "switching to form test", restoreBar: false);
+        // v0.137.5 (D3-A): no revert-then-apply in one frame — the transform-to-transform chain v0.120 banned for
+        // players. While transformed (or while a form is still spawning) the admin reverts first, then retries.
+        var current = Core.AbilityRegistry.GetActiveTransform(steamId);
+        var verdict = TransformGate.Decide(TransformRoute.FormTest, TransformBuffService.HasPendingForm(steamId),
+            current?.UnitPrefabGuid ?? 0, formBuffGuid);
+        if (!Passed(TransformRoute.FormTest, verdict, steamId, formBuffGuid))
+            return (false, TransformGate.Message(verdict, TransformRoute.FormTest, ActiveName(current)));
 
         if (!TransformBuffService.ApplyForm(character, formBuffGuid, set, null))
             return (false, "ApplyForm returned false — the form buff could not be applied.");
@@ -1025,6 +1055,9 @@ internal sealed class TransformService
     public bool ApplyPhase(ulong steamId, ActiveTransform active, Entity character, int phase)
     {
         if (active == null) return false;
+        // v0.137.5: refuse BEFORE any state change, so a refused switch records no phase and emits no
+        // transform-phase-shift event — the Auto-HP tick simply retries on its next pass.
+        if (PhaseGate(steamId, active) != TransformGateVerdict.Allow) return false;
         var pg = new PrefabGUID(active.UnitPrefabGuid);
 
         // v0.32.0/0.33.0: form units (curated boss OR native ExoForm) switch the FORM
