@@ -1,0 +1,21 @@
+# cast_basic.vrs — grant a captured ability to Q, USE it, and prove the server saw the cast.
+# Needs: Chaos holds a sword and has captured 1621601748 (Knife Throw). VerboseLogging is switched on (it makes
+# AbilityCastStartedSystemPatch log every player cast as [Beelz SUMMON][cast]).
+ensure
+console TPHome
+wait 3
+chat .beelz resetbar CONFIRM
+expect-log \[Beelz RESET\].*target=${CHARACTER} .*clean=1
+chat .beelz admin set VerboseLogging true
+expect-reply VerboseLogging
+chat .beelz grant 1 1621601748
+expect-reply slot 1
+# the live bar updates a frame after the grant
+wait 2
+shot spells q-granted
+cast q 0.15 0
+expect-log \[Beelz SUMMON\]\[cast\].*ability=AB_Undead_Infiltrator_KnifeThrow.*guid=1621601748 timeout=5
+wait 3
+chat .beelz resetbar CONFIRM
+expect-log \[Beelz RESET\].*target=${CHARACTER} .*clean=1
+# VerboseLogging is left ON: the dev server runs with it on (the reply shows the previous value - "was True").
