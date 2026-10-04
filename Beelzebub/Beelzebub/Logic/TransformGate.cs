@@ -101,4 +101,12 @@ public static class TransformGate
     /// </summary>
     public static bool PhaseResetDue(bool resetDue, bool inCombat, int currentPhase) =>
         resetDue && !inCombat && currentPhase > 1;
+
+    /// <summary>
+    /// v0.137.5 (A5): does a phase have anything to put on the bar? A curated boss phase (BossFormRegistry set), the
+    /// prefab's own phase-tagged abilities, or the player's custom loadout — any one is enough. Before this the
+    /// <c>.beelz phase</c> pre-check ignored the curated set, so every Dracula/Morgana phase above 1 was refused.
+    /// </summary>
+    public static bool PhaseHasAbilities(int curatedCount, int naturalCount, int customCount) =>
+        curatedCount > 0 || naturalCount > 0 || customCount > 0;
 }

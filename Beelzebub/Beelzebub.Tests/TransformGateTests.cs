@@ -147,6 +147,15 @@ public class TransformGateTests
     }
 
     [Fact]
+    public void PhaseHasAbilities_fails_when_a_curated_phase_reads_empty()
+    {
+        Assert.True(TransformGate.PhaseHasAbilities(curatedCount: 6, naturalCount: 0, customCount: 0));   // Dracula phase 2
+        Assert.True(TransformGate.PhaseHasAbilities(curatedCount: 0, naturalCount: 3, customCount: 0));
+        Assert.True(TransformGate.PhaseHasAbilities(curatedCount: 0, naturalCount: 0, customCount: 1));
+        Assert.False(TransformGate.PhaseHasAbilities(curatedCount: 0, naturalCount: 0, customCount: 0));
+    }
+
+    [Fact]
     public void PhaseResetDue_fails_when_a_refused_reset_is_dropped()
     {
         Assert.True(TransformGate.PhaseResetDue(resetDue: true, inCombat: false, currentPhase: 2));

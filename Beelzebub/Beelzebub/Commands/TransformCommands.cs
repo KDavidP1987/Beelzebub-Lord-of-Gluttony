@@ -266,8 +266,13 @@ internal static class TransformCommands
         // Validate the phase actually has abilities before swapping (nicer message). v0.100.0: a player's
         // custom loadout for this phase counts even if the prefab has no natural abilities for it.
         var abilities = Core.Transforms.GetTransformAbilities(pg, n);
-        bool hasCustom = Core.AbilityRegistry.GetTransformLoadout(steamId, active.UnitPrefabGuid, n).Count > 0;
-        if (abilities.Count == 0 && !hasCustom)
+        int customCount = Core.AbilityRegistry.GetTransformLoadout(steamId, active.UnitPrefabGuid, n).Count;
+        // v0.137.5 (A5): a curated boss phase (Dracula's Bloodmage, Morgana's Serpent) is what ApplyPhase applies —
+        // count it the way EffectiveSet does (only phases the form defines), or the command refuses it.
+        int curatedCount = 0;
+        if (BossFormRegistry.TryResolve(active.UnitPrefabGuid, abilities, out var bossForm) && n <= bossForm.FormCount)
+            foreach (int ab in bossForm.SetForPhase(n)) if (ab != 0) curatedCount++;
+        if (!TransformGate.PhaseHasAbilities(curatedCount, abilities.Count, customCount))
         {
             ctx.Reply($"Phase {n} has no eligible abilities for {Core.AbilityMetadata.ResolveUnitName(pg._Value)}. Aborting.");
             return;
@@ -288,7 +293,7 @@ internal static class TransformCommands
         string applyHint = appliedNow ? "Spell bar swapped." : "Spell bar will swap this frame.";
         string name = PhaseName(active.UnitPrefabGuid, n);
         string phaseLabel = name != null ? $"Phase {n} ({name})" : $"Phase {n}";
-        ctx.Reply($"{phaseLabel} active: {abilities.Count} abilities now on the bar. {applyHint}");
+        ctx.Reply($"{phaseLabel} active: {System.Math.Max(curatedCount, abilities.Count)} abilities now on the bar. {applyHint}");
     }
 
     /// <summary>v0.43.1: the curated name of a boss form-phase (e.g. "Humanoid"/"Serpent"), or null.</summary>

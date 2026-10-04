@@ -92,6 +92,7 @@ def enclosing(st: str, pos: int) -> str | None:
     return name
 
 REQUIRED_TESTS = [
+    "PhaseHasAbilities_fails_when_a_curated_phase_reads_empty",
     "PhaseResetDue_fails_when_a_refused_reset_is_dropped",
     "Decide_fails_when_a_pending_form_allows_any_route",
     "Decide_fails_when_an_active_transform_allows_a_second_activate",

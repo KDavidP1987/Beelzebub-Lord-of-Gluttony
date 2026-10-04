@@ -3,20 +3,21 @@
 # while transformed is refused ("revert first") instead of reverting + applying in one frame; (c) a phase switch on
 # a settled form still works; (d) Morgana (async SnakePhase form): a phase switch right after the transform either
 # swaps or says "Still transforming" — never an error — and a retry lands.
-# Needs: Chaos has transform unlocks 0 (Beatrice) and 1 (Dracula); admin rights (ensure runs adminauth).
+# Needs: Chaos has transform unlocks Beatrice and Dracula (named, not indexed: force-transform adds unlocks and shifts
+# the indexes); admin rights (ensure runs adminauth).
 ensure
 console TPHome
 wait 3
 chat .beelz admin clear-transform Chaos
 wait 2
 # --- (a) chain refused ---
-chat .beelz transform 1
+chat .beelz transform Dracula
 expect-reply Transformed into Dracula
 wait 3
-chat .beelz transform 0
+chat .beelz transform Beatrice
 expect-reply Use .beelz revert first, then transform again.
 expect-log \[Beelz TXGUARD\] refused route=Activate reason=Active
-chat .beelz transform 1
+chat .beelz transform Dracula
 expect-reply You're already transformed as that unit.
 expect-log \[Beelz TXGUARD\] refused route=Activate reason=SameUnit
 # --- (b) testform refused while transformed ---

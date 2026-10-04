@@ -2,7 +2,7 @@
 # (scope=ClearSet) and ends clean; a kept set's binds come back; a rider is dismounted and a transform ended, and the
 # reply says so. Cases: (a) universal, (b) sword, (e) sword with a universal bind kept, (f) universal while transformed,
 # (c) wolf while in a live wolf form, (d) all while riding.
-# Needs: Chaos holds a sword; captured 1621601748 (Knife Throw); transform unlock 0 (Beatrice); VerboseLogging for casts.
+# Needs: Chaos holds a sword; captured 1621601748 (Knife Throw); transform unlock Beatrice (named, not indexed); VerboseLogging for casts.
 ensure
 console TPHome
 wait 3
@@ -39,7 +39,7 @@ cast q 0.15 0
 expect-log \[Beelz SUMMON\]\[cast\].*guid=1621601748 timeout=8
 wait 3
 # --- (f) universal while transformed (Beatrice) ---
-chat .beelz transform 0
+chat .beelz transform Beatrice
 expect-reply Transformed into Beatrice
 wait 3
 shot full transformed
