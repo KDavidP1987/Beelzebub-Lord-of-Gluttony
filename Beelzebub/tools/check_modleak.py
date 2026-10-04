@@ -80,6 +80,7 @@ REQUIRED_TESTS = [
     "Select_fails_when_a_holder_that_is_not_stale_now_is_cleaned",
     "Page_fails_when_a_holder_past_the_cap_is_never_read",
     "IdleLine_fails_when_an_idle_boot_is_silent_or_unnamed",
+    "Arm_fails_when_repeated_pops_postpone_the_pass",
     "SweepLine_fails_when_a_count_or_the_cap_is_not_named",
     "RowLine_fails_when_a_name_breaks_the_line",
 ]
@@ -171,8 +172,11 @@ def check_wiring(root: str) -> str:
     if pops == 0:
         bad.append("no slot-mod pop found (RemoveAbilityGroupModificationOnSlot)")
     p = method_body(hb, "Pulse")
-    if p is None or not re.search(r"\bModLeakService\.Tick\s*\(", p):
-        bad.append("Heartbeat.Pulse: no ModLeakService.Tick")
+    if p is None or not re.search(r"\btry\s*\{\s*ModLeakService\.Tick\s*\(\s*\)\s*;\s*\}\s*catch\b", p):
+        bad.append("Heartbeat.Pulse: no ModLeakService.Tick inside try/catch (a throw must not stop the next pulse)")
+    md = method_body(svc, "MarkDue")
+    if md is None or not re.search(r"\bModLeak\.Arm\s*\(", md) or re.search(r"_firstRead\s*=\s*null", md):
+        bad.append("ModLeakService.MarkDue: does not coalesce through ModLeak.Arm (or restarts the pass)")
     if not _order(method_body(core, "TryInitialize"), r"\bIsReady\s*=\s*true", r"\bModLeakService\.MarkDue\s*\("):
         bad.append("Core.TryInitialize: no MarkDue after IsReady = true")
     if not _order(method_body(svc, "Tick"), r"\bModLeak\.Select\s*\(", r"\bClean\s*\("):
@@ -195,7 +199,7 @@ def check_wiring(root: str) -> str:
         bad.append("ModLeakService.Scan: does not page from the cursor (ModLeak.Page)")
     if bad:
         return "wiring: FAIL " + "; ".join(bad[:6])
-    return f"wiring: ok, {pops} pop site(s) mark the sweep, heartbeat ticks it, boot marks it, select before clean, clear before destroy, fallbacks kept, idle boot logged, paged"
+    return f"wiring: ok, {pops} pop site(s) mark the sweep, heartbeat ticks it, boot marks it, select before clean, clear before destroy, fallbacks kept, idle boot logged, paged, pops coalesce, heartbeat guarded"
 
 
 def check_actors(root: str) -> str:
@@ -417,7 +421,7 @@ CHECKS = {"wiring": check_wiring, "actors": check_actors, "secrets": check_secre
 
 GOOD_SVC = '''
 internal static class ModLeakService {
-    internal static void MarkDue(string why) { _dueAt = x; }
+    internal static void MarkDue(string why) { _dueAt = ModLeak.Arm(_dueAt, DateTime.UtcNow, ReadGap); }
     internal static void Tick()
     {
         // Clean( in a comment is not a call
@@ -508,6 +512,10 @@ def _fixtures() -> dict[str, tuple[dict, dict]]:
         "actors_mark": (code, dict(code, **{ACMDS: GOOD_ACMDS + 'public static void Arm(ChatCommandContext ctx) { ModLeakService.MarkDue("x"); }\n'})),
         # defect: Clean without its catch (a throw would propagate into the heartbeat mid-pass)
         "wiring_catch": (code, dict(code, **{SERVICE: GOOD_SVC.replace("static bool Clean", "static bool CleanX")})),
+        # defect: MarkDue restarts the pass on every pop (command spam would starve the sweep)
+        "wiring_arm": (code, dict(code, **{SERVICE: GOOD_SVC.replace("_dueAt = ModLeak.Arm(_dueAt, DateTime.UtcNow, ReadGap);", "_dueAt = DateTime.UtcNow + ReadGap; _firstRead = null;")})),
+        # defect: the heartbeat calls Tick unguarded
+        "wiring_try": (code, dict(code, **{HEART: "static class Heartbeat { static void Pulse() { ModLeakService.Tick(); } }\n"})),
         "actors": (code, dict(code, **{ACMDS: GOOD_ACMDS.replace(", adminOnly: true", "")})),
         # defect: a command cleans holders directly, outside the confirmed sweep
         "actors_clean": (code, dict(code, **{ACMDS: GOOD_ACMDS + "public static void Wipe(ChatCommandContext ctx) { ModLeakService.Clean(h, out _); }\n"})),

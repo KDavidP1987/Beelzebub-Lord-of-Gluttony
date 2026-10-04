@@ -59,6 +59,10 @@ public static class ModLeak
         return set;
     }
 
+    /// <summary>When the armed pass runs: an idle sweep (<see cref="DateTime.MaxValue"/>) is armed one gap from now; an armed
+    /// one keeps its time, so repeated pops can never postpone a pass.</summary>
+    public static DateTime Arm(DateTime dueAt, DateTime now, TimeSpan gap) => dueAt == DateTime.MaxValue ? now + gap : dueAt;
+
     /// <summary>The holders a pass may clean: Stale in this read AND in the first read. Live, Unknown, Building and
     /// Empty holders are never selected, whatever the first read said.</summary>
     public static HashSet<LeakHolder> Select(ICollection<LeakHolder> firstRead, IEnumerable<(LeakHolder Holder, HolderVerdict Verdict)> secondRead)

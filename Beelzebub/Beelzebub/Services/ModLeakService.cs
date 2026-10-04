@@ -37,17 +37,17 @@ internal static class ModLeakService
     /// <summary>Ask for a sweep pass (boot, bar reset, grant). Cheap: only arms the heartbeat; repeated calls coalesce.</summary>
     internal static void MarkDue(string why)
     {
-        // the first read lands ReadGap after the LAST pop; a pop mid-pass restarts the pass with two fresh reads
-        var at = DateTime.UtcNow + ReadGap;
-        _dueAt = _dueAt == DateTime.MaxValue || at > _dueAt ? at : _dueAt;
-        _dueWhy = why;
-        _firstRead = null;
+        // coalesce: the first call arms the pass; later calls neither postpone it nor restart it (a holder a later pop
+        // makes stale is "seen once" by this pass and confirmed by the next), so command spam cannot starve the sweep
+        if (_dueAt == DateTime.MaxValue) _dueWhy = why;
+        _dueAt = ModLeak.Arm(_dueAt, DateTime.UtcNow, ReadGap);
     }
 
     /// <summary>Heartbeat: first read, then (≥ ReadGap later) the confirming read of the same page and the clean.</summary>
     internal static void Tick()
     {
         if (!Core.IsReady || DateTime.UtcNow < _dueAt) return;
+        _dueAt = DateTime.UtcNow + ReadGap;   // a throw below retries one gap later, not every pulse
         var clock = System.Diagnostics.Stopwatch.StartNew();
         if (_firstRead == null) _passCursor = _cursor;
         int cursor = _passCursor;

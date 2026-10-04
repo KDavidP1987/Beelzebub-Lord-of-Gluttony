@@ -118,6 +118,17 @@ public class ModLeakTests
     }
 
     [Fact]
+    public void Arm_fails_when_repeated_pops_postpone_the_pass()
+    {
+        var t0 = new System.DateTime(2026, 10, 4, 12, 0, 0, System.DateTimeKind.Utc);
+        var gap = System.TimeSpan.FromSeconds(2);
+        var due = ModLeak.Arm(System.DateTime.MaxValue, t0, gap);
+        Assert.Equal(t0 + gap, due);
+        for (int i = 1; i <= 100; i++) due = ModLeak.Arm(due, t0.AddMilliseconds(500 * i), gap);   // a pop every 0.5 s
+        Assert.Equal(t0 + gap, due);
+    }
+
+    [Fact]
     public void IdleLine_fails_when_an_idle_boot_is_silent_or_unnamed()
     {
         Assert.Equal("[Beelz MODLEAK] sweep (boot): nothing stale among 11 player holder(s); 4 ms.", ModLeak.IdleLine("boot", 11, 4));

@@ -142,3 +142,53 @@ VERDICT: REVISE
 - F6 · accepted · real defect in the cap design: `ModLeak.Page` pages ascending entity indices from a cursor and wraps; `Tick` keeps one page per pass and moves the cursor; D22 with `Page_fails_when_a_holder_past_the_cap_is_never_read` (planted once); `wiring` requires paging in Scan
 - F7 · rejected · the destructive step was the owner's explicit choice (decision 6-A, 2026-10-04) with the dev save copied first; S-2 and S-3 now carry a decided release stop, which is what makes them reversible before rollout — after rollout a cleaned holder held only dead ids and leftover mods, so there is nothing to restore
 - F8 · accepted · a boot pass that finds nothing logs `ModLeak.IdleLine` (`sweep (boot): nothing stale among <n> player holder(s); <ms> ms.`), tested and planted; `restarts` now FAILs a boot without a boot sweep line
+
+## Review 3 · 2026-10-04 · codex · plan commit cc84b6f · plan 52063 B · 22 items · files 3 · 479cf8a7279f · prompt 56ce6356db41
+F1 [blocking] Probe 3.3 is not controlled: the named `dotnet test …ModLeakTests` command checks stale-holder classification, but cannot fail if log, backup, rules-backup, temporary-result, or save retention/deletion policy is removed or changed.
+Fix: make one evidence command validate every artifact’s storage, owner, retention, deletion, and copy policy, including the irreversible world-save deletion.
+
+F2 [blocking] Probe 4.4 is answered in prose but not enforced: the cited unit-test command cannot fail if the safety-first precedence or owner-only exception policy is removed.
+Fix: add one evidence command that fails unless cleanup selects only twice-confirmed stale holders and any exception remains owner-approved through a plan amendment.
+
+F3 [blocking] Probe 6.2 lacks a complete failure control: D5 checks several local guards, but its command does not state that it fails when an uncaught scan/pass exception prevents the promised “next pulse runs again” behavior.
+Fix: make `wiring` or a named test fail when `Tick` cannot recover and retry after any collaborator or scan exception.
+
+F4 [blocking] Probes 7.2 and 9.3 have contradictory concurrency decisions: Business rule 3 says every `MarkDue` resets the first read, while Permissions says calls coalesce and spam costs at most one pass per two seconds, leaving whether repeated commands postpone or starve cleanup undecided.
+Fix: choose coalescing or resetting semantics and add one test proving repeated player commands cannot indefinitely postpone a confirming pass.
+
+F5 [blocking] Probe 12.4 remains unanswered because the exact current `modid_remap.vrs` check has never been run once: the recorded 6/7 run predates its capture-restoration step, while the present item is still `n/a`.
+Fix: run the exact current scenario against the real checker before approval and record its failing output, silent/pass counterpart, and empty/unjoinable-input output.
+
+F6 [blocking] Probe 13.1 relies on S-4, which is decision-required rather than reversible: exceeding 250 ms sends the owner a future choice between changing the budget and redesigning across frames, and the measured 11-holder boot does not establish a budget for the stated 1,000–4,096-holder scale.
+Fix: decide the over-budget behavior now and source the applicable-scale threshold from three measured runs with spread or an explicit specification.
+
+F7 [blocking] Probe 14.4 is not controlled for all declared paths: `paths` and `status` can fail for repository changes, but cannot fail if an undeclared deployed DLL, save/rules mutation, log backup, `%TEMP%` artifact, `dist/` output, or review-process output is created.
+Fix: provide one manifest-based evidence command that observes every repository, ignored, generated, deployment, temporary, and review path and fails on an undeclared write.
+
+F8 [advisory] Probe 11.1 names the command’s location but not how an administrator discovers it; D11 exercises behavior and does not verify command help or documentation.
+Fix: add the command to an existing admin-help or command-document surface and verify that surface with the release documentation check.
+
+F9 [advisory] Minimal-stretch scenario: a deleted character’s holders are deliberately excluded and left for vanilla, so their saved dead IDs may continue producing the original boot-remap error; this belongs to probe 2.3.
+Fix: record evidence that vanilla removes these orphan holders, or explicitly document the residual warning and support action.
+
+F10 [advisory] Maximal-stretch scenario: D10’s “largest batch” is seven stale holders, while the plan permits 4,096 holders per main-thread pass; no evidence shows cleaning near the bound stays within the hitch budget, belonging to probe 13.1.
+Fix: add a representative high-volume measurement or narrow the supported bound and describe degradation.
+
+F11 [advisory] Unauthorized-path scenario: D6 statically checks `adminOnly`, but no runtime negative case shows an ordinary player receives VCF’s deny and causes neither a report nor a sweep mutation, belonging to probe 2.2.
+Fix: add a non-admin scenario asserting the deny response and absence of MODLEAK report/cleanup side effects.
+
+EARLIER: all resolved
+6/15 layers · 40/49 probes
+VERDICT: REVISE
+### Dispositions
+- F1 · rejected · the feature writes no artifact of its own except its log lines and the save mutation, and the rollback check (D17) names the save; the `%TEMP%` log and save copies are the operator's own session procedure (CLAUDE.md › Development procedure), not feature behaviour a feature check can own
+- F2 · rejected · 4.4 is enforced by code, not prose: `Select_fails_when_a_holder_that_is_not_stale_now_is_cleaned` (D3, planted) proves only twice-confirmed Stale holders are selected, and `wiring` (D5) FAILs when Tick cleans from anything but `ModLeak.Select`; the owner-only exception is a plan-process rule (an `amend`), which the dod lifecycle already enforces
+- F3 · accepted · `Tick` moves its due time one gap ahead before working, so a throw anywhere in a pass is retried 2 s later; `Heartbeat.Pulse` calls it inside `try … catch`; `wiring` FAILs when the heartbeat call loses its try/catch (`heartbeat guarded`, new `wiring_try` selftest fixture)
+- F4 · accepted · real defect: every `MarkDue` reset the first read and pushed the due time out, so a pop every < 2 s starved the pass. Now coalescing: pure `ModLeak.Arm` arms an idle sweep and leaves an armed one unchanged; `MarkDue` no longer resets the first read; Business rule 3 rewritten; `Arm_fails_when_repeated_pops_postpone_the_pass` (planted once); `wiring` FAILs when MarkDue stops using Arm or resets the first read (`pops coalesce`, new `wiring_arm` fixture)
+- F5 · rejected · repeats review 2 F5: the scenario's sweep assertions need this build's sweep, which exists only once step 6 deploys it; the real failing case on the current boot is already recorded (`bootsweep: FAIL 0 boot sweep line(s)`, `restarts: FAIL rtest: 14 remap error(s)`), and the scenario is run at step 6
+- F6 · accepted · the over-budget behaviour is put to the owner as a decision at the human review (S-4), not left for later
+- F7 · rejected · `paths` and `status` (D18, D19) cover every repository write; the deploy copy is the existing `BuildToServer` target, and `%TEMP%`/review outputs sit outside the repository by design; a whole-filesystem write manifest is out of proportion to an M-sized fix
+- F8 · accepted · Design › UX names discovery (VCF `.help` for `.beelz admin`, plus one README admin cheat-sheet line in the release commit under D16)
+- F9 · accepted · the residual is stated in Design › Permissions: a deleted character's holders are left to vanilla and may keep logging the remap error; the README caveat names it
+- F10 · rejected · 4 096 real holders cannot be made on the dev server without reproducing the very leak this fixes; the cap is a safety bound, not an expected load (the dev boot holds 11), and every pass reports its `ms` on the sweep line so a slow pass is visible in production
+- F11 · rejected · `adminOnly` is enforced by VCF itself, and `actors` (D6) FAILs when `modleak` loses it; vrclient drives one admin character, and a second non-admin client is a multi-player hand-off the tool cannot do
