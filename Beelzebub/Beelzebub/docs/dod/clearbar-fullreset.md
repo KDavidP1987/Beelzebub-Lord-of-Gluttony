@@ -45,6 +45,8 @@ review: pending
 - [ ] D19 · **Backlog row closed** `Beelzebub/Beelzebub/docs/BACKLOG.md`'s own `clearbar-fullreset` row (first cell) says `DONE v0.137.4` · cmd: `python Beelzebub/tools/check_clearbar.py backlog` → `backlog: ok, clearbar-fullreset DONE v0.137.4` (fails when: the row is missing or lacks `DONE v0.137.4`; a missing BACKLOG.md prints `FAIL no input`)
 - [ ] D21 · **The named controls exist** every D1–D5 control is a `[Fact]`/`[Theory]` method under its exact name (`REQUIRED_TESTS` in `check_clearbar.py`, 19 names) — a filtered `dotnet test` passes when they are deleted, this does not · cmd: `python Beelzebub/tools/check_clearbar.py tests` → `tests: ok, 19 named ClearSet controls present` (fails when: any named control is missing, renamed or loses its attribute; no test files prints `FAIL no input`)
 - [ ] D22 · **Only VCF chat reaches clearbar** nothing in the plugin dispatches commands besides VCF's chat hook: no `CommandRegistry.Handle(` call, no direct `ClearBar(`/`ResetBar(` call, no RCON/console command type · cmd: `python Beelzebub/tools/check_clearbar.py entry` → `entry: ok, <n> files, commands reach clearbar/resetbar only through VCF chat` (fails when: any of those appears in a plugin `.cs` file; no .cs files prints `FAIL no input`)
+- [ ] D23 · **One command for every actor** 2.1/10.1 in one run: `entry` (D22), `selfonly` (D9) and `check_bar_reset.py auth` (D8) on the real tree · cmd: `python Beelzebub/tools/check_clearbar.py actors` → `actors: ok - entry: ok, … | selfonly: ok, 2 self-only commands | auth: ok, <n> admin commands, 5 reset callers` (fails when: any of the three fails — a second dispatch channel, a self-only command gaining a target or adminOnly, a renamed self-only command or a non-admin caller of FullReset/ReadBar; an empty tree prints `FAIL no input`)
+- [ ] D24 · **Plant scratch is deleted** none of the scratch copies the plants make (`%TEMP%\authplant`, `BarSet.bak`, `cc_plant.py`, `plant_ref.py`) is left in the temp folder · cmd: `python Beelzebub/tools/check_clearbar.py scratch` → `scratch: ok, 4 scratch names absent from the temp folder` (fails when: any of them exists; a missing temp folder prints `FAIL no input`)
 - [ ] D20 · **Every check catches its fault** each `check_clearbar.py` check passes a good fixture, FAILs a planted-defect fixture and FAILs an empty tree with `no input` (rollback and paths on a throwaway git repo) · cmd: `python Beelzebub/tools/check_clearbar.py selftest` → `selftest: ok, 9 checks x good/defect/empty` (fails when: any check passes its defect fixture, fails its good fixture, or passes an empty tree)
 
 ## Purpose & typical use
@@ -107,6 +109,7 @@ and `mounted-bar-reset` (v0.137.3) and adds no new user or job.
   | ECS bar layers (ClearEquipEntries … Reapply) | throws | `<Step>:ERR`, later steps still run, `failed:` line (D3, D4) |
   | `SlotApply.RestoreResolvedGrants` (RestoreKept) | throws | `RestoreKept:ERR`, `clean=0`, the kept binds stay saved and return on the next weapon equip (L5) — tested by `ClearSet_fails_when_a_run_without_RestoreKept_or_with_a_thrown_RestoreKept_reads_clean` (D3) |
   | live bar not reachable (mid-respawn) | planner skips live steps | saved set cleared, reply says the live bar is not reachable (D1, D4) |
+- Slow or garbage results (6.2): there is no timeout — the reset is one synchronous call on the server's main thread, so a slow step (a long synchronous save, a large buffer) stalls that frame and the run still completes; `ms=` on the `[Beelz RESET]` line and ` slow=1` above 250 ms (bar-reset D16, `Format_fails_when_a_slow_run_lacks_slow_flag`) report it. Malformed-but-readable output fails closed: an unreadable slot or rows-unknown bar is `Unreadable` and never clean (bar-reset `BarResetTests`), an unknown bind origin is a survivor (D2), a step count that cannot be trusted is an ERR (`EmptyPush`, `RequireEquipBuff`).
 - The game client, through vrclient (test tooling only): if the client cannot join, `ensure` fails and the scenario prints `SCENARIO FAIL` (D12); the owner is then asked to look.
 - Supported runtime (6.1): game server `VRisingServer v1.1.15.0-r101082` (dev server boot line, 2026-10-04); `BepInEx.Unity.IL2CPP` `[6.0.0-be.733]`, `VampireReferenceAssemblies` `[1.1.12-r99041-b2]`, `VRising.VampireCommandFramework` `0.10.*` (`Beelzebub/Beelzebub/Beelzebub.csproj`) — unchanged by this plan. Contracts sampled: VCF dispatches a command only from its `ChatMessageSystem.OnUpdate` prefix, building `ChatCommandContext` from the chat event's `FromCharacter.User` (`Learning Mods/VampireCommandFramework-main/VCF.Core/Breadstone/ChatHook.cs`); the ECS calls are the ones resetbar already makes (D13 re-runs them). No quota, no rate limit, no per-call cost: everything runs in the server process.
 - Test mode: `.beelz admin testmount on|off` (admin-only) for the riding case; `.beelz transform 0` (Chaos's Beatrice unlock) for the transform case; both exist today and are used only by D12.
@@ -122,6 +125,8 @@ and `mounted-bar-reset` (v0.137.3) and adds no new user or job.
   | saved binds | `BepInEx/config/kdpen.Beelzebub/state.json` on each server | server owner | until the next change; clearbar deletes the chosen set | none made by this change |
   | reset/bar log lines | `BepInEx/LogOutput.log`, `logs/NyarDev.log` | server owner | overwritten at the next server start | procedure 6 copies both to `%TEMP%\beelz-logs-2026-10-04-clearbar\` before a restart; OS temp cleanup |
   | vrclient results + screenshots | `%TEMP%\vrclient\results\`, `%TEMP%\vrclient\shots\` | dev machine owner | OS temp cleanup; never committed | none |
+  | plant scratch copies | `%TEMP%\authplant\`, `%TEMP%\BarSet.bak`, `%TEMP%\cc_plant.py`, `%TEMP%\plant_ref.py` | Claude | deleted right after each plant; D24 fails while any remains | none |
+  | staged package | `Beelzebub/Beelzebub/dist/` (gitignored) | build | rewritten by every Release build | the Thunderstore upload, owner's choice |
   | deployed DLL | the dev server's `BepInEx/plugins/Beelzebub.dll` | owner | replaced by the next build | `bin/Release/net6.0/` |
   | plan, reviews, audit, pages | `Beelzebub/Beelzebub/docs/dod/`, `docs/audits/` | repo | git history | GitHub on the owner's push |
 
@@ -129,6 +134,7 @@ and `mounted-bar-reset` (v0.137.3) and adds no new user or job.
 ### States
 - On foot, riding, in a vanilla form, transformed (active or parked), offline-impossible (clearbar is self, the caller is online), live bar unreachable — the planner covers each (D1).
 - Concurrency: the reset runs synchronously in one VCF command on the main thread; no remount, swap or second command interleaves between planning and the readback. A cast already in flight is caught by the existing late re-read: a slot that turns overridden after the readback logs `[Beelz RESET] late-survivor … slot=<n>` (a warning line, same as resetbar — the reply has already gone); the re-read (`BarResetService.TickLate`) reports only slots overridden now that were NOT overridden at the readback, and a restored kept bind is already overridden at the readback (RestoreKept runs before it), so a kept bind is never reported — no ClearSet-specific code.
+- A vanilla form from the shapeshift wheel (not a transform record) is removed by DestroyOverrideSources, not RevertTransform, so its clear says nothing about the form ending — the same as resetbar today; D12 (c) covers the testform/transform-record path only. Wording a form-ended suffix is left to a follow-up (no new reply text in this slice).
 - Bind origin: each readback slot's `Bind` comes from `BarResetService.BindOrigins` — the saved set (`universal`, `weapon:<Family>`, `form:<Form>`) the resolver picked for that slot after the clear, or `none`; the kept-bind rule (D2, D3) trusts only that, never the live buff.
 - Interrupted (7.3) — there is no cancel: the command is one synchronous call on the main thread, so the only interruption is a server stop or crash between steps. Before SaveBindings: the old save stands, the live bar is untouched or partly reset, and the next login re-injects the old binds (L5). After SaveBindings, before the live steps finish: the chosen set is gone from the save, the live bar may still show leftovers until the next weapon equip, login or `.beelz clearbar`/`resetbar`, which re-resolve from the save. A readback that goes stale after the reply (a cast in flight) is the late-survivor case below. A later run supersedes everything: clearbar is idempotent (the second run finds nothing bound and resets the live layers again), and `.beelz resetbar CONFIRM` supersedes any partial clear.
 - Undo: none besides re-granting (unchanged); a dismount or ended transform is undone by remounting / re-transforming.
@@ -153,11 +159,11 @@ and `mounted-bar-reset` (v0.137.3) and adds no new user or job.
 
   | Probe | Command | Fails when |
   |---|---|---|
-  | 2.1 | `python Beelzebub/tools/check_clearbar.py entry` (D22), with `selfonly` (D9) and `check_bar_reset.py auth` (D8) | clearbar gains a target or becomes adminOnly; a non-self handler calls FullReset |
+  | 2.1 | `python Beelzebub/tools/check_clearbar.py actors` (D23 = D22 + D9 + D8) | clearbar gains a target or becomes adminOnly; a non-self handler calls FullReset |
   | 3.3 | `python Beelzebub/tools/check_clearbar.py tests` (D21) then `dotnet test Beelzebub/Beelzebub.Tests --filter FullyQualifiedName~BarResetTests` (D1) | a ClearSet plan lacks SaveBindings or RestoreKept |
   | 4.4 | `dotnet test Beelzebub/Beelzebub.Tests --filter FullyQualifiedName~BarSetTests` (D2) | a set keeps its own origin or drops another's |
   | 6.2 | `dotnet test Beelzebub/Beelzebub.Tests --filter FullyQualifiedName~BarResetTests` (D3) | a ClearSet run without RestoreKept, or with a thrown step, reads clean |
-  | 10.1 | `python Beelzebub/tools/check_bar_reset.py auth` (D8) | a patch/service/non-admin handler calls FullReset |
+  | 10.1 | `python Beelzebub/tools/check_clearbar.py actors` (D23) | a patch/service/non-admin handler calls FullReset |
   | 10.3 | `python Beelzebub/tools/check_clearbar.py secrets` (D10) | a credential-shaped literal appears |
   | 12.4 | `python Beelzebub/tools/check_clearbar.py selftest` (D20) and each check's planted fault (Log `note · planted`) | a check passes its defect fixture or an empty tree; a planted fault does not fail its check |
   | 14.3 | `python Beelzebub/tools/check_clearbar.py rollback` (D16) | the range is missing/unresolvable or a step is missing |
@@ -166,7 +172,7 @@ and `mounted-bar-reset` (v0.137.3) and adds no new user or job.
 ## Performance
 - One reset per command, the same work as resetbar plus one `RestoreResolvedGrants` (≤ 9 slots): 4–9 ms measured for resetbar on 2026-10-04. No hot path changes.
 - Bounds (13.2): the readback walks bar slots 0–8 (`BarResetService.BarMaxSlot`), the `AbilityGroupSlotBuffer` indices a player sees, established by bar-reset (v0.137.0, its plan's D6 and the 2026-09-30 `admin bar-raw` dumps, which showed engine mods on slot 8 too). Binds can only be saved on 0–7 (`AbilityRegistry.IsValidSlot`: 1–6, primary 0, ultimate 7); slot 8 is never bound, so a slot-8 override is always a survivor, never kept (its `Bind` is `none`). A saved bind outside 0–7 is refused at `SetSlot`/`SetFormSlot` with a warning, so none exists to clear; this change adds and excludes no slot.
-- Throughput (13.1): many players clearing at once queue as separate chat commands on the main thread, each a 4–9 ms reset; 100 queued clears would cost about 0.4–0.9 s of server frame time spread over the frames VCF processes them in — the same profile as resetbar, which shipped without a stress test; no multi-player measurement is claimed.
+- Throughput (13.1): many players clearing at once queue as separate chat commands on the main thread, each a 4–9 ms reset; 100 queued clears would cost about 0.4–0.9 s of server frame time — treated as a worst-case single-frame stall, since how VCF spreads queued chat over frames is not measured; acceptable for a self-only, rarely-typed command (a player types it, it is not scripted) — the same profile as resetbar, which shipped without a stress test; no multi-player measurement is claimed.
 
 ## Build plan
 1. Create `Beelzebub/Beelzebub/Logic/BarSet.cs` (`BarSet` with `All`, `Universal`, `Weapon(name)`, `Form(name)`, `Keeps`, `Label`) — `Beelzebub.Tests.csproj` links `..\Beelzebub\Logic\*.cs` by wildcard, so no csproj change; add `Beelzebub.Tests/BarSetTests.cs` with the D2 `fails when` cases; plant (make `Keeps` keep its own origin) once · satisfies D2
@@ -212,17 +218,17 @@ and `mounted-bar-reset` (v0.137.3) and adds no new user or job.
 | # | Layer | Status | Probes | Pointer / reason |
 |---|---|---|---|---|
 | 1 | Purpose & typical use | Considered | 3/3 | Purpose & typical use |
-| 2 | Actors & permissions | Considered | 3/3 | Design › Permissions › 2.1 D8 D9 D22; 2.2 prose: no new unauthorised path, VCF standard deny unchanged; 2.3 D9 |
-| 3 | Inputs, outputs & data | Considered | 4/4 | Design › Data › 3.1 D6; 3.2 D4 D5 D11; 3.3 D1 D17 D18; 3.4 D16 |
+| 2 | Actors & permissions | Considered | 3/3 | Design › Permissions › 2.1 D8 D9 D22 D23; 2.2 prose: no new unauthorised path, VCF standard deny unchanged; 2.3 D9 |
+| 3 | Inputs, outputs & data | Considered | 4/4 | Design › Data › 3.1 D6; 3.2 D4 D5 D11; 3.3 D1 D17 D18 D24; 3.4 D16 |
 | 4 | Business rules & invariants | Considered | 5/5 | Business rules › 4.1 D1 D4; 4.2 D3; 4.3 prose: no time rule, a clear applies at once; 4.4 D2 D3; 4.5 D2 D6 D7 |
 | 5 | Internal interfaces | Considered | 3/3 | Interfaces › Internal › 5.1 D6; 5.2 D12 D13; 5.3 D5 D11 |
 | 6 | External dependencies & contracts | Considered | 3/3 | Interfaces › External › 6.1 D12 D22; 6.2 D3 D12; 6.3 D12 |
 | 7 | States & lifecycle | Considered | 3/3 | Design › States › 7.1 D1 D4; 7.2 D1; 7.3 D4 D12 |
 | 8 | Minimal stretch | Considered | 2/2 | Use cases › Minimal stretch › 8.1 D4; 8.2 D3 D14 |
 | 9 | Maximal stretch | Considered | 3/3 | Use cases › Maximal stretch › 9.1 D3; 9.2 D9; 9.3 D4 D12 |
-| 10 | Security & privacy | Considered | 4/4 | Security › 10.1 D8; 10.2 prose: set names match fixed tokens and enums only; 10.3 D10; 10.4 prose: only the SteamID and name already logged, artifacts table under Design, Data |
+| 10 | Security & privacy | Considered | 4/4 | Security › 10.1 D8 D23; 10.2 prose: set names match fixed tokens and enums only; 10.3 D10; 10.4 prose: only the SteamID and name already logged, artifacts table under Design, Data |
 | 11 | Design & UX | Considered | 4/4 | Design › UX › 11.1 D4; 11.2 D4; 11.3 prose: plain chat text, every state said in words, under the chat cap; 11.4 D4 |
-| 12 | Failure handling & observability | Considered | 4/4 | Failure & observability › 12.1 D4; 12.2 D5; 12.3 D14; 12.4 D1 D2 D3 D4 D5 D6 D7 D8 D9 D10 D11 D16 D18 D19 D20 D21 D22 |
+| 12 | Failure handling & observability | Considered | 4/4 | Failure & observability › 12.1 D4; 12.2 D5; 12.3 D14; 12.4 D1 D2 D3 D4 D5 D6 D7 D8 D9 D10 D11 D16 D18 D19 D20 D21 D22 D23 D24 |
 | 13 | Performance & scale | Considered | 2/2 | Performance › 13.1 prose: one reset per command, 4-9 ms measured; 13.2 D1 |
 | 14 | Rollout & compatibility | Considered | 4/4 | Rollout › 14.1 D15; 14.2 D11 D13; 14.3 D16; 14.4 D17 D18 |
 | 15 | Out of scope | Considered | 2/2 | Out of scope |
@@ -287,3 +293,8 @@ Gate — acceptance & testability: passed — every Considered layer 2–14 maps
 - 2026-10-04 · note · planted · D22 · the `CommandRegistry.Handle` pattern disabled → `selftest: FAIL 1: entry want FAIL, got: entry: ok, 2 files`; on a temp copy
 - 2026-10-04 · note · planted · D6 · on the `wiring` good fixture, the SteamID-0 refusal without `return` and a refusal placed after FullReset → both `wiring: FAIL no steamId == 0 refusal before the reset`; the fixture as written → `wiring: ok`
 - 2026-10-04 · note · dry-run · D20 · cmd: `python Beelzebub/tools/check_clearbar.py selftest` → `selftest: ok, 9 checks x good/defect/empty`
+- 2026-10-04 · note · review round 3 (codex) · REVISE, reviewer coverage `9/15 layers · 43/49 probes`, rounds 1–2 all resolved; the three-round cap is reached — dispositions in `clearbar-fullreset.reviews.md`, the next review needs the owner (a round-cap note or the human rubric)
+- 2026-10-04 · note · dry-run · D23 · cmd: `python Beelzebub/tools/check_clearbar.py actors` → `actors: ok - entry: ok, 79 files, … | selfonly: ok, 2 self-only commands | auth: ok, 70 admin commands, 4 reset callers`
+- 2026-10-04 · note · planted · D23 · temp copy with `[Command("resetbar"` renamed → `actors: FAIL selfonly: FAIL ['resetbar: not found'] | auth: FAIL …: resetother calls FullReset without adminOnly`; an empty tree → `actors: FAIL no input (…)`
+- 2026-10-04 · note · dry-run · D24 · cmd: `python Beelzebub/tools/check_clearbar.py scratch` → `scratch: ok, 4 scratch names absent from the temp folder`
+- 2026-10-04 · note · planted · D24 · with `%TEMP%\authplant` present → `scratch: FAIL undeleted scratch artifact(s) in the temp folder: ['authplant']`; deleted → ok

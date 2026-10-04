@@ -122,3 +122,41 @@ VERDICT: REVISE
 - F8 · accepted · Performance › Throughput: queued multi-player clears qualified (4–9 ms each on the main thread, the resetbar profile); no stress measurement claimed
 - F9 · accepted · `BarSet.Keeps` fails closed: an origin outside the closed grammar (`BarSet.IsKnownOrigin`) is never kept; +6 test cases, planted (D2 text updated)
 - F10 · accepted · D12 no longer claims the screenshot as evidence; the decisive check is the `[Beelz BAR] binds=0 rows=0 … other=0` readback, which a populated R fails
+
+## Review 3 · 2026-10-04 · codex · plan commit 164b38c · plan 53835 B · 22 items · files 17 · 318aa34bfb7d · prompt bb0a7d914a63
+F1 [blocking] Probe 2.1 lacks one evidence command: the table distributes actor enforcement across `entry`, `selfonly`, and `auth`, so no single command fails when any reachable actor gains unauthorized capability.
+Fix: Add one aggregate command that runs all three controls against the real tree and fails if any actor or entry path violates the actor matrix.
+
+F2 [blocking] Probe 3.3 is unanswered as a control: its cited `tests`/`dotnet test` commands do not verify artifact ownership, retention, deletion, or copies, and the `%TEMP%\authplant`, `%TEMP%\BarSet.bak`, ignored `dist/`, logs, screenshots, and deployed DLL cannot make either command fail.
+Fix: Add every intermediate to the artifact table and provide one data-lifecycle command that fails for an undeclared producer, missing lifecycle fields, or an undeleted temporary artifact.
+
+F3 [blocking] Probe 6.2 does not decide slow or garbage behaviour for each collaborator: the plan covers throws and unreachable state, but not a slow synchronous ECS/save operation or malformed-but-readable dependency output.
+Fix: State the timeout/no-timeout and fail-closed policy for slow and malformed results, with one command whose tests fail when that policy is removed.
+
+F4 [blocking] Probe 10.1 lacks one complete authorization command: `check_bar_reset.py auth` checks `FullReset`/`ReadBar` callers but does not detect the direct command-dispatch channels covered separately by D22.
+Fix: Provide one real-tree authorization command that combines caller authorization, self-only targeting, and all direct/indirect entry-channel checks.
+
+F5 [blocking] Probe 12.4 is a Gap: several checks—including D12–D15 and D17—lack recorded failing, silent, and empty inputs, while D1–D5 were marked `n/a` before implementation rather than run once against the real check before approval.
+Fix: Record the required failing/silent/empty real-check runs for every introduced check, including source-backed thresholds and exact outputs, before approval.
+
+F6 [blocking] Probe 14.4 is not enforced by its evidence command: `check_clearbar.py paths` derives tracked and non-ignored untracked repository changes, so it cannot fail when declarations for `dist/`, deployed DLLs, logs, `%TEMP%` outputs, review products, or scratch directories are removed.
+Fix: Make one paths-walk command compare the declared manifest with every repository, ignored/generated, deployment, review, plan-store, and temporary path walked by the Build plan.
+
+F7 [advisory] The actual shapeshift-wheel path is untested: D12(c) uses `admin testform` through a transform record, so a normal Wolf-form buff could be removed by `DestroyOverrideSources` without incrementing `RevertTransform`, producing no “transform ended” feedback under probes 7.1 and 11.2.
+Fix: Add a wheel-form-equivalent fixture or manual run and ensure ending that form produces the promised feedback.
+
+F8 [advisory] Probe 9.1 estimates 100 clears as 0.4–0.9 seconds but assumes VCF spreads them across frames; the quoted plan provides no evidence for that scheduling behaviour or acceptable stall budget.
+Fix: Treat the estimate as a worst-case main-thread stall unless measured, and record the acceptable queue/stall behaviour.
+
+EARLIER: all resolved
+9/15 layers · 43/49 probes
+VERDICT: REVISE
+### Dispositions
+- F1 · accepted · +D23 `check_clearbar.py actors`: entry + selfonly + `check_bar_reset.py auth` in one command on the real tree; planted (renamed self-only command) and empty-tree runs recorded; the 2.1 gating row now names it
+- F2 · accepted · the artifact table gains the plant scratch copies and `dist/`; +D24 `check_clearbar.py scratch` fails while any scratch copy is left; the lifecycle of the rest (logs, shots, DLL) is policy in the table — files outside the repo that the OS or the next build rewrite, which no repo command owns
+- F3 · accepted · Interfaces › External: no timeout (one synchronous main-thread call; a slow step stalls the frame and is reported by `ms=`/`slow=1`, bar-reset D16 test); malformed-but-readable output fails closed (Unreadable never clean, unknown origin a survivor D2, untrusted counts ERR)
+- F4 · accepted · same as F1 (D23 is the 10.1 row)
+- F5 · rejected · advisory by rule — 12.4 is answered at Failure & observability and the Log: D1–D5 were re-run as real tests after the early `n/a` notes (Log `dry-run · D1`…`D5` → Passed, each planted); D12 ran on v0.137.3 and FAILed 19/30; D13 ran 14/14 and 6/6; D14 and D15 ran preflight; D17 ran git status; the reviewer read the superseded `n/a` lines, which stay because the Log is append-only
+- F6 · rejected · 14.4 is answered at Rollout: D18 compares every repo path changed since the recon commit with the declaration; `dist/` is gitignored build output and the rest (deployed DLL, logs, %TEMP%) are not paths the change ships — they are listed for the record, owned in the artifact table, and D24 covers the only scratch the build creates
+- F7 · accepted · Design › States records the limit: a wheel-entered vanilla form ends through DestroyOverrideSources with no form-ended suffix (same as resetbar today); D12 (c) covers the transform-record path; a form-ended reply is out of this slice
+- F8 · accepted · Performance › Throughput: the estimate is now a worst-case single-frame stall, accepted for a self-only, typed command

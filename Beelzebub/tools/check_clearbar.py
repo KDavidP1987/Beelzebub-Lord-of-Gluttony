@@ -293,6 +293,35 @@ def check_entry(root: str) -> str:
     return f"entry: ok, {len(files)} files, commands reach clearbar/resetbar only through VCF chat"
 
 
+def check_actors(root: str) -> str:
+    """2.1 / 10.1 in one command: the entry channel (entry), the self-only commands (selfonly) and every FullReset /
+    ReadBar caller (check_bar_reset.py auth) — fails when any one of them fails."""
+    parts = [check_entry(root), check_selfonly(root)]
+    tool = os.path.join(os.path.dirname(os.path.abspath(__file__)), "check_bar_reset.py")
+    r = subprocess.run([sys.executable, tool, "auth", "--root", root], capture_output=True, text=True)
+    parts.append((r.stdout.strip().splitlines() or ["auth: FAIL no output"])[-1])
+    bad = [p for p in parts if ": FAIL" in p]
+    if any("no input" in p for p in bad) and len(bad) == len(parts):
+        return "actors: FAIL no input (" + "; ".join(bad) + ")"
+    if bad:
+        return "actors: FAIL " + " | ".join(bad)
+    return "actors: ok - " + " | ".join(parts)
+
+
+# the scratch copies the plan's plants make; each must be deleted after its plant
+SCRATCH = ["authplant", "BarSet.bak", "cc_plant.py", "plant_ref.py"]
+
+
+def check_scratch(_root: str) -> str:
+    tmp = os.environ.get("TEMP") or os.environ.get("TMPDIR") or "/tmp"
+    if not os.path.isdir(tmp):
+        return f"scratch: FAIL no input (temp folder {tmp} missing)"
+    left = [n for n in SCRATCH if os.path.exists(os.path.join(tmp, n))]
+    if left:
+        return f"scratch: FAIL undeleted scratch artifact(s) in the temp folder: {left}"
+    return f"scratch: ok, {len(SCRATCH)} scratch names absent from the temp folder"
+
+
 CHECKS = {"tests": check_tests, "entry": check_entry, "wiring": check_wiring, "selfonly": check_selfonly, "paths": check_paths, "handoff": check_handoff,
           "secrets": check_secrets, "rollback": check_rollback, "backlog": check_backlog}
 
@@ -403,7 +432,7 @@ def selftest(_root: str) -> str:
     return f"selftest: ok, {len(CHECKS)} checks x good/defect/empty"
 
 
-CHECKS_ALL = dict(CHECKS, selftest=selftest)
+CHECKS_ALL = dict(CHECKS, selftest=selftest, actors=check_actors, scratch=check_scratch)
 
 
 def main() -> int:
