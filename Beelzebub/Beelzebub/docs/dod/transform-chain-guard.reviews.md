@@ -190,3 +190,12 @@ Owner (Chaos), approving the proposed answers to the four rubric questions on `d
 15/15 layers · 49/49 probes
 VERDICT: READY
 
+
+## Review 6 · 2026-10-04 · human · plan uncommitted · plan 77310 B · 20 items · files 15 · 0a72ef32f027 · prompt 3999988a1742 · scope A7
+Owner (Chaos), approving the proposed answers to the four rubric questions on `docs/dod/transform-chain-guard.review.html`, scoped to A7 (confirmed "READY as proposed", 2026-10-04):
+1. Coverage — A7 names layer 12.4 and re-answers it: the `tests` check fails when any of the 15 names is missing.
+2. Contest — text-only; no code, check or behaviour change.
+3. Hunt — no other item states a count A2–A6 changed (D9 already names units; D19's 10 checks still hold).
+4. Test the tests — `tests: ok, 15 named TransformGate controls present`; the selftest defect fixture FAILs.
+15/15 layers · 49/49 probes
+VERDICT: READY

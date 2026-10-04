@@ -243,83 +243,83 @@ ol.said li{padding:.15rem 0}
 <h3 id="D1"><span class="mono">D1</span> One gate decides every route</h3>
 <p>`Logic/TransformGate.cs` `TransformGate.Decide(TransformRoute route, bool pendingForm, int activeUnit, int requestedUnit)` returns a `TransformGateVerdict`: `RefusePending` for every route when `pendingForm`; for `Activate`: `RefuseSameUnit` when `activeUnit != 0 &amp;&amp; activeUnit == requestedUnit`, `RefuseActive` when `activeUnit != 0`, else `Allow`; for `FormTest`: `RefuseActive` when `activeUnit != 0`, else `Allow`; for `PhaseSwitch` and `Reapply`: `RefuseInactive` when `activeUnit == 0`, else `Allow`; a route value outside the enum returns `RefuseUnknown` (fail closed)</p>
 <p class="mono">test: Beelzebub.Tests/TransformGateTests.cs (fails when: a pending form allows any route, an active transform allows Activate or FormTest, the same unit reads RefuseActive, a free player is refused Activate or FormTest, an active transform is refused PhaseSwitch or Reapply, or `(TransformRoute)99` is allowed)</p>
-<p class="absent">no evidence line yet</p>
+<ul><li class="mono">2026-10-04 · pass · test: Beelzebub.Tests/TransformGateTests.cs (`dotnet test` 245 pass, 0 fail)</li></ul>
 <h3 id="D2"><span class="mono">D2</span> The refusal texts</h3>
 <p>`TransformGate.Message(verdict, route, string activeName)` returns null for `Allow` and exactly: RefusePending `Still transforming — give it a moment, then try again.`; RefuseSameUnit `You&#39;re already transformed as that unit. Use .beelz revert to return to normal.`; RefuseActive on Activate `You&#39;re already transformed as &lt;activeName&gt;. Use .beelz revert first, then transform again.`; RefuseActive on FormTest `You&#39;re already transformed as &lt;activeName&gt;. Use .beelz revert first, then run testform again.`; RefuseInactive `You are not currently transformed. Use .beelz transform &lt;unit&gt; first.`; RefuseUnknown `That transform action is not allowed.`; `&lt;activeName&gt;` goes through `TransformGate.SafeName`: control characters and `&lt;`/`&gt;` dropped (one plain chat line, no rich text), cut to 64 characters plus `…`, null/blank/nothing-left → `another unit`; every text ≤ 480 UTF-8 bytes for any name</p>
 <p class="mono">test: Beelzebub.Tests/TransformGateTests.cs (fails when: Allow has text, a refusal text differs from the exact string, a null/empty/blank name is not `another unit`, a newline or `&lt;`/`&gt;` survives into the text, a 500-character name is not cut to 64 + `…`, or a text exceeds 480 bytes)</p>
-<p class="absent">no evidence line yet</p>
+<ul><li class="mono">2026-10-04 · pass · test: Beelzebub.Tests/TransformGateTests.cs (245 pass incl. the Message/SafeName controls)</li></ul>
 <h3 id="D3"><span class="mono">D3</span> The log names route and reason</h3>
 <p>`TransformGate.LogLine(route, verdict, ulong steamId, int unit)` returns `[Beelz TXGUARD] refused route=&lt;Route&gt; reason=&lt;Pending|SameUnit|Active|Inactive|Unknown&gt; steamId=&lt;id&gt; unit=&lt;guid&gt;` and null for Allow</p>
 <p class="mono">test: Beelzebub.Tests/TransformGateTests.cs (fails when: the route or reason token is missing or misspelt, or Allow yields a line)</p>
-<p class="absent">no evidence line yet</p>
+<ul><li class="mono">2026-10-04 · pass · test: Beelzebub.Tests/TransformGateTests.cs (245 pass incl. LogLine_fails_when_route_or_reason_is_missing)</li></ul>
 <h3 id="D4"><span class="mono">D4</span> Every route asks the gate first</h3>
 <p>in `Services/TransformService.cs`, `TryActivate`, `ApplyPhase`, `ReapplyActiveTransform` and `ApplyNativeFormTest` each ask the gate (`TransformGate.Decide(`, or `PhaseGate(` — which calls it — in `ApplyPhase` and `ReapplyActiveTransform`) before their first state-changing call (`ApplyForm(`, `TransformBuffService.Apply(`, `ReapplyFormAbilitiesInPlace(`, `TransformBuffService.Reapply(`, `SetActiveTransform(`, `CurrentPhase =`, `Revert(`, `ApplyPhase(`, `SendEvent(`); `ApplyNativeFormTest` contains no `Revert(` call; `Commands/TransformCommands.cs` `Phase` calls `PhaseGate(` before `ApplyPhase(`</p>
 <p class="mono">cmd: `python Beelzebub/tools/check_transform_guard.py wiring` → `wiring: ok, 4 routes gated, testform never reverts, phase command gated, revert forgets the ledger, login clears a stale pending form` (fails when: any of the four methods has a state-changing call before its gate call or no gate call, ApplyNativeFormTest calls Revert, or Phase calls ApplyPhase without or before PhaseGate; a missing TransformService.cs or TransformCommands.cs prints `FAIL no input`)</p>
-<p class="absent">no evidence line yet</p>
+<ul><li class="mono">2026-10-04 · pass · cmd: `check_transform_guard.py wiring` → `wiring: ok, 4 routes gated, testform never reverts, phase command gated, revert forgets the ledger, login clears a stale pending form`</li></ul>
 <h3 id="D5"><span class="mono">D5</span> A refused phase leaves no trace in state</h3>
 <p>`ApplyPhase` returns false on a refusal without assigning `CurrentPhase`, calling `SetActiveTransform` or emitting `[BEELZ:event] type=transform-phase-shift`, so the Auto-HP tick retries on its next pass; every route writes the D3 line only when the service&#39;s `TransformGuardLog.ShouldLog` says so (D20), calls `Allowed(steamId)` when the gate allows, `TransformService.Revert` calls `Forget(steamId)`, and `ReconcileOnLogin` calls `TransformBuffService.ClearPendingForm(steamId)` before its `ReapplyActiveTransform` — a pending entry left by the previous session&#39;s character is stale (its form buff died with that entity), and without the clear the gate would refuse the login re-apply</p>
 <p class="mono">cmd: `python Beelzebub/tools/check_transform_guard.py wiring` → `wiring: ok, 4 routes gated, testform never reverts, phase command gated, revert forgets the ledger, login clears a stale pending form` (the D4 order check covers `CurrentPhase =`, `SetActiveTransform(` and `SendEvent(`) (fails when: ApplyPhase assigns CurrentPhase, calls SetActiveTransform or SendEvent before the gate refusal returns, Revert does not call Forget, or ReconcileOnLogin re-applies without or before ClearPendingForm)</p>
-<p class="absent">no evidence line yet</p>
+<ul><li class="mono">2026-10-04 · pass · cmd: `check_transform_guard.py wiring` → ok (ApplyPhase gated before `CurrentPhase =`; Revert forgets) + A2 control PhaseResetDue_fails_when_a_refused_reset_is_dropped passes</li></ul>
 <h3 id="D6"><span class="mono">D6</span> Who reaches each route</h3>
 <p>`transform`, `phase` and `revert` stay self-only (no player/target/name/steam parameter, not adminOnly); `admin testform` and `admin force-transform` stay `adminOnly: true`; every call of `TryActivate`, `ApplyNativeFormTest` or `ApplyPhase` anywhere in the plugin sits in one of 7 known (file, method) callers — `TransformCommands.{Transform,Phase}`, `AdminCommands.{TestForm,ForceTransform}`, `UpdateBuffsBufferDestroyPatch.OnUpdatePostfix`, `TransformService.{AutoAdvancePhases,ReapplyActiveTransform}` — and every `TransformBuffService.{ApplyForm,Apply,Reapply,ReapplyFormAbilitiesInPlace}` call outside `TransformBuffService.cs` sits inside one of the four gated route methods</p>
 <p class="mono">cmd: `python Beelzebub/tools/check_transform_guard.py actors` → `actors: ok, 3 self-only, 2 admin-only, 7 route calls in 7 allowed methods, 7 form applies inside the 4 gated routes` (fails when: a self-only command gains a target parameter or adminOnly, an admin command loses adminOnly, a route is called from any other method — including a new helper inside an allowed file — or a form apply appears outside the four routes; no .cs files prints `FAIL no input`)</p>
-<p class="absent">no evidence line yet</p>
+<ul><li class="mono">2026-10-04 · pass · cmd: `check_transform_guard.py actors` → `actors: ok, 3 self-only, 2 admin-only, 8 route calls in 7 allowed methods, 7 form applies inside the 4 gated routes`</li></ul>
 <h3 id="D7"><span class="mono">D7</span> No credential in the plugin</h3>
 <p>no `.cs`, `.json` or `.toml` file under `Beelzebub/Beelzebub` holds a credential-shaped literal</p>
 <p class="mono">cmd: `python Beelzebub/tools/check_transform_guard.py secrets` → `secrets: ok, &lt;n&gt; files, 0 hits` (fails when: any `password|api_key|secret|bearer|access_token` key is assigned an 8+ character string; no such files prints `FAIL no input`)</p>
-<p class="absent">no evidence line yet</p>
+<ul><li class="mono">2026-10-04 · pass · cmd: `check_transform_guard.py secrets` → `secrets: ok, 84 files, 0 hits`</li></ul>
 <h3 id="D8"><span class="mono">D8</span> The named controls exist</h3>
-<p>every D1–D3 and D20 control is a `[Fact]`/`[Theory]` method under its exact name (`REQUIRED_TESTS` in `check_transform_guard.py`, 13 names)</p>
-<p class="mono">cmd: `python Beelzebub/tools/check_transform_guard.py tests` → `tests: ok, 13 named TransformGate controls present` (fails when: any named control is missing, renamed or loses its attribute; no test file prints `FAIL no input`)</p>
-<p class="absent">no evidence line yet</p>
+<p>every D1–D3 and D20 control is a `[Fact]`/`[Theory]` method under its exact name (`REQUIRED_TESTS` in `check_transform_guard.py`, 15 names: the 13 planned plus A2&#39;s `PhaseResetDue_fails_when_a_refused_reset_is_dropped` and A5&#39;s `PhaseHasAbilities_fails_when_a_curated_phase_reads_empty`)</p>
+<p class="mono">cmd: `python Beelzebub/tools/check_transform_guard.py tests` → `tests: ok, 15 named TransformGate controls present` (fails when: any named control is missing, renamed or loses its attribute; no test file prints `FAIL no input`)</p>
+<ul><li class="mono">2026-10-04 · pass · cmd: `check_transform_guard.py tests` → `tests: ok, 15 named TransformGate controls present`</li></ul>
 <h3 id="D9"><span class="mono">D9</span> In game, nothing chains</h3>
 <p>Claude&#39;s vrclient scenario `Beelzebub/tools/vrclient/scenarios/transform_chain_guard.vrs` runs (a) `.beelz transform Dracula` then `.beelz transform Beatrice` → `Use .beelz revert first, then transform again.` + `[Beelz TXGUARD] refused route=Activate reason=Active`, and `.beelz transform Dracula` again → `You&#39;re already transformed as that unit.` + `reason=SameUnit`; (b) `.beelz admin testform wolf` while Dracula → `Use .beelz revert first, then run testform again.` + `route=FormTest reason=Active`; (c) `.beelz phase 2` → `Phase 2 (Bloodmage) active`, `.beelz revert`; (d) `.beelz admin force-transform Chaos 591725925` (Morgana, async form) then at once `.beelz phase 2` → no `[Error`/`Exception`/`at Beelzebub.` line, and after 3 s `.beelz phase 2` (swaps, or replies &quot;Already in phase 2.&quot;) then `.beelz phase` → `Currently in phase 2`, then `.beelz revert`</p>
 <p class="mono">cmd: `python Beelzebub/tools/vrclient/vrclient.py run Beelzebub/tools/vrclient/scenarios/transform_chain_guard.vrs` → `SCENARIO PASS transform_chain_guard 14/14` (fails when: a second transform or testform is applied over an active transform, a refusal lacks its TXGUARD line, a phase switch on a settled form fails, an error line appears, or the client cannot join — `ensure` FAIL aborts and prints `SCENARIO FAIL`)</p>
-<p class="absent">no evidence line yet</p>
+<ul><li class="mono">2026-10-04 · pass · cmd: `vrclient.py run scenarios/transform_chain_guard.vrs` → `SCENARIO PASS transform_chain_guard 14/14` on the deployed 84eb186 build (step 6 Log; Morgana (d) proved a clean swap, the recorded chat-latency limit)</li></ul>
 <h3 id="D10"><span class="mono">D10</span> Older in-game paths still pass</h3>
 <p>a plain cast and the clearbar transform case are unchanged</p>
 <p class="mono">cmd: `python Beelzebub/tools/vrclient/vrclient.py run Beelzebub/tools/vrclient/scenarios/cast_basic.vrs` → `SCENARIO PASS cast_basic 6/6`, then the same for `clearbar_fullreset.vrs` → `SCENARIO PASS clearbar_fullreset 32/32` (fails when: any check of either scenario fails)</p>
-<p class="absent">no evidence line yet</p>
+<ul><li class="mono">2026-10-04 · pass · cmd: `vrclient.py run` → `SCENARIO PASS cast_basic 6/6`, `SCENARIO PASS clearbar_fullreset 32/32` on the deployed 84eb186 build (step 6 Log)</li></ul>
 <h3 id="D11"><span class="mono">D11</span> Session logs are clean</h3>
 <p>after the in-game runs and before any restart, the session&#39;s logs hold no Beelzebub stack frame and no error</p>
 <p class="mono">cmd: `pwsh Beelzebub/tools/preflight.ps1 -LogCheck` → `PREFLIGHT OK (2 checks)` with `0 Beelzebub stack frame(s), 0 error(s)` for LogOutput.log (fails when: either log has a Beelzebub stack frame or an `[Error` line; a missing log FAILs)</p>
-<p class="absent">no evidence line yet</p>
+<ul><li class="mono">2026-10-04 · pass · cmd: `pwsh Beelzebub/tools/preflight.ps1 -LogCheck` → `PREFLIGHT OK (2 checks)`, LogOutput.log 0 Beelzebub stack frame(s), 0 error(s); NyarDev.log 0 error(s) (same server session as the runs, no restart)</li></ul>
 <h3 id="D12"><span class="mono">D12</span> BCH is told, no API bump</h3>
 <p>`Commands/ApiCommands.cs` keeps `ApiVersion = 35`; the handoff banner still reads `ApiVersion = 35` and gains a `v0.137.5` block naming `transform-phase-shift`, `Still transforming` and `no wire change`</p>
 <p class="mono">cmd: `python Beelzebub/tools/check_transform_guard.py handoff` → `handoff: ok, api 35, banner 35, 4 tokens` (fails when: ApiVersion or the banner is not 35, or a token is missing; a missing file prints `FAIL no input`)</p>
-<p class="absent">no evidence line yet</p>
+<ul><li class="mono">2026-10-04 · pass · cmd: `check_transform_guard.py handoff` → `handoff: ok, api 35, banner 35, 4 tokens`</li></ul>
 <h3 id="D13"><span class="mono">D13</span> Release surfaces in sync</h3>
 <p>csproj and thunderstore.toml read 0.137.5, CHANGELOG.md has `## [0.137.5]` under its size cap, the README status names v0.137.5 and the root README is regenerated</p>
 <p class="mono">cmd: `pwsh Beelzebub/tools/preflight.ps1` → `PREFLIGHT OK` with `versions csproj 0.137.5, thunderstore.toml 0.137.5` (fails when: the versions differ, CHANGELOG.md lacks the entry, the README names another version, or the root README is stale)</p>
-<p class="absent">no evidence line yet</p>
+<ul><li class="mono">2026-10-04 · pass · cmd: `pwsh Beelzebub/tools/preflight.ps1` → `versions csproj 0.137.5, thunderstore.toml 0.137.5` … `PREFLIGHT OK (10 checks)`</li></ul>
 <h3 id="D14"><span class="mono">D14</span> Rollback range recorded</h3>
 <p>the audit states the first and last commit of this build, the revert/rebuild/redeploy steps and that a rollback needs `no saved-data migration`</p>
 <p class="mono">cmd: `python Beelzebub/tools/check_transform_guard.py rollback` → `rollback: ok, &lt;first&gt;..&lt;last&gt;` (fails when: the audit is missing (`FAIL no input`), the range line is absent or unresolvable, first is not an ancestor of last, or a step or the consequence is missing)</p>
-<p class="absent">no evidence line yet</p>
+<ul><li class="mono">2026-10-04 · pass · cmd: `check_transform_guard.py rollback` → `rollback: ok, b6b9318..84eb186`</li></ul>
 <h3 id="D15"><span class="mono">D15</span> Every written path is committed</h3>
 <p>after the release commit `git status --porcelain` lists nothing but the owner&#39;s two private files (`Beelzebub/Beelzebub/docs/V0136_ABILITY_TEST_PLAN.xlsx`, `_matrix_build.py`)</p>
 <p class="mono">cmd: `python Beelzebub/tools/check_transform_guard.py status` → `status: ok, nothing uncommitted but &lt;n&gt; owner file(s)` (fails when: any other path is listed; outside a repository git exits 128 and it prints `FAIL no input`)</p>
-<p class="absent">no evidence line yet</p>
+<ul><li class="mono">2026-10-04 · pass · cmd: `check_transform_guard.py status` → `status: ok, nothing uncommitted but 2 owner file(s)`</li></ul>
 <h3 id="D16"><span class="mono">D16</span> Every touched path is declared</h3>
 <p>every path changed since `a38c168` (tracked diff plus untracked, minus the owner files) is named in the Rollout path list</p>
 <p class="mono">cmd: `python Beelzebub/tools/check_transform_guard.py paths` → `paths: ok, &lt;n&gt; changed, &lt;k&gt; declared` (fails when: a changed path is undeclared or the list is missing; nothing changed prints `FAIL no input`)</p>
-<p class="absent">no evidence line yet</p>
+<ul><li class="mono">2026-10-04 · pass · cmd: `check_transform_guard.py paths` → `paths: ok, 25 changed, 29 declared`</li></ul>
 <h3 id="D17"><span class="mono">D17</span> Backlog row closed</h3>
 <p>`Beelzebub/Beelzebub/docs/BACKLOG.md`&#39;s `transform-chain-guard` row (first cell) says `DONE v0.137.5`</p>
 <p class="mono">cmd: `python Beelzebub/tools/check_transform_guard.py backlog` → `backlog: ok, transform-chain-guard DONE v0.137.5` (fails when: the row is missing or lacks `DONE v0.137.5`; a missing BACKLOG.md prints `FAIL no input`)</p>
-<p class="absent">no evidence line yet</p>
+<ul><li class="mono">2026-10-04 · pass · cmd: `check_transform_guard.py backlog` → `backlog: ok, transform-chain-guard DONE v0.137.5`</li></ul>
 <h3 id="D18"><span class="mono">D18</span> The 6.2 lesson is in the profile</h3>
 <p>`Beelzebub/Beelzebub/docs/dod/profile.md` › Project-wide notes carries a `Probe 6.2` line that asks, per collaborator, how it reports failure (throws / returns 0 / swallows) and how a deferred engine effect (DestroyTag, async form spawn) is observed in the same frame</p>
 <p class="mono">cmd: `python Beelzebub/tools/check_transform_guard.py profile` → `profile: ok, probe 6.2 note present` (fails when: the line is missing or lacks `reports failure` or `deferred`; a missing profile.md prints `FAIL no input`)</p>
-<p class="absent">no evidence line yet</p>
+<ul><li class="mono">2026-10-04 · pass · cmd: `check_transform_guard.py profile` → `profile: ok, probe 6.2 note present`</li></ul>
 <h3 id="D19"><span class="mono">D19</span> Every check catches its fault</h3>
 <p>each `check_transform_guard.py` check passes a good fixture, FAILs a planted-defect fixture and FAILs an empty tree with `no input` (rollback and paths on a throwaway git repo)</p>
 <p class="mono">cmd: `python Beelzebub/tools/check_transform_guard.py selftest` → `selftest: ok, 10 checks x good/defect/empty` (fails when: any check passes its defect fixture, fails its good fixture, or passes an empty tree)</p>
-<p class="absent">no evidence line yet</p>
+<ul><li class="mono">2026-10-04 · pass · cmd: `check_transform_guard.py selftest` → `selftest: ok, 10 checks x good/defect/empty`</li></ul>
 <h3 id="D20"><span class="mono">D20</span> One log line per refusal, bounded</h3>
 <p>`Logic/TransformGuardLog.cs` `ShouldLog(steamId, route, verdict)` is true the first time a (player, route, reason) refusal is seen and false for every repeat and for Allow; `Allowed(steamId)` and `Forget(steamId)` drop that player&#39;s entries so their next refusal logs again; at `Cap` = 512 entries the ledger is cleared before adding, so it never holds more than 512 (worst case after a clear: one repeated line per player)</p>
 <p class="mono">test: Beelzebub.Tests/TransformGateTests.cs (fails when: a repeated refusal logs twice, a different route/reason/player does not log, Allow logs, Allowed or Forget does not reset the player or touches another player, or 10 000 distinct one-time refusals leave more than 256 entries)</p>
-<p class="absent">no evidence line yet</p></section>
+<ul><li class="mono">2026-10-04 · pass · test: Beelzebub.Tests/TransformGateTests.cs (245 pass incl. the three GuardLog controls)</li></ul></section>
 </main>
 <footer class="wrap foot">Generated by dod · works offline and loads nothing</footer>
 <script>(function(){var d=document;d.documentElement.classList.add('js');var tabs=[].slice.call(d.querySelectorAll('[role=tab]'));if(!tabs.length)return;var panels=tabs.map(function(t){return d.getElementById(t.getAttribute('aria-controls'))});function show(i,focus){tabs.forEach(function(t,j){var on=i===j;t.setAttribute('aria-selected',on);t.tabIndex=on?0:-1;panels[j].hidden=!on});if(focus)tabs[i].focus();var b=tabs[i],l=b.parentNode;if(l.scrollWidth>l.clientWidth)l.scrollLeft=b.offsetLeft-l.offsetLeft-(l.clientWidth-b.offsetWidth)/2;if(history.replaceState)history.replaceState(null,'','#'+tabs[i].id.slice(4))}tabs.forEach(function(t,i){t.addEventListener('click',function(){show(i)});t.addEventListener('keydown',function(e){var n=e.key==='ArrowRight'||e.key==='ArrowDown'?i+1:e.key==='ArrowLeft'||e.key==='ArrowUp'?i-1:e.key==='Home'?0:e.key==='End'?tabs.length-1:null;if(n===null)return;e.preventDefault();show((n+tabs.length)%tabs.length,true)})});function fromHash(){var h=location.hash.slice(1),s=-1;tabs.forEach(function(t,k){if(t.id==='tab-'+h)s=k});show(s<0?0:s)}fromHash();addEventListener('hashchange',fromHash)})();</script>
