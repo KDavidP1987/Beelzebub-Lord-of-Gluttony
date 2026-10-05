@@ -127,7 +127,7 @@ Hotkeys_MaxPerPlayer  = 5      # cap to prevent storage abuse
 ```
 
 Hotkey bindings are storage-only on the server — the cast trigger is
-BloodCraftHub-side (when BCH ships the UI). Safe to leave enabled even if you
+Raphael-side (when Raphael ships the UI). Safe to leave enabled even if you
 don't run BCH; players just won't have a way to fire the bindings yet.
 
 ### Logging
@@ -244,9 +244,9 @@ Full audit + reasoning: `INTEROP_BLOODCRAFT.md`.
 
 ---
 
-## Optional: paired with BloodCraftHub (BCH)
+## Optional: paired with Raphael (formerly BloodCraftHub)
 
-BCH is a separate client-side companion mod (same author) that renders a
+Raphael (formerly BloodCraftHub, BCH) is a separate client-side companion mod (same author) that renders a
 "Bloodbook" UI on the player's screen — captured abilities, transformation
 catalog, progress %, and (future) hotkey buttons.
 

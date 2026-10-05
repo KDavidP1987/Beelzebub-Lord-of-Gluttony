@@ -27,7 +27,7 @@ internal static class HotkeyCommands
         ctx.Reply(".beelz hotkey set <name> <index> — bind a captured ability (by .beelz list index) to a named hotkey");
         ctx.Reply(".beelz hotkey clear <name> — remove a hotkey binding");
         ctx.Reply(".beelz hotkey list — show your current hotkey bindings");
-        ctx.Reply("Cast a bound hotkey with .beelz cast <name>. BloodCraftHub can surface these as on-screen buttons.");
+        ctx.Reply("Cast a bound hotkey with .beelz cast <name>. Raphael can surface these as on-screen buttons.");
     }
 
     [Command("set", description: "Bind a hotkey name to a captured ability. Usage: .beelz hotkey set <name> <index|ability ID> (the number is a .beelz list index when in range, otherwise the ability's stable ID).")]
@@ -79,7 +79,7 @@ internal static class HotkeyCommands
 
         Core.AbilityRegistry.SetHotkey(steamId, name, ability._Value);
         Core.Persistence.RequestSave();
-        ctx.Reply($"Hotkey '{name}' bound to {abilityName}. Fire it with .beelz cast {name} (or a BloodCraftHub button).");
+        ctx.Reply($"Hotkey '{name}' bound to {abilityName}. Fire it with .beelz cast {name} (or a Raphael button).");
         Core.Chat.SendEvent(ctx.Event.SenderCharacterEntity,
             $"[BEELZ:event] type=hotkey-set name={name} a={ability._Value} an={abilityName}");
     }

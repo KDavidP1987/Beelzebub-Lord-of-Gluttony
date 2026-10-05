@@ -365,7 +365,7 @@ combinations to lock is your call.
 .beelz admin lock list
 .beelz admin lock check <player>
 ```
-Every lock command saves the file and re-checks every online player immediately. BloodCraftHub reads the
+Every lock command saves the file and re-checks every online player immediately. Raphael reads the
 groups with `.beelz api locks` (ApiVersion 32).
 
 ---

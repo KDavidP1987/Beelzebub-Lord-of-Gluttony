@@ -210,7 +210,7 @@ internal sealed class AbilityRules
     /// <summary>
     /// v0.69.0: normalize an admin-supplied ability identifier to the canonical prefab-NAME key the
     /// AbilityMap + the tuning matcher use. Accepts the prefab name as-is, OR a numeric PrefabGUID
-    /// (what `.beelz list` / BloodCraftHub show — admins/BCH naturally use the ID) resolved to its
+    /// (what `.beelz list` / Raphael show — admins/BCH naturally use the ID) resolved to its
     /// prefab name. Returns null if a numeric ID can't be resolved to a known prefab. Without this,
     /// `.beelz admin ability &lt;guid&gt; cooldown 10` created a dead GUID-keyed entry the tuner never
     /// matched (it scans prefabs by NAME), so the edit silently did nothing.

@@ -15,7 +15,7 @@ namespace Beelzebub.Services;
 ///
 /// WHY this matters: it's how players get MORE abilities than V Rising's 6-slot bar.
 /// Bind a captured ability to a named hotkey (<c>.beelz hotkey set</c>) and fire it
-/// with <c>.beelz cast &lt;name&gt;</c> (or a BloodCraftHub button). It needs no slot,
+/// with <c>.beelz cast &lt;name&gt;</c> (or a Raphael button). It needs no slot,
 /// which also sidesteps the ULTIMATE-slot limitation — the ultimate (slot 7) is not
 /// replaceable on the normal bar, but force-cast doesn't use a slot at all.
 ///

@@ -7,7 +7,7 @@ using VampireCommandFramework;
 namespace Beelzebub.Commands;
 
 /// <summary>
-/// Structured chat output for client UI integration (BCH / BloodCraftHub).
+/// Structured chat output for client UI integration (Raphael, formerly BloodCraftHub / BCH).
 ///
 /// Wire format: every line begins with a "[BEELZ:&lt;tag&gt;]" marker, followed by
 /// space-separated "key=value" fields. Values are bare tokens (no quoting); prefab
@@ -241,7 +241,7 @@ internal static class ApiCommands
         ctx.Reply("    filters: weapon|cat|unit|form|search|tag|reviewstatus|tier|vblood — load just a subset fast");
         ctx.Reply(".beelz api rules / config / cooldowns / transform-config — server config + state streams");
         ctx.Reply(".beelz api tform-kit <unit> / tform-binds <unit> — transform kit + your custom binds · api broadcast-msgs <pool> (admin)");
-        ctx.Reply("These power BloodCraftHub's on-screen UI; most just stream data and don't change anything.");
+        ctx.Reply("These power Raphael's on-screen UI; most just stream data and don't change anything.");
     }
 
     [Command("version", description: "Return the Beelzebub API version (BCH-readable).")]

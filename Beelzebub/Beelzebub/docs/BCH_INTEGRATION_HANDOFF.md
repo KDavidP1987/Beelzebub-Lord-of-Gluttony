@@ -1,4 +1,8 @@
-# Beelzebub → BloodCraftHub (BCH) Integration Handoff
+# Beelzebub → Raphael (formerly BloodCraftHub / BCH) Integration Handoff
+
+> **Rename (2026-10-04).** The client companion BloodCraftHub is now **Raphael**. "BCH" below means
+> Raphael. Nothing on the wire changed: command names (`.beelz api bch …`), `[BEELZ:*]` lines and config keys keep
+> their `bch`/`BCH` spellings, and `ApiVersion` is unchanged.
 
 > **Purpose.** This is the single reference for everything **BloodCraftHub (the
 > client-side companion mod)** needs to build to surface and extend Beelzebub.

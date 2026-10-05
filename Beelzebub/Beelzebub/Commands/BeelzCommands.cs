@@ -184,7 +184,7 @@ internal static class BeelzCommands
     // isn't gated by a bar slot, so we enforce the ability's own cooldown ourselves).
     static readonly System.Collections.Generic.Dictionary<(ulong, int), System.DateTime> _castCooldowns = new();
 
-    [Command("cast", description: "Cast a captured ability on demand — beyond your 6 slots. Usage: .beelz cast <hotkey name | list index>. BloodCraftHub buttons invoke this.")]
+    [Command("cast", description: "Cast a captured ability on demand — beyond your 6 slots. Usage: .beelz cast <hotkey name | list index>. Raphael buttons invoke this.")]
     public static void Cast(ChatCommandContext ctx, string nameOrIndex)
     {
         if (!Core.IsReady) { ctx.Reply("Beelzebub not yet initialized."); return; }

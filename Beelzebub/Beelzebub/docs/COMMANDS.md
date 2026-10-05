@@ -8,7 +8,7 @@ authoritative behavior is always the `[Command(...)]` descriptions in `Commands/
 Prefixes:
 - `.beelz <cmd>` — player commands (collection, slots, transforms).
 - `.beelz admin <cmd>` — admin-only (curation, grants, recovery, config). Requires admin.
-- `.beelz api <cmd>` — machine-readable `[BEELZ:*]` data streams for the BloodCraftHub UI (a few are admin).
+- `.beelz api <cmd>` — machine-readable `[BEELZ:*]` data streams for the Raphael UI (a few are admin).
 - `.beelz hotkey <cmd>` — named extra-hotkey bindings beyond the 6 spell slots.
 
 Selectors: most commands that take an ability accept either its **list index** (from `.beelz list`)
@@ -156,7 +156,7 @@ conditionSource=confirmed).
 
 ---
 
-## API / read (`.beelz api …`) — BloodCraftHub data streams
+## API / read (`.beelz api …`) — Raphael data streams
 
 These emit `[BEELZ:*]` lines a client parses; most don't change anything. Wire contract = `ApiVersion`
 (see `Commands/ApiCommands.cs`).
