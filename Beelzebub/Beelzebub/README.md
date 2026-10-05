@@ -166,7 +166,7 @@ The full list, with every option, is in
 ## Known limitations
 
 - **Only five transformations.** A server-side mod cannot change how a player is drawn, so becoming any unit needs a
-  client-side mod. That is planned through BloodCraftHub.
+  client-side mod. Whether that is possible is still under investigation.
 - **Some multi-stage boss abilities misfire.** A cast that spawns a projectile that spawns an area can lose a later
   stage when a player casts it. Many are fixed or curated out; the audit continues.
 - **Some abilities look best in form.** A few are tied to a boss's skeleton and animate oddly on a vampire body.
@@ -179,18 +179,65 @@ The full list, with every option, is in
   error at startup. It is harmless.
 - **Untested at scale:** other mods, other server presets and large populations.
 
-Especially useful to test: mixing captures with vanilla spells, hotkeys, the bar after weapon swaps, transforms and
-dismounting, summons in group fights, the Devour rate, and reconnecting while transformed (your form and summons
-should resume within 90 seconds).
+## Roadmap: the road to 1.0
 
-## Roadmap
+Beelzebub is at **v0.137.6**, a public test build. These five steps lead to 1.0. Testing comes first, because its
+results decide what gets re-tuned, re-enabled or kept off.
+
+| Step | Status |
+|---|---|
+| 1. Ability testing | In progress |
+| 2. Ability reconfiguration | Next, driven by the test results |
+| 3. Stability | In progress |
+| 4. Planned features | Scope for 1.0 not final |
+| 5. Before 1.0 | After steps 1-3 |
+
+### 1. Ability testing
+
+Every ability the mod can hand out is on a test plan, 615 in three groups:
+
+| Group | Abilities | What is checked |
+|---|---|---|
+| Presets | 209 | Re-tuned cooldowns, ranges and cast feel, each against its expected result |
+| Hard-blocked | 20 | Abilities that crashed, killed or launched players: confirm they never drop |
+| Soft-disabled | 386 | Off by default: each gets a verdict (re-enable, re-enable with a tweak, or keep off) |
+
+Alongside the plan, general play is especially useful to test: mixing captures with vanilla spells, hotkeys, the bar
+after weapon swaps, transforms and dismounting, summons in group fights, the Devour rate, and reconnecting while
+transformed (your form and summons should resume within 90 seconds).
+
+### 2. Ability reconfiguration
+
+- Re-tune every preset that tests Partial or Fail.
+- Apply the soft-disabled verdicts to the shipped defaults.
+- Make problem abilities safe instead of blocked where possible: Gaius Twinblade Throw, Spider Baneling Explode, Ziva
+  Jetpack, Toad King Swallow and Spit, and others.
+- Fix the summon abilities that do not work yet.
+- Finish the multi-stage boss ability audit, so boss kits fire cleanly when a player casts them.
+- Fill in missing ability names and descriptions.
+
+### 3. Stability
+
+- **Fixed in v0.137.6:** the startup `Couldn't remap old Modification Id` errors.
+- A transformation that expires on its own does not fully clean up yet.
+- A performance check on the action bar cleanup.
+- Re-check the mounted and beast-form action bars on the current build.
+
+### 4. Planned features
+
+Which of these make 1.0 is still open.
 
 - **Mastery:** per-unit mastery levels and set rewards on top of the bestiary.
-- **BloodCraftHub UI:** ability buttons, cooldown rings, the collection book, a transform browser and admin panels.
-  The server side of this already ships.
-- **More transformations:** becoming other units, through the client-side companion.
+- **Raphael (client UI, formerly the BloodCraftHub UI):** ability buttons, cooldown rings, the collection book, a
+  transform browser and admin panels. The server side of this already ships.
+- **More transformations (under investigation):** becoming other units. A server-side mod cannot do this alone;
+  whether a client-side mod can is still being investigated, so this is not promised.
 - **Summon AI:** allies that engage more reliably, and fight hostile players in PvP.
-- **Ability audit:** more boss kits that fire cleanly when a player casts them.
+
+### 5. Before 1.0
+
+- Testing at scale, on other server presets and alongside other mods.
+- Close out the [known limitations](#known-limitations) above.
 
 ## Feedback
 

@@ -50,9 +50,10 @@ discipline) and follows `ABILITY_CHANGE_IMPACT.md` (solve the class, not the ins
 ## 4. Planned features (which ones are in 1.0 is the owner's open decision)
 
 1. Mastery - per-unit mastery levels and set rewards on top of the bestiary.
-2. BloodCraftHub UI - ability buttons, cooldown rings, collection book, transform browser, admin panels (server side
+2. Raphael (client UI; formerly "BloodCraftHub UI") - ability buttons, cooldown rings, collection book, transform browser, admin panels (server side
    already ships; client work lives in the BCH workspace, contract in `BCH_INTEGRATION_HANDOFF.md`).
-3. More transformations - through the client-side companion only (server-side model swap is a hard limit).
+3. More transformations - UNDER INVESTIGATION, feasibility unknown (server-side model swap is a hard limit; whether a
+   client-side mod can do it is not established). Owner wants to circle back to it.
 4. Summon AI - allies that engage more reliably, PvP support.
 
 ## 5. Before 1.0
@@ -61,7 +62,10 @@ discipline) and follows `ABILITY_CHANGE_IMPACT.md` (solve the class, not the ins
 - Close out the README's Known limitations (only five transformations, some multi-stage boss abilities misfire, some
   abilities animate oddly on a vampire body, per-hit damage scaling is new, boss forms take a moment to appear).
 
-## Public copy (Discord, posted 2026-10-04)
+The public roadmap lives in the README's "Roadmap: the road to 1.0" section (Thunderstore page + generated GitHub
+README); keep it in step with this file.
+
+## Public copy (Discord, posted 2026-10-04 - before the Raphael rename and the transformations status change)
 
 ```
 # Beelzebub - Road to 1.0
