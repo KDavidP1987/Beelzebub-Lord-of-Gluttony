@@ -8,9 +8,13 @@
 a rare jackpot teaches you its entire kit at once. Slot what you collect on your action bar, bind the rest to extra
 hotkeys, and take the forms of the bosses you defeat.
 
-> **Status:** early access, **public test build (v0.137.6)**. Works end to end on dedicated servers. Expect rough
-> edges, and expect test servers to be wiped. Feedback goes to the
+> **Status:** **pre-1.0 ALPHA (v0.137.6)**, a public test build. Works end to end on dedicated servers, but features are
+> still being added, hundreds of abilities are still being tested, and save data may not carry over between builds.
+> See the [road to 1.0](#roadmap-the-road-to-10). Feedback goes to the
 > [issue tracker](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/issues).
+>
+> **Install only on a test or dev server, a server you reset regularly, or one you don't mind resetting if
+> something goes wrong.** Do not run it on a live server whose progress you need to keep.
 
 **Source and roadmap:** [github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony) · **License:** MIT
 

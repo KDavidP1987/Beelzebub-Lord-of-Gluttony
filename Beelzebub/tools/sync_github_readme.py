@@ -19,7 +19,7 @@ STORE = 'https://thunderstore.io/c/v-rising/p/kdpen/Beelzebub/'
 BADGES = f"""<p align="center">
   <a href="{STORE}"><img alt="Thunderstore" src="https://img.shields.io/badge/Thunderstore-kdpen%2FBeelzebub-2a6fdb"></a>
   <a href="{REPO}/releases"><img alt="Release" src="https://img.shields.io/github/v/release/KDavidP1987/Beelzebub-Lord-of-Gluttony?include_prereleases&label=release"></a>
-  <img alt="Status" src="https://img.shields.io/badge/status-early%20access-orange">
+  <img alt="Status" src="https://img.shields.io/badge/status-pre--1.0%20alpha-orange">
   <img alt="Side" src="https://img.shields.io/badge/V%20Rising-server--side-8b1e3f">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-green"></a>
 </p>
