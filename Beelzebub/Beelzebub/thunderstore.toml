@@ -4,8 +4,8 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "kdpen"
 name = "Beelzebub"
-versionNumber = "0.137.6"
-description = "[ALPHA/TEST] Devour the bestiary: every kill can teach you an enemy's abilities, and some bosses let you take their form. Slot captures, bind extra hotkeys, complete your collection. Server-side, admin-configurable."
+versionNumber = "0.137.7"
+description = "ALPHA (pre-1.0, test servers only). Devour the bestiary: every kill can teach you an enemy's abilities, and some bosses let you take their form. Slot captures, bind extra hotkeys, complete your collection. Server-side, admin-configurable."
 websiteUrl = "https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony"
 containsNsfwContent = false
 

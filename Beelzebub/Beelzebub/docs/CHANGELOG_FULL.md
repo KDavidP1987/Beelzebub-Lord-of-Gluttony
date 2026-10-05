@@ -3,6 +3,14 @@
 Every version, newest first. The shipped [CHANGELOG.md](../CHANGELOG.md) keeps the ten most recent; the technical
 history is the [commit log](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/commits/main).
 
+## [0.137.7] - 2026-10-04
+
+- The mod page now states that this is a **pre-1.0 alpha**: install it only on a test server, or one you are willing
+  to reset.
+- New **road to 1.0** section on the mod page.
+- The client companion BloodCraftHub is now called **Raphael**. Nothing else changes; it keeps working as before.
+- This changelog is shorter.
+
 ## [0.137.6] - 2026-10-04
 
 ### Server startup errors fixed

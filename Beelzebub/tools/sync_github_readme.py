@@ -27,9 +27,9 @@ BADGES = f"""<p align="center">
 
 GET_IT = f"""## Get it
 
-- **Thunderstore (recommended):** [{STORE}]({STORE}) — install with r2modman / Thunderstore Mod Manager.
-- **GitHub Releases:** [{REPO}/releases]({REPO}/releases) — the same zip; drop `BepInEx/plugins/Beelzebub.dll`
-  into your dedicated server's `BepInEx\\plugins\\` folder.
+- **Thunderstore (recommended):** [kdpen/Beelzebub]({STORE}), installed with r2modman or the Thunderstore Mod Manager.
+- **GitHub Releases:** [download the zip]({REPO}/releases) and copy `BepInEx/plugins/Beelzebub.dll` into your
+  dedicated server's `BepInEx\\plugins\\` folder.
 - **What changed:** [player changelog](Beelzebub/Beelzebub/CHANGELOG.md) · full technical history in the git log
 
 ---
@@ -49,7 +49,7 @@ DEV = """## For developers and server admins
 | [Summons as allies](Beelzebub/docs/SUMMON_AS_ALLY.md) | How captured summons become player allies |
 | [Bloodcraft interop](Beelzebub/docs/INTEROP_BLOODCRAFT.md) | Running alongside Bloodcraft |
 | [Ability change impact](Beelzebub/Beelzebub/docs/ABILITY_CHANGE_IMPACT.md) | Checklist for changing how an ability behaves without breaking its neighbours |
-| [BloodCraftHub integration](Beelzebub/Beelzebub/docs/BCH_INTEGRATION_HANDOFF.md) | The `[BEELZ:*]` chat API contract for client UIs |
+| [Raphael integration](Beelzebub/Beelzebub/docs/BCH_INTEGRATION_HANDOFF.md) | The `[BEELZ:*]` chat API contract for the Raphael client UI |
 
 ### Building from source
 Requirements: the .NET 6 SDK. The V Rising, BepInEx and VCF references come from NuGet.
@@ -101,7 +101,7 @@ def main():
     i = s.index('# Beelzebub, Lord of Gluttony')
     s = s[:i] + BADGES + '\n' + s[i:]
     # "Get it" before the install notes, developer section before Credits
-    for anchor, block in (('## Before you install', GET_IT), ('## Credits', DEV)):
+    for anchor, block in (('## How it works', GET_IT), ('## Credits', DEV)):
         if anchor not in s: sys.exit(f'anchor not found: {anchor}')
         s = s.replace(anchor, block + anchor, 1)
     header = ('<!-- GENERATED from Beelzebub/Beelzebub/README.md by Beelzebub/tools/sync_github_readme.py '

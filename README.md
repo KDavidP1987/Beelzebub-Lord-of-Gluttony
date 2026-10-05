@@ -17,37 +17,27 @@
 a rare jackpot teaches you its entire kit at once. Slot what you collect on your action bar, bind the rest to extra
 hotkeys, and take the forms of the bosses you defeat.
 
-> **Status:** **pre-1.0 ALPHA (v0.137.6)**, a public test build. Works end to end on dedicated servers, but features are
-> still being added, hundreds of abilities are still being tested, and save data may not carry over between builds.
-> See the [road to 1.0](#roadmap-the-road-to-10). Feedback goes to the
-> [issue tracker](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/issues).
+> **Status:** **pre-1.0 ALPHA (v0.137.7). Test servers only.**
+> Install it only on a test or dev server, a server you reset regularly, or one you don't mind resetting if something
+> goes wrong. Characters, collections or the whole server may need a wipe between builds.
 >
-> **Install only on a test or dev server, a server you reset regularly, or one you don't mind resetting if
-> something goes wrong.** Do not run it on a live server whose progress you need to keep.
+> Features are still being added and hundreds of abilities are still being tested; some misbehave when a player
+> casts them, and a broken ability is useful feedback. Running alongside Bloodcraft and KindredCommands is intended but
+> not fully verified; other mods are untested.
+> [Road to 1.0](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony#roadmap-the-road-to-10) · [Report an issue](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/issues)
 
-**Source and roadmap:** [github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony) · **License:** MIT
+**Source:** [github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony) · **License:** MIT
 
 ---
 
 ## Get it
 
-- **Thunderstore (recommended):** [https://thunderstore.io/c/v-rising/p/kdpen/Beelzebub/](https://thunderstore.io/c/v-rising/p/kdpen/Beelzebub/) — install with r2modman / Thunderstore Mod Manager.
-- **GitHub Releases:** [https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/releases](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/releases) — the same zip; drop `BepInEx/plugins/Beelzebub.dll`
-  into your dedicated server's `BepInEx\plugins\` folder.
+- **Thunderstore (recommended):** [kdpen/Beelzebub](https://thunderstore.io/c/v-rising/p/kdpen/Beelzebub/), installed with r2modman or the Thunderstore Mod Manager.
+- **GitHub Releases:** [download the zip](https://github.com/KDavidP1987/Beelzebub-Lord-of-Gluttony/releases) and copy `BepInEx/plugins/Beelzebub.dll` into your
+  dedicated server's `BepInEx\plugins\` folder.
 - **What changed:** [player changelog](Beelzebub/Beelzebub/CHANGELOG.md) · full technical history in the git log
 
 ---
-
-## Before you install
-
-- **This is a test build.** V Rising has hundreds of NPC and boss abilities, and some of them misbehave when a player
-  casts them. Finding out which ones are worth keeping is a goal of this test. A broken ability is useful feedback.
-- **Progress is not safe yet.** Characters, collections or a whole test server may be wiped between builds.
-- **Other mods are untested.** Beelzebub is designed to run alongside Bloodcraft and KindredCommands, but that has not
-  been fully verified. Anything else is unknown; please report conflicts.
-- **BloodCraftHub is recommended.** The client-side BloodCraftHub companion adds on-screen ability buttons, cooldowns
-  and a collection book. Without it, everything works through chat commands and the six vanilla slots. The
-  integration is still being built.
 
 ## How it works
 
@@ -58,6 +48,21 @@ hotkeys, and take the forms of the bosses you defeat.
    named hotkeys.
 5. **Become the boss.** Some bosses can also unlock their transformation, a separate prize with its own odds.
 6. **Complete the bestiary.** Track what you have per unit and hunt what is missing.
+
+## Requirements
+
+- A V Rising **dedicated server**. Beelzebub runs on the server only; it does not work in a Host & Play game.
+- [BepInExPack V Rising](https://thunderstore.io/c/v-rising/p/BepInEx/BepInExPack_V_Rising/)
+- [VampireCommandFramework](https://thunderstore.io/c/v-rising/p/deca/VampireCommandFramework/)
+- Recommended for players: **Raphael**, a client-side companion (formerly BloodCraftHub) that adds on-screen ability
+  buttons, cooldowns and a collection book. It is still in development. Without it, everything works through chat
+  commands and the six vanilla slots.
+
+## Installation
+
+Install with [r2modman](https://thunderstore.io/package/ebkr/r2modman/) or the Thunderstore Mod Manager, or copy
+`Beelzebub.dll` into `<VRisingDedicatedServer>\BepInEx\plugins\`. Stop the server before replacing the DLL; it is
+locked while the server runs.
 
 ## Features
 
@@ -86,15 +91,13 @@ hotkeys, and take the forms of the bosses you defeat.
 - Bosses have more abilities than you have slots, so you choose: `.beelz tform <unit> set <phase> <slot> <index>`
   builds your own kit for each phase.
 - Capturing abilities, devouring a kit and unlocking a form are three separate rolls. A form is never a free extra.
-- Why only these forms: the game client decides what your character looks like, and a server-side mod cannot change
-  that. These are the forms the game can already show on a player. Other units' powers come to you as abilities.
 
 ### Summons
 - Captured summon abilities raise allies that fight for you, transformed or not. They scale with your level and have
   caps, leashing and clean despawns.
 - `.beelz summon` calls a transformed boss's signature adds (the Toad King's frogs, the Werewolf Chieftain's wolves).
-- `.beelz summons stash|restore|clear|status` manages them; `Transform_MountedSummonMode` decides whether they wait
-  or follow when you mount up.
+- `.beelz summons stash/restore/clear/status` manages them. A server setting decides whether they wait or follow
+  when you mount up.
 
 ### Server tools
 - Change drop rates, pity, transform rules and more live with `.beelz admin set <key> <value>`. No restart needed.
@@ -106,25 +109,8 @@ hotkeys, and take the forms of the bosses you defeat.
 - Incompatibility locks limit how many abilities of a group one player can hold, for combinations that break
   balance. None ship; your server decides.
 - Optional per-hit damage scaling (`Damage_Mode`), with a telemetry mode to try it before it changes anything.
+- Optional transform power scaling from a player's Bloodcraft progression.
 - Recovery without wipes: inspect a player's bar, clear a stuck state, or reset loadouts, online or offline.
-
-### BloodCraftHub companion
-Beelzebub exposes a chat API (`[BEELZ:*]` lines) that the client-side **BloodCraftHub** mod reads to draw ability
-buttons, live cooldowns, the collection book and admin panels. Each player installs it on their own client. The
-integration is being built; its Thunderstore link will be added here.
-
-## Requirements
-
-- A V Rising **dedicated server**. Beelzebub runs on the server only; it does not work in a Host & Play game.
-- [BepInExPack V Rising](https://thunderstore.io/c/v-rising/p/BepInEx/BepInExPack_V_Rising/)
-- [VampireCommandFramework](https://thunderstore.io/c/v-rising/p/deca/VampireCommandFramework/)
-- Recommended for players: BloodCraftHub (client-side).
-
-## Installation
-
-Install with [r2modman](https://thunderstore.io/package/ebkr/r2modman/) or the Thunderstore Mod Manager, or copy
-`Beelzebub.dll` into `<VRisingDedicatedServer>\BepInEx\plugins\`. Stop the server before replacing the DLL; it is
-locked while the server runs.
 
 ## Commands
 
@@ -161,7 +147,7 @@ The full list, with every option, is in
 | `.beelz refresh` · `.beelz detonate` | Re-apply a blank form bar · manual area burst |
 | `.beelz summon [n]` · `.beelz summons stash/restore/clear/status` | Boss adds · manage your summons |
 
-**Settings:** `.beelz verbosity silent|summary|verbose` · `.beelz silent on|off` · `.beelz help`
+**Settings:** `.beelz verbosity silent/summary/verbose` · `.beelz silent on/off` · `.beelz help`
 
 **Admin** (all start with `.beelz admin`, see `.beelz admin help`)
 
@@ -172,7 +158,6 @@ The full list, with every option, is in
 | `give` · `revoke` · `devour <player> <unitGuid>` · `transform-set <unit> <field> <value>` | Grants and transform rules |
 | `lock add/max/remove/list/check` · `reseed preview/merge/replace CONFIRM` | Locks · take new shipped defaults |
 | `bar <player>` · `purge <player> CONFIRM` · `cleanse <player>` · `respawn <player>` | Recovery: start with `bar` |
-| `modleak [player\|all]` | Read-only: hidden slot helpers and whether any are stale (the sweep cleans them on its own) |
 | `broadcast …` · `damage-stats` · `difficulty basic/brutal` | Server announcements and tuning |
 
 ## Configuration
@@ -187,8 +172,9 @@ The full list, with every option, is in
 
 ## Known limitations
 
-- **Only five transformations.** A server-side mod cannot change how a player is drawn, so becoming any unit needs a
-  client-side mod. Whether that is possible is still under investigation.
+- **Only five transformations.** The game client decides what your character looks like, and a server-side mod
+  cannot change that; these are the forms the game can already show on a player. Becoming other units would need a
+  client-side mod, and whether that is possible is still under investigation.
 - **Some multi-stage boss abilities misfire.** A cast that spawns a projectile that spawns an area can lose a later
   stage when a player casts it. Many are fixed or curated out; the audit continues.
 - **Some abilities look best in form.** A few are tied to a boss's skeleton and animate oddly on a vampire body.
@@ -203,7 +189,7 @@ The full list, with every option, is in
 
 ## Roadmap: the road to 1.0
 
-Beelzebub is at **v0.137.6**, a public test build. These five steps lead to 1.0. Testing comes first, because its
+These five steps lead to 1.0. Testing comes first, because its
 results decide what gets re-tuned, re-enabled or kept off.
 
 | Step | Status |
@@ -240,7 +226,6 @@ transformed (your form and summons should resume within 90 seconds).
 
 ### 3. Stability
 
-- **Fixed in v0.137.6:** the startup `Couldn't remap old Modification Id` errors.
 - A transformation that expires on its own does not fully clean up yet.
 - A performance check on the action bar cleanup.
 - Re-check the mounted and beast-form action bars on the current build.
@@ -250,7 +235,7 @@ transformed (your form and summons should resume within 90 seconds).
 Which of these make 1.0 is still open.
 
 - **Mastery:** per-unit mastery levels and set rewards on top of the bestiary.
-- **Raphael (client UI, formerly the BloodCraftHub UI):** ability buttons, cooldown rings, the collection book, a
+- **Raphael UI:** ability buttons, cooldown rings, the collection book, a
   transform browser and admin panels. The server side of this already ships.
 - **More transformations (under investigation):** becoming other units. A server-side mod cannot do this alone;
   whether a client-side mod can is still being investigated, so this is not promised.
@@ -259,7 +244,7 @@ Which of these make 1.0 is still open.
 ### 5. Before 1.0
 
 - Testing at scale, on other server presets and alongside other mods.
-- Close out the [known limitations](#known-limitations) above.
+- Close out the known limitations above.
 
 ## Feedback
 
@@ -280,7 +265,7 @@ are all welcome.
 | [Summons as allies](Beelzebub/docs/SUMMON_AS_ALLY.md) | How captured summons become player allies |
 | [Bloodcraft interop](Beelzebub/docs/INTEROP_BLOODCRAFT.md) | Running alongside Bloodcraft |
 | [Ability change impact](Beelzebub/Beelzebub/docs/ABILITY_CHANGE_IMPACT.md) | Checklist for changing how an ability behaves without breaking its neighbours |
-| [BloodCraftHub integration](Beelzebub/Beelzebub/docs/BCH_INTEGRATION_HANDOFF.md) | The `[BEELZ:*]` chat API contract for client UIs |
+| [Raphael integration](Beelzebub/Beelzebub/docs/BCH_INTEGRATION_HANDOFF.md) | The `[BEELZ:*]` chat API contract for the Raphael client UI |
 
 ### Building from source
 Requirements: the .NET 6 SDK. The V Rising, BepInEx and VCF references come from NuGet.
