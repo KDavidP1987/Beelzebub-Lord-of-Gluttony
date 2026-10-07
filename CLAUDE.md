@@ -28,7 +28,7 @@ qualification, they mean `Beelzebub/`.
 living at:
 
 ```
-C:\Users\KDPen\OneDrive\Documents\CURSOR PROJECTS\Games\V Rising\BloodCraftUI 2\
+C:\dev\projects\Games\V Rising\BloodCraftUI 2\
 ```
 
 That project has its own `CLAUDE.md`, its own auto-memory namespace, and its
