@@ -37,11 +37,11 @@ as you capture more.
 
 | Command | What it does |
 |---|---|
-| `.beelz grant <index\|id> <slot>` | Bind a captured ability to a normal spell slot. Slots **0 (primary/left-click)**, **1–6**, **7 (ultimate/T)**. |
+| `.beelz grant <slot> <index\|id>` | Bind a captured ability to a spell slot. Slot is **1–6**, `primary` (left-click, 0) or `ultimate` (T, 7). |
 | `.beelz unslot <slot>` *(alias: `clear-slot`)* | Clear one universal slot binding. |
-| `.beelz weapon-grant <index\|id> <weapon> <slot>` | Bind an ability only while wielding a given weapon family. |
+| `.beelz weapon-grant <weapon\|auto> <slot> <index\|id>` | Bind an ability only while wielding a given weapon family. `auto` = the weapon in your hands. |
 | `.beelz weapon-unslot <weapon> <slot>` | Clear one per-weapon binding. |
-| `.beelz form-grant <index\|id> <form> <slot>` | Bind an ability into a shapeshift form's bar. |
+| `.beelz form-grant <form\|auto> <slot> <index\|id>` | Bind an ability into a shapeshift form's bar. Mounted accepts only slots 5, 6 and 7 (R, C, T). |
 | `.beelz form-unslot <form> <slot>` | Clear one per-form binding. |
 | `.beelz clearbar [all\|universal\|<weapon>\|<form>]` | Clear a whole bucket of binds (no confirm). |
 | `.beelz resetbar CONFIRM` | Reset your bar to vanilla without a weapon swap: ends any transform, clears every universal/weapon/form bind and every Beelzebub override on the live bar. Captures, unlocks, hotkeys and presets kept. Replies "bar is back to vanilla" or names the slots still overridden. Still stuck: ask an admin for `.beelz admin bar`. |
@@ -73,7 +73,7 @@ as you capture more.
 | `.beelz forget-transform <unit>` | Drop a transform unlock. |
 | `.beelz summons <stash\|restore\|clear\|status>` / `.beelz tp` | Manage your ally summons (`tp` = stash before teleport). |
 | `.beelz summon [n]` / `.beelz detonate` | A transformed boss's add-summon / detonate signature (must be transformed). |
-| `.beelz clear CONFIRM` | Wipe ALL your binds, presets, and hotkeys (captures kept). |
+| `.beelz clear CONFIRM` | Wipe ALL your Beelzebub data: captured abilities, transform unlocks, binds, hotkeys and presets. Cannot be undone. To reset only your bar, use `resetbar`. |
 
 ---
 
